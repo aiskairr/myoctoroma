@@ -1,0 +1,21 @@
+:root {
+  --background: 0 0% 100%; /* Белый, hsl для background */
+  --foreground: 222 47% 11%; /* Тёмный текст */
+  --border: 214 32% 91%; /* Светло-синий для границ */
+  --primary-green: 125 59% 12%; /* Sidebar */
+  --accent-blue: 207 90% 54%; /* Попапы и кнопки */
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}

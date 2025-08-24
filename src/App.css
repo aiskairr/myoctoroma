@@ -1,0 +1,60 @@
+:root {
+  --background: 0 0% 100%; /* Белый, hsl для background */
+  --foreground: 222 47% 11%; /* Тёмный текст */
+  --border: 214 32% 91%; /* Светло-синий для границ */
+  --primary-green: 125 59% 12%; /* Sidebar */
+  --accent-blue: 207 90% 54%; /* Попапы и кнопки */
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em hsl(240 64% 78% / 0.67));
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em hsl(178 57% 65% / 0.67));
+}
+
+.masters-container {
+  display: flex;
+  flex-wrap: wrap; /* Перенос на новую строку */
+  justify-content: space-between;
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .card { max-width: 100%; } /* На мобильных — полная ширина */
+  .sidebar { width: 100%; position: static; } /* Sidebar сверху */
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+  flex: 1 1 300px; /* Минимальная ширина 300px */
+  max-width: 30%; /* Максимальная ширина 30% */
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* Отступ между строками */
+}
+.card-header { font-weight: bold; margin-bottom: 12px; }
+
+.read-the-docs {
+  color: hsl(210 0% 53%);
+}
