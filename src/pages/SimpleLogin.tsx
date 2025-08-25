@@ -30,8 +30,18 @@ export default function SimpleLogin() {
     setIsLoading(true);
     setError("");
 
+    // Получаем URL из переменной окружения
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
+    // Проверяем, что URL существует, чтобы избежать ошибок
+    if (!BACKEND_URL) {
+      setError("Ошибка конфигурации: URL бэкенда не найден.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch("/api/login", {
+      const response = await fetch(`${BACKEND_URL}/api/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -22,7 +22,7 @@ export default function StableLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [_, setLocation] = useLocation();
+  useLocation();
 
   // Проверяем авторизацию при загрузке
   useEffect(() => {
