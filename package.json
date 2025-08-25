@@ -11,7 +11,7 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "tailwind:init": "tailwindcss init -p",
-    "start": "serve -s dist"
+    "start": "npx serve -s dist"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
