@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuthStatus = async (): Promise<boolean> => {
     try {
       console.log("Checking authentication status...");
-      const res = await fetch("/api/user", {
+      const res = await fetch("${import.meta.env.VITE_BACKEND_URL}/api/user", {
         method: "GET",
         credentials: "include",
         headers: {
@@ -105,8 +105,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("Attempting login with:", username);
       
       try {
-        // Используем правильный endpoint /api/auth/login
-        const res = await fetch("/api/login", {
+        // Используем правильный endpoint ${import.meta.env.VITE_BACKEND_URL}/api/auth/login
+        const res = await fetch("${import.meta.env.VITE_BACKEND_URL}/api/login", {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",
@@ -183,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       console.log("Attempting to logout...");
       
-      const res = await fetch("/api/logout", {
+      const res = await fetch("${import.meta.env.VITE_BACKEND_URL}/api/logout", {
         method: "POST",
         credentials: "include",
         headers: { 

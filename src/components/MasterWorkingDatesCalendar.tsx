@@ -41,9 +41,9 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
 
   // Получаем рабочие даты мастера для текущего месяца
   const { data: workingDates = [], isLoading, refetch } = useQuery<WorkingDate[]>({
-    queryKey: ['/api/masters', masterId, 'working-dates', currentMonth.getMonth() + 1, currentMonth.getFullYear(), currentBranch.waInstance],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/masters', masterId, 'working-dates', currentMonth.getMonth() + 1, currentMonth.getFullYear(), currentBranch.waInstance],
     queryFn: async (): Promise<WorkingDate[]> => {
-      const res = await fetch(`/api/masters/${masterId}/working-dates?month=${currentMonth.getMonth() + 1}&year=${currentMonth.getFullYear()}&branchId=${currentBranch.waInstance}`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates?month=${currentMonth.getMonth() + 1}&year=${currentMonth.getFullYear()}&branchId=${currentBranch.waInstance}`);
       if (!res.ok) throw new Error('Failed to fetch working dates');
       return res.json();
     },
@@ -52,7 +52,7 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
   // Мутация для сохранения рабочей даты
   const saveWorkingDate = useMutation({
     mutationFn: async (data: { workDate: string; startTime: string; endTime: string }) => {
-      const res = await fetch(`/api/masters/${masterId}/working-dates`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -80,7 +80,7 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
   // Мутация для удаления рабочей даты
   const deleteWorkingDate = useMutation({
     mutationFn: async (workDate: string) => {
-      const res = await fetch(`/api/masters/${masterId}/working-dates/${workDate}?branchId=${currentBranch.waInstance}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates/${workDate}?branchId=${currentBranch.waInstance}`, {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error('Failed to delete working date');

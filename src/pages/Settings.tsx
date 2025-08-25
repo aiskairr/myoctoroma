@@ -24,18 +24,18 @@ export default function Settings() {
   
   // Fetch settings
   const { data, isLoading, error } = useQuery({
-    queryKey: ["/api/settings"],
-    queryFn: () => fetch("/api/settings").then(res => res.json()),
+    queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/settings"],
+    queryFn: () => fetch("${import.meta.env.VITE_BACKEND_URL}/api/settings").then(res => res.json()),
   });
   
   // Mutation for updating settings
   const updateSettingMutation = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
-      const response = await apiRequest("POST", "/api/settings", { key, value });
+      const response = await apiRequest("POST", "${import.meta.env.VITE_BACKEND_URL}/api/settings", { key, value });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/settings"] });
     },
   });
   

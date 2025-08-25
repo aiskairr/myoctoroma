@@ -22,7 +22,7 @@ interface GiftCertificate {
 class GiftCertificateService {
   async getCertificates(branchId: string): Promise<GiftCertificate[]> {
     try {
-      const response = await fetch(`/api/gift-certificates?branchId=${branchId}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?branchId=${branchId}`);
       if (response.ok) {
         return await response.json();
       }
@@ -35,7 +35,7 @@ class GiftCertificateService {
 
   async saveCertificate(certificate: Omit<GiftCertificate, 'id' | 'createdAt' | 'updatedAt'>): Promise<GiftCertificate | null> {
     try {
-      const response = await fetch('/api/gift-certificates', {
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -62,7 +62,7 @@ class GiftCertificateService {
 
   async updateCertificate(id: number, updates: Partial<GiftCertificate>): Promise<GiftCertificate | null> {
     try {
-      const response = await fetch(`/api/gift-certificates/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -81,7 +81,7 @@ class GiftCertificateService {
 
   async findCertificateByNumber(certificateNumber: string, branchId: string): Promise<GiftCertificate | null> {
     try {
-      const response = await fetch(`/api/gift-certificates/search/${certificateNumber}?branchId=${branchId}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates/search/${certificateNumber}?branchId=${branchId}`);
       if (response.ok) {
         return await response.json();
       }
@@ -94,7 +94,7 @@ class GiftCertificateService {
 
   async getActiveCertificates(branchId: string): Promise<GiftCertificate[]> {
     try {
-      const response = await fetch(`/api/gift-certificates?branchId=${branchId}&isUsed=false`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?branchId=${branchId}&isUsed=false`);
       if (response.ok) {
         const certificates = await response.json();
         const today = new Date();
@@ -111,12 +111,12 @@ class GiftCertificateService {
 
   async getUsedCertificates(branchId: string): Promise<GiftCertificate[]> {
     try {
-      const response = await fetch(`/api/gift-certificates?branchId=${branchId}&isUsed=true`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?branchId=${branchId}&isUsed=true`);
       if (response.ok) {
         const usedCerts = await response.json();
         
         // Also get expired certificates
-        const allCertsResponse = await fetch(`/api/gift-certificates?branchId=${branchId}`);
+        const allCertsResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?branchId=${branchId}`);
         if (allCertsResponse.ok) {
           const allCerts = await allCertsResponse.json();
           const expiredCerts = allCerts.filter((cert: GiftCertificate) => cert.isExpired);
@@ -139,7 +139,7 @@ class GiftCertificateService {
 
   async deleteCertificate(id: number): Promise<boolean> {
     try {
-      const response = await fetch(`/api/gift-certificates/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates/${id}`, {
         method: 'DELETE',
       });
       return response.ok;

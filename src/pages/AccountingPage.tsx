@@ -86,7 +86,7 @@ const AccountingPage = () => {
 
   const fetchMasters = async () => {
     try {
-      const response = await fetch('/api/masters');
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/masters');
       if (response.ok) {
         const mastersData = await response.json();
         // Показываем всех мастеров, а не только активных
@@ -99,7 +99,7 @@ const AccountingPage = () => {
 
   const fetchAdministrators = async () => {
     try {
-      const response = await fetch('/api/administrators');
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/administrators');
       if (response.ok) {
         const administratorsData = await response.json();
         // Показываем всех активных администраторов независимо от филиала

@@ -32,7 +32,7 @@ export function SimpleAuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const response = await fetch("/api/user", {
+      const response = await fetch("${import.meta.env.VITE_BACKEND_URL}/api/user", {
         method: "GET",
         credentials: "include",
         headers: {
@@ -65,7 +65,7 @@ export function SimpleAuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch("/api/logout", {
+      await fetch("${import.meta.env.VITE_BACKEND_URL}/api/logout", {
         method: "POST",
         credentials: "include"
       });

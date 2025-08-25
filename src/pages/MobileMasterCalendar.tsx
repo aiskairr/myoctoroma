@@ -47,7 +47,7 @@ export const MobileMasterCalendar: React.FC<MobileMasterCalendarProps> = ({ mast
 
   // Получение пользователя для проверки роли
   const { data: user } = useQuery({
-    queryKey: ["/api/user"],
+    queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/user"],
     retry: false,
   });
 
@@ -60,10 +60,10 @@ export const MobileMasterCalendar: React.FC<MobileMasterCalendarProps> = ({ mast
 
   // Получаем задачи для конкретного мастера на выбранную дату через новый API
   const { data: tasksData = [], isLoading, refetch } = useQuery({
-    queryKey: ['/api/crm/tasks-master-calendar', format(currentDate, 'yyyy-MM-dd')],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks-master-calendar', format(currentDate, 'yyyy-MM-dd')],
     queryFn: async () => {
       const response = await fetch(
-        `/api/crm/tasks-master-calendar?date=${format(currentDate, 'yyyy-MM-dd')}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks-master-calendar?date=${format(currentDate, 'yyyy-MM-dd')}`,
         {
           credentials: 'include'
         }

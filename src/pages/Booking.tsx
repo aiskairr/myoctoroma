@@ -371,7 +371,7 @@ const BookingPage: React.FC = () => {
   const fetchServices = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/public/massage-services');
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/public/massage-services');
       if (response.ok) {
         const data = await response.json();
         console.log("Loaded services from API:", data);
@@ -476,7 +476,7 @@ const BookingPage: React.FC = () => {
   const fetchMasters = async (branchId: string, serviceId: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/public/masters?branchId=${branchId}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/masters?branchId=${branchId}`);
       if (response.ok) {
         const data = await response.json();
         console.log("Loaded masters:", data);
@@ -501,7 +501,7 @@ const BookingPage: React.FC = () => {
   const fetchMasterAvailability = async (masterId: number) => {
     try {
       // Получаем все рабочие даты мастера (без параметров месяца/года)
-      const response = await fetch(`/api/public/masters/${masterId}/working-dates`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/masters/${masterId}/working-dates`);
       
       let workingDates: any[] = [];
       
@@ -578,7 +578,7 @@ const BookingPage: React.FC = () => {
       console.log(`Fetching time slots for masterId: ${masterId}, date: ${dateStr}`);
       
       const serviceDuration = bookingData.serviceDuration || 60;
-      const response = await fetch(`/api/public/available-slots?masterId=${masterId}&date=${dateStr}&serviceDuration=${serviceDuration}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/available-slots?masterId=${masterId}&date=${dateStr}&serviceDuration=${serviceDuration}`);
       if (response.ok) {
         const data = await response.json() as TimeSlot[];
         console.log("Loaded time slots:", data);
@@ -666,7 +666,7 @@ const BookingPage: React.FC = () => {
         phone: bookingData.phone
       };
       
-      const response = await fetch('/api/booking', {
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/booking', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

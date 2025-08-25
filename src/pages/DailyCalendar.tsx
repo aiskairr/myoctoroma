@@ -171,8 +171,8 @@ const CreateAppointmentDialog = ({
 
   // Загружаем мастеров для выбранной даты
   const { data: masters = [] } = useQuery<Master[]>({
-    queryKey: ['/api/calendar/masters', format(selectedDate, 'yyyy-MM-dd'), currentBranch?.waInstance],
-    queryFn: () => fetch(`/api/calendar/masters/${format(selectedDate, 'yyyy-MM-dd')}?branchId=${currentBranch?.waInstance}`, {
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters', format(selectedDate, 'yyyy-MM-dd'), currentBranch?.waInstance],
+    queryFn: () => fetch(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters/${format(selectedDate, 'yyyy-MM-dd')}?branchId=${currentBranch?.waInstance}`, {
       credentials: 'include'
     }).then(res => res.json()),
     enabled: !!currentBranch?.waInstance && isOpen
@@ -180,13 +180,13 @@ const CreateAppointmentDialog = ({
 
   // Загружаем все мастеров для общего выбора
   const { data: allMasters = [] } = useQuery<Master[]>({
-    queryKey: ['/api/masters'],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/masters'],
     enabled: isOpen,
   });
 
   // Список услуг
   const { data: massageServices = [] } = useQuery<MassageService[]>({
-    queryKey: ['/api/public/massage-services'],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/public/massage-services'],
     enabled: isOpen,
   });
 
@@ -230,12 +230,12 @@ const CreateAppointmentDialog = ({
   const [isCustomDuration, setIsCustomDuration] = useState(false);
 
   const { data: massageDurations } = useQuery<MassageDurationsResponse>({
-    queryKey: ['/api/massage-services/durations', formData.massageType],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', formData.massageType],
     enabled: !!formData.massageType && isOpen,
     queryFn: async () => {
       if (!formData.massageType) return null;
       
-      const res = await fetch('/api/massage-services/durations', {
+      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ massageType: formData.massageType }),
@@ -308,7 +308,7 @@ const CreateAppointmentDialog = ({
         branchId: formData.branchId // Добавляем branchId в payload
       };
       
-      const res = await fetch('/api/crm/tasks', {
+      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -596,21 +596,21 @@ const EditAppointmentDialog = ({
 
   // Загружаем все мастеров для выбора
   const { data: allMasters = [] } = useQuery<Master[]>({
-    queryKey: ['/api/masters'],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/masters'],
     enabled: isOpen,
   });
 
   // Список услуг
   const { data: massageServices = [] } = useQuery<MassageService[]>({
-    queryKey: ['/api/public/massage-services'],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/public/massage-services'],
     enabled: isOpen,
   });
 
   // Загружаем администраторов для выбора в модальном окне оплаты
   const { data: administrators = [] } = useQuery<{id: number, name: string}[]>({
-    queryKey: ['/api/administrators', currentBranch?.waInstance],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/administrators', currentBranch?.waInstance],
     queryFn: async () => {
-      const res = await fetch(`/api/administrators?branchId=${currentBranch?.waInstance}`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchId=${currentBranch?.waInstance}`);
       if (!res.ok) return [];
       const data = await res.json();
       return data.filter((admin: any) => admin.isActive).map((admin: any) => ({
@@ -779,12 +779,12 @@ const EditAppointmentDialog = ({
   const queryClient = useQueryClient();
 
   const { data: massageDurations } = useQuery<MassageDurationsResponse>({
-    queryKey: ['/api/massage-services/durations', formData.massageType],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', formData.massageType],
     enabled: !!formData.massageType && isOpen,
     queryFn: async () => {
       if (!formData.massageType) return null;
       
-      const res = await fetch('/api/massage-services/durations', {
+      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ massageType: formData.massageType }),
@@ -797,10 +797,10 @@ const EditAppointmentDialog = ({
 
   // Получаем дочерние задачи (дополнительные услуги)
   const { data: childTasksData } = useQuery<Task[]>({
-    queryKey: ['/api/tasks/children', task?.id],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task?.id],
     enabled: isOpen && !!task?.id,
     queryFn: async () => {
-      const res = await fetch(`/api/tasks/${task?.id}/children`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task?.id}/children`);
       if (!res.ok) return [];
       return res.json();
     }
@@ -889,7 +889,7 @@ const EditAppointmentDialog = ({
     if (!task?.id) return;
     
     try {
-      const response = await fetch(`/api/tasks/${task.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -911,7 +911,7 @@ const EditAppointmentDialog = ({
         for (const childTask of childTasks) {
           const childEndTime = calculateEndTime(currentStartTime, childTask.massageDuration || 0);
           
-          await fetch(`/api/tasks/${childTask.id}`, {
+          await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTask.id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -925,7 +925,7 @@ const EditAppointmentDialog = ({
         }
       }
       
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks/children', task.id] });
+      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task.id] });
       onTaskUpdated();
       
       toast({
@@ -960,7 +960,7 @@ const EditAppointmentDialog = ({
       
       const childEndTime = calculateEndTime(currentStartTime, newDuration);
       
-      const response = await fetch(`/api/tasks/${childTaskId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTaskId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -982,7 +982,7 @@ const EditAppointmentDialog = ({
         const nextChildTask = childTasks[i];
         const nextEndTime = calculateEndTime(nextStartTime, nextChildTask.massageDuration || 0);
         
-        await fetch(`/api/tasks/${nextChildTask.id}`, {
+        await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${nextChildTask.id}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -995,7 +995,7 @@ const EditAppointmentDialog = ({
         nextStartTime = nextEndTime;
       }
       
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks/children', task?.id] });
+      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task?.id] });
       onTaskUpdated();
       
       toast({
@@ -1032,7 +1032,7 @@ const EditAppointmentDialog = ({
       const childStartTime = calculateEndTime(task?.scheduleTime || '', mainDuration);
       const childEndTime = calculateEndTime(childStartTime, serviceData.duration);
       
-      const res = await fetch('/api/tasks', {
+      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1069,7 +1069,7 @@ const EditAppointmentDialog = ({
       });
       
       // Обновляем список дочерних задач
-      await queryClient.invalidateQueries({ queryKey: ['/api/tasks/children', task?.id] });
+      await queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task?.id] });
       
       // Обновляем final_price основной задачи после добавления дочерней услуги
       if (task?.id) {
@@ -1078,7 +1078,7 @@ const EditAppointmentDialog = ({
         const finalPriceAllServices = Math.round(totalPriceAllServices - discountAmount);
         
         try {
-          await fetch(`/api/tasks/${task.id}`, {
+          await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1104,7 +1104,7 @@ const EditAppointmentDialog = ({
   // Мутация для удаления дополнительной услуги
   const deleteAdditionalServiceMutation = useMutation({
     mutationFn: async (childTaskId: number) => {
-      const res = await fetch(`/api/tasks/${childTaskId}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTaskId}`, {
         method: 'DELETE',
       });
       
@@ -1122,7 +1122,7 @@ const EditAppointmentDialog = ({
       });
       
       // Обновляем список дочерних задач
-      await queryClient.invalidateQueries({ queryKey: ['/api/tasks/children', task?.id] });
+      await queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task?.id] });
       
       // Обновляем final_price основной задачи после удаления дочерней услуги
       if (task?.id) {
@@ -1131,7 +1131,7 @@ const EditAppointmentDialog = ({
         const finalPriceAllServices = Math.round(totalPriceAllServices - discountAmount);
         
         try {
-          await fetch(`/api/tasks/${task.id}`, {
+          await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1166,7 +1166,7 @@ const EditAppointmentDialog = ({
       }
 
       // Создаем основную запись об оплате
-      const res = await fetch('/api/accounting', {
+      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/accounting', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1192,7 +1192,7 @@ const EditAppointmentDialog = ({
       }
 
       // Обновляем способ оплаты, администратора и статус оплаты для родительской записи
-      await fetch(`/api/tasks/${task.id}`, {
+      await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1205,7 +1205,7 @@ const EditAppointmentDialog = ({
       // Обновляем способ оплаты, администратора и статус оплаты для всех дочерних записей
       if (childTasks.length > 0) {
         await Promise.all(childTasks.map(childTask => 
-          fetch(`/api/tasks/${childTask.id}`, {
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTask.id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1314,7 +1314,7 @@ const EditAppointmentDialog = ({
       // Статус будет обновляться только для текущей записи без синхронизации с дочерними
       
       // Обновляем основную задачу
-      const res = await fetch(`/api/tasks/${task.id}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
         method: 'POST',  // ✅ Используем POST для совместимости с сервером
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -1363,7 +1363,7 @@ const EditAppointmentDialog = ({
             branchId: formData.branchId
           };
           
-          await fetch(`/api/tasks/${childTask.id}`, {
+          await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTask.id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(childPayload),
@@ -2068,20 +2068,20 @@ export default function DailyCalendar() {
     const syncTimer = setInterval(() => {
       // Обновляем данные календаря
       queryClient.invalidateQueries({ 
-        queryKey: ['/api/crm/tasks', formattedDate, currentBranch?.waInstance] 
+        queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks', formattedDate, currentBranch?.waInstance] 
       });
       
       // Обновляем данные мастеров
       queryClient.invalidateQueries({ 
-        queryKey: ['/api/calendar/masters', formattedDate, currentBranch?.waInstance] 
+        queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters', formattedDate, currentBranch?.waInstance] 
       });
     }, 10000); // Синхронизация каждые 10 секунд
 
     return () => clearInterval(syncTimer);
   }, [formattedDate, currentBranch?.waInstance, queryClient]);
   const { data: masters = [], isLoading: mastersLoading } = useQuery<Master[]>({
-    queryKey: ['/api/calendar/masters', formattedDate, currentBranch?.waInstance],
-    queryFn: () => fetch(`/api/calendar/masters/${formattedDate}?branchId=${currentBranch?.waInstance}`, {
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters', formattedDate, currentBranch?.waInstance],
+    queryFn: () => fetch(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters/${formattedDate}?branchId=${currentBranch?.waInstance}`, {
       credentials: 'include'
     }).then(res => res.json()),
     enabled: !!currentBranch?.waInstance,
@@ -2091,9 +2091,9 @@ export default function DailyCalendar() {
 
   // Загружаем все записи из crm_tasks для выбранной даты
   const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
-    queryKey: ['/api/crm/tasks', formattedDate, currentBranch?.waInstance],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks', formattedDate, currentBranch?.waInstance],
     queryFn: async () => {
-      const res = await fetch(`/api/crm/tasks?date=${formattedDate}&branchId=${currentBranch?.waInstance}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks?date=${formattedDate}&branchId=${currentBranch?.waInstance}`, {
         credentials: 'include'
       });
       if (!res.ok) {
@@ -2106,7 +2106,7 @@ export default function DailyCalendar() {
 
   // Загружаем дочерние задачи для всех основных задач
   const { data: childTasksMap = {} } = useQuery<{[taskId: number]: Task[]}>({
-    queryKey: ['/api/calendar/child-tasks', formattedDate, currentBranch?.waInstance],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/child-tasks', formattedDate, currentBranch?.waInstance],
     queryFn: async () => {
       const childrenMap: {[taskId: number]: Task[]} = {};
       
@@ -2116,7 +2116,7 @@ export default function DailyCalendar() {
       // Загружаем дочерние задачи для каждой основной задачи
       for (const task of mainTasks) {
         try {
-          const res = await fetch(`/api/tasks/${task.id}/children`, {
+          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}/children`, {
             credentials: 'include'
           });
           if (res.ok) {
@@ -2137,7 +2137,7 @@ export default function DailyCalendar() {
 
   // Загружаем услуги массажа для правильного расчета длительности
   const { data: massageServices = [] } = useQuery<MassageService[]>({
-    queryKey: ['/api/public/massage-services'],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/public/massage-services'],
   });
 
   // Генерируем временные слоты с 9:00 до 22:00 с шагом 30 минут
@@ -2297,14 +2297,14 @@ export default function DailyCalendar() {
   };
 
   const handleTaskCreated = () => {
-    queryClient.invalidateQueries({ queryKey: ['/api/crm/tasks'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/calendar/masters'] });
+    queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters'] });
     setSelectedTimeSlot(null);
   };
 
   const handleTaskUpdated = () => {
-    queryClient.invalidateQueries({ queryKey: ['/api/crm/tasks'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/calendar/masters'] });
+    queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters'] });
     setSelectedTask(null);
   };
 
@@ -2336,7 +2336,7 @@ export default function DailyCalendar() {
       const newMaster = activeMasters.find(m => m.id === newMasterId);
       if (!newMaster) throw new Error('Мастер не найден');
       
-      const res = await fetch(`/api/crm/tasks/${taskId}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks/${taskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2359,7 +2359,7 @@ export default function DailyCalendar() {
         title: "Запись перемещена",
         description: "Запись успешно перемещена"
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/crm/tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks'] });
     },
     onError: (error) => {
       toast({

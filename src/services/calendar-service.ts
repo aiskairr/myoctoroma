@@ -63,7 +63,7 @@ export const calendarService = {
   // Получение списка мастеров
   async getMasters(): Promise<Master[]> {
     try {
-      const response = await axios.get<Master[]>('/api/crm/masters');
+      const response = await axios.get<Master[]>('${import.meta.env.VITE_BACKEND_URL}/api/crm/masters');
       return response.data;
     } catch (error) {
       console.error('Error fetching masters:', error);
@@ -74,7 +74,7 @@ export const calendarService = {
   // Получение мастера по ID
   async getMaster(id: number): Promise<Master> {
     try {
-      const response = await axios.get<Master>(`/api/crm/masters/${id}`);
+      const response = await axios.get<Master>(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching master ${id}:`, error);
@@ -96,9 +96,9 @@ export const calendarService = {
       });
       
       // Логируем параметры запроса для отладки
-      console.log(`🔄 Calendar API: calling /api/crm/appointments with params:`, cleanParams);
+      console.log(`🔄 Calendar API: calling ${import.meta.env.VITE_BACKEND_URL}/api/crm/appointments with params:`, cleanParams);
       
-      const response = await axios.get<Appointment[]>('/api/crm/appointments', { params: cleanParams });
+      const response = await axios.get<Appointment[]>('${import.meta.env.VITE_BACKEND_URL}/api/crm/appointments', { params: cleanParams });
       
       console.log(`✅ Calendar API: received ${response.data.length} appointments`);
       return response.data;
@@ -122,9 +122,9 @@ export const calendarService = {
       });
       
       // Логируем параметры запроса для отладки
-      console.log(`🔄 Calendar API: calling /api/crm/tasks-calendar with params:`, cleanParams);
+      console.log(`🔄 Calendar API: calling ${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks-calendar with params:`, cleanParams);
       
-      const response = await axios.get<Appointment[]>('/api/crm/tasks-calendar', { params: cleanParams });
+      const response = await axios.get<Appointment[]>('${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks-calendar', { params: cleanParams });
       
       console.log(`✅ Calendar API: received ${response.data.length} tasks`);
       return response.data;
@@ -137,7 +137,7 @@ export const calendarService = {
   // Получение записи по ID
   async getAppointment(id: number): Promise<Appointment> {
     try {
-      const response = await axios.get<Appointment>(`/api/crm/appointments/${id}`);
+      const response = await axios.get<Appointment>(`${import.meta.env.VITE_BACKEND_URL}/api/crm/appointments/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching appointment ${id}:`, error);
@@ -148,7 +148,7 @@ export const calendarService = {
   // Получение клиентской задачи по ID
   async getClientTask(id: number): Promise<ClientTask> {
     try {
-      const response = await axios.get<ClientTask>(`/api/crm/tasks/${id}`);
+      const response = await axios.get<ClientTask>(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching client task ${id}:`, error);
@@ -159,7 +159,7 @@ export const calendarService = {
   // Обновление клиентской задачи
   async updateClientTask(id: number, taskData: Partial<ClientTask>): Promise<ClientTask> {
     try {
-      const response = await axios.post<ClientTask>(`/api/crm/tasks/${id}`, taskData);
+      const response = await axios.post<ClientTask>(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks/${id}`, taskData);
       return response.data;
     } catch (error: any) {
       console.error(`Error updating client task ${id}:`, error);
@@ -174,7 +174,7 @@ export const calendarService = {
   // Создание новой записи
   async createAppointment(appointment: Omit<Appointment, 'id'>): Promise<Appointment> {
     try {
-      const response = await axios.post<Appointment>('/api/crm/appointments', appointment);
+      const response = await axios.post<Appointment>('${import.meta.env.VITE_BACKEND_URL}/api/crm/appointments', appointment);
       return response.data;
     } catch (error: any) {
       console.error('Error creating appointment:', error);
@@ -190,7 +190,7 @@ export const calendarService = {
   // Обновление существующей записи
   async updateAppointment(id: number, appointment: Partial<Appointment>): Promise<Appointment> {
     try {
-      const response = await axios.post<Appointment>(`/api/crm/appointments/${id}`, appointment);
+      const response = await axios.post<Appointment>(`${import.meta.env.VITE_BACKEND_URL}/api/crm/appointments/${id}`, appointment);
       return response.data;
     } catch (error: any) {
       console.error(`Error updating appointment ${id}:`, error);
@@ -206,7 +206,7 @@ export const calendarService = {
   // Удаление записи
   async deleteAppointment(id: number): Promise<void> {
     try {
-      await axios.delete(`/api/crm/appointments/${id}`);
+      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/crm/appointments/${id}`);
     } catch (error: any) {
       console.error(`Error deleting appointment ${id}:`, error);
       if (error.response && error.response.data && error.response.data.message) {

@@ -118,7 +118,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
   // Загрузка дополнительных услуг для записи
   const loadAdditionalServices = async (taskId: number) => {
     try {
-      const response = await fetch(`/api/tasks/${taskId}/additional-services`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}/additional-services`, {
         credentials: 'include'
       });
       
@@ -134,7 +134,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
   // Загрузка списка массажных услуг
   const loadMassageServices = async () => {
     try {
-      const response = await fetch('/api/public/massage-services', {
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/public/massage-services', {
         credentials: 'include'
       });
       
@@ -152,7 +152,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
     if (!appointment) return;
     
     try {
-      const response = await fetch(`/api/tasks/${appointment.id}/additional-services`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${appointment.id}/additional-services`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -189,7 +189,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
     if (!appointment) return;
     
     try {
-      const response = await fetch(`/api/tasks/${appointment.id}/additional-services/${serviceId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${appointment.id}/additional-services/${serviceId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -220,7 +220,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
     if (!appointment) return;
     
     try {
-      const response = await fetch(`/api/tasks/${appointment.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${appointment.id}`, {
         credentials: 'include'
       });
       

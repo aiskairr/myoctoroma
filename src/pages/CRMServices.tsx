@@ -57,13 +57,13 @@ export default function CRMServices() {
 
   // Get services data
   const { data: services = [], isLoading } = useQuery<MassageService[]>({
-    queryKey: ['/api/crm/services'],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'],
   });
 
   // Create service mutation
   const createMutation = useMutation({
     mutationFn: async (newService: ServiceFormData) => {
-      const response = await fetch('/api/crm/services', {
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/crm/services', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newService),
@@ -77,7 +77,7 @@ export default function CRMServices() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/crm/services'] });
+      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
       setIsAddDialogOpen(false);
       resetForm();
       toast({
@@ -97,7 +97,7 @@ export default function CRMServices() {
   // Update service mutation
   const updateMutation = useMutation({
     mutationFn: async (updatedService: ServiceFormData & { id: number }) => {
-      const response = await fetch(`/api/crm/services/${updatedService.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${updatedService.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -117,7 +117,7 @@ export default function CRMServices() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/crm/services'] });
+      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
       setIsEditDialogOpen(false);
       setSelectedService(null);
       resetForm();
@@ -138,7 +138,7 @@ export default function CRMServices() {
   // Delete service mutation
   const deleteMutation = useMutation({
     mutationFn: async (serviceId: number) => {
-      const response = await fetch(`/api/crm/services/${serviceId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${serviceId}`, {
         method: 'DELETE',
       });
       
@@ -150,7 +150,7 @@ export default function CRMServices() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/crm/services'] });
+      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
       setSelectedService(null);
       toast({
         title: "Успех",

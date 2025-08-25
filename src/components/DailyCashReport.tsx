@@ -98,7 +98,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
       const yesterdayStr = new Date(yesterday.getTime() - (yesterday.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
       
       try {
-        const response = await fetch(`/api/daily-cash-reports?startDate=${yesterdayStr}&endDate=${yesterdayStr}&branchId=${branchId}`);
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/daily-cash-reports?startDate=${yesterdayStr}&endDate=${yesterdayStr}&branchId=${branchId}`);
         if (response.ok) {
           const reports = await response.json();
           if (reports.length > 0) {
@@ -152,7 +152,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
       };
 
       try {
-        const giftCertResponse = await fetch(`/api/gift-certificates?date=${selectedDateStr}&branchId=${branchId}&isUsed=false&isExpired=false`);
+        const giftCertResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?date=${selectedDateStr}&branchId=${branchId}&isUsed=false&isExpired=false`);
         if (giftCertResponse.ok) {
           const giftCerts = await giftCertResponse.json();
           const todayGiftCerts = giftCerts; // Сервер уже отфильтровал по дате и филиалу
@@ -330,7 +330,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
         cashCollection
       };
 
-      const response = await fetch('/api/daily-cash-reports', {
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/daily-cash-reports', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

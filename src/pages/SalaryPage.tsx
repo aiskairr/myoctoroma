@@ -65,7 +65,7 @@ export default function SalaryPage() {
   const fetchSalaryData = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/salaries');
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/salaries');
       if (response.ok) {
         const data = await response.json();
         // Новый формат API возвращает объект с полем salaries
@@ -97,7 +97,7 @@ export default function SalaryPage() {
   // Загрузка данных из accounting для расчетов
   const fetchAccountingData = async () => {
     try {
-      const response = await fetch(`/api/accounting/period?startDate=${startDate}&endDate=${endDate}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting/period?startDate=${startDate}&endDate=${endDate}`);
       if (response.ok) {
         const data = await response.json();
         setAccountingData(data);
@@ -110,7 +110,7 @@ export default function SalaryPage() {
   // Загрузка выплат за период
   const fetchSalaryPayments = async () => {
     try {
-      const response = await fetch(`/api/salary-payments?startDate=${startDate}&endDate=${endDate}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments?startDate=${startDate}&endDate=${endDate}`);
       if (response.ok) {
         const data = await response.json();
         setSalaryPayments(data);
@@ -181,7 +181,7 @@ export default function SalaryPage() {
   // Сохранение выплаты
   const savePayment = async (employeeId: number, employeeName: string, amount: number) => {
     try {
-      const response = await fetch('/api/salary-payments', {
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/salary-payments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -220,7 +220,7 @@ export default function SalaryPage() {
 
 
 
-  // Удаление сотрудника (всегда используем общий endpoint /api/salaries)
+  // Удаление сотрудника (всегда используем общий endpoint ${import.meta.env.VITE_BACKEND_URL}/api/salaries)
   const deleteEmployee = async (record: SalaryRecord) => {
     if (!record.id) {
       toast({
@@ -233,7 +233,7 @@ export default function SalaryPage() {
 
     try {
       // Используем общий endpoint для удаления, который обработает и мастеров, и администраторов
-      const response = await fetch(`/api/salaries/${record.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salaries/${record.id}`, {
         method: 'DELETE',
       });
 
@@ -264,7 +264,7 @@ export default function SalaryPage() {
   // Обновление выплаченной суммы
   const updatePaidAmount = async (id: number, paidAmount: number) => {
     try {
-      const response = await fetch(`/api/salaries/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salaries/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -344,7 +344,7 @@ export default function SalaryPage() {
     console.log('Отправляю запрос PUT:', requestData);
 
     try {
-      const response = await fetch(`/api/salaries/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salaries/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

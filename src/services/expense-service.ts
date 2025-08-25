@@ -10,7 +10,7 @@ interface ExpenseRecord {
 class ExpenseService {
   async getExpensesForDate(date: string, branchId: string): Promise<ExpenseRecord[]> {
     try {
-      const response = await fetch(`/api/expenses?date=${date}&branchId=${branchId}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/expenses?date=${date}&branchId=${branchId}`);
       if (response.ok) {
         return await response.json();
       }
@@ -23,7 +23,7 @@ class ExpenseService {
 
   async createExpense(expense: Omit<ExpenseRecord, 'id'>): Promise<ExpenseRecord | null> {
     try {
-      const response = await fetch('/api/expenses', {
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/expenses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -42,7 +42,7 @@ class ExpenseService {
 
   async deleteExpense(id: number): Promise<boolean> {
     try {
-      const response = await fetch(`/api/expenses/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/expenses/${id}`, {
         method: 'DELETE',
       });
       return response.ok;

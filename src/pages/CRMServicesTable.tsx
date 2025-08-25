@@ -60,7 +60,7 @@ export default function CRMServices() {
   };
 
   const { data: services = [], isLoading, error } = useQuery<MassageService[]>({
-    queryKey: ['/api/crm/services'],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'],
   });
 
   // Инициализация состояния редактирования при загрузке данных
@@ -77,7 +77,7 @@ export default function CRMServices() {
   const updateMutation = useMutation({
     mutationFn: async (service: MassageService) => {
       // Отправляем все поля напрямую без преобразования в durationPrices
-      const response = await fetch(`/api/crm/services/${service.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${service.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -106,7 +106,7 @@ export default function CRMServices() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/crm/services'] });
+      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
       toast({ title: "Услуга обновлена успешно" });
     },
     onError: (error: Error) => {
@@ -117,7 +117,7 @@ export default function CRMServices() {
   const createMutation = useMutation({
     mutationFn: async (service: Omit<MassageService, 'id' | 'createdAt'>) => {
       // Отправляем все поля напрямую без преобразования в durationPrices
-      const response = await fetch('/api/crm/services', {
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/crm/services', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -146,7 +146,7 @@ export default function CRMServices() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/crm/services'] });
+      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
       toast({ title: "Услуга создана успешно" });
     },
     onError: (error: Error) => {
@@ -168,14 +168,14 @@ export default function CRMServices() {
 
   const deleteMutation = useMutation({
     mutationFn: async (serviceId: number) => {
-      const response = await fetch(`/api/crm/services/${serviceId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${serviceId}`, {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Ошибка удаления услуги');
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/crm/services'] });
+      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
       toast({ title: "Услуга удалена успешно" });
     },
     onError: (error: Error) => {

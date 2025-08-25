@@ -55,7 +55,7 @@ const GiftCertificatesPage = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/gift-certificates?branchId=${currentBranch.waInstance}`);
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?branchId=${currentBranch.waInstance}`);
         if (response.ok) {
           const allCertificates = await response.json();
           
@@ -109,7 +109,7 @@ const GiftCertificatesPage = () => {
     }
 
     try {
-      const response = await fetch('/api/gift-certificates', {
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -169,7 +169,7 @@ const GiftCertificatesPage = () => {
     }
 
     try {
-      const response = await fetch(`/api/gift-certificates/${certificate.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates/${certificate.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -224,7 +224,7 @@ const GiftCertificatesPage = () => {
     }
 
     try {
-      const response = await fetch(`/api/gift-certificates/search/${searchNumber}?branchId=${currentBranch.waInstance}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates/search/${searchNumber}?branchId=${currentBranch.waInstance}`);
       if (response.ok) {
         const found = await response.json();
         setSelectedCertificate(found);

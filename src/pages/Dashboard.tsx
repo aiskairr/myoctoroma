@@ -67,25 +67,25 @@ export default function Dashboard() {
 
   // Fetch dashboard data - добавляем параметр филиала
   const { data, isLoading, error } = useQuery({
-    queryKey: ["/api/stats", currentBranch.waInstance],
+    queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/stats", currentBranch.waInstance],
     refetchInterval: 10000, // Refresh every 10 seconds
   });
 
   // Fetch recent activities - добавляем параметр филиала
   const activitiesQuery = useQuery({
-    queryKey: ["/api/activities", currentBranch.waInstance],
+    queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/activities", currentBranch.waInstance],
     refetchInterval: 10000, // Refresh every 10 seconds
   });
   
   // Fetch massage type statistics - добавляем параметр филиала
   const massageStatsQuery = useQuery({
-    queryKey: [`/api/stats/massage-types?branchId=${currentBranch.waInstance}`, currentBranch.waInstance],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/stats/massage-types?branchId=${currentBranch.waInstance}`, currentBranch.waInstance],
     refetchInterval: 60000, // Refresh every minute
   });
   
   // Fetch master statistics - добавляем параметр филиала
   const masterStatsQuery = useQuery({
-    queryKey: [`/api/stats/masters?branchId=${currentBranch.waInstance}`, currentBranch.waInstance],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/stats/masters?branchId=${currentBranch.waInstance}`, currentBranch.waInstance],
     refetchInterval: 60000, // Refresh every minute
   });
 

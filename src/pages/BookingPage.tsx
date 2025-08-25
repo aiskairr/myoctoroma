@@ -50,7 +50,7 @@ const BookingPage = () => {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const response = await fetch(`/api/public/massage-services?branchId=${currentBranch.waInstance}`);
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/massage-services?branchId=${currentBranch.waInstance}`);
         if (response.ok) {
           const data = await response.json();
           setServices(data);

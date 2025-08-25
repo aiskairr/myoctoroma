@@ -33,13 +33,13 @@ export default function Clients() {
   
   // Запрос данных пользователя
   const userQuery = useQuery<{ id: number; email: string; username: string }>({
-    queryKey: ["/api/user"],
+    queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/user"],
     staleTime: Infinity,
   });
   
   // Запрос списка клиентов
   const clientsQuery = useQuery<{ clients: Client[] }>({
-    queryKey: ["/api/clients"],
+    queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/clients"],
     refetchInterval: 30000, // Обновлять каждые 30 секунд
   });
   
@@ -50,7 +50,7 @@ export default function Clients() {
   
   // Запрос деталей выбранного клиента и истории сообщений
   const clientDetailsQuery = useQuery<ClientDetailsResponse>({
-    queryKey: ["/api/clients", selectedClientId],
+    queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/clients", selectedClientId],
     enabled: !!selectedClientId,
     refetchInterval: 5000, // Обновлять каждые 5 секунд при выборе
     retry: 3, // Повторить запрос до 3 раз в случае ошибки
@@ -60,13 +60,13 @@ export default function Clients() {
   // Мутация для обновления имени клиента
   const updateClientNameMutation = useMutation({
     mutationFn: async ({ telegramId, customName }: { telegramId: string; customName: string }) => {
-      const response = await apiRequest("POST", `/api/clients/${telegramId}/update-name`, { customName });
+      const response = await apiRequest("POST", `${import.meta.env.VITE_BACKEND_URL}/api/clients/${telegramId}/update-name`, { customName });
       return response.json();
     },
     onSuccess: (data) => {
       // Обновляем список клиентов и детали выбранного клиента
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/clients", selectedClientId] });
+      queryClient.invalidateQueries({ queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/clients", selectedClientId] });
       
       toast({
         title: "Имя клиента обновлено",
@@ -87,12 +87,12 @@ export default function Clients() {
   // Мутация для отправки сообщения клиенту
   const sendMessageMutation = useMutation({
     mutationFn: async ({ telegramId, message }: { telegramId: string; message: string }) => {
-      const response = await apiRequest("POST", `/api/clients/${telegramId}/send`, { message });
+      const response = await apiRequest("POST", `${import.meta.env.VITE_BACKEND_URL}/api/clients/${telegramId}/send`, { message });
       return response.json();
     },
     onSuccess: () => {
       // Обновить данные клиента после отправки сообщения
-      queryClient.invalidateQueries({ queryKey: ["/api/clients", selectedClientId] });
+      queryClient.invalidateQueries({ queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/clients", selectedClientId] });
       setNewMessage("");
       toast({
         title: "Сообщение отправлено",
@@ -353,11 +353,11 @@ export default function Clients() {
               console.log("WebSocket identification successful:", data.message || "No additional info");
               
               // Запрос актуального списка клиентов после успешной идентификации
-              queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+              queryClient.invalidateQueries({ queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/clients"] });
               
               // Запрос данных текущего клиента, если он выбран
               if (selectedClientId) {
-                queryClient.invalidateQueries({ queryKey: ["/api/clients", selectedClientId] });
+                queryClient.invalidateQueries({ queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/clients", selectedClientId] });
               }
             } 
             else if (data.type === 'new_message') {
@@ -457,7 +457,7 @@ export default function Clients() {
                 }
                 
                 // Также обновим данные клиентов, чтобы получить актуальный список
-                queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+                queryClient.invalidateQueries({ queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/clients"] });
               }
             }
           } catch (error) {
@@ -586,7 +586,7 @@ export default function Clients() {
       // Прямой запрос к API для получения данных клиента
       try {
         console.log(`Directly fetching data for client ${telegramId}`);
-        const response = await apiRequest("GET", `/api/clients/${telegramId}`);
+        const response = await apiRequest("GET", `${import.meta.env.VITE_BACKEND_URL}/api/clients/${telegramId}`);
         
         if (response.ok) {
           const data = await response.json();
@@ -611,7 +611,7 @@ export default function Clients() {
       }
       
       // Инвалидируем запрос с деталями клиента, чтобы обновить кэш
-      queryClient.invalidateQueries({ queryKey: ["/api/clients", telegramId] });
+      queryClient.invalidateQueries({ queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/clients", telegramId] });
     } catch (error) {
       console.error("Error in handleClientSelect:", error);
       toast({

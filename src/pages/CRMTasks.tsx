@@ -209,16 +209,16 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
   
   // Получаем список доступных услуг
   const { data: massageServices, isLoading: isLoadingServices } = useQuery<MassageService[]>({
-    queryKey: ['/api/public/massage-services'],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/public/massage-services'],
     enabled: isOpen, // Запрашиваем только когда диалог открыт
   });
 
   // Получаем дочерние задачи (дополнительные услуги)
   const { data: childTasksData } = useQuery<Task[]>({
-    queryKey: ['/api/tasks/children', task.id],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task.id],
     enabled: isOpen,
     queryFn: async () => {
-      const res = await fetch(`/api/tasks/${task.id}/children`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}/children`);
       if (!res.ok) return [];
       return res.json();
     }
@@ -236,12 +236,12 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
   const [isCustomDuration, setIsCustomDuration] = useState(false);
   
   const { data: massageDurations, isLoading: isLoadingDurations } = useQuery<MassageDurationsResponse>({
-    queryKey: ['/api/massage-services/durations', taskData.massageType],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', taskData.massageType],
     enabled: !!taskData.massageType && isOpen,
     queryFn: async () => {
       if (!taskData.massageType) return null;
       
-      const res = await fetch('/api/massage-services/durations', {
+      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -273,7 +273,7 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
   
   const updateTaskMutation = useMutation({
     mutationFn: async (updatedTask: Partial<Task>) => {
-      const res = await fetch(`/api/tasks/${task.id}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedTask)
@@ -306,7 +306,7 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
   // Мутация для создания дополнительной услуги
   const createAdditionalServiceMutation = useMutation({
     mutationFn: async (serviceData: { serviceId: number; serviceName: string; duration: number; price: number }) => {
-      const res = await fetch('/api/tasks', {
+      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -340,7 +340,7 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
         variant: "default",
       });
       // Обновляем список дочерних задач
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks/children', task.id] });
+      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task.id] });
       onTaskUpdated();
     },
     onError: (error) => {
@@ -375,7 +375,7 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
   // Функция для удаления дополнительной услуги
   const deleteAdditionalServiceMutation = useMutation({
     mutationFn: async (childTaskId: number) => {
-      const res = await fetch(`/api/tasks/${childTaskId}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTaskId}`, {
         method: 'DELETE',
       });
       
@@ -391,7 +391,7 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
         description: "Услуга успешно удалена",
         variant: "default",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/tasks/children', task.id] });
+      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task.id] });
       onTaskUpdated();
     },
     onError: (error) => {
@@ -755,7 +755,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
   // Мутация для анализа переписки с помощью CRM
   const analyzeCRMMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/tasks/${task.id}/analyze`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -786,7 +786,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
   
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
-      const res = await fetch(`/api/tasks/${task.id}/update-status`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}/update-status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
@@ -817,7 +817,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
   
   const deleteTaskMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/tasks/${task.id}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
         method: 'DELETE'
       });
       
@@ -930,12 +930,12 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
 
   // Получаем список мастеров для выбора
   const { data: mastersData, isLoading: isLoadingMasters } = useQuery<Master[]>({
-    queryKey: ['/api/crm/masters'],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/masters'],
   });
   
   // Получаем список услуг для диалога выбора времени
   const { data: massageServicesForSchedule, isLoading: isLoadingScheduleServices } = useQuery<MassageService[]>({
-    queryKey: ['/api/public/massage-services'],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/public/massage-services'],
   });
   
   // Состояние для управления диалогом
@@ -967,13 +967,13 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
 
   // Получаем доступных мастеров и временные слоты для выбранной даты и филиала
   const { data: availableMasters, isLoading: isLoadingAvailability } = useQuery<AvailableMaster[]>({
-    queryKey: ['/api/masters/availability', dateTime.date, dateTime.branch],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/masters/availability', dateTime.date, dateTime.branch],
     enabled: !!dateTime.date && !!dateTime.branch && isDialogOpen,
     queryFn: async () => {
       if (!dateTime.date || !dateTime.branch) return [];
       
       console.log(`Fetching masters for branch: ${dateTime.branch}, date: ${dateTime.date}`);
-      const res = await fetch(`/api/masters/availability?date=${dateTime.date}&branchId=${dateTime.branch}`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/availability?date=${dateTime.date}&branchId=${dateTime.branch}`);
       if (!res.ok) {
         console.error('Failed to fetch master availability', await res.text());
         return [];
@@ -990,7 +990,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
   
   // Получаем доступные длительности для выбранной услуги
   const { data: scheduleMassageDurations, isLoading: isLoadingScheduleDurations } = useQuery<MassageDurationsResponse>({
-    queryKey: ['/api/massage-services/durations', dateTime.massageType],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', dateTime.massageType],
     enabled: !!dateTime.massageType,
     queryFn: async () => {
       if (!dateTime.massageType) {
@@ -999,7 +999,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
       
       console.log(`Загружаем длительности для услуги: ${dateTime.massageType}`);
       
-      const res = await fetch('/api/massage-services/durations', {
+      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1066,7 +1066,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
       
       console.log(`Creating appointment for task id ${task.id}, status: ${task.status}, branch: ${data.branchId}`);
       
-      const res = await fetch(`/api/tasks/${task.id}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1659,13 +1659,13 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
   
   // Список мастеров
   const { data: mastersData, isLoading: isLoadingMasters } = useQuery<Master[]>({
-    queryKey: ['/api/masters'],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/masters'],
     enabled: isOpen,
   });
   
   // Список услуг
   const { data: massageServices, isLoading: isLoadingServices } = useQuery<MassageService[]>({
-    queryKey: ['/api/public/massage-services'],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/public/massage-services'],
     enabled: isOpen,
   });
   
@@ -1673,12 +1673,12 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   
   const { data: massageDurations, isLoading: isLoadingDurations } = useQuery<MassageDurationsResponse>({
-    queryKey: ['/api/massage-services/durations', formData.massageType],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', formData.massageType],
     enabled: !!formData.massageType && isOpen,
     queryFn: async () => {
       if (!formData.massageType) return null;
       
-      const res = await fetch('/api/massage-services/durations', {
+      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1757,7 +1757,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
       console.log("Отправляем данные для создания клиента:", payload);
       
       // Отправляем запрос на создание клиента
-      const response = await fetch('/api/clients', {
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/clients', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1806,7 +1806,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
           console.log("Создаем задачу для клиента:", taskPayload);
           
           // Отправляем запрос на создание задачи
-          const taskResponse = await fetch('/api/tasks', {
+          const taskResponse = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/tasks', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -2263,11 +2263,11 @@ const CRMTasks: React.FC = () => {
   
   // Запрос на получение задач по статусу
   const { data: tasksData, isLoading, isError, refetch } = useQuery({
-    queryKey: ['/api/tasks', activeTab, currentBranch.waInstance],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks', activeTab, currentBranch.waInstance],
     queryFn: async () => {
       const url = activeTab === 'all' 
-        ? '/api/tasks' 
-        : `/api/tasks?status=${activeTab}`;
+        ? '${import.meta.env.VITE_BACKEND_URL}/api/tasks' 
+        : `${import.meta.env.VITE_BACKEND_URL}/api/tasks?status=${activeTab}`;
       
       const res = await fetch(url);
       

@@ -61,10 +61,10 @@ const MasterForm: React.FC<{
 
   // Запрос для получения данных пользователя (при редактировании)
   const { data: userAccountData } = useQuery({
-    queryKey: ['/api/crm/masters', master?.id, 'user-account'],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/masters', master?.id, 'user-account'],
     queryFn: async () => {
       if (!master?.id) return null;
-      const response = await fetch(`/api/crm/masters/${master.id}/user-account`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${master.id}/user-account`);
       if (!response.ok) {
         if (response.status === 404) {
           return null; // Аккаунт не найден
@@ -621,9 +621,9 @@ const Masters: React.FC = () => {
 
   // Запрос на получение списка администраторов
   const { data: administrators, refetch: refetchAdministrators } = useQuery({
-    queryKey: ['/api/administrators', currentBranch.waInstance],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/administrators', currentBranch.waInstance],
     queryFn: async () => {
-      const res = await fetch(`/api/administrators?branchId=${currentBranch.waInstance}`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchId=${currentBranch.waInstance}`);
       if (!res.ok) {
         throw new Error('Failed to fetch administrators');
       }
@@ -633,12 +633,12 @@ const Masters: React.FC = () => {
 
   // Запрос на получение списка мастеров с рабочими датами
   const { data: masters, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['/api/crm/masters', currentBranch.waInstance],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/masters', currentBranch.waInstance],
     queryFn: async () => {
       console.log('Fetching masters data for branch:', currentBranch.waInstance);
       
       try {
-        const url = `/api/crm/masters?branchId=${currentBranch.waInstance}`;
+        const url = `${import.meta.env.VITE_BACKEND_URL}/api/crm/masters?branchId=${currentBranch.waInstance}`;
         console.log('Masters API URL:', url);
         const res = await fetch(url);
         
@@ -659,7 +659,7 @@ const Masters: React.FC = () => {
             try {
               const currentDate = new Date();
               const workingDatesRes = await fetch(
-                `/api/masters/${master.id}/working-dates?month=${currentDate.getMonth() + 1}&year=${currentDate.getFullYear()}`
+                `${import.meta.env.VITE_BACKEND_URL}/api/masters/${master.id}/working-dates?month=${currentDate.getMonth() + 1}&year=${currentDate.getFullYear()}`
               );
               
               if (workingDatesRes.ok) {
@@ -704,7 +704,7 @@ const Masters: React.FC = () => {
       const { workingDates, ...masterData } = data;
       
       // Создаем мастера
-      const res = await fetch('/api/crm/masters', {
+      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/crm/masters', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(masterData)
@@ -719,7 +719,7 @@ const Masters: React.FC = () => {
       // Сохраняем рабочие даты, если они есть
       if (workingDates && workingDates.length > 0) {
         await Promise.all(workingDates.map(async (wd) => {
-          await fetch(`/api/masters/${newMaster.id}/working-dates`, {
+          await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${newMaster.id}/working-dates`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -758,7 +758,7 @@ const Masters: React.FC = () => {
       const { workingDates, ...masterData } = data;
       
       // Обновляем мастера
-      const res = await fetch(`/api/crm/masters/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -778,7 +778,7 @@ const Masters: React.FC = () => {
         // Получаем текущие рабочие даты
         const currentDate = new Date();
         const currentWorkingDatesRes = await fetch(
-          `/api/masters/${id}/working-dates?month=${currentDate.getMonth() + 1}&year=${currentDate.getFullYear()}`
+          `${import.meta.env.VITE_BACKEND_URL}/api/masters/${id}/working-dates?month=${currentDate.getMonth() + 1}&year=${currentDate.getFullYear()}`
         );
         
         if (currentWorkingDatesRes.ok) {
@@ -786,7 +786,7 @@ const Masters: React.FC = () => {
           
           // Удаляем старые даты (деактивируем)
           await Promise.all(currentWorkingDates.map(async (cwd: any) => {
-            await fetch(`/api/masters/${id}/working-dates/${cwd.work_date}?branchId=${cwd.branch_id}`, {
+            await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${id}/working-dates/${cwd.work_date}?branchId=${cwd.branch_id}`, {
               method: 'DELETE'
             });
           }));
@@ -794,7 +794,7 @@ const Masters: React.FC = () => {
         
         // Добавляем новые даты
         await Promise.all(workingDates.map(async (wd) => {
-          await fetch(`/api/masters/${id}/working-dates`, {
+          await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${id}/working-dates`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -831,7 +831,7 @@ const Masters: React.FC = () => {
   // Мутация для удаления мастера
   const deleteMasterMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/crm/masters/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${id}`, {
         method: 'DELETE'
       });
       
@@ -861,7 +861,7 @@ const Masters: React.FC = () => {
   // Мутация для создания администратора
   const createAdministratorMutation = useMutation({
     mutationFn: async (data: Partial<Administrator>) => {
-      const res = await fetch('/api/administrators', {
+      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/administrators', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -894,7 +894,7 @@ const Masters: React.FC = () => {
   // Мутация для удаления администратора
   const deleteAdministratorMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/administrators/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators/${id}`, {
         method: 'DELETE',
       });
 
@@ -939,7 +939,7 @@ const Masters: React.FC = () => {
       const formData = new FormData();
       formData.append('image', file);
       
-      const res = await fetch(`/api/crm/masters/${masterId}/upload-image`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${masterId}/upload-image`, {
         method: 'POST',
         body: formData
       });

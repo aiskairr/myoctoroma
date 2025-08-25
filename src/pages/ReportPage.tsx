@@ -47,7 +47,7 @@ export default function ReportPage() {
   // Загрузка данных пользователя
   const fetchUserData = async () => {
     try {
-      const response = await fetch('/api/user');
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/user');
       if (response.ok) {
         const data = await response.json();
         if (data) {
@@ -67,7 +67,7 @@ export default function ReportPage() {
   // Загрузка списка филиалов
   const fetchBranches = async () => {
     try {
-      const response = await fetch('/api/daily-cash-reports-branches');
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/daily-cash-reports-branches');
       if (response.ok) {
         const data = await response.json();
         setBranches(data);
@@ -93,7 +93,7 @@ export default function ReportPage() {
     setIsLoading(true);
     try {
       const branchParam = selectedBranch ? `&branchId=${selectedBranch}` : '';
-      const response = await fetch(`/api/daily-cash-reports?startDate=${startDate}&endDate=${endDate}${branchParam}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/daily-cash-reports?startDate=${startDate}&endDate=${endDate}${branchParam}`);
       if (response.ok) {
         const data = await response.json();
         setReports(data);

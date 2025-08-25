@@ -20,7 +20,7 @@ interface AccountingRecord {
 class AccountingService {
   async getRecordsForDate(date: string, branchId: string): Promise<AccountingRecord[]> {
     try {
-      const response = await fetch(`/api/accounting?date=${date}&branchId=${branchId}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}${import.meta.env.VITE_BACKEND_URL}/api/accounting?date=${date}&branchId=${branchId}`);
       if (response.ok) {
         return await response.json();
       }
@@ -33,7 +33,7 @@ class AccountingService {
 
   async saveRecord(record: Omit<AccountingRecord, 'id'>): Promise<AccountingRecord | null> {
     try {
-      const response = await fetch('/api/accounting', {
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/accounting', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ class AccountingService {
 
   async updateRecord(record: AccountingRecord): Promise<boolean> {
     try {
-      const response = await fetch(`/api/accounting/${record.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting/${record.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -99,7 +99,7 @@ class AccountingService {
 
   async updateRecords(records: AccountingRecord[]): Promise<boolean> {
     try {
-      const response = await fetch('/api/accounting/bulk-update', {
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/accounting/bulk-update', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ class AccountingService {
 
   async deleteRecord(id: number): Promise<boolean> {
     try {
-      const response = await fetch(`/api/accounting/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting/${id}`, {
         method: 'DELETE',
       });
       return response.ok;

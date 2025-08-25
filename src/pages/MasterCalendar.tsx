@@ -110,7 +110,7 @@ export default function MasterCalendar() {
     instanceId: string;
     master_id: number;
   }>({
-    queryKey: ["/api/user"],
+    queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/user"],
     retry: false,
   });
 
@@ -135,9 +135,9 @@ export default function MasterCalendar() {
 
   // Загрузка задач только для мастера
   const { data: tasks = [], isLoading: tasksLoading, refetch: refetchTasks } = useQuery({
-    queryKey: ["/api/crm/tasks-master-calendar"],
+    queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks-master-calendar"],
     queryFn: async () => {
-      const response = await fetch(`/api/crm/tasks-master-calendar?date=${dateString}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks-master-calendar?date=${dateString}`, {
         credentials: 'include'
       });
       
@@ -175,7 +175,7 @@ export default function MasterCalendar() {
   // Мутация обновления задачи
   const updateTaskMutation = useMutation({
     mutationFn: async (updatedTask: Partial<Task> & { id: number }) => {
-      const response = await fetch(`/api/crm/tasks/${updatedTask.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks/${updatedTask.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -190,7 +190,7 @@ export default function MasterCalendar() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/tasks-master-calendar"] });
+      queryClient.invalidateQueries({ queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks-master-calendar"] });
       toast({ title: "Запись успешно обновлена" });
       setEditDialogOpen(false);
       setEditingTask(null);
@@ -292,7 +292,7 @@ export default function MasterCalendar() {
   // Обновление времени каждые 10 секунд
   useEffect(() => {
     const interval = setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: ["/api/crm/tasks-master-calendar"] });
+      queryClient.invalidateQueries({ queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks-master-calendar"] });
     }, 10000);
 
     return () => clearInterval(interval);
