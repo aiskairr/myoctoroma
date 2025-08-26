@@ -1,7 +1,7 @@
-import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import { useAuth } from "@/contexts/SimpleAuthContext";
 
 export function useIsAdmin() {
-  const { user, isLoading } = useSimpleAuth();
+  const { user, isLoading } = useAuth();
   
   return {
     isAdmin: user?.role === "admin",
