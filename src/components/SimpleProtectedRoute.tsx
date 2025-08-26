@@ -1,4 +1,4 @@
-import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import { useAuth } from "@/contexts/SimpleAuthContext";
 import { Loader2 } from "lucide-react";
 
 interface SimpleProtectedRouteProps {
@@ -7,7 +7,7 @@ interface SimpleProtectedRouteProps {
 }
 
 export function SimpleProtectedRoute({ children, requiredRole }: SimpleProtectedRouteProps) {
-  const { isAuthenticated, user, isLoading } = useSimpleAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
 
   // Показываем загрузку во время проверки аутентификации
   if (isLoading) {
