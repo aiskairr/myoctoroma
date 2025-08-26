@@ -1,7 +1,7 @@
 import React from "react";
 import { Switch, Route, Redirect } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
-import { SimpleAuthProvider } from "./contexts/SimpleAuthContext";
+import { AuthProvider } from "./contexts/SimpleAuthContext";
 import { BranchProvider } from "./contexts/BranchContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useIsMaster } from "@/hooks/use-master-role";
@@ -65,7 +65,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <SimpleAuthProvider>
+    <AuthProvider>
       <BranchProvider>
         <div className="min-h-screen">
           <Switch>
@@ -183,7 +183,7 @@ function App() {
         </div>
         <Toaster />
       </BranchProvider>
-    </SimpleAuthProvider>
+    </AuthProvider>
   );
 }
 
