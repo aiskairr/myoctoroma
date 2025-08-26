@@ -1,5 +1,5 @@
 import React from 'react';
-import { useSimpleAuth } from "../contexts/SimpleAuthContext";
+import { useAuth } from "../contexts/SimpleAuthContext";
 import { 
   LogOut, 
   Bot
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 export function MobileNavbarMaster() {
-  const { logout } = useSimpleAuth();
+  const { logout } = useAuth();
   const { toast } = useToast();
 
   const handleLogout = async () => {

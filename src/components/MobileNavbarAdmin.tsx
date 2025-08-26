@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from "wouter";
-import { useSimpleAuth } from "../contexts/SimpleAuthContext";
+import { useAuth } from "../contexts/SimpleAuthContext";
 import { 
   Users, 
   Settings as SettingsIcon, 
@@ -24,7 +24,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export function MobileNavbarAdmin() {
   const [location] = useLocation();
-  const { logout } = useSimpleAuth();
+  const { logout } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
 

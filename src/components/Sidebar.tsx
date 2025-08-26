@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useSimpleAuth } from "../contexts/SimpleAuthContext";
+import { useAuth } from "../contexts/SimpleAuthContext";
 import { 
   LayoutDashboard, 
   Users, 
@@ -27,7 +27,7 @@ import { BranchSelectorDialog, BranchIndicator } from "./BranchSelector";
 // Master-only Sidebar Component
 function MasterSidebar() {
   const [location, setLocation] = useLocation();
-  const { logout } = useSimpleAuth();
+  const { logout } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -82,7 +82,7 @@ function MasterSidebar() {
 }
 
 export default function Sidebar() {
-  const { user } = useSimpleAuth();
+  const { user } = useAuth();
   
   // Show master sidebar for master users
   if (user?.role === 'master') {
@@ -101,7 +101,7 @@ export default function Sidebar() {
 // Admin-only Sidebar Component (без Отчетов, Задач, Дашборда, Мастеров)
 function AdminOnlySidebar() {
   const [location, setLocation] = useLocation();
-  const { logout } = useSimpleAuth();
+  const { logout } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -217,7 +217,7 @@ function AdminOnlySidebar() {
 // Admin/SuperAdmin Sidebar Component
 function AdminSidebar() {
   const [location, setLocation] = useLocation();
-  const { logout } = useSimpleAuth();
+  const { logout } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
