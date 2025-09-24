@@ -1,3 +1,9 @@
+@import url("https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&display=swap");
+
+body {
+  font-family: "Jost", sans-serif;
+}
+
 :root {
   --background: 0 0% 100%; /* Белый, hsl для background */
   --foreground: 222 47% 11%; /* Тёмный текст */
@@ -35,8 +41,13 @@
 }
 
 @media (max-width: 768px) {
-  .card { max-width: 100%; } /* На мобильных — полная ширина */
-  .sidebar { width: 100%; position: static; } /* Sidebar сверху */
+  .card {
+    max-width: 100%;
+  } /* На мобильных — полная ширина */
+  .sidebar {
+    width: 100%;
+    position: static;
+  } /* Sidebar сверху */
   a:nth-of-type(2) .logo {
     animation: logo-spin infinite 20s linear;
   }
@@ -53,7 +64,10 @@
   flex-direction: column;
   gap: 8px; /* Отступ между строками */
 }
-.card-header { font-weight: bold; margin-bottom: 12px; }
+.card-header {
+  font-weight: bold;
+  margin-bottom: 12px;
+}
 
 .read-the-docs {
   color: hsl(210 0% 53%);

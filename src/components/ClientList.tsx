@@ -20,30 +20,30 @@ interface ClientListProps {
   conversationTopics?: Record<string, string>;
 }
 
-export default function ClientList({ 
-  clients, 
-  selectedClientId, 
+export default function ClientList({
+  clients,
+  selectedClientId,
   onClientSelect,
   conversationTopics = {}
 }: ClientListProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState<'lastActive' | 'hasUnread'>('lastActive');
-  
+
   // Filter and sort clients based on search query and sort order
   const filteredAndSortedClients = useMemo(() => {
     // Filter based on search
     const filtered = searchQuery
       ? clients.filter(
-          (client) =>
-            client.telegramId.includes(searchQuery) ||
-            (client.username && client.username.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            (client.firstName && client.firstName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            (client.lastName && client.lastName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            (conversationTopics[client.telegramId] && 
-             conversationTopics[client.telegramId].toLowerCase().includes(searchQuery.toLowerCase()))
-        )
+        (client) =>
+          client.telegramId.includes(searchQuery) ||
+          (client.username && client.username.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (client.firstName && client.firstName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (client.lastName && client.lastName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (conversationTopics[client.telegramId] &&
+            conversationTopics[client.telegramId].toLowerCase().includes(searchQuery.toLowerCase()))
+      )
       : [...clients];
-    
+
     // Sort clients
     return filtered.sort((a, b) => {
       // Always prioritize clients with unread messages if sortOrder is 'hasUnread'
@@ -51,14 +51,14 @@ export default function ClientList({
         if (a.hasUnreadMessages && !b.hasUnreadMessages) return -1;
         if (!a.hasUnreadMessages && b.hasUnreadMessages) return 1;
       }
-      
+
       // Then sort by last active time
       const dateA = a.lastActiveAt ? new Date(a.lastActiveAt).getTime() : 0;
       const dateB = b.lastActiveAt ? new Date(b.lastActiveAt).getTime() : 0;
       return dateB - dateA; // Most recent first
     });
   }, [clients, searchQuery, sortOrder, conversationTopics]);
-  
+
   // Get client initials for avatar
   const getClientInitials = (client: Client): string => {
     if (client.firstName && client.firstName.length > 0) {
@@ -66,14 +66,14 @@ export default function ClientList({
       const lastInitial = client.lastName ? client.lastName.charAt(0).toUpperCase() : '';
       return firstInitial + lastInitial;
     }
-    
+
     if (client.username && client.username.length > 0) {
       return client.username.charAt(0).toUpperCase();
     }
-    
+
     return "U"; // Unknown/User default
   };
-  
+
   // Count clients with unread messages
   const unreadCount = clients.filter(client => client.hasUnreadMessages).length;
 
@@ -86,15 +86,15 @@ export default function ClientList({
             {clients.length}
           </Badge>
         </div>
-        
+
         {unreadCount > 0 && (
           <Badge variant="destructive" className="rounded-full">
-            {unreadCount} {unreadCount === 1 ? 'новое' : 
-                          (unreadCount > 1 && unreadCount < 5) ? 'новых' : 'новых'}
+            {unreadCount} {unreadCount === 1 ? 'новое' :
+              (unreadCount > 1 && unreadCount < 5) ? 'новых' : 'новых'}
           </Badge>
         )}
       </div>
-      
+
       <div className="p-4 border-b space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -105,18 +105,18 @@ export default function ClientList({
             className="pl-10"
           />
         </div>
-        
+
         <div className="flex space-x-2">
-          <Badge 
-            variant={sortOrder === 'lastActive' ? 'default' : 'outline'} 
+          <Badge
+            variant={sortOrder === 'lastActive' ? 'default' : 'outline'}
             className="cursor-pointer"
             onClick={() => setSortOrder('lastActive')}
           >
             <Clock className="mr-1 h-3 w-3" />
             По активности
           </Badge>
-          <Badge 
-            variant={sortOrder === 'hasUnread' ? 'default' : 'outline'} 
+          <Badge
+            variant={sortOrder === 'hasUnread' ? 'default' : 'outline'}
             className="cursor-pointer"
             onClick={() => setSortOrder('hasUnread')}
           >
@@ -125,7 +125,7 @@ export default function ClientList({
           </Badge>
         </div>
       </div>
-      
+
       <ScrollArea className="flex-grow">
         <div className="divide-y">
           {filteredAndSortedClients.length === 0 ? (
@@ -138,13 +138,12 @@ export default function ClientList({
             filteredAndSortedClients.map((client) => (
               <div
                 key={client.telegramId}
-                className={`p-4 hover:bg-muted/20 cursor-pointer transition-colors relative ${
-                  selectedClientId === client.telegramId 
-                    ? "bg-primary/10 hover:bg-primary/15 border-l-4 border-primary" 
-                    : client.hasUnreadMessages 
-                      ? "border-l-4 border-primary" 
-                      : ""
-                }`}
+                className={`p-4 hover:bg-muted/20 cursor-pointer transition-colors relative ${selectedClientId === client.telegramId
+                  ? "bg-primary/10 hover:bg-primary/15 border-l-4 border-primary"
+                  : client.hasUnreadMessages
+                    ? "border-l-4 border-primary"
+                    : ""
+                  }`}
                 onClick={() => onClientSelect(client.telegramId)}
               >
                 <div className="flex items-center space-x-3">
@@ -153,7 +152,7 @@ export default function ClientList({
                       {getClientInitials(client)}
                     </AvatarFallback>
                   </Avatar>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium truncate">
@@ -161,13 +160,12 @@ export default function ClientList({
                           client.customName
                         ) : (
                           client.firstName || client.username
-                            ? `${client.firstName || ""} ${client.lastName || ""} ${
-                                client.username ? `(@${client.username})` : ""
+                            ? `${client.firstName || ""} ${client.lastName || ""} ${client.username ? `(@${client.username})` : ""
                               }`.trim()
                             : `Пользователь #${client.telegramId}`
                         )}
                       </h3>
-                      
+
                       {client.hasUnreadMessages && (
                         <Badge className="bg-primary text-white text-xs flex items-center h-5 shrink-0">
                           <MessageCircle className="h-3 w-3 mr-0.5" />
@@ -175,25 +173,25 @@ export default function ClientList({
                         </Badge>
                       )}
                     </div>
-                    
+
                     <div className="flex items-center text-xs text-muted-foreground mt-1">
                       <Clock className="h-3 w-3 mr-1 inline" />
-                      {client.lastActiveAt 
-                        ? formatDistanceToNow(new Date(client.lastActiveAt), { 
-                            addSuffix: true,
-                            locale: ru
-                          })
+                      {client.lastActiveAt
+                        ? formatDistanceToNow(new Date(client.lastActiveAt), {
+                          addSuffix: true,
+                          locale: ru
+                        })
                         : "Неизвестно"}
-                      
-                      <StatusBadge 
-                        status={client.isActive ? "Active" : "Inactive"} 
+
+                      <StatusBadge
+                        status={client.isActive ? "Active" : "Inactive"}
                         className="ml-2 text-xs"
                       />
                     </div>
-                    
+
                     {conversationTopics[client.telegramId] && (
-                      <Badge 
-                        variant="outline" 
+                      <Badge
+                        variant="outline"
                         className="bg-primary/5 text-xs mt-2"
                       >
                         {conversationTopics[client.telegramId]}

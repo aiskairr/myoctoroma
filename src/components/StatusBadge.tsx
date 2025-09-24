@@ -12,7 +12,7 @@ export default function StatusBadge({ status, className, showIndicator = true }:
   // Перевод статусов
   const translateStatus = (status: string): string => {
     const statusLower = status.toLowerCase();
-    
+
     if (statusLower === "active") return "Активен";
     if (statusLower === "inactive") return "Неактивен";
     if (statusLower === "processed") return "Обработан";
@@ -23,70 +23,70 @@ export default function StatusBadge({ status, className, showIndicator = true }:
     if (statusLower === "error") return "Ошибка";
     if (statusLower === "processing") return "Обработка";
     if (statusLower === "pending") return "В ожидании";
-    
+
     return status; // Возвращаем оригинальный статус, если перевод не найден
   };
-  
+
   // Define icon for status
   const StatusIcon = () => {
     const statusLower = status.toLowerCase();
-    
-    if (statusLower === "active" || 
-        statusLower === "processed" || 
-        statusLower === "completed" || 
-        statusLower === "registered" ||
-        statusLower === "success") {
+
+    if (statusLower === "active" ||
+      statusLower === "processed" ||
+      statusLower === "completed" ||
+      statusLower === "registered" ||
+      statusLower === "success") {
       return <Check className="h-3 w-3" />;
     }
-    
+
     if (statusLower === "failed" || statusLower === "error") {
       return <XCircle className="h-3 w-3" />;
     }
-    
+
     if (statusLower === "inactive") {
       return <AlertCircle className="h-3 w-3" />;
     }
-    
+
     if (statusLower === "processing" || statusLower === "pending") {
       return <Clock className="h-3 w-3" />;
     }
-    
+
     return null;
   };
-  
+
   // Define color mapping for different statuses
   const getStatusColor = (status: string) => {
     const statusLower = status.toLowerCase();
-    
-    if (statusLower === "active" || 
-        statusLower === "processed" || 
-        statusLower === "completed" || 
-        statusLower === "registered" ||
-        statusLower === "success") {
+
+    if (statusLower === "active" ||
+      statusLower === "processed" ||
+      statusLower === "completed" ||
+      statusLower === "registered" ||
+      statusLower === "success") {
       return "bg-green-500 hover:bg-green-600 text-white";
     }
-    
+
     if (statusLower === "failed" || statusLower === "error") {
       return "bg-red-500 hover:bg-red-600 text-white";
     }
-    
+
     if (statusLower === "inactive") {
       return "bg-gray-500 hover:bg-gray-600 text-white";
     }
-    
+
     if (statusLower === "processing" || statusLower === "pending") {
       return "bg-blue-500 hover:bg-blue-600 text-white";
     }
-    
+
     return "bg-gray-200 hover:bg-gray-300 text-gray-800";
   };
-  
+
   // Small variant for mini-badge (used in tables or inline)
   if (className?.includes("text-xs")) {
     return (
       <span className={cn(
-        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium", 
-        getStatusColor(status), 
+        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium",
+        getStatusColor(status),
         className
       )}>
         {showIndicator && <StatusIcon />}
@@ -97,11 +97,11 @@ export default function StatusBadge({ status, className, showIndicator = true }:
 
   return (
     <Badge className={cn(
-      getStatusColor(status), 
-      "flex items-center gap-1",
+      getStatusColor(status),
+      "flex items-center w-fit gap-1",
       className
     )}>
-      {showIndicator && status.length > 0 && 
+      {showIndicator && status.length > 0 &&
         (className?.includes("icon") ? <StatusIcon /> : <span className="w-2 h-2 bg-white rounded-full mr-1" />)
       }
       {translateStatus(status)}

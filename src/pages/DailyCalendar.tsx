@@ -14,7 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useBranch } from "@/contexts/BranchContext";
 import { useIsMaster } from "@/hooks/use-master-role";
-import { format, parseISO, addMinutes, isSameDay, addDays, subDays, isToday } from "date-fns";
+import { format, addMinutes, isSameDay, addDays, subDays, isToday } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Loader2, Plus, UserPlus, Edit, X, User, Clock, MapPin, CalendarIcon, ChevronLeft, ChevronRight, CreditCard, Banknote, QrCode, Coins } from "lucide-react";
 import { PaymentMethodIcon } from "@/components/BankIcons";
@@ -62,6 +62,7 @@ interface Master {
     branch: string;
   }>;
   branchId: string;
+  photoUrl?: string;
 }
 
 interface Task {
@@ -151,13 +152,13 @@ interface ClientFormData {
 }
 
 // Компонент создания новой записи (адаптированный из CRMTasks)
-const CreateAppointmentDialog = ({ 
-  isOpen, 
-  onClose, 
-  selectedDate, 
-  selectedTime, 
+const CreateAppointmentDialog = ({
+  isOpen,
+  onClose,
+  selectedDate,
+  selectedTime,
   masterId,
-  onTaskCreated 
+  onTaskCreated
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -192,7 +193,7 @@ const CreateAppointmentDialog = ({
 
   // Автоопределение выбранного мастера
   const selectedMaster = masters.find(m => m.id === masterId) || allMasters.find(m => m.id === masterId);
-  
+
   // Инициализация формы с автоопределением
   const [formData, setFormData] = useState<ClientFormData>({
     clientName: "",
@@ -224,7 +225,7 @@ const CreateAppointmentDialog = ({
 
   // Доступные длительности для выбранного типа услуги
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
-  
+
   // Редактируемая длительность
   const [customDuration, setCustomDuration] = useState<number | null>(null);
   const [isCustomDuration, setIsCustomDuration] = useState(false);
@@ -234,23 +235,23 @@ const CreateAppointmentDialog = ({
     enabled: !!formData.massageType && isOpen,
     queryFn: async () => {
       if (!formData.massageType) return null;
-      
+
       const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ massageType: formData.massageType }),
       });
       if (!res.ok) return null;
-      
+
       return res.json();
     }
   });
 
   // Устанавливаем длительность по умолчанию
   useEffect(() => {
-    if (massageDurations && massageDurations.availableDurations && 
-        (!selectedDuration || 
-         !massageDurations.availableDurations.some((d: DurationOption) => d.duration === selectedDuration))) {
+    if (massageDurations && massageDurations.availableDurations &&
+      (!selectedDuration ||
+        !massageDurations.availableDurations.some((d: DurationOption) => d.duration === selectedDuration))) {
       setSelectedDuration(massageDurations.defaultDuration);
     }
   }, [massageDurations, selectedDuration]);
@@ -264,7 +265,7 @@ const CreateAppointmentDialog = ({
         const basePrice = selectedOption.price;
         const discountAmount = (basePrice * formData.discount) / 100;
         const finalPrice = Math.round(basePrice - discountAmount);
-        
+
         setFormData(prev => ({ ...prev, finalPrice: finalPrice }));
       }
     }
@@ -290,9 +291,9 @@ const CreateAppointmentDialog = ({
       if (!formData.clientName) {
         throw new Error("Имя клиента обязательно");
       }
-      
+
       const currentDuration = isCustomDuration ? customDuration : selectedDuration;
-      
+
       const payload = {
         clientName: formData.clientName,
         clientPhone: formData.phoneNumber,
@@ -307,19 +308,19 @@ const CreateAppointmentDialog = ({
         discount: formData.discount,
         branchId: formData.branchId // Добавляем branchId в payload
       };
-      
+
       const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
         credentials: 'include'
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || 'Ошибка создания записи');
       }
-      
+
       const createdTask = await res.json();
       return createdTask;
     },
@@ -359,7 +360,7 @@ const CreateAppointmentDialog = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Валидация обязательного поля мастер
     if (!formData.masterId || formData.masterId === 0) {
       toast({
@@ -369,7 +370,7 @@ const CreateAppointmentDialog = ({
       });
       return;
     }
-    
+
     createClientMutation.mutate();
   };
 
@@ -380,7 +381,7 @@ const CreateAppointmentDialog = ({
           {/* Левая колонка - Клиент */}
           <div className="flex-1 bg-white rounded-lg p-4">
             <div className="text-center text-blue-600 font-semibold text-lg mb-4">Клиент</div>
-            
+
             <div className="space-y-3">
               <div>
                 <Label htmlFor="clientName" className="block font-semibold text-gray-700 text-sm mb-1">Имя клиента</Label>
@@ -393,7 +394,7 @@ const CreateAppointmentDialog = ({
                   required
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="phoneNumber" className="block font-semibold text-gray-700 text-sm mb-1">Телефон</Label>
                 <Input
@@ -404,7 +405,7 @@ const CreateAppointmentDialog = ({
                   placeholder="Введите номер телефона"
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="notes" className="block font-semibold text-gray-700 text-sm mb-1">Примечания</Label>
                 <Textarea
@@ -421,7 +422,7 @@ const CreateAppointmentDialog = ({
           {/* Правая колонка - Запись */}
           <div className="flex-1 bg-white rounded-lg p-4">
             <div className="text-center text-blue-600 font-semibold text-lg mb-4">Запись</div>
-            
+
             <div className="space-y-3">
               <div className="flex gap-2">
                 <div className="flex-1">
@@ -435,7 +436,7 @@ const CreateAppointmentDialog = ({
                   />
                 </div>
               </div>
-              
+
               <div>
                 <Label htmlFor="duration" className="block font-semibold text-gray-700 text-sm mb-1">Длительность</Label>
                 <Select
@@ -455,7 +456,7 @@ const CreateAppointmentDialog = ({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label htmlFor="massageType" className="block font-semibold text-gray-700 text-sm mb-1">Тип услуги</Label>
                 <Select
@@ -474,7 +475,7 @@ const CreateAppointmentDialog = ({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label htmlFor="masterName" className="block font-semibold text-gray-700 text-sm mb-1">
                   Мастер <span className="text-red-500">*</span>
@@ -483,8 +484,8 @@ const CreateAppointmentDialog = ({
                   value={formData.masterName}
                   onValueChange={(value) => {
                     const master = [...masters, ...allMasters].find(m => m.name === value);
-                    setFormData(prev => ({ 
-                      ...prev, 
+                    setFormData(prev => ({
+                      ...prev,
                       masterName: value,
                       masterId: master?.id || 0
                     }));
@@ -503,7 +504,7 @@ const CreateAppointmentDialog = ({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label htmlFor="branchId" className="block font-semibold text-gray-700 text-sm mb-1">Филиал</Label>
                 <Select
@@ -518,7 +519,7 @@ const CreateAppointmentDialog = ({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label htmlFor="scheduleDate" className="block font-semibold text-gray-700 text-sm mb-1">Дата</Label>
                 <Input
@@ -529,7 +530,7 @@ const CreateAppointmentDialog = ({
                   onChange={(e) => setFormData(prev => ({ ...prev, scheduleDate: e.target.value }))}
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="discount" className="block font-semibold text-gray-700 text-sm mb-1">Скидка (%)</Label>
                 <Input
@@ -545,8 +546,8 @@ const CreateAppointmentDialog = ({
                   }}
                 />
               </div>
-              
-              
+
+
               {formData.finalPrice > 0 && (
                 <div className="text-right mt-3">
                   <Label className="block font-semibold text-gray-700 text-sm mb-1">Общая стоимость:</Label>
@@ -559,7 +560,7 @@ const CreateAppointmentDialog = ({
                   />
                 </div>
               )}
-              
+
               <div className="flex justify-between mt-4">
                 <Button type="button" variant="outline" onClick={onClose} className="bg-red-500 text-white hover:bg-red-600">
                   Отмена
@@ -580,11 +581,11 @@ const CreateAppointmentDialog = ({
 };
 
 // Компонент редактирования записи (адаптированный из CRMTasks)
-const EditAppointmentDialog = ({ 
+const EditAppointmentDialog = ({
   task,
-  isOpen, 
-  onClose, 
-  onTaskUpdated 
+  isOpen,
+  onClose,
+  onTaskUpdated
 }: {
   task: Task | null;
   isOpen: boolean;
@@ -607,7 +608,7 @@ const EditAppointmentDialog = ({
   });
 
   // Загружаем администраторов для выбора в модальном окне оплаты
-  const { data: administrators = [] } = useQuery<{id: number, name: string}[]>({
+  const { data: administrators = [] } = useQuery<{ id: number, name: string }[]>({
     queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/administrators', currentBranch?.waInstance],
     queryFn: async () => {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchId=${currentBranch?.waInstance}`);
@@ -659,20 +660,20 @@ const EditAppointmentDialog = ({
 
   // Доступные длительности для выбранного типа услуги
   const [selectedDuration, setSelectedDuration] = useState<number | null>(task?.duration || null);
-  
+
   // Состояние для дополнительных услуг
   const [childTasks, setChildTasks] = useState<Task[]>([]);
   const [loadingServices, setLoadingServices] = useState(false);
-  
+
   // ✅ Локальное состояние для редактирования длительностей (не сохраняется сразу)
   const [localMainDuration, setLocalMainDuration] = useState<number>(0);
-  const [localChildDurations, setLocalChildDurations] = useState<{[key: number]: number}>({});
-  
+  const [localChildDurations, setLocalChildDurations] = useState<{ [key: number]: number }>({});
+
   // Состояние для диалога оплаты
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("");
   const [selectedAdministrator, setSelectedAdministrator] = useState<string>("");
-  
+
   // Доступные способы оплаты на основе данных из таблицы accounting
   const paymentMethods: PaymentMethod[] = [
     {
@@ -760,7 +761,7 @@ const EditAppointmentDialog = ({
       description: "Оплата подарочным сертификатом"
     }
   ];
-  
+
   // ✅ Проверка есть ли несохраненные изменения длительности
   const hasUnsavedDurationChanges = (): boolean => {
     const mainDurationChanged = localMainDuration !== (task?.massageDuration || task?.duration || 0);
@@ -783,14 +784,14 @@ const EditAppointmentDialog = ({
     enabled: !!formData.massageType && isOpen,
     queryFn: async () => {
       if (!formData.massageType) return null;
-      
+
       const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ massageType: formData.massageType }),
       });
       if (!res.ok) return null;
-      
+
       return res.json();
     }
   });
@@ -810,7 +811,7 @@ const EditAppointmentDialog = ({
     if (childTasksData) {
       setChildTasks(childTasksData);
       // ✅ Инициализируем локальные длительности дочерних задач
-      const initialChildDurations: {[key: number]: number} = {};
+      const initialChildDurations: { [key: number]: number } = {};
       childTasksData.forEach(child => {
         initialChildDurations[child.id] = child.massageDuration || child.duration || 0;
       });
@@ -837,21 +838,21 @@ const EditAppointmentDialog = ({
   // ✅ Упрощенная функция расчета цены основной услуги с учетом произвольной длительности
   const calculateMainServicePrice = (): number => {
     if (!massageDurations || !task?.massageDuration) return task?.massagePrice || task?.finalPrice || 0;
-    
+
     const duration = task.massageDuration;
-    
+
     // ✅ Если длительность произвольная (не стандартная), возвращаем сохраненную цену без изменений
     if (!isStandardDuration(duration)) {
       return task?.massagePrice || task?.finalPrice || 0;
     }
-    
+
     const durationOption = massageDurations.availableDurations.find((d: DurationOption) => d.duration === duration);
-    
+
     // Если есть точное соответствие стандартной длительности, используем его цену
     if (durationOption) {
       return durationOption.price;
     }
-    
+
     // Иначе используем сохраненную цену
     return task?.massagePrice || task?.finalPrice || 0;
   };
@@ -887,7 +888,7 @@ const EditAppointmentDialog = ({
   // ✅ Функции для редактирования длительности отдельных услуг
   const updateMainServiceDuration = async (newDuration: number) => {
     if (!task?.id) return;
-    
+
     try {
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
         method: 'POST',
@@ -898,19 +899,19 @@ const EditAppointmentDialog = ({
         }),
         credentials: 'include'
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Server error: ${response.status}`);
       }
-      
+
       // Пересчитываем время дочерних услуг
       if (childTasks.length > 0) {
         let currentStartTime = calculateEndTime(task.scheduleTime || '', newDuration);
-        
+
         for (const childTask of childTasks) {
           const childEndTime = calculateEndTime(currentStartTime, childTask.massageDuration || 0);
-          
+
           await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTask.id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -920,14 +921,14 @@ const EditAppointmentDialog = ({
             }),
             credentials: 'include'
           });
-          
+
           currentStartTime = childEndTime;
         }
       }
-      
+
       queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task.id] });
       onTaskUpdated();
-      
+
       toast({
         title: "Длительность обновлена",
         description: "Длительность основной услуги изменена",
@@ -947,19 +948,19 @@ const EditAppointmentDialog = ({
     try {
       const childIndex = childTasks.findIndex(child => child.id === childTaskId);
       if (childIndex === -1) return;
-      
+
       // Рассчитываем новое время начала для данной дочерней услуги
       let currentStartTime = task?.scheduleTime || '';
       const mainDuration = task?.massageDuration || task?.duration || 0;
       currentStartTime = calculateEndTime(currentStartTime, mainDuration);
-      
+
       // Добавляем длительности предыдущих дочерних услуг
       for (let i = 0; i < childIndex; i++) {
         currentStartTime = calculateEndTime(currentStartTime, childTasks[i].massageDuration || 0);
       }
-      
+
       const childEndTime = calculateEndTime(currentStartTime, newDuration);
-      
+
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTaskId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -970,18 +971,18 @@ const EditAppointmentDialog = ({
         }),
         credentials: 'include'
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Server error: ${response.status}`);
       }
-      
+
       // Пересчитываем время всех последующих дочерних услуг
       let nextStartTime = childEndTime;
       for (let i = childIndex + 1; i < childTasks.length; i++) {
         const nextChildTask = childTasks[i];
         const nextEndTime = calculateEndTime(nextStartTime, nextChildTask.massageDuration || 0);
-        
+
         await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${nextChildTask.id}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -991,13 +992,13 @@ const EditAppointmentDialog = ({
           }),
           credentials: 'include'
         });
-        
+
         nextStartTime = nextEndTime;
       }
-      
+
       queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task?.id] });
       onTaskUpdated();
-      
+
       toast({
         title: "Длительность обновлена",
         description: "Длительность дополнительной услуги изменена",
@@ -1019,7 +1020,7 @@ const EditAppointmentDialog = ({
       const totalPriceAllServices = calculateTotalPrice();
       const discountAmount = (totalPriceAllServices * formData.discount) / 100;
       const finalPriceAllServices = Math.round(totalPriceAllServices - discountAmount);
-      
+
       setFormData(prev => ({ ...prev, finalPrice: finalPriceAllServices }));
     }
   }, [massageDurations, task?.massageDuration, formData.discount, childTasks]);
@@ -1031,7 +1032,7 @@ const EditAppointmentDialog = ({
       const mainDuration = task?.massageDuration || task?.duration || massageDurations?.defaultDuration || 0;
       const childStartTime = calculateEndTime(task?.scheduleTime || '', mainDuration);
       const childEndTime = calculateEndTime(childStartTime, serviceData.duration);
-      
+
       const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1054,11 +1055,11 @@ const EditAppointmentDialog = ({
           mother: task?.id // Устанавливаем связь с материнской задачей
         })
       });
-      
+
       if (!res.ok) {
         throw new Error('Failed to create additional service');
       }
-      
+
       return res.json();
     },
     onSuccess: async () => {
@@ -1067,16 +1068,16 @@ const EditAppointmentDialog = ({
         description: "Услуга успешно добавлена к задаче",
         variant: "default",
       });
-      
+
       // Обновляем список дочерних задач
       await queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task?.id] });
-      
+
       // Обновляем final_price основной задачи после добавления дочерней услуги
       if (task?.id) {
         const totalPriceAllServices = calculateTotalPrice();
         const discountAmount = (totalPriceAllServices * formData.discount) / 100;
         const finalPriceAllServices = Math.round(totalPriceAllServices - discountAmount);
-        
+
         try {
           await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
             method: 'POST',
@@ -1089,7 +1090,7 @@ const EditAppointmentDialog = ({
           console.error('Error updating main task final price:', error);
         }
       }
-      
+
       onTaskUpdated();
     },
     onError: (error) => {
@@ -1107,11 +1108,11 @@ const EditAppointmentDialog = ({
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTaskId}`, {
         method: 'DELETE',
       });
-      
+
       if (!res.ok) {
         throw new Error('Failed to delete additional service');
       }
-      
+
       return res.json();
     },
     onSuccess: async () => {
@@ -1120,16 +1121,16 @@ const EditAppointmentDialog = ({
         description: "Услуга успешно удалена",
         variant: "default",
       });
-      
+
       // Обновляем список дочерних задач
       await queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task?.id] });
-      
+
       // Обновляем final_price основной задачи после удаления дочерней услуги
       if (task?.id) {
         const totalPriceAllServices = calculateTotalPrice();
         const discountAmount = (totalPriceAllServices * formData.discount) / 100;
         const finalPriceAllServices = Math.round(totalPriceAllServices - discountAmount);
-        
+
         try {
           await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
             method: 'POST',
@@ -1142,7 +1143,7 @@ const EditAppointmentDialog = ({
           console.error('Error updating main task final price after deletion:', error);
         }
       }
-      
+
       onTaskUpdated();
     },
     onError: (error) => {
@@ -1171,9 +1172,9 @@ const EditAppointmentDialog = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           master: task.masterName || 'Неизвестный мастер',
-          client: task.clientName || task.client?.customName || task.client?.firstName || 'Неизвестный клиент',
+          client: task.client?.customName || task.client?.firstName || 'Неизвестный клиент',
           massageType: task.massageType || 'Услуга',
-          phoneNumber: task.phoneNumber || task.client?.phoneNumber || '',
+          phoneNumber: task.client?.phoneNumber || '',
           amount: calculateTotalPrice() - Math.round(calculateTotalPrice() * formData.discount / 100),
           discount: formData.discount || 0,
           duration: task.duration || 60,
@@ -1186,7 +1187,7 @@ const EditAppointmentDialog = ({
           date: task.scheduleDate || new Date().toISOString().split('T')[0]
         }),
       });
-      
+
       if (!res.ok) {
         throw new Error('Failed to create payment record');
       }
@@ -1204,7 +1205,7 @@ const EditAppointmentDialog = ({
 
       // Обновляем способ оплаты, администратора и статус оплаты для всех дочерних записей
       if (childTasks.length > 0) {
-        await Promise.all(childTasks.map(childTask => 
+        await Promise.all(childTasks.map(childTask =>
           fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTask.id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1216,7 +1217,7 @@ const EditAppointmentDialog = ({
           })
         ));
       }
-      
+
       return res.json();
     },
     onSuccess: () => {
@@ -1225,7 +1226,7 @@ const EditAppointmentDialog = ({
         description: `Платеж через ${selectedPaymentMethod} успешно записан`,
         variant: "default",
       });
-      
+
       setShowPaymentDialog(false);
       setSelectedPaymentMethod("");
       setSelectedAdministrator("");
@@ -1251,7 +1252,7 @@ const EditAppointmentDialog = ({
       });
       return;
     }
-    
+
     if (!selectedAdministrator) {
       toast({
         title: "Выберите администратора",
@@ -1260,7 +1261,7 @@ const EditAppointmentDialog = ({
       });
       return;
     }
-    
+
     createPaymentMutation.mutate();
   };
 
@@ -1270,7 +1271,7 @@ const EditAppointmentDialog = ({
     if (service) {
       const duration = service.defaultDuration;
       const price = service.duration60Price || 0; // Используем цену за 60 минут по умолчанию
-      
+
       createAdditionalServiceMutation.mutate({
         serviceId: service.id,
         serviceName: service.name,
@@ -1293,7 +1294,7 @@ const EditAppointmentDialog = ({
       if (!task || !formData.clientName) {
         throw new Error("Данные задачи или имя клиента отсутствуют");
       }
-      
+
       const payload = {
         clientName: formData.clientName,
         phoneNumber: formData.phoneNumber,
@@ -1309,10 +1310,10 @@ const EditAppointmentDialog = ({
         branchId: formData.branchId,
         status: formData.status
       };
-      
+
       // ✅ ВРЕМЕННО УБРАЛ синхронизацию статусов - она вызывала разъединение записей
       // Статус будет обновляться только для текущей записи без синхронизации с дочерними
-      
+
       // Обновляем основную задачу
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
         method: 'POST',  // ✅ Используем POST для совместимости с сервером
@@ -1320,7 +1321,7 @@ const EditAppointmentDialog = ({
         body: JSON.stringify(payload),
         credentials: 'include'
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || 'Ошибка обновления записи');
@@ -1330,12 +1331,12 @@ const EditAppointmentDialog = ({
       if (localMainDuration !== (task?.massageDuration || task?.duration || 0)) {
         await updateMainServiceDuration(localMainDuration);
       }
-      
+
       // Сохраняем изменения дочерних задач
       for (const childTask of childTasks) {
         const currentDuration = childTask.massageDuration || childTask.duration || 0;
         const newDuration = localChildDurations[childTask.id] || 0;
-        
+
         if (currentDuration !== newDuration) {
           await updateChildServiceDuration(childTask.id, newDuration);
         }
@@ -1345,14 +1346,14 @@ const EditAppointmentDialog = ({
       if (childTasks.length > 0) {
         const mainDuration = selectedDuration || task?.massageDuration || 0;
         let currentStartTime = formData.scheduleTime;
-        
+
         // Сдвигаем время основной записи
         currentStartTime = calculateEndTime(currentStartTime, mainDuration);
-        
+
         // Обновляем каждую дочернюю запись
         for (const childTask of childTasks) {
           const childEndTime = calculateEndTime(currentStartTime, childTask.massageDuration || 0);
-          
+
           const childPayload = {
             scheduleDate: formData.scheduleDate,
             scheduleTime: currentStartTime,
@@ -1362,19 +1363,19 @@ const EditAppointmentDialog = ({
             status: formData.status, // ✅ Автоматическая синхронизация статуса с материнской записью
             branchId: formData.branchId
           };
-          
+
           await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTask.id}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(childPayload),
             credentials: 'include'
           });
-          
+
           // Следующая дочерняя услуга начинается после окончания текущей
           currentStartTime = childEndTime;
         }
       }
-      
+
       return res.json();
     },
     onSuccess: () => {
@@ -1403,523 +1404,520 @@ const EditAppointmentDialog = ({
 
   return (
     <>
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0">
-        {/* Статус оплаты в верхней части */}
-        <div className={`px-4 py-3 border-b ${task?.paid === 'paid' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-          <div className="flex items-center justify-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${task?.paid === 'paid' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            <span className={`font-semibold text-sm ${task?.paid === 'paid' ? 'text-green-700' : 'text-red-700'}`}>
-              {task?.paid === 'paid' ? 'ОПЛАЧЕНО' : 'НЕ ОПЛАЧЕНО'}
-            </span>
-          </div>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="flex gap-5 p-4">
-          {/* Левая колонка - Клиент */}
-          <div className="flex-1 bg-white rounded-lg p-4">
-            <div className="text-center text-blue-600 font-semibold text-lg mb-4">Клиент</div>
-            
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="clientName" className="block font-semibold text-gray-700 text-sm mb-1">Имя клиента</Label>
-                <Input
-                  id="clientName"
-                  className="w-full text-sm"
-                  value={formData.clientName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
-                  placeholder="Введите имя клиента"
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="phoneNumber" className="block font-semibold text-gray-700 text-sm mb-1">Телефон</Label>
-                <Input
-                  id="phoneNumber"
-                  className="w-full text-sm"
-                  value={formData.phoneNumber}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                  placeholder="Введите номер телефона"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="notes" className="block font-semibold text-gray-700 text-sm mb-1">Примечания</Label>
-                <Textarea
-                  id="notes"
-                  className="w-full text-sm min-h-[80px]"
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Дополнительные заметки"
-                />
-              </div>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0">
+          {/* Статус оплаты в верхней части */}
+          <div className={`px-4 py-3 border-b ${task?.paid === 'paid' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+            <div className="flex items-center justify-center gap-2">
+              <div className={`w-3 h-3 rounded-full ${task?.paid === 'paid' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className={`font-semibold text-sm ${task?.paid === 'paid' ? 'text-green-700' : 'text-red-700'}`}>
+                {task?.paid === 'paid' ? 'ОПЛАЧЕНО' : 'НЕ ОПЛАЧЕНО'}
+              </span>
             </div>
           </div>
 
-          {/* Правая колонка - Запись */}
-          <div className="flex-1 bg-white rounded-lg p-4">
-            <div className="text-center text-blue-600 font-semibold text-lg mb-4">Запись</div>
-            
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Label htmlFor="scheduleTime" className="block font-semibold text-gray-700 text-sm mb-1">Время</Label>
-                  <Input
-                    id="scheduleTime"
-                    type="time"
-                    className="w-full text-sm"
-                    value={formData.scheduleTime}
-                    onChange={(e) => setFormData(prev => ({ ...prev, scheduleTime: e.target.value }))}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="duration" className="block font-semibold text-gray-700 text-sm mb-1">Длительность</Label>
-                <Select
-                  value={selectedDuration?.toString() || ""}
-                  onValueChange={(value) => setSelectedDuration(Number(value))}
-                  disabled={!formData.massageType}
-                >
-                  <SelectTrigger className="w-full text-sm">
-                    <SelectValue placeholder="В минутах" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {massageDurations?.availableDurations?.map((duration: DurationOption) => (
-                      <SelectItem key={duration.duration} value={duration.duration.toString()}>
-                        {duration.duration} мин - {duration.price} сом
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="massageType" className="block font-semibold text-gray-700 text-sm mb-1">Тип услуги</Label>
-                <Select
-                  value={formData.massageType}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, massageType: value }))}
-                >
-                  <SelectTrigger className="w-full text-sm">
-                    <SelectValue placeholder="Выберите тип услуги" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {massageServices?.map((service) => (
-                      <SelectItem key={service.id} value={service.name}>
-                        {service.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="masterName" className="block font-semibold text-gray-700 text-sm mb-1">Мастер</Label>
-                <Select
-                  value={formData.masterName}
-                  onValueChange={(value) => {
-                    const master = allMasters.find(m => m.name === value);
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      masterName: value,
-                      masterId: master?.id || 0
-                    }));
-                  }}
-                >
-                  <SelectTrigger className="w-full text-sm">
-                    <SelectValue placeholder="Выберите мастера" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allMasters?.map((master) => (
-                      <SelectItem key={master.id} value={master.name}>
-                        {master.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="status" className="block font-semibold text-gray-700 text-sm mb-1">Статус</Label>
-                <Select
-                  value={formData.status || 'scheduled'}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
-                >
-                  <SelectTrigger className="w-full text-sm">
-                    <SelectValue placeholder="Выберите статус" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="new">Неразобранные</SelectItem>
-                    <SelectItem value="scheduled">Записан</SelectItem>
-                    <SelectItem value="in_progress">В процессе</SelectItem>
-                    <SelectItem value="completed">Обслуженные</SelectItem>
-                    <SelectItem value="cancelled">Отмененные</SelectItem>
-                    <SelectItem value="regular">Постоянные</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="branchId" className="block font-semibold text-gray-700 text-sm mb-1">Филиал</Label>
-                <Select
-                  value={formData.branchId}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, branchId: value }))}
-                >
-                  <SelectTrigger className="w-full text-sm">
-                    <SelectValue placeholder="Выберите филиал" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="wa1">Токтогула 93</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="scheduleDate" className="block font-semibold text-gray-700 text-sm mb-1">Дата</Label>
-                <Input
-                  id="scheduleDate"
-                  type="date"
-                  className="w-3/5 text-sm"
-                  value={formData.scheduleDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, scheduleDate: e.target.value }))}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="discount" className="block font-semibold text-gray-700 text-sm mb-1">Скидка (%)</Label>
-                <Input
-                  id="discount"
-                  type="number"
-                  min="0"
-                  max="100"
-                  className="w-1/3 text-sm"
-                  value={formData.discount}
-                  onChange={(e) => {
-                    const discount = parseFloat(e.target.value) || 0;
-                    setFormData(prev => ({ ...prev, discount }));
-                  }}
-                />
-              </div>
-              
-              {formData.finalPrice > 0 && (
-                <div className="text-right mt-3">
-                  <Label className="block font-semibold text-gray-700 text-sm mb-1">Стоимость:</Label>
-                  <Input
-                    type="number"
-                    className="w-32 text-sm inline-block"
-                    value={formData.finalPrice}
-                    readOnly
-                    placeholder="Сумма"
-                  />
-                </div>
-              )}
+          <form onSubmit={handleSubmit} className="flex gap-5 p-4">
+            {/* Левая колонка - Клиент */}
+            <div className="flex-1 bg-white rounded-lg p-4">
+              <div className="text-center text-blue-600 font-semibold text-lg mb-4">Клиент</div>
 
-              {/* Дополнительные услуги */}
-              <div className="border-t pt-4 mt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <Label className="font-semibold text-gray-700 text-sm">Дополнительные услуги</Label>
-                  {/* ✅ Убрано редактирование общей длительности */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">
-                      Общее время: {calculateTotalDuration()} мин
-                    </span>
-                    {hasUnsavedDurationChanges() && (
-                      <span className="text-xs text-amber-600 bg-amber-100 px-2 py-1 rounded">
-                        Не сохранено
-                      </span>
-                    )}
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="clientName" className="block font-semibold text-gray-700 text-sm mb-1">Имя клиента</Label>
+                  <Input
+                    id="clientName"
+                    className="w-full text-sm"
+                    value={formData.clientName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
+                    placeholder="Введите имя клиента"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="phoneNumber" className="block font-semibold text-gray-700 text-sm mb-1">Телефон</Label>
+                  <Input
+                    id="phoneNumber"
+                    className="w-full text-sm"
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                    placeholder="Введите номер телефона"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="notes" className="block font-semibold text-gray-700 text-sm mb-1">Примечания</Label>
+                  <Textarea
+                    id="notes"
+                    className="w-full text-sm min-h-[80px]"
+                    value={formData.notes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Дополнительные заметки"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Правая колонка - Запись */}
+            <div className="flex-1 bg-white rounded-lg p-4">
+              <div className="text-center text-blue-600 font-semibold text-lg mb-4">Запись</div>
+
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Label htmlFor="scheduleTime" className="block font-semibold text-gray-700 text-sm mb-1">Время</Label>
+                    <Input
+                      id="scheduleTime"
+                      type="time"
+                      className="w-full text-sm"
+                      value={formData.scheduleTime}
+                      onChange={(e) => setFormData(prev => ({ ...prev, scheduleTime: e.target.value }))}
+                    />
                   </div>
                 </div>
-                
-                {/* Отображение связанных дополнительных услуг */}
-                <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg p-4 border border-amber-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-amber-600 text-lg">🔗</span>
-                    <h4 className="font-semibold text-amber-800">Связанные услуги</h4>
+
+                <div>
+                  <Label htmlFor="duration" className="block font-semibold text-gray-700 text-sm mb-1">Длительность</Label>
+                  <Select
+                    value={selectedDuration?.toString() || ""}
+                    onValueChange={(value) => setSelectedDuration(Number(value))}
+                    disabled={!formData.massageType}
+                  >
+                    <SelectTrigger className="w-full text-sm">
+                      <SelectValue placeholder="В минутах" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {massageDurations?.availableDurations?.map((duration: DurationOption) => (
+                        <SelectItem key={duration.duration} value={duration.duration.toString()}>
+                          {duration.duration} мин - {duration.price} сом
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="massageType" className="block font-semibold text-gray-700 text-sm mb-1">Тип услуги</Label>
+                  <Select
+                    value={formData.massageType}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, massageType: value }))}
+                  >
+                    <SelectTrigger className="w-full text-sm">
+                      <SelectValue placeholder="Выберите тип услуги" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {massageServices?.map((service) => (
+                        <SelectItem key={service.id} value={service.name}>
+                          {service.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="masterName" className="block font-semibold text-gray-700 text-sm mb-1">Мастер</Label>
+                  <Select
+                    value={formData.masterName}
+                    onValueChange={(value) => {
+                      const master = allMasters.find(m => m.name === value);
+                      setFormData(prev => ({
+                        ...prev,
+                        masterName: value,
+                        masterId: master?.id || 0
+                      }));
+                    }}
+                  >
+                    <SelectTrigger className="w-full text-sm">
+                      <SelectValue placeholder="Выберите мастера" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allMasters?.map((master) => (
+                        <SelectItem key={master.id} value={master.name}>
+                          {master.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="status" className="block font-semibold text-gray-700 text-sm mb-1">Статус</Label>
+                  <Select
+                    value={formData.status || 'scheduled'}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
+                  >
+                    <SelectTrigger className="w-full text-sm">
+                      <SelectValue placeholder="Выберите статус" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">Неразобранные</SelectItem>
+                      <SelectItem value="scheduled">Записан</SelectItem>
+                      <SelectItem value="in_progress">В процессе</SelectItem>
+                      <SelectItem value="completed">Обслуженные</SelectItem>
+                      <SelectItem value="cancelled">Отмененные</SelectItem>
+                      <SelectItem value="regular">Постоянные</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="branchId" className="block font-semibold text-gray-700 text-sm mb-1">Филиал</Label>
+                  <Select
+                    value={formData.branchId}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, branchId: value }))}
+                  >
+                    <SelectTrigger className="w-full text-sm">
+                      <SelectValue placeholder="Выберите филиал" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="wa1">Токтогула 93</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="scheduleDate" className="block font-semibold text-gray-700 text-sm mb-1">Дата</Label>
+                  <Input
+                    id="scheduleDate"
+                    type="date"
+                    className="w-3/5 text-sm"
+                    value={formData.scheduleDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, scheduleDate: e.target.value }))}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="discount" className="block font-semibold text-gray-700 text-sm mb-1">Скидка (%)</Label>
+                  <Input
+                    id="discount"
+                    type="number"
+                    min="0"
+                    max="100"
+                    className="w-1/3 text-sm"
+                    value={formData.discount}
+                    onChange={(e) => {
+                      const discount = parseFloat(e.target.value) || 0;
+                      setFormData(prev => ({ ...prev, discount }));
+                    }}
+                  />
+                </div>
+
+                {formData.finalPrice > 0 && (
+                  <div className="text-right mt-3">
+                    <Label className="block font-semibold text-gray-700 text-sm mb-1">Стоимость:</Label>
+                    <Input
+                      type="number"
+                      className="w-32 text-sm inline-block"
+                      value={formData.finalPrice}
+                      readOnly
+                      placeholder="Сумма"
+                    />
                   </div>
-                  
-                  {childTasks.length > 0 ? (
-                    <div className="space-y-3">
-                      {/* Основная услуга */}
-                      <div className="bg-white rounded-md p-3 border-l-4 border-amber-400">
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
-                            <span className="text-amber-600 font-medium">🏆 Основная:</span>
-                            <span className="text-gray-700">{task?.massageType}</span>
-                            <div className="flex items-center gap-1">
-                              <Input
-                                type="number"
-                                value={localMainDuration}
-                                onChange={(e) => {
-                                  const newDuration = parseInt(e.target.value) || 0;
-                                  setLocalMainDuration(newDuration);
-                                }}
-                                className={`w-16 h-6 text-xs text-center ${
-                                  localMainDuration !== (task?.massageDuration || task?.duration || 0)
-                                    ? 'border-amber-400 bg-amber-50' 
-                                    : ''
-                                }`}
-                                min="1"
-                              />
-                              <span className="text-gray-500 text-xs">мин</span>
-                            </div>
-                          </div>
-                          <span className="font-medium text-gray-800">{calculateMainServicePrice()} сом</span>
-                        </div>
-                      </div>
-                      
-                      {/* Дополнительные услуги */}
-                      {childTasks.map((childTask, index) => (
-                        <div key={childTask.id} className="bg-white rounded-md p-3 border-l-4 border-amber-300">
+                )}
+
+                {/* Дополнительные услуги */}
+                <div className="border-t pt-4 mt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <Label className="font-semibold text-gray-700 text-sm">Дополнительные услуги</Label>
+                    {/* ✅ Убрано редактирование общей длительности */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">
+                        Общее время: {calculateTotalDuration()} мин
+                      </span>
+                      {hasUnsavedDurationChanges() && (
+                        <span className="text-xs text-amber-600 bg-amber-100 px-2 py-1 rounded">
+                          Не сохранено
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Отображение связанных дополнительных услуг */}
+                  <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg p-4 border border-amber-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-amber-600 text-lg">🔗</span>
+                      <h4 className="font-semibold text-amber-800">Связанные услуги</h4>
+                    </div>
+
+                    {childTasks.length > 0 ? (
+                      <div className="space-y-3">
+                        {/* Основная услуга */}
+                        <div className="bg-white rounded-md p-3 border-l-4 border-amber-400">
                           <div className="flex items-center justify-between text-sm">
                             <div className="flex items-center gap-2">
-                              <span className="text-amber-500 font-medium">📎 Доп. услуга {index + 1}:</span>
-                              <span className="text-gray-700">{childTask.massageType}</span>
+                              <span className="text-amber-600 font-medium">🏆 Основная:</span>
+                              <span className="text-gray-700">{task?.massageType}</span>
                               <div className="flex items-center gap-1">
                                 <Input
                                   type="number"
-                                  value={localChildDurations[childTask.id] || 0}
+                                  value={localMainDuration}
                                   onChange={(e) => {
                                     const newDuration = parseInt(e.target.value) || 0;
-                                    setLocalChildDurations(prev => ({
-                                      ...prev,
-                                      [childTask.id]: newDuration
-                                    }));
+                                    setLocalMainDuration(newDuration);
                                   }}
-                                  className={`w-16 h-6 text-xs text-center ${
-                                    (localChildDurations[childTask.id] || 0) !== (childTask.massageDuration || childTask.duration || 0)
-                                      ? 'border-amber-400 bg-amber-50'
-                                      : ''
-                                  }`}
-                                  min="0"
+                                  className={`w-16 h-6 text-xs text-center ${localMainDuration !== (task?.massageDuration || task?.duration || 0)
+                                    ? 'border-amber-400 bg-amber-50'
+                                    : ''
+                                    }`}
+                                  min="1"
                                 />
                                 <span className="text-gray-500 text-xs">мин</span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-800">{childTask.massagePrice} сом</span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveAdditionalService(childTask.id)}
-                                disabled={deleteAdditionalServiceMutation.isPending}
-                                className="h-6 w-6 p-0 hover:bg-red-100"
-                              >
-                                {deleteAdditionalServiceMutation.isPending ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                  <X className="h-3 w-3 text-red-500" />
-                                )}
-                              </Button>
+                            <span className="font-medium text-gray-800">{calculateMainServicePrice()} сом</span>
+                          </div>
+                        </div>
+
+                        {/* Дополнительные услуги */}
+                        {childTasks.map((childTask, index) => (
+                          <div key={childTask.id} className="bg-white rounded-md p-3 border-l-4 border-amber-300">
+                            <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-2">
+                                <span className="text-amber-500 font-medium">📎 Доп. услуга {index + 1}:</span>
+                                <span className="text-gray-700">{childTask.massageType}</span>
+                                <div className="flex items-center gap-1">
+                                  <Input
+                                    type="number"
+                                    value={localChildDurations[childTask.id] || 0}
+                                    onChange={(e) => {
+                                      const newDuration = parseInt(e.target.value) || 0;
+                                      setLocalChildDurations(prev => ({
+                                        ...prev,
+                                        [childTask.id]: newDuration
+                                      }));
+                                    }}
+                                    className={`w-16 h-6 text-xs text-center ${(localChildDurations[childTask.id] || 0) !== (childTask.massageDuration || childTask.duration || 0)
+                                      ? 'border-amber-400 bg-amber-50'
+                                      : ''
+                                      }`}
+                                    min="0"
+                                  />
+                                  <span className="text-gray-500 text-xs">мин</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-gray-800">{childTask.massagePrice} сом</span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleRemoveAdditionalService(childTask.id)}
+                                  disabled={deleteAdditionalServiceMutation.isPending}
+                                  className="h-6 w-6 p-0 hover:bg-red-100"
+                                >
+                                  {deleteAdditionalServiceMutation.isPending ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <X className="h-3 w-3 text-red-500" />
+                                  )}
+                                </Button>
+                              </div>
                             </div>
                           </div>
+                        ))}
+
+                        {/* Итоговая сумма */}
+                        <div className="bg-amber-100 rounded-md p-3 border border-amber-300">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-amber-800">Итого:</span>
+                              <span className="text-amber-700">{calculateTotalDuration()} мин</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-amber-700">Сумма всех услуг:</span>
+                              <span className="font-bold text-amber-900 text-lg">{calculateTotalPrice()} сом</span>
+                            </div>
+                          </div>
+                          {formData.discount > 0 && (
+                            <div className="mt-2 text-sm text-amber-700">
+                              Скидка {formData.discount}%: -{Math.round(calculateTotalPrice() * formData.discount / 100)} сом
+                            </div>
+                          )}
                         </div>
-                      ))}
-                      
-                      {/* Итоговая сумма */}
-                      <div className="bg-amber-100 rounded-md p-3 border border-amber-300">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-amber-800">Итого:</span>
-                            <span className="text-amber-700">{calculateTotalDuration()} мин</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-amber-700">Сумма всех услуг:</span>
-                            <span className="font-bold text-amber-900 text-lg">{calculateTotalPrice()} сом</span>
-                          </div>
-                        </div>
-                        {formData.discount > 0 && (
-                          <div className="mt-2 text-sm text-amber-700">
-                            Скидка {formData.discount}%: -{Math.round(calculateTotalPrice() * formData.discount / 100)} сом
-                          </div>
-                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <span className="text-amber-600 text-sm">Дополнительных услуг пока нет</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 items-end mt-3">
+                    <div className="flex-1">
+                      <Select
+                        value=""
+                        onValueChange={(serviceName) => {
+                          if (serviceName) {
+                            handleAddAdditionalService(serviceName);
+                          }
+                        }}
+                        disabled={createAdditionalServiceMutation.isPending}
+                      >
+                        <SelectTrigger className="w-full text-sm">
+                          <SelectValue placeholder={createAdditionalServiceMutation.isPending ? "Добавление..." : "Добавить дополнительную услугу"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {massageServices?.map((service) => (
+                            <SelectItem key={service.id} value={service.name}>
+                              {service.name} (по умолчанию: {service.defaultDuration} мин)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between mt-4">
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" onClick={onClose} className="bg-red-500 text-white hover:bg-red-600">
+                      Отмена
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowPaymentDialog(true)}
+                      className="bg-amber-500 text-white hover:bg-amber-600 flex items-center gap-2"
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      Оплатить
+                    </Button>
+                  </div>
+                  <Button type="submit" disabled={updateTaskMutation.isPending} className="bg-green-500 text-white hover:bg-green-600">
+                    {updateTaskMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Сохранить
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Диалог выбора способа оплаты */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-amber-600" />
+              Оплата услуг
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex gap-6">
+            {/* Левая колонка - способы оплаты */}
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold mb-4">Выберите способ оплаты</h3>
+              <div className="space-y-2">
+                {paymentMethods.map((method) => (
+                  <div
+                    key={method.value}
+                    onClick={() => setSelectedPaymentMethod(method.value)}
+                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${selectedPaymentMethod === method.value
+                      ? 'border-amber-400 bg-amber-50'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">
+                        <PaymentMethodIcon paymentMethod={method.value} className="w-8 h-8" />
+                      </div>
+                      <div>
+                        <div className="font-medium">{method.label}</div>
+                        <div className="text-sm text-gray-600">{method.description}</div>
                       </div>
                     </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <span className="text-amber-600 text-sm">Дополнительных услуг пока нет</span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex gap-2 items-end mt-3">
-                  <div className="flex-1">
-                    <Select
-                      value=""
-                      onValueChange={(serviceName) => {
-                        if (serviceName) {
-                          handleAddAdditionalService(serviceName);
-                        }
-                      }}
-                      disabled={createAdditionalServiceMutation.isPending}
-                    >
-                      <SelectTrigger className="w-full text-sm">
-                        <SelectValue placeholder={createAdditionalServiceMutation.isPending ? "Добавление..." : "Добавить дополнительную услугу"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {massageServices?.map((service) => (
-                          <SelectItem key={service.id} value={service.name}>
-                            {service.name} (по умолчанию: {service.defaultDuration} мин)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-between mt-4">
-                <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={onClose} className="bg-red-500 text-white hover:bg-red-600">
-                    Отмена
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setShowPaymentDialog(true)}
-                    className="bg-amber-500 text-white hover:bg-amber-600 flex items-center gap-2"
-                  >
-                    <CreditCard className="h-4 w-4" />
-                    Оплатить
-                  </Button>
-                </div>
-                <Button type="submit" disabled={updateTaskMutation.isPending} className="bg-green-500 text-white hover:bg-green-600">
-                  {updateTaskMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Сохранить
-                </Button>
+                ))}
               </div>
             </div>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
 
-    {/* Диалог выбора способа оплаты */}
-    <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-amber-600" />
-            Оплата услуг
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="flex gap-6">
-          {/* Левая колонка - способы оплаты */}
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold mb-4">Выберите способ оплаты</h3>
-            <div className="space-y-2">
-              {paymentMethods.map((method) => (
-                <div
-                  key={method.value}
-                  onClick={() => setSelectedPaymentMethod(method.value)}
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                    selectedPaymentMethod === method.value 
-                      ? 'border-amber-400 bg-amber-50' 
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="text-2xl">
-                      <PaymentMethodIcon paymentMethod={method.value} className="w-8 h-8" />
-                    </div>
-                    <div>
-                      <div className="font-medium">{method.label}</div>
-                      <div className="text-sm text-gray-600">{method.description}</div>
-                    </div>
+            {/* Правая колонка - детали оплаты */}
+            <div className="w-64 bg-gray-50 rounded-lg p-4">
+              <h3 className="font-semibold text-lg mb-4">Детали оплаты</h3>
+
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm">Услуга:</span>
+                  <span className="text-sm font-medium">{task?.massageType}</span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-sm">Мастер:</span>
+                  <span className="text-sm font-medium">{task?.masterName}</span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-sm">Клиент:</span>
+                  <span className="text-sm font-medium">{task?.client?.customName || task?.client?.firstName}</span>
+                </div>
+
+                <hr className="my-3" />
+
+                <div className="flex justify-between">
+                  <span className="text-sm">Сумма услуг:</span>
+                  <span className="text-sm">{calculateTotalPrice()} сом</span>
+                </div>
+
+                {formData.discount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span className="text-sm">Скидка {formData.discount}%:</span>
+                    <span className="text-sm">-{Math.round(calculateTotalPrice() * formData.discount / 100)} сом</span>
                   </div>
+                )}
+
+                <hr className="my-3" />
+
+                <div className="flex justify-between font-bold text-lg">
+                  <span>К оплате:</span>
+                  <span className="text-amber-600">
+                    {calculateTotalPrice() - Math.round(calculateTotalPrice() * formData.discount / 100)} сом
+                  </span>
                 </div>
-              ))}
+              </div>
             </div>
           </div>
-          
-          {/* Правая колонка - детали оплаты */}
-          <div className="w-64 bg-gray-50 rounded-lg p-4">
-            <h3 className="font-semibold text-lg mb-4">Детали оплаты</h3>
-            
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm">Услуга:</span>
-                <span className="text-sm font-medium">{task?.massageType}</span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span className="text-sm">Мастер:</span>
-                <span className="text-sm font-medium">{task?.masterName}</span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span className="text-sm">Клиент:</span>
-                <span className="text-sm font-medium">{task?.clientName}</span>
-              </div>
-              
-              <hr className="my-3" />
-              
-              <div className="flex justify-between">
-                <span className="text-sm">Сумма услуг:</span>
-                <span className="text-sm">{calculateTotalPrice()} сом</span>
-              </div>
-              
-              {formData.discount > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span className="text-sm">Скидка {formData.discount}%:</span>
-                  <span className="text-sm">-{Math.round(calculateTotalPrice() * formData.discount / 100)} сом</span>
-                </div>
+
+          {/* Выбор администратора */}
+          <div className="mt-4 border-t pt-4">
+            <Label className="text-sm font-semibold mb-2 block">Администратор</Label>
+            <Select value={selectedAdministrator} onValueChange={setSelectedAdministrator}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Выберите администратора" />
+              </SelectTrigger>
+              <SelectContent>
+                {administrators.map((admin) => (
+                  <SelectItem key={admin.id} value={admin.name}>
+                    {admin.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter className="flex justify-between mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowPaymentDialog(false)}
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={handlePayment}
+              disabled={!selectedPaymentMethod || !selectedAdministrator || createPaymentMutation.isPending}
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+            >
+              {createPaymentMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              
-              <hr className="my-3" />
-              
-              <div className="flex justify-between font-bold text-lg">
-                <span>К оплате:</span>
-                <span className="text-amber-600">
-                  {calculateTotalPrice() - Math.round(calculateTotalPrice() * formData.discount / 100)} сом
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Выбор администратора */}
-        <div className="mt-4 border-t pt-4">
-          <Label className="text-sm font-semibold mb-2 block">Администратор</Label>
-          <Select value={selectedAdministrator} onValueChange={setSelectedAdministrator}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Выберите администратора" />
-            </SelectTrigger>
-            <SelectContent>
-              {administrators.map((admin) => (
-                <SelectItem key={admin.id} value={admin.name}>
-                  {admin.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <DialogFooter className="flex justify-between mt-4">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowPaymentDialog(false)}
-          >
-            Отмена
-          </Button>
-          <Button 
-            onClick={handlePayment}
-            disabled={!selectedPaymentMethod || !selectedAdministrator || createPaymentMutation.isPending}
-            className="bg-amber-500 hover:bg-amber-600 text-white"
-          >
-            {createPaymentMutation.isPending && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            )}
-            Зафиксировать оплату
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+              Зафиксировать оплату
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
@@ -1931,7 +1929,7 @@ const getRelatedTaskStyles = (task: Task, allTasks: Task[]) => {
   const isMainTask = !task.mother; // Основная задача не имеет поля mother
   const hasChildren = allTasks.some(t => t.mother === task.id);
   const isChildTask = !!task.mother;
-  
+
   if (isMainTask && hasChildren) {
     return {
       indicator: '🔗', // Индикатор связанной записи
@@ -1939,7 +1937,7 @@ const getRelatedTaskStyles = (task: Task, allTasks: Task[]) => {
       connectLine: 'after:absolute after:top-full after:left-1/2 after:w-1 after:h-3 after:bg-amber-500 after:transform after:-translate-x-1/2 after:z-20'
     };
   }
-  
+
   if (isChildTask) {
     return {
       indicator: '📎',
@@ -1947,7 +1945,7 @@ const getRelatedTaskStyles = (task: Task, allTasks: Task[]) => {
       connectLine: 'before:absolute before:top-0 before:left-1/2 before:w-1 before:h-3 before:bg-amber-400 before:transform before:-translate-x-1/2 before:-top-3 before:z-20'
     };
   }
-  
+
   return { indicator: '', borderStyle: '', connectLine: '' };
 };
 
@@ -1969,7 +1967,7 @@ const getStatusColors = (status: string) => {
       };
     case 'in_progress':
       return {
-        bg: 'bg-orange-200 hover:bg-orange-300', 
+        bg: 'bg-orange-200 hover:bg-orange-300',
         border: 'border-orange-400',
         text: 'text-orange-900',
         badge: 'bg-orange-600 text-white'
@@ -1977,7 +1975,7 @@ const getStatusColors = (status: string) => {
     case 'completed':
       return {
         bg: 'bg-purple-200 hover:bg-purple-300',
-        border: 'border-purple-400', 
+        border: 'border-purple-400',
         text: 'text-purple-900',
         badge: 'bg-purple-600 text-white'
       };
@@ -1985,7 +1983,7 @@ const getStatusColors = (status: string) => {
       return {
         bg: 'bg-red-200 hover:bg-red-300',
         border: 'border-red-400',
-        text: 'text-red-900', 
+        text: 'text-red-900',
         badge: 'bg-red-600 text-white'
       };
     case 'regular':
@@ -2026,23 +2024,24 @@ const getStatusLabel = (status: string) => {
 
 export default function DailyCalendar() {
   const { isMaster, isLoading: masterRoleLoading } = useIsMaster();
-  
+  const { toast } = useToast();
+
   // Если пользователь - мастер, перенаправляем на календарь мастеров
   if (!masterRoleLoading && isMaster) {
     return <Redirect to="/master/calendar" />;
   }
-  
+
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ time: string; masterId: number } | null>(null);
   const [hoveredSlot, setHoveredSlot] = useState<{ time: string; masterId: number } | null>(null);
-  
+
   // Состояние для drag and drop
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [draggedOver, setDraggedOver] = useState<{ time: string; masterId: number } | null>(null);
-  
+
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const { currentBranch } = useBranch();
@@ -2067,13 +2066,13 @@ export default function DailyCalendar() {
   useEffect(() => {
     const syncTimer = setInterval(() => {
       // Обновляем данные календаря
-      queryClient.invalidateQueries({ 
-        queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks', formattedDate, currentBranch?.waInstance] 
+      queryClient.invalidateQueries({
+        queryKey: ['/api/crm/tasks', formattedDate, currentBranch?.waInstance]
       });
-      
+
       // Обновляем данные мастеров
-      queryClient.invalidateQueries({ 
-        queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters', formattedDate, currentBranch?.waInstance] 
+      queryClient.invalidateQueries({
+        queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters', formattedDate, currentBranch?.waInstance]
       });
     }, 10000); // Синхронизация каждые 10 секунд
 
@@ -2105,14 +2104,14 @@ export default function DailyCalendar() {
   });
 
   // Загружаем дочерние задачи для всех основных задач
-  const { data: childTasksMap = {} } = useQuery<{[taskId: number]: Task[]}>({
+  const { data: childTasksMap = {} } = useQuery<{ [taskId: number]: Task[] }>({
     queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/child-tasks', formattedDate, currentBranch?.waInstance],
     queryFn: async () => {
-      const childrenMap: {[taskId: number]: Task[]} = {};
-      
+      const childrenMap: { [taskId: number]: Task[] } = {};
+
       // Получаем только основные задачи (без поля mother)
       const mainTasks = tasks.filter(task => !task.mother);
-      
+
       // Загружаем дочерние задачи для каждой основной задачи
       for (const task of mainTasks) {
         try {
@@ -2129,7 +2128,7 @@ export default function DailyCalendar() {
           childrenMap[task.id] = [];
         }
       }
-      
+
       return childrenMap;
     },
     enabled: !!currentBranch?.waInstance && tasks.length > 0
@@ -2145,39 +2144,39 @@ export default function DailyCalendar() {
     const slots = [];
     const startHour = 9;
     const endHour = 22;
-    
+
     for (let hour = startHour; hour < endHour; hour++) {
       slots.push(`${hour.toString().padStart(2, '0')}:00`);
       slots.push(`${hour.toString().padStart(2, '0')}:15`);
       slots.push(`${hour.toString().padStart(2, '0')}:30`);
       slots.push(`${hour.toString().padStart(2, '0')}:45`);
     }
-    
+
     return slots;
   }, []);
 
   // Вычисляем позицию линии текущего времени
   const getCurrentTimePosition = () => {
     if (!isSameDay(selectedDate, currentTime)) return null;
-    
+
     const currentHour = currentTime.getHours();
     const currentMinute = currentTime.getMinutes();
     const currentTimeInMinutes = currentHour * 60 + currentMinute;
-    
+
     // Время начала календаря (9:00) в минутах
     const startTimeInMinutes = 9 * 60;
     const endTimeInMinutes = 22 * 60;
-    
+
     // Если текущее время вне рабочих часов, не показываем линию
     if (currentTimeInMinutes < startTimeInMinutes || currentTimeInMinutes >= endTimeInMinutes) {
       return null;
     }
-    
+
     // Вычисляем позицию относительно первого слота
     const relativeMinutes = currentTimeInMinutes - startTimeInMinutes;
     const slotHeight = 24; // px высота одного слота
     const position = (relativeMinutes / 15) * slotHeight; // каждый слот = 15 минут
-    
+
     return position;
   };
 
@@ -2192,25 +2191,24 @@ export default function DailyCalendar() {
   const isSlotOccupied = (time: string, masterId: number) => {
     const masterName = activeMasters.find(m => m.id === masterId)?.name;
     if (!masterName) return false;
-    
+
     // Конвертируем время в минуты для сравнения
     const timeToMinutes = (timeStr: string) => {
       const [hours, minutes] = timeStr.split(':').map(Number);
       return hours * 60 + minutes;
     };
-    
+
     const slotMinutes = timeToMinutes(time);
-    
+
     return tasks.some((task: Task) => {
-      if (task.masterName !== masterName || 
-          format(parseISO(task.scheduleDate || ''), 'yyyy-MM-dd') !== format(selectedDate, 'yyyy-MM-dd')) {
-        return false;
-      }
-      
+      if (task.masterName !== masterName) return false;
+      const taskDateStr = (task.scheduleDate || '').split('T')[0];
+      if (taskDateStr !== format(selectedDate, 'yyyy-MM-dd')) return false;
+
       const taskStartMinutes = timeToMinutes(task.scheduleTime || '');
       const taskDuration = task.massageDuration || task.duration || 60;
       const taskEndMinutes = taskStartMinutes + taskDuration;
-      
+
       // Проверяем, попадает ли слот в диапазон записи (с учетом 30-минутных интервалов)
       return slotMinutes >= taskStartMinutes && slotMinutes < taskEndMinutes;
     });
@@ -2220,25 +2218,24 @@ export default function DailyCalendar() {
   const getSlotTask = (time: string, masterId: number) => {
     const masterName = activeMasters.find(m => m.id === masterId)?.name;
     if (!masterName) return undefined;
-    
+
     // Конвертируем время в минуты для сравнения
     const timeToMinutes = (timeStr: string) => {
       const [hours, minutes] = timeStr.split(':').map(Number);
       return hours * 60 + minutes;
     };
-    
+
     const slotMinutes = timeToMinutes(time);
-    
+
     return tasks.find((task: Task) => {
-      if (task.masterName !== masterName || 
-          format(parseISO(task.scheduleDate || ''), 'yyyy-MM-dd') !== format(selectedDate, 'yyyy-MM-dd')) {
-        return false;
-      }
-      
+      if (task.masterName !== masterName) return false;
+      const taskDateStr = (task.scheduleDate || '').split('T')[0];
+      if (taskDateStr !== format(selectedDate, 'yyyy-MM-dd')) return false;
+
       const taskStartMinutes = timeToMinutes(task.scheduleTime || '');
       const taskDuration = task.massageDuration || task.duration || 60;
       const taskEndMinutes = taskStartMinutes + taskDuration;
-      
+
       // Возвращаем задачу только если слот является началом записи или попадает в её диапазон
       return slotMinutes >= taskStartMinutes && slotMinutes < taskEndMinutes;
     });
@@ -2248,32 +2245,31 @@ export default function DailyCalendar() {
   const getAllSlotTasks = (time: string, masterId: number) => {
     const masterName = activeMasters.find(m => m.id === masterId)?.name;
     if (!masterName) return [];
-    
+
     // Конвертируем время в минуты для сравнения
     const timeToMinutes = (timeStr: string) => {
       const [hours, minutes] = timeStr.split(':').map(Number);
       return hours * 60 + minutes;
     };
-    
+
     const slotMinutes = timeToMinutes(time);
-    
+
     return tasks.filter((task: Task) => {
-      if (task.masterName !== masterName || 
-          format(parseISO(task.scheduleDate || ''), 'yyyy-MM-dd') !== format(selectedDate, 'yyyy-MM-dd')) {
-        return false;
-      }
-      
+      if (task.masterName !== masterName) return false;
+      const taskDateStr = (task.scheduleDate || '').split('T')[0];
+      if (taskDateStr !== format(selectedDate, 'yyyy-MM-dd')) return false;
+
       const taskStartMinutes = timeToMinutes(task.scheduleTime || '');
       const taskDuration = task.massageDuration || task.duration || 60;
       const taskEndMinutes = taskStartMinutes + taskDuration;
-      
+
       return slotMinutes >= taskStartMinutes && slotMinutes < taskEndMinutes;
     }).sort((a, b) => (a.id || 0) - (b.id || 0)); // Сортируем по ID для стабильного порядка наложения
   };
 
   const handleSlotClick = (time: string, masterId: number) => {
     const existingTask = getSlotTask(time, masterId);
-    
+
     if (existingTask) {
       // Если есть запись - открываем для редактирования
       setSelectedTask(existingTask);
@@ -2335,7 +2331,7 @@ export default function DailyCalendar() {
     mutationFn: async ({ taskId, newTime, newMasterId }: { taskId: number; newTime: string; newMasterId: number }) => {
       const newMaster = activeMasters.find(m => m.id === newMasterId);
       if (!newMaster) throw new Error('Мастер не найден');
-      
+
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks/${taskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -2346,12 +2342,12 @@ export default function DailyCalendar() {
         }),
         credentials: 'include'
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || 'Ошибка перемещения записи');
       }
-      
+
       return res.json();
     },
     onSuccess: () => {
@@ -2373,14 +2369,14 @@ export default function DailyCalendar() {
   const handleDrop = (e: React.DragEvent, time: string, masterId: number) => {
     e.preventDefault();
     setDraggedOver(null);
-    
+
     if (!draggedTask) return;
-    
+
     // Проверяем, изменились ли время или мастер
     if (draggedTask.scheduleTime === time && draggedTask.masterId === masterId) {
       return; // Ничего не изменилось
     }
-    
+
     moveTaskMutation.mutate({
       taskId: draggedTask.id,
       newTime: time,
@@ -2400,515 +2396,511 @@ export default function DailyCalendar() {
   return (
     <TooltipProvider>
       <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Календарь записей</h1>
-          <p className="text-muted-foreground">
-            Управление записями клиентов на {format(selectedDate, 'dd MMMM yyyy', { locale: ru })}
-          </p>
-        </div>
-        <Badge variant="outline" className="ml-2">
-          {currentBranch?.name || 'Филиал'}
-        </Badge>
-      </div>
-
-      {/* Горизонтальный слайдер дней */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-4 border-b">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Выберите дату</h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDatePicker(!showDatePicker)}
-            >
-              <CalendarIcon className="h-4 w-4 mr-2" />
-              Календарь
-            </Button>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Календарь записей</h1>
+            <p className="text-muted-foreground">
+              Управление записями клиентов на {format(selectedDate, 'dd MMMM yyyy')}
+            </p>
           </div>
+          <Badge variant="outline" className="ml-2">
+            {currentBranch?.name || 'Филиал'}
+          </Badge>
         </div>
-        <div className="p-4">
-          {/* Горизонтальный скроллер дней */}
-          <div className="relative">
-            <div className="flex space-x-2 overflow-x-auto pb-4 scrollbar-hide">
-              {sliderDays.map((day, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedDate(day)}
-                  className={`
+
+        {/* Горизонтальный слайдер дней */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-4 border-b">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Выберите дату</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDatePicker(!showDatePicker)}
+              >
+                <CalendarIcon className="h-4 w-4 mr-2" />
+                Календарь
+              </Button>
+            </div>
+          </div>
+          <div className="p-4">
+            {/* Горизонтальный скроллер дней */}
+            <div className="relative">
+              <div className="flex space-x-2 overflow-x-auto pb-4 scrollbar-hide">
+                {sliderDays.map((day, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedDate(day)}
+                    className={`
                     flex-shrink-0 p-3 rounded-lg border transition-colors min-w-[80px] text-center
-                    ${isSameDay(day, selectedDate) 
-                      ? 'bg-primary text-primary-foreground border-primary' 
-                      : 'hover:bg-muted border-border'
-                    }
+                    ${isSameDay(day, selectedDate)
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'hover:bg-muted border-border'
+                      }
                     ${isToday(day) ? 'ring-2 ring-primary/20' : ''}
                   `}
-                >
-                  <div className="text-sm font-medium">
-                    {format(day, 'EEE', { locale: ru })}
-                  </div>
-                  <div className="text-lg font-bold">
-                    {format(day, 'd')}
-                  </div>
-                  {isToday(day) && (
-                    <div className="text-xs text-primary mt-1">Сегодня</div>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Расширенный календарь */}
-          {showDatePicker && (
-            <div className="mt-4 p-4 border rounded-lg bg-muted/30">
-              <div className="flex items-center justify-between mb-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedDate(subDays(selectedDate, 1))}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <h3 className="font-semibold">
-                  {format(selectedDate, 'MMMM yyyy', { locale: ru })}
-                </h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedDate(addDays(selectedDate, 1))}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="flex justify-center">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
-                  className="rounded-md border"
-                  locale={ru}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Дневное расписание */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold">
-            Расписание на {format(selectedDate, 'd MMMM', { locale: ru })}
-          </h2>
-        </div>
-        
-        {/* Проверяем, есть ли мастера на выбранную дату */}
-        {activeMasters.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <p className="text-lg">На выбранную дату нет работающих мастеров</p>
-            <p className="text-sm mt-2">Выберите другую дату или проверьте расписание мастеров</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <div className="min-w-max">
-              {/* Заголовки с именами мастеров - фиксированная сетка */}
-              <div 
-                className="grid border-b bg-gray-50" 
-                style={{gridTemplateColumns: `100px repeat(${activeMasters.length}, minmax(150px, 180px))`}}
-              >
-                <div className="p-3 font-medium text-sm bg-gray-100 border-r">Время</div>
-                {activeMasters.map((master: Master) => (
-                  <div key={master.id} className="p-3 font-medium text-sm text-center border-r bg-gray-50">
-                    {/* Изображение мастера */}
-                    <div className="flex justify-center mb-2">
-                      {master.photoUrl ? (
-                        <img 
-                          src={master.photoUrl} 
-                          alt={master.name}
-                          className="w-10 h-10 rounded-full object-cover border-2 border-gray-300"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center border-2 border-gray-400">
-                          <span className="text-gray-600 font-bold text-xs">
-                            {master.name.charAt(0)}
-                          </span>
-                        </div>
-                      )}
+                  >
+                    <div className="text-sm font-medium">
+                      {format(day, 'EEE')}
                     </div>
-                    <div className="font-bold">{master.name}</div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {master.specialization}
+                    <div className="text-lg font-bold">
+                      {format(day, 'd')}
                     </div>
-                    <div className="text-xs text-blue-600 mt-1">
-                      {master.startWorkHour} - {master.endWorkHour}
-                    </div>
-                  </div>
+                    {isToday(day) && (
+                      <div className="text-xs text-primary mt-1">Сегодня</div>
+                    )}
+                  </button>
                 ))}
               </div>
+            </div>
 
-              {/* Временные слоты - единая CSS Grid */}
-              <div className="max-h-[600px] overflow-y-auto relative">
-                {/* Линия текущего времени */}
-                {currentTimePosition !== null && (
-                  <div 
-                    className="absolute left-0 right-0 z-10 pointer-events-none"
-                    style={{ top: `${currentTimePosition}px` }}
+            {/* Расширенный календарь */}
+            {showDatePicker && (
+              <div className="mt-4 p-4 border rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedDate(subDays(selectedDate, 1))}
                   >
-                    <div className="flex items-center">
-                      <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-l font-medium min-w-[100px] text-center">
-                        {format(currentTime, 'HH:mm')}
-                      </div>
-                      <div className="flex-1 h-0.5 bg-blue-500"></div>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Единая CSS Grid для всех слотов */}
-                <div 
-                  className="grid"
-                  style={{
-                    gridTemplateColumns: `100px repeat(${activeMasters.length}, minmax(150px, 180px))`,
-                    gridTemplateRows: `repeat(${timeSlots.length}, 24px)`
-                  }}
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <h3 className="font-semibold">
+                    {format(selectedDate, 'MMMM yyyy')}
+                  </h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedDate(addDays(selectedDate, 1))}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="flex justify-center">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    className="rounded-md border"
+                    locale={ru}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Дневное расписание */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-4 border-b">
+            <h2 className="text-lg font-semibold">
+              Расписание на {format(selectedDate, 'd MMMM')}
+            </h2>
+          </div>
+
+          {/* Проверяем, есть ли мастера на выбранную дату */}
+          {activeMasters.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              <p className="text-lg">На выбранную дату нет работающих мастеров</p>
+              <p className="text-sm mt-2">Выберите другую дату или проверьте расписание мастеров</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <div className="min-w-max">
+                {/* Заголовки с именами мастеров - фиксированная сетка */}
+                <div
+                  className="grid border-b bg-gray-50"
+                  style={{ gridTemplateColumns: `100px repeat(${activeMasters.length}, minmax(150px, 180px))` }}
                 >
-                {timeSlots.map((time, timeIndex) => [
-                  // Колонка времени
-                  <div 
-                    key={`time-${time}`}
-                    className={`p-1 bg-gray-50 border-r text-center flex items-center justify-center h-[24px] font-bold text-gray-800 text-[13px] border-b ${
-                      time.endsWith(':00') 
-                        ? '' 
-                        : time.endsWith(':30') 
-                        ? 'font-medium text-gray-600'
-                        : 'font-normal text-gray-400'
-                    }`}
-                    style={{ gridColumn: 1, gridRow: timeIndex + 1 }}
+                  <div className="p-3 font-medium text-sm bg-gray-100 border-r">Время</div>
+                  {activeMasters.map((master: Master) => (
+                    <div key={master.id} className="p-3 font-medium text-sm text-center border-r bg-gray-50">
+                      {/* Изображение мастера */}
+                      <div className="flex justify-center mb-2">
+                        {master.photoUrl ? (
+                          <img
+                            src={master.photoUrl}
+                            alt={master.name}
+                            className="w-10 h-10 rounded-full object-cover border-2 border-gray-300"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center border-2 border-gray-400">
+                            <span className="text-gray-600 font-bold text-xs">
+                              {master.name.charAt(0)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="font-bold">{master.name}</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {master.specialization}
+                      </div>
+                      <div className="text-xs text-blue-600 mt-1">
+                        {master.startWorkHour} - {master.endWorkHour}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Временные слоты - единая CSS Grid */}
+                <div className="max-h-[600px] overflow-y-auto relative">
+                  {/* Линия текущего времени */}
+                  {currentTimePosition !== null && (
+                    <div
+                      className="absolute left-0 right-0 z-10 pointer-events-none"
+                      style={{ top: `${currentTimePosition}px` }}
+                    >
+                      <div className="flex items-center">
+                        <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-l font-medium min-w-[100px] text-center">
+                          {format(currentTime, 'HH:mm')}
+                        </div>
+                        <div className="flex-1 h-0.5 bg-blue-500"></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Единая CSS Grid для всех слотов */}
+                  <div
+                    className="grid"
+                    style={{
+                      gridTemplateColumns: `100px repeat(${activeMasters.length}, minmax(150px, 180px))`,
+                      gridTemplateRows: `repeat(${timeSlots.length}, 24px)`
+                    }}
                   >
-                    {time}
-                  </div>,
-                  // Колонки для каждого мастера
-                  ...activeMasters.map((master: Master, masterIndex) => {
-                    const allSlotTasks = getAllSlotTasks(time, master.id);
-                    const task = getSlotTask(time, master.id); // Получаем основную задачу для обратной совместимости
-                    const isOccupied = isSlotOccupied(time, master.id);
-                    const isHovered = hoveredSlot?.time === time && hoveredSlot?.masterId === master.id;
-                    
-                    // Если есть несколько задач, показываем их с наложением
-                    if (allSlotTasks.length > 1) {
-                      return allSlotTasks.map((overlappingTask, taskIndex) => {
-                        const isTaskStart = overlappingTask.scheduleTime === time;
-                        const shouldShowTaskContent = isTaskStart;
-                        
-                        if (!shouldShowTaskContent) return null;
-                        
+                    {timeSlots.map((time, timeIndex) => [
+                      // Колонка времени
+                      <div
+                        key={`time-${time}`}
+                        className={`p-1 bg-gray-50 border-r text-center flex items-center justify-center h-[24px] font-bold text-gray-800 text-[13px] border-b ${time.endsWith(':00')
+                          ? ''
+                          : time.endsWith(':30')
+                            ? 'font-medium text-gray-600'
+                            : 'font-normal text-gray-400'
+                          }`}
+                        style={{ gridColumn: 1, gridRow: timeIndex + 1 }}
+                      >
+                        {time}
+                      </div>,
+                      // Колонки для каждого мастера
+                      ...activeMasters.map((master: Master, masterIndex) => {
+                        const allSlotTasks = getAllSlotTasks(time, master.id);
+                        const task = getSlotTask(time, master.id); // Получаем основную задачу для обратной совместимости
+                        const isOccupied = isSlotOccupied(time, master.id);
+                        const isHovered = hoveredSlot?.time === time && hoveredSlot?.masterId === master.id;
+
+                        // Если есть несколько задач, показываем их с наложением
+                        if (allSlotTasks.length > 1) {
+                          return allSlotTasks.map((overlappingTask, taskIndex) => {
+                            const isTaskStart = overlappingTask.scheduleTime === time;
+                            const shouldShowTaskContent = isTaskStart;
+
+                            if (!shouldShowTaskContent) return null;
+
+                            // Рассчитываем grid positioning для многослотовых записей
+                            let gridRow = timeIndex + 1;
+                            let gridRowEnd: number | undefined;
+
+                            // Логика для определения длительности (как в оригинале)
+                            const childTasks = (tasks || []).filter(t => t.mother === overlappingTask.id);
+                            const childrenDuration = childTasks.reduce((sum, child) => sum + (child.massageDuration || child.duration || 0), 0);
+
+                            let mainDuration = overlappingTask.massageDuration || overlappingTask.duration;
+
+                            if (!mainDuration && overlappingTask.massageServiceId && massageServices.length > 0) {
+                              const service = massageServices.find(s => s.id === overlappingTask.massageServiceId);
+                              if (service) {
+                                mainDuration = service.defaultDuration || 60;
+                              }
+                            }
+
+                            if (!mainDuration) {
+                              mainDuration = 60;
+                            }
+
+                            const totalDuration = mainDuration + childrenDuration;
+                            const slotsCount = Math.ceil(totalDuration / 15);
+                            if (slotsCount > 1) {
+                              gridRowEnd = gridRow + slotsCount;
+                            }
+
+                            const relatedStyles = getRelatedTaskStyles(overlappingTask, tasks || []);
+                            const zIndex = 10 + taskIndex; // Более поздние задачи имеют больший z-index
+
+                            return (
+                              <Tooltip key={`${time}-${master.id}-${overlappingTask.id}-${taskIndex}`}>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className={`p-1 border-r border-b cursor-move transition-all duration-200 relative rounded-lg overflow-hidden ${getStatusColors(overlappingTask?.status || 'scheduled').bg
+                                      } ${relatedStyles.borderStyle || (getStatusColors(overlappingTask.status || 'scheduled').border + ' border-l-4')}
+                                ${draggedTask?.id === overlappingTask.id ? 'opacity-50 scale-95' : ''}`}
+                                    style={{
+                                      gridColumn: masterIndex + 2,
+                                      gridRow: gridRowEnd ? `${gridRow} / ${gridRowEnd}` : gridRow,
+                                      zIndex: zIndex,
+                                      opacity: taskIndex > 0 ? 0.8 : 1 // Немного прозрачности для наложенных задач
+                                    }}
+                                    draggable={true}
+                                    onDragStart={(e) => handleDragStart(e, overlappingTask)}
+                                    onDragEnd={handleDragEnd}
+                                    onClick={() => handleSlotClick(time, master.id)}
+                                    onMouseEnter={() => handleSlotHover(time, master.id)}
+                                    onMouseLeave={handleSlotLeave}
+                                  >
+                                    <div className="text-xs h-full w-full flex flex-col overflow-hidden leading-tight max-w-full relative">
+                                      {overlappingTask.paid !== 'paid' && (
+                                        <div className="absolute top-0 right-0 z-10">
+                                          <Coins className="h-3 w-3 text-amber-500" />
+                                        </div>
+                                      )}
+
+                                      <div className="flex items-center justify-between min-h-0 w-full max-w-full">
+                                        <div className={`font-medium ${getStatusColors(overlappingTask.status || 'scheduled').text} flex items-center gap-0.5 truncate flex-1 text-xs max-w-full`}>
+                                          {relatedStyles.indicator && (
+                                            <span className="text-amber-500 text-xs flex-shrink-0">{relatedStyles.indicator}</span>
+                                          )}
+                                          <span className="truncate text-xs">{overlappingTask.client?.customName || overlappingTask.client?.firstName || 'Клиент'}</span>
+                                          {taskIndex > 0 && <span className="text-xs text-gray-500 ml-1">#{taskIndex + 1}</span>}
+                                        </div>
+                                      </div>
+
+                                      {overlappingTask.client?.phoneNumber && (
+                                        <div className="text-gray-500 truncate text-xs leading-none">
+                                          📞 {overlappingTask.client.phoneNumber}
+                                        </div>
+                                      )}
+
+                                      <div className="text-gray-600 truncate text-xs leading-none">
+                                        {overlappingTask.massageType}
+                                      </div>
+
+                                      {childTasksMap[overlappingTask.id] && childTasksMap[overlappingTask.id].length > 0 && (
+                                        <div className="text-indigo-600 truncate text-xs leading-none">
+                                          +{childTasksMap[overlappingTask.id].length} доп. услуг
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs">
+                                  <div className="space-y-1">
+                                    <p><strong>Клиент:</strong> {overlappingTask.client?.customName || overlappingTask.client?.firstName}</p>
+                                    <p><strong>Услуга:</strong> {overlappingTask.massageType}</p>
+                                    <p><strong>Время:</strong> {overlappingTask.scheduleTime} - {overlappingTask.endTime}</p>
+                                    <p><strong>Мастер:</strong> {overlappingTask.masterName}</p>
+                                    <p><strong>Статус:</strong> {overlappingTask.status}</p>
+                                    {overlappingTask.paid !== 'paid' && <p><strong>Оплата:</strong> Не оплачено</p>}
+                                    {childTasksMap[overlappingTask.id] && childTasksMap[overlappingTask.id].length > 0 && (
+                                      <p><strong>Доп. услуги:</strong> {childTasksMap[overlappingTask.id].map(child => child.massageType).join(', ')}</p>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          }).filter(Boolean);
+                        }
+
+                        // Оригинальная логика для одиночных задач
+                        const isTaskStart = task && task.scheduleTime === time;
+                        const shouldShowTaskContent = task && isTaskStart;
+                        const isTaskContinuation = task && !isTaskStart;
+
+                        // Для продолжающихся слотов не рендерим ничего - основная запись займет эти слоты через gridRowEnd
+                        if (isTaskContinuation) {
+                          return null;
+                        }
+
                         // Рассчитываем grid positioning для многослотовых записей
                         let gridRow = timeIndex + 1;
                         let gridRowEnd: number | undefined;
-                        
-                        // Логика для определения длительности (как в оригинале)
-                        const childTasks = (tasks || []).filter(t => t.mother === overlappingTask.id);
-                        const childrenDuration = childTasks.reduce((sum, child) => sum + (child.massageDuration || child.duration || 0), 0);
-                        
-                        let mainDuration = overlappingTask.massageDuration || overlappingTask.duration;
-                        
-                        if (!mainDuration && overlappingTask.massageServiceId && massageServices.length > 0) {
-                          const service = massageServices.find(s => s.id === overlappingTask.massageServiceId);
-                          if (service) {
-                            mainDuration = service.defaultDuration || 60;
+
+                        if (shouldShowTaskContent && task) {
+                          // ✅ Используем общую длительность включая дополнительные услуги
+                          const childTasks = (tasks || []).filter(t => t.mother === task.id);
+                          const childrenDuration = childTasks.reduce((sum, child) => sum + (child.massageDuration || child.duration || 0), 0);
+
+                          // Улучшенная логика определения длительности основной услуги
+                          let mainDuration = task.massageDuration || task.duration;
+
+                          // Если длительность не установлена, пытаемся найти её в данных услуги
+                          if (!mainDuration && task.massageServiceId && massageServices.length > 0) {
+                            const service = massageServices.find(s => s.id === task.massageServiceId);
+                            if (service) {
+                              mainDuration = service.defaultDuration || 60;
+                            }
+                          }
+
+                          // Финальный fallback только если ничего не найдено
+                          if (!mainDuration) {
+                            mainDuration = 60;
+                          }
+
+                          const totalDuration = mainDuration + childrenDuration;
+
+                          const slotsCount = Math.ceil(totalDuration / 15); // 15 минут на слот
+                          if (slotsCount > 1) {
+                            gridRowEnd = gridRow + slotsCount;
                           }
                         }
-                        
-                        if (!mainDuration) {
-                          mainDuration = 60;
-                        }
-                        
-                        const totalDuration = mainDuration + childrenDuration;
-                        const slotsCount = Math.ceil(totalDuration / 15);
-                        if (slotsCount > 1) {
-                          gridRowEnd = gridRow + slotsCount;
-                        }
-                        
-                        const relatedStyles = getRelatedTaskStyles(overlappingTask, tasks || []);
-                        const zIndex = 10 + taskIndex; // Более поздние задачи имеют больший z-index
-                        
+
+                        // Получаем стили для связанных записей
+                        const relatedStyles = task ? getRelatedTaskStyles(task, tasks || []) : { indicator: '', borderStyle: '', connectLine: '' };
+
                         return (
-                          <Tooltip key={`${time}-${master.id}-${overlappingTask.id}-${taskIndex}`}>
+                          <Tooltip key={`${time}-${master.id}`}>
                             <TooltipTrigger asChild>
-                              <div 
-                                className={`p-1 border-r border-b cursor-move transition-all duration-200 relative rounded-lg overflow-hidden ${
-                                  getStatusColors(overlappingTask?.status || 'scheduled').bg
-                                } ${relatedStyles.borderStyle || (getStatusColors(overlappingTask.status || 'scheduled').border + ' border-l-4')}
-                                ${draggedTask?.id === overlappingTask.id ? 'opacity-50 scale-95' : ''}`}
-                                style={{ 
-                                  gridColumn: masterIndex + 2, 
-                                  gridRow: gridRowEnd ? `${gridRow} / ${gridRowEnd}` : gridRow,
-                                  zIndex: zIndex,
-                                  opacity: taskIndex > 0 ? 0.8 : 1 // Немного прозрачности для наложенных задач
+                              <div
+                                className={`p-1 border-r border-b transition-all duration-200 relative rounded-lg overflow-hidden ${isOccupied
+                                  ? getStatusColors(task?.status || 'scheduled').bg + (task ? ' cursor-move' : '')
+                                  : (isHovered || (draggedOver?.time === time && draggedOver?.masterId === master.id))
+                                    ? 'bg-green-100 border-green-300 shadow-md cursor-pointer'
+                                    : 'hover:bg-green-50 hover:border-green-200 cursor-pointer'
+                                  } ${task ? (relatedStyles.borderStyle || (getStatusColors(task.status || 'scheduled').border + ' border-l-4')) : ''} ${isTaskStart ? 'border-2 border-black' : ''
+                                  } ${task ? relatedStyles.connectLine : ''}
+                            ${draggedOver?.time === time && draggedOver?.masterId === master.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}
+                            ${draggedTask?.id === task?.id ? 'opacity-50 scale-95' : ''}`}
+                                style={{
+                                  gridColumn: masterIndex + 2,
+                                  gridRow: gridRowEnd ? `${gridRow} / ${gridRowEnd}` : gridRow
                                 }}
-                                draggable={true}
-                                onDragStart={(e) => handleDragStart(e, overlappingTask)}
-                                onDragEnd={handleDragEnd}
+                                draggable={!!task}
+                                onDragStart={task ? (e) => handleDragStart(e, task) : undefined}
+                                onDragEnd={task ? handleDragEnd : undefined}
+                                onDragOver={(e) => handleDragOver(e, time, master.id)}
+                                onDragLeave={handleDragLeave}
+                                onDrop={(e) => handleDrop(e, time, master.id)}
                                 onClick={() => handleSlotClick(time, master.id)}
                                 onMouseEnter={() => handleSlotHover(time, master.id)}
                                 onMouseLeave={handleSlotLeave}
                               >
-                                <div className="text-xs h-full w-full flex flex-col overflow-hidden leading-tight max-w-full relative">
-                                  {overlappingTask.paid !== 'paid' && (
-                                    <div className="absolute top-0 right-0 z-10">
-                                      <Coins className="h-3 w-3 text-amber-500" />
-                                    </div>
-                                  )}
-                                  
-                                  <div className="flex items-center justify-between min-h-0 w-full max-w-full">
-                                    <div className={`font-medium ${getStatusColors(overlappingTask.status || 'scheduled').text} flex items-center gap-0.5 truncate flex-1 text-xs max-w-full`}>
-                                      {relatedStyles.indicator && (
-                                        <span className="text-amber-500 text-xs flex-shrink-0">{relatedStyles.indicator}</span>
-                                      )}
-                                      <span className="truncate text-xs">{overlappingTask.client?.customName || overlappingTask.client?.firstName || 'Клиент'}</span>
-                                      {taskIndex > 0 && <span className="text-xs text-gray-500 ml-1">#{taskIndex + 1}</span>}
-                                    </div>
-                                  </div>
-                                  
-                                  {overlappingTask.client?.phoneNumber && (
-                                    <div className="text-gray-500 truncate text-xs leading-none">
-                                      📞 {overlappingTask.client.phoneNumber}
-                                    </div>
-                                  )}
-                                  
-                                  <div className="text-gray-600 truncate text-xs leading-none">
-                                    {overlappingTask.massageType}
-                                  </div>
-                                  
-                                  {childTasksMap[overlappingTask.id] && childTasksMap[overlappingTask.id].length > 0 && (
-                                    <div className="text-indigo-600 truncate text-xs leading-none">
-                                      +{childTasksMap[overlappingTask.id].length} доп. услуг
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-xs">
-                              <div className="space-y-1">
-                                <p><strong>Клиент:</strong> {overlappingTask.client?.customName || overlappingTask.client?.firstName}</p>
-                                <p><strong>Услуга:</strong> {overlappingTask.massageType}</p>
-                                <p><strong>Время:</strong> {overlappingTask.scheduleTime} - {overlappingTask.endTime}</p>
-                                <p><strong>Мастер:</strong> {overlappingTask.masterName}</p>
-                                <p><strong>Статус:</strong> {overlappingTask.status}</p>
-                                {overlappingTask.paid !== 'paid' && <p><strong>Оплата:</strong> Не оплачено</p>}
-                                {childTasksMap[overlappingTask.id] && childTasksMap[overlappingTask.id].length > 0 && (
-                                  <p><strong>Доп. услуги:</strong> {childTasksMap[overlappingTask.id].map(child => child.massageType).join(', ')}</p>
-                                )}
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        );
-                      }).filter(Boolean);
-                    }
-                    
-                    // Оригинальная логика для одиночных задач
-                    const isTaskStart = task && task.scheduleTime === time;
-                    const shouldShowTaskContent = task && isTaskStart;
-                    const isTaskContinuation = task && !isTaskStart;
-                    
-                    // Для продолжающихся слотов не рендерим ничего - основная запись займет эти слоты через gridRowEnd
-                    if (isTaskContinuation) {
-                      return null;
-                    }
-                    
-                    // Рассчитываем grid positioning для многослотовых записей
-                    let gridRow = timeIndex + 1;
-                    let gridRowEnd: number | undefined;
-                    
-                    if (shouldShowTaskContent && task) {
-                      // ✅ Используем общую длительность включая дополнительные услуги
-                      const childTasks = (tasks || []).filter(t => t.mother === task.id);
-                      const childrenDuration = childTasks.reduce((sum, child) => sum + (child.massageDuration || child.duration || 0), 0);
-                      
-                      // Улучшенная логика определения длительности основной услуги
-                      let mainDuration = task.massageDuration || task.duration;
-                      
-                      // Если длительность не установлена, пытаемся найти её в данных услуги
-                      if (!mainDuration && task.massageServiceId && massageServices.length > 0) {
-                        const service = massageServices.find(s => s.id === task.massageServiceId);
-                        if (service) {
-                          mainDuration = service.defaultDuration || 60;
-                        }
-                      }
-                      
-                      // Финальный fallback только если ничего не найдено
-                      if (!mainDuration) {
-                        mainDuration = 60;
-                      }
-                      
-                      const totalDuration = mainDuration + childrenDuration;
-                      
-                      const slotsCount = Math.ceil(totalDuration / 15); // 15 минут на слот
-                      if (slotsCount > 1) {
-                        gridRowEnd = gridRow + slotsCount;
-                      }
-                    }
-                    
-                    // Получаем стили для связанных записей
-                    const relatedStyles = task ? getRelatedTaskStyles(task, tasks || []) : { indicator: '', borderStyle: '', connectLine: '' };
-                    
-                    return (
-                      <Tooltip key={`${time}-${master.id}`}>
-                        <TooltipTrigger asChild>
-                          <div 
-                            className={`p-1 border-r border-b transition-all duration-200 relative rounded-lg overflow-hidden ${
-                              isOccupied 
-                                ? getStatusColors(task?.status || 'scheduled').bg + (task ? ' cursor-move' : '')
-                                : (isHovered || (draggedOver?.time === time && draggedOver?.masterId === master.id))
-                                  ? 'bg-green-100 border-green-300 shadow-md cursor-pointer'
-                                  : 'hover:bg-green-50 hover:border-green-200 cursor-pointer'
-                            } ${task ? (relatedStyles.borderStyle || (getStatusColors(task.status || 'scheduled').border + ' border-l-4')) : ''} ${
-                              isTaskStart ? 'border-2 border-black' : ''
-                            } ${task ? relatedStyles.connectLine : ''}
-                            ${draggedOver?.time === time && draggedOver?.masterId === master.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}
-                            ${draggedTask?.id === task?.id ? 'opacity-50 scale-95' : ''}`}
-                            style={{ 
-                              gridColumn: masterIndex + 2, 
-                              gridRow: gridRowEnd ? `${gridRow} / ${gridRowEnd}` : gridRow
-                            }}
-                            draggable={!!task}
-                            onDragStart={task ? (e) => handleDragStart(e, task) : undefined}
-                            onDragEnd={task ? handleDragEnd : undefined}
-                            onDragOver={(e) => handleDragOver(e, time, master.id)}
-                            onDragLeave={handleDragLeave}
-                            onDrop={(e) => handleDrop(e, time, master.id)}
-                            onClick={() => handleSlotClick(time, master.id)}
-                            onMouseEnter={() => handleSlotHover(time, master.id)}
-                            onMouseLeave={handleSlotLeave}
-                          >
-                            {shouldShowTaskContent ? (
-                              <div className="text-xs h-full w-full flex flex-col overflow-hidden leading-tight max-w-full relative">
-                                {/* Иконка монеты для неоплаченных записей */}
-                                {task.paid !== 'paid' && (
-                                  <div className="absolute top-0 right-0 z-10">
-                                    <Coins className="h-3 w-3 text-amber-500" />
-                                  </div>
-                                )}
-                                
-                                <div className="flex items-center justify-between min-h-0 w-full max-w-full">
-                                  <div className={`font-medium ${getStatusColors(task.status || 'scheduled').text} flex items-center gap-0.5 truncate flex-1 text-xs max-w-full`}>
-                                    {relatedStyles.indicator && (
-                                      <span className="text-amber-500 text-xs flex-shrink-0">{relatedStyles.indicator}</span>
+                                {shouldShowTaskContent ? (
+                                  <div className="text-xs h-full w-full flex flex-col overflow-hidden leading-tight max-w-full relative">
+                                    {/* Иконка монеты для неоплаченных записей */}
+                                    {task.paid !== 'paid' && (
+                                      <div className="absolute top-0 right-0 z-10">
+                                        <Coins className="h-3 w-3 text-amber-500" />
+                                      </div>
                                     )}
-                                    <span className="truncate text-xs">{task.client?.customName || task.client?.firstName || 'Клиент'}</span>
-                                  </div>
-                                </div>
-                                
-                                {/* Номер телефона клиента */}
-                                {task.client?.phoneNumber && (
-                                  <div className="text-gray-500 truncate text-xs leading-none">
-                                    📞 {task.client.phoneNumber}
-                                  </div>
-                                )}
-                                
-                                <div className="text-gray-600 truncate text-xs leading-none">
-                                  {task.massageType}
-                                </div>
-                                
-                                {/* Показываем если есть дополнительные услуги */}
-                                {childTasksMap[task.id] && childTasksMap[task.id].length > 0 && (
-                                  <div className="text-indigo-600 truncate text-xs leading-none">
-                                    +{childTasksMap[task.id].length} доп. услуг
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-center h-full">
-                                {isHovered ? (
-                                  <div className="flex flex-col items-center text-green-600">
-                                    <Plus className="h-5 w-5 mb-1" />
-                                    <span className="text-xs font-medium">Создать запись</span>
+
+                                    <div className="flex items-center justify-between min-h-0 w-full max-w-full">
+                                      <div className={`font-medium ${getStatusColors(task.status || 'scheduled').text} flex items-center gap-0.5 truncate flex-1 text-xs max-w-full`}>
+                                        {relatedStyles.indicator && (
+                                          <span className="text-amber-500 text-xs flex-shrink-0">{relatedStyles.indicator}</span>
+                                        )}
+                                        <span className="truncate text-xs">{task.client?.customName || task.client?.firstName || 'Клиент'}</span>
+                                      </div>
+                                    </div>
+
+                                    {/* Номер телефона клиента */}
+                                    {task.client?.phoneNumber && (
+                                      <div className="text-gray-500 truncate text-xs leading-none">
+                                        📞 {task.client.phoneNumber}
+                                      </div>
+                                    )}
+
+                                    <div className="text-gray-600 truncate text-xs leading-none">
+                                      {task.massageType}
+                                    </div>
+
+                                    {/* Показываем если есть дополнительные услуги */}
+                                    {childTasksMap[task.id] && childTasksMap[task.id].length > 0 && (
+                                      <div className="text-indigo-600 truncate text-xs leading-none">
+                                        +{childTasksMap[task.id].length} доп. услуг
+                                      </div>
+                                    )}
                                   </div>
                                 ) : (
-                                  <Plus className="h-4 w-4 text-gray-400" />
-                                )}
-                              </div>
-                            )}
-                            
-                            {/* Индикатор hover для создания записи */}
-                            {isHovered && !isOccupied && (
-                              <div className="absolute inset-0 border-2 border-green-400 rounded-md pointer-events-none animate-pulse" />
-                            )}
-                          </div>
-                        </TooltipTrigger>
-                        {task && (
-                          <TooltipContent side="top" className="max-w-xs">
-                            <div className="space-y-2">
-                              <div className="font-semibold">
-                                {task.client?.customName || task.client?.firstName || 'Клиент'}
-                              </div>
-                              <div className="text-sm">
-                                <div><strong>Услуга:</strong> {task.massageType}</div>
-                                {task.client?.phoneNumber && (
-                                  <div><strong>Телефон:</strong> {task.client.phoneNumber}</div>
-                                )}
-                                <div><strong>Время:</strong> {task.scheduleTime} - {task.endTime}</div>
-                                <div><strong>Длительность:</strong> {task.duration || task.massageDuration || 60} мин</div>
-                                <div><strong>Мастер:</strong> {task.masterName || 'Не назначен'}</div>
-                                <div><strong>Статус:</strong> {getStatusLabel(task.status || 'scheduled')}</div>
-                                <div><strong>Оплата:</strong> <span className={task.paid === 'paid' ? 'text-green-600' : 'text-red-600'}>{task.paid === 'paid' ? 'Оплачено' : 'Не оплачено'}</span></div>
-                                {task.finalPrice && (
-                                  <div><strong>Цена:</strong> {task.finalPrice} сом</div>
-                                )}
-                                {/* Показываем дополнительные услуги в tooltip */}
-                                {childTasksMap[task.id] && childTasksMap[task.id].length > 0 && (
-                                  <div>
-                                    <strong>Дополнительные услуги:</strong>
-                                    <ul className="ml-2 mt-1">
-                                      {childTasksMap[task.id].map((childTask, index) => (
-                                        <li key={index} className="text-xs">
-                                          • {childTask.massageType} ({childTask.massageDuration || 0}мин - {childTask.finalPrice || 0}сом)
-                                        </li>
-                                      ))}
-                                    </ul>
+                                  <div className="flex items-center justify-center h-full">
+                                    {isHovered ? (
+                                      <div className="flex flex-col items-center text-green-600">
+                                        <Plus className="h-5 w-5 mb-1" />
+                                        <span className="text-xs font-medium">Создать запись</span>
+                                      </div>
+                                    ) : (
+                                      <Plus className="h-4 w-4 text-gray-400" />
+                                    )}
                                   </div>
                                 )}
-                                {task.notes && (
-                                  <div><strong>Заметки:</strong> {task.notes}</div>
+
+                                {/* Индикатор hover для создания записи */}
+                                {isHovered && !isOccupied && (
+                                  <div className="absolute inset-0 border-2 border-green-400 rounded-md pointer-events-none animate-pulse" />
                                 )}
                               </div>
-                            </div>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    );
-                  })
-                ]).flat()}
+                            </TooltipTrigger>
+                            {task && (
+                              <TooltipContent side="top" className="max-w-xs">
+                                <div className="space-y-2">
+                                  <div className="font-semibold">
+                                    {task.client?.customName || task.client?.firstName || 'Клиент'}
+                                  </div>
+                                  <div className="text-sm">
+                                    <div><strong>Услуга:</strong> {task.massageType}</div>
+                                    {task.client?.phoneNumber && (
+                                      <div><strong>Телефон:</strong> {task.client.phoneNumber}</div>
+                                    )}
+                                    <div><strong>Время:</strong> {task.scheduleTime} - {task.endTime}</div>
+                                    <div><strong>Длительность:</strong> {task.duration || task.massageDuration || 60} мин</div>
+                                    <div><strong>Мастер:</strong> {task.masterName || 'Не назначен'}</div>
+                                    <div><strong>Статус:</strong> {getStatusLabel(task.status || 'scheduled')}</div>
+                                    <div><strong>Оплата:</strong> <span className={task.paid === 'paid' ? 'text-green-600' : 'text-red-600'}>{task.paid === 'paid' ? 'Оплачено' : 'Не оплачено'}</span></div>
+                                    {task.finalPrice && (
+                                      <div><strong>Цена:</strong> {task.finalPrice} сом</div>
+                                    )}
+                                    {/* Показываем дополнительные услуги в tooltip */}
+                                    {childTasksMap[task.id] && childTasksMap[task.id].length > 0 && (
+                                      <div>
+                                        <strong>Дополнительные услуги:</strong>
+                                        <ul className="ml-2 mt-1">
+                                          {childTasksMap[task.id].map((childTask, index) => (
+                                            <li key={index} className="text-xs">
+                                              • {childTask.massageType} ({childTask.massageDuration || 0}мин - {childTask.finalPrice || 0}сом)
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    {task.notes && (
+                                      <div><strong>Заметки:</strong> {task.notes}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        );
+                      })
+                    ]).flat()}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      {/* Диалог создания записи */}
-      <CreateAppointmentDialog
-        isOpen={showCreateDialog}
-        onClose={() => {
-          setShowCreateDialog(false);
-          setSelectedTimeSlot(null);
-        }}
-        selectedDate={selectedDate}
-        selectedTime={selectedTimeSlot?.time}
-        masterId={selectedTimeSlot?.masterId}
-        onTaskCreated={handleTaskCreated}
-      />
+        {/* Диалог создания записи */}
+        <CreateAppointmentDialog
+          isOpen={showCreateDialog}
+          onClose={() => {
+            setShowCreateDialog(false);
+            setSelectedTimeSlot(null);
+          }}
+          selectedDate={selectedDate}
+          selectedTime={selectedTimeSlot?.time}
+          masterId={selectedTimeSlot?.masterId}
+          onTaskCreated={handleTaskCreated}
+        />
 
-      {/* Диалог редактирования записи */}
-      <EditAppointmentDialog
-        task={selectedTask}
-        isOpen={showEditDialog}
-        onClose={() => {
-          setShowEditDialog(false);
-          setSelectedTask(null);
-        }}
-        onTaskUpdated={handleTaskUpdated}
-      />
+        {/* Диалог редактирования записи */}
+        <EditAppointmentDialog
+          task={selectedTask}
+          isOpen={showEditDialog}
+          onClose={() => {
+            setShowEditDialog(false);
+            setSelectedTask(null);
+          }}
+          onTaskUpdated={handleTaskUpdated}
+        />
       </div>
     </TooltipProvider>
   );

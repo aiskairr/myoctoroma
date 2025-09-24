@@ -60,23 +60,23 @@ const GiftCertificatesPage = () => {
       setIsLoading(true);
       try {
         // Загружаем сертификаты
-        const certificatesResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?branchId=${currentBranch.waInstance}`);
+        const certificatesResponse = await fetch(`/api/gift-certificates?branchId=${currentBranch.waInstance}`);
         if (certificatesResponse.ok) {
           const allCertificates = await certificatesResponse.json();
-          
-          const active = allCertificates.filter((cert: GiftCertificate) => 
+
+          const active = allCertificates.filter((cert: GiftCertificate) =>
             !cert.is_used && !cert.is_expired && new Date(cert.expiry_date) >= new Date()
           );
-          const used = allCertificates.filter((cert: GiftCertificate) => 
+          const used = allCertificates.filter((cert: GiftCertificate) =>
             cert.is_used || cert.is_expired || new Date(cert.expiry_date) < new Date()
           );
-          
+
           setActiveCertificates(active);
           setUsedCertificates(used);
         }
 
         // Загружаем мастеров из таблицы salaries
-        const mastersResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/employees?role=мастер`);
+        const mastersResponse = await fetch(`/api/employees?role=мастер`);
         if (mastersResponse.ok) {
           const mastersData = await mastersResponse.json();
           const masterNames = mastersData.map((m: any) => m.name).filter((name: string) => Boolean(name));
@@ -84,7 +84,7 @@ const GiftCertificatesPage = () => {
         }
 
         // Загружаем администраторов из таблицы salaries
-        const administratorsResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/employees?role=администратор`);
+        const administratorsResponse = await fetch(`/api/employees?role=администратор`);
         if (administratorsResponse.ok) {
           const administratorsData = await administratorsResponse.json();
           const adminNames = administratorsData.map((a: any) => a.name).filter((name: string) => Boolean(name));
@@ -92,7 +92,7 @@ const GiftCertificatesPage = () => {
         }
 
         // Загружаем типы массажа из таблицы client_tasks
-        const massageTypesResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/massage-types?branchId=${currentBranch.waInstance}`);
+        const massageTypesResponse = await fetch(`/api/massage-types?branchId=${currentBranch.waInstance}`);
         if (massageTypesResponse.ok) {
           const massageTypesData = await massageTypesResponse.json();
           const typeNames = massageTypesData.map((t: any) => t.massage_type).filter((type: string) => Boolean(type));
@@ -132,7 +132,7 @@ const GiftCertificatesPage = () => {
     }
 
     try {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates', {
+      const response = await fetch('/api/gift-certificates', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +147,7 @@ const GiftCertificatesPage = () => {
           is_expired: false
         }),
       });
-      
+
       if (response.ok) {
         const savedCertificate = await response.json();
         setActiveCertificates([...activeCertificates, savedCertificate]);
@@ -155,7 +155,7 @@ const GiftCertificatesPage = () => {
           title: "Успех",
           description: "Сертификат успешно добавлен"
         });
-        
+
         setNewCertificate({
           certificate_number: '',
           amount: 0,
@@ -190,7 +190,7 @@ const GiftCertificatesPage = () => {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates/${certificate.id}`, {
+      const response = await fetch(`/api/gift-certificates/${certificate.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -207,9 +207,9 @@ const GiftCertificatesPage = () => {
 
       if (response.ok) {
         const updatedCert = await response.json();
-        
+
         // Создаем запись в бухгалтерии для использованного сертификата
-        const accountingResponse = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/accounting', {
+        const accountingResponse = await fetch('/api/accounting', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -231,7 +231,7 @@ const GiftCertificatesPage = () => {
         if (!accountingResponse.ok) {
           console.error('Failed to create accounting record for gift certificate');
         }
-        
+
         setActiveCertificates(activeCertificates.filter(c => c.id !== certificate.id));
         setUsedCertificates([...usedCertificates, updatedCert]);
         setSelectedCertificate(null);
@@ -276,7 +276,7 @@ const GiftCertificatesPage = () => {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates/search/${searchNumber}`);
+      const response = await fetch(`/api/gift-certificates/search/${searchNumber}`);
       if (response.ok) {
         const certificate = await response.json();
         toast({
@@ -303,7 +303,7 @@ const GiftCertificatesPage = () => {
     'Наличные',
     'МБанк - Перевод',
     'МБанк - POS',
-    'МБизнес - Перевод', 
+    'МБизнес - Перевод',
     'МБизнес - POS',
     'О!Банк - Перевод',
     'О!Банк - POS',
@@ -388,7 +388,7 @@ const GiftCertificatesPage = () => {
 
                 <Select
                   value={newCertificate.payment_method}
-                  onValueChange={(value) => setNewCertificate({...newCertificate, payment_method: value})}
+                  onValueChange={(value) => setNewCertificate({ ...newCertificate, payment_method: value })}
                 >
                   <SelectTrigger className="rounded-lg">
                     <SelectValue placeholder="Способ оплаты*" />
@@ -459,8 +459,8 @@ const GiftCertificatesPage = () => {
                     </div>
                     <Dialog open={isUsageDialogOpen} onOpenChange={setIsUsageDialogOpen}>
                       <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="rounded-lg"
                           onClick={() => {
                             setSelectedCertificate(cert);
@@ -478,7 +478,7 @@ const GiftCertificatesPage = () => {
                         <div className="space-y-4">
                           <Select
                             value={usageData.admin_name}
-                            onValueChange={(value) => setUsageData({...usageData, admin_name: value})}
+                            onValueChange={(value) => setUsageData({ ...usageData, admin_name: value })}
                           >
                             <SelectTrigger className="rounded-lg">
                               <SelectValue placeholder="Выберите администратора*" />
@@ -505,7 +505,7 @@ const GiftCertificatesPage = () => {
                           />
                           <Select
                             value={usageData.massage_type}
-                            onValueChange={(value) => setUsageData({...usageData, massage_type: value})}
+                            onValueChange={(value) => setUsageData({ ...usageData, massage_type: value })}
                           >
                             <SelectTrigger className="rounded-lg">
                               <SelectValue placeholder="Выберите тип массажа*" />
@@ -518,7 +518,7 @@ const GiftCertificatesPage = () => {
                           </Select>
                           <Select
                             value={usageData.duration}
-                            onValueChange={(value) => setUsageData({...usageData, duration: value})}
+                            onValueChange={(value) => setUsageData({ ...usageData, duration: value })}
                           >
                             <SelectTrigger className="rounded-lg">
                               <SelectValue placeholder="Выберите длительность*" />
@@ -531,7 +531,7 @@ const GiftCertificatesPage = () => {
                           </Select>
                           <Select
                             value={usageData.master_name}
-                            onValueChange={(value) => setUsageData({...usageData, master_name: value})}
+                            onValueChange={(value) => setUsageData({ ...usageData, master_name: value })}
                           >
                             <SelectTrigger className="rounded-lg">
                               <SelectValue placeholder="Выберите мастера*" />
@@ -542,8 +542,8 @@ const GiftCertificatesPage = () => {
                               ))}
                             </SelectContent>
                           </Select>
-                          <Button 
-                            onClick={() => selectedCertificate && markAsUsed(selectedCertificate)} 
+                          <Button
+                            onClick={() => selectedCertificate && markAsUsed(selectedCertificate)}
                             className="w-full rounded-lg"
                             disabled={!selectedCertificate}
                           >

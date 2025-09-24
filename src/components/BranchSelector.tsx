@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogTrigger,
   DialogDescription,
   DialogFooter
@@ -54,7 +54,7 @@ const BranchCard: React.FC<BranchCardProps> = ({ branch, isSelected, onClick }) 
   const colorClasses = getColorClasses();
 
   return (
-    <div 
+    <div
       className={cn(
         "p-4 border rounded-lg flex items-start gap-4 cursor-pointer transition-all duration-200",
         colorClasses.border,
@@ -108,7 +108,7 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" className="justify-start px-3 py-2 w-full hover:text-white hover:bg-white/10 text-[#080000]">
+        <Button variant="ghost" className="justify-start px-3 py-2 w-full hover:text-white hover:bg-white/10 text-slate-300">
           <Building2 className="h-5 w-5 mr-2" />
           <span className="text-left">Филиал</span>
         </Button>
@@ -150,7 +150,7 @@ interface BranchIndicatorProps {
 
 export const BranchIndicator: React.FC<BranchIndicatorProps> = ({ compact = false }) => {
   const { currentBranch } = useBranch();
-  
+
   const getColorClasses = () => {
     switch (currentBranch.color) {
       case "green":
@@ -167,7 +167,7 @@ export const BranchIndicator: React.FC<BranchIndicatorProps> = ({ compact = fals
   return (
     <div className={compact ? "" : "px-4 py-2"}>
       <div className={cn(
-        "flex items-center gap-2 text-sm font-medium rounded-md", 
+        "flex items-center gap-2 text-sm font-medium rounded-md",
         getColorClasses(),
         compact ? "px-2 py-1" : "p-2"
       )}>

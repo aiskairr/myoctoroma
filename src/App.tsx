@@ -30,20 +30,21 @@ import { MobileNavbar } from "@/components/MobileNavbar";
 import { MobileNavbarMaster } from "@/components/MobileNavbarMaster";
 import { MobileNavbarAdmin } from "@/components/MobileNavbarAdmin";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import CalendarScreen from "./pages/Calendar";
 
 // Компонент для защищенных маршрутов с layout
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const { isMaster } = useIsMaster();
   const { isAdmin } = useIsAdmin();
-  
+
   // Определяем какой мобильный navbar показать
   const getMobileNavbar = () => {
     if (isMaster) return <MobileNavbarMaster />;
     if (isAdmin) return <MobileNavbarAdmin />;
     return <MobileNavbar />;
   };
-  
+
   return (
     <SimpleProtectedRoute>
       <div className="flex flex-col min-h-screen">
@@ -73,108 +74,116 @@ function App() {
             <Route path="/login" component={SimpleLogin} />
             <Route path="/public/booking" component={BookingPage} />
             <Route path="/booking" component={Booking} />
-            
+
             {/* Мобильная версия для мастеров */}
             <Route path="/mobile" component={MobileApp} />
-            
+
             {/* Защищенные маршруты */}
             <Route path="/">
               <ProtectedLayout>
                 <Dashboard />
               </ProtectedLayout>
             </Route>
-            
+
             <Route path="/clients">
               <ProtectedLayout>
                 <Clients />
               </ProtectedLayout>
             </Route>
-            
+
             <Route path="/settings">
               <ProtectedLayout>
                 <Settings />
               </ProtectedLayout>
             </Route>
-            
+
             <Route path="/crm/tasks">
               <ProtectedLayout>
                 <CRMTasks />
               </ProtectedLayout>
             </Route>
-            
+
             <Route path="/crm/calendar">
+              <ProtectedLayout>
+                <CalendarScreen />
+              </ProtectedLayout>
+            </Route>
+
+            <Route path={'/crm/calendarscreen'}>
               <ProtectedLayout>
                 <DailyCalendar />
               </ProtectedLayout>
             </Route>
-            
+
             <Route path="/master/calendar">
               <ProtectedLayout>
                 <MasterCalendar />
               </ProtectedLayout>
             </Route>
-            
+
             <Route path="/master-calendar">
               <ProtectedLayout>
                 <MasterCalendar />
               </ProtectedLayout>
             </Route>
-            
+
+
+
             <Route path="/crm/masters">
               <ProtectedLayout>
                 <Masters />
               </ProtectedLayout>
             </Route>
-            
-            
+
+
             <Route path="/accounting">
               <ProtectedLayout>
                 <AccountingPage />
               </ProtectedLayout>
             </Route>
-            
+
             <Route path="/salary">
               <ProtectedLayout>
                 <SalaryPage />
               </ProtectedLayout>
             </Route>
-            
+
             <Route path="/gift-certificates">
               <ProtectedLayout>
                 <GiftCertificatesPage />
               </ProtectedLayout>
             </Route>
-            
+
             <Route path="/report">
               <ProtectedLayout>
                 <ReportPage />
               </ProtectedLayout>
             </Route>
-            
+
             <Route path="/reports">
               <ProtectedLayout>
                 <ReportPage />
               </ProtectedLayout>
             </Route>
-            
+
             <Route path="/services">
               <ProtectedLayout>
                 <CRMServices />
               </ProtectedLayout>
             </Route>
-            
+
             <Route path="/crm/services">
               <ProtectedLayout>
                 <CRMServices />
               </ProtectedLayout>
             </Route>
-            
+
             <Route path="/how-to-use">
               <ProtectedLayout>
                 <HowToUsePage />
               </ProtectedLayout>
             </Route>
-            
+
             {/* 404 страница */}
             <Route>
               <NotFound />
