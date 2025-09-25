@@ -19,7 +19,7 @@ export default defineConfig({
     proxy: {
       '/api': {
         // target: 'https://international-patience-promconsulting-b5fd18f5.koyeb.app',
-        target: 'scattered-ermentrude-promconsulting-23cbccde.koyeb.app/',
+        target: 'https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app',
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {
