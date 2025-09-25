@@ -31,6 +31,7 @@ import { MobileNavbarMaster } from "@/components/MobileNavbarMaster";
 import { MobileNavbarAdmin } from "@/components/MobileNavbarAdmin";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import CalendarScreen from "./pages/Calendar";
+import ServicesPage from "./pages/Services";
 
 // Компонент для защищенных маршрутов с layout
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
@@ -168,7 +169,8 @@ function App() {
 
             <Route path="/services">
               <ProtectedLayout>
-                <CRMServices />
+                {/* <CRMServices /> */}
+                <ServicesPage />
               </ProtectedLayout>
             </Route>
 
