@@ -10,6 +10,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Settings2, Clock, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import type React from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface FormData {
     clientName: string;
@@ -26,7 +28,13 @@ interface FormData {
     cost: string;
 }
 
-const TaskDialogBtn = () => {
+interface Props {
+    children: React.ReactNode;
+}
+
+const TaskDialogBtn: React.FC<Props> = ({ children }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
     const {
         control,
         handleSubmit,
@@ -51,34 +59,42 @@ const TaskDialogBtn = () => {
         }
     });
 
+    const handleOpenChange = useCallback((open: boolean) => {
+        setIsOpen(open);
+    }, []);
+
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isOpen]);
+
     // Форматирование номера телефона для Кыргызстана
     const formatKyrgyzPhone = (value: string) => {
-        // Удаляем все символы кроме цифр
         const cleanValue = value.replace(/\D/g, '');
 
         if (cleanValue.length === 0) return '';
 
         let formattedValue = cleanValue;
 
-        // Если начинается с 996, оставляем как есть
         if (cleanValue.startsWith('996')) {
             formattedValue = cleanValue;
-        }
-        // Если начинается с 0, заменяем на 996
-        else if (cleanValue.startsWith('0')) {
+        } else if (cleanValue.startsWith('0')) {
             formattedValue = '996' + cleanValue.substring(1);
-        }
-        // Если начинается с любой другой цифры, добавляем 996
-        else if (cleanValue.length <= 9) {
+        } else if (cleanValue.length <= 9) {
             formattedValue = '996' + cleanValue;
         }
 
-        // Форматируем как +996 (XXX) XXX-XXX
         if (formattedValue.length >= 3) {
-            const countryCode = formattedValue.substring(0, 3); // 996
-            const operatorCode = formattedValue.substring(3, 6); // XXX
-            const firstPart = formattedValue.substring(6, 9); // XXX
-            const secondPart = formattedValue.substring(9, 12); // XXX
+            const countryCode = formattedValue.substring(0, 3);
+            const operatorCode = formattedValue.substring(3, 6);
+            const firstPart = formattedValue.substring(6, 9);
+            const secondPart = formattedValue.substring(9, 12);
 
             let formatted = `+${countryCode}`;
             if (operatorCode) formatted += ` (${operatorCode}`;
@@ -111,16 +127,19 @@ const TaskDialogBtn = () => {
     const onSubmit = (data: FormData) => {
         console.log('Form data:', data);
         // Здесь можно добавить логику отправки данных
+        handleOpenChange(false);
     };
 
     return (
-        <Dialog>
-            <DialogTrigger>
-                <Button variant={"outline"} className="w-5 h-5 p-[2.5] rounded-full">
-                    <Settings2 width={5} height={5} />
-                </Button>
+        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+            <DialogTrigger asChild>
+                {children}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+            <DialogContent
+                className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto"
+                // Убрали onInteractOutside - теперь клик по backdrop будет закрывать модалку
+                onEscapeKeyDown={() => handleOpenChange(false)}
+            >
                 <DialogHeader className="pb-4">
                     <div className="flex items-center gap-2">
                         <span className="w-3 h-3 bg-red-500 rounded-full"></span>
@@ -131,7 +150,7 @@ const TaskDialogBtn = () => {
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit(onSubmit)}>
-                    <div className="flex flex-col gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                         {/* Левая колонка - Клиент */}
                         <div className="space-y-4">
                             <h3 className="text-blue-600 font-medium">Клиент</h3>
@@ -505,7 +524,11 @@ const TaskDialogBtn = () => {
                     </div>
 
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
-                        <Button type="button" variant="outline">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleOpenChange(false)}
+                        >
                             Отмена
                         </Button>
                         <Button

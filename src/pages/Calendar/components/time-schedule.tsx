@@ -623,76 +623,73 @@ const AdvancedScheduleComponent: React.FC = () => {
 
         return (
             <Tooltip key={appointment.id}>
-                <TooltipTrigger asChild>
-                    <div
-                        className={`absolute border-l-4 rounded-r-md text-xs group transition-all duration-100 ${statusColors[appointment.status]
-                            } ${isDragging ? 'opacity-70 scale-105 shadow-xl ring-2 ring-blue-400/50' : 'shadow-sm hover:shadow-md'} ${isResizing ? 'ring-2 ring-blue-400' : ''
-                            } hover:opacity-90`}
-                        style={{
-                            top: startIndex * TIME_SLOT_HEIGHT + 1,
-                            height: Math.max(height, 32),
-                            left: `${(column * width)}%`,
-                            width: `${width}%`,
-                            paddingLeft: column > 0 ? '2px' : '4px',
-                            paddingRight: '4px',
-                            borderLeftColor: borderColor,
-                            zIndex: zIndex,
-                            cursor: 'grab'
-                        }}
-                    >
-                        {/* Resize handles */}
+                <TaskDialogBtn>
+                    <TooltipTrigger asChild>
                         <div
-                            className="absolute top-0 left-0 right-0 h-3 cursor-ns-resize opacity-0"
-                            onMouseDown={(e) => handleMouseDown(e, appointment, 'resize-top')}
-                        />
-
-                        {/* Task Dialog Button */}
-                        <div className="absolute top-1 right-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto">
-                            <TaskDialogBtn />
-                        </div>
-
-                        {/* Content */}
-                        <div
-                            className={`${isSmall ? 'px-1 py-1' : 'px-2 py-1'} h-full flex ${isSmall ? 'items-center' : 'flex-col justify-between'} cursor-grab active:cursor-grabbing`}
-                            onMouseDown={(e) => handleMouseDown(e, appointment, 'drag')}
+                            className={`absolute border-l-4 rounded-r-md text-xs group transition-all duration-100 ${statusColors[appointment.status]
+                                } ${isDragging ? 'opacity-70 scale-105 shadow-xl ring-2 ring-blue-400/50' : 'shadow-sm hover:shadow-md'} ${isResizing ? 'ring-2 ring-blue-400' : ''
+                                } hover:opacity-90`}
+                            style={{
+                                top: startIndex * TIME_SLOT_HEIGHT + 1,
+                                height: Math.max(height, 32),
+                                left: `${(column * width)}%`,
+                                width: `${width}%`,
+                                paddingLeft: column > 0 ? '2px' : '4px',
+                                paddingRight: '4px',
+                                borderLeftColor: borderColor,
+                                zIndex: zIndex,
+                                cursor: 'grab'
+                            }}
                         >
-                            {isSmall ? (
-                                <div className="flex-1 min-w-0 pointer-events-none pr-6">
-                                    <div className="font-semibold truncate text-xs leading-tight">{appointment.clientName}</div>
-                                </div>
-                            ) : isMedium ? (
-                                <div className="flex-1 min-w-0 pointer-events-none pr-6">
-                                    <div className="font-semibold truncate text-xs leading-tight">{appointment.clientName}</div>
-                                    <div className="truncate text-xs opacity-70 leading-tight">{appointment.service}</div>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="flex items-start justify-between pr-6">
-                                        <div className="flex-1 min-w-0 pointer-events-none">
-                                            <div className="font-semibold truncate text-sm leading-tight">{appointment.clientName}</div>
-                                            <div className="truncate text-xs opacity-70 leading-tight">{appointment.service}</div>
+                            {/* Resize handles */}
+                            <div
+                                className="absolute top-0 left-0 right-0 h-3 cursor-ns-resize opacity-0"
+                                onMouseDown={(e) => handleMouseDown(e, appointment, 'resize-top')}
+                            />
+
+                            {/* Content */}
+                            <div
+                                className={`${isSmall ? 'px-1 py-1' : 'px-2 py-1'} h-full flex ${isSmall ? 'items-center' : 'flex-col justify-between'} cursor-grab active:cursor-grabbing`}
+                                onMouseDown={(e) => handleMouseDown(e, appointment, 'drag')}
+                            >
+                                {isSmall ? (
+                                    <div className="flex-1 min-w-0 pointer-events-none pr-6">
+                                        <div className="font-semibold truncate text-xs leading-tight">{appointment.clientName}</div>
+                                    </div>
+                                ) : isMedium ? (
+                                    <div className="flex-1 min-w-0 pointer-events-none pr-6">
+                                        <div className="font-semibold truncate text-xs leading-tight">{appointment.clientName}</div>
+                                        <div className="truncate text-xs opacity-70 leading-tight">{appointment.service}</div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex items-start justify-between pr-6">
+                                            <div className="flex-1 min-w-0 pointer-events-none">
+                                                <div className="font-semibold truncate text-sm leading-tight">{appointment.clientName}</div>
+                                                <div className="truncate text-xs opacity-70 leading-tight">{appointment.service}</div>
+                                            </div>
+                                            {width > 50 && (
+                                                <div className="ml-1 pointer-events-none">
+                                                </div>
+                                            )}
                                         </div>
+
                                         {width > 50 && (
-                                            <div className="ml-1 pointer-events-none">
+                                            <div className="text-xs opacity-60 mt-auto pointer-events-none leading-tight">
+                                                {appointment.startTime} - {appointment.endTime}
                                             </div>
                                         )}
-                                    </div>
+                                    </>
+                                )}
+                            </div>
 
-                                    {width > 50 && (
-                                        <div className="text-xs opacity-60 mt-auto pointer-events-none leading-tight">
-                                            {appointment.startTime} - {appointment.endTime}
-                                        </div>
-                                    )}
-                                </>
-                            )}
+                            <div
+                                className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize opacity-0"
+                                onMouseDown={(e) => handleMouseDown(e, appointment, 'resize-bottom')}
+                            />
                         </div>
-
-                        <div
-                            className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize opacity-0"
-                            onMouseDown={(e) => handleMouseDown(e, appointment, 'resize-bottom')}
-                        />
-                    </div>
-                </TooltipTrigger>
+                    </TooltipTrigger>
+                </TaskDialogBtn>
                 <TooltipContent className="bg-white border border-gray-300 rounded-lg shadow-xl p-4 min-w-64 max-w-80">
                     <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
