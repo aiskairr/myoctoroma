@@ -1,12 +1,5 @@
-import { Eye, Trash2, Check } from 'lucide-react';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
+import { Eye, Trash2, Check, PencilRuler, Pen } from 'lucide-react';
+// Using standard HTML table elements with Tailwind styling
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -178,52 +171,64 @@ const ServicesTable: React.FC = () => {
     };
 
     return (
-        <Card className="w-full">
+        <Card className="w-full p-4">
             <div className="overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="min-w-[150px]">Название услуги</TableHead>
-                            <TableHead className="min-w-[120px]">Описание</TableHead>
-                            <TableHead className="min-w-[100px]">Филиал</TableHead>
-                            <TableHead className="min-w-[120px]">Стандартная длительность</TableHead>
-                            <TableHead className="min-w-[80px] text-center">Активна</TableHead>
+                <table className="w-full border-collapse rounded-xl">
+                    <thead>
+                        <tr className="">
+                            <th className="min-w-[180px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">
+                                Название услуги
+                            </th>
+                            <th className="min-w-[140px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">
+                                Описание
+                            </th>
+                            <th className="min-w-[120px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">
+                                Филиал
+                            </th>
+                            <th className="min-w-[140px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">
+                                Длительность
+                            </th>
+                            <th className="min-w-[100px] text-center border border-gray-300 px-4 py-3 text-base font-semibold">
+                                Активна
+                            </th>
                             {timeColumns.map(time => (
-                                <TableHead key={time} className="min-w-[80px] text-center">
+                                <th key={time} className="min-w-[90px] text-center border border-gray-300 px-4 py-3 text-base font-semibold">
                                     {time} мин
-                                </TableHead>
+                                </th>
                             ))}
-                            <TableHead className="min-w-[120px] text-center">Действия</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {services.map((service) => (
-                            <TableRow key={service.id}>
-                                <TableCell>
+                            <th className="min-w-[140px] text-center border border-gray-300 px-4 py-3 text-base font-semibold">
+                                Действия
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {services.map((service, index) => (
+                            <tr key={service.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                <td className="border border-gray-300 px-4 py-3">
                                     <Input
                                         value={service.name}
                                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                                             updateService(service.id, 'name', e.target.value)
                                         }
-                                        className="border-0 shadow-none p-2 h-auto focus-visible:ring-0 min-w-[250px]"
+                                        className="border-0 shadow-none p-2 text-base font-medium bg-transparent focus-visible:ring-1 focus-visible:ring-blue-500 min-w-[250px]"
                                     />
-                                </TableCell>
-                                <TableCell>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3">
                                     <Input
                                         value={service.description}
                                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                                             updateService(service.id, 'description', e.target.value)
                                         }
                                         placeholder="Описание"
-                                        className="border-0 shadow-none p-2 min-w-[150px] h-auto focus-visible:ring-0"
+                                        className="border-0 shadow-none p-2 text-base bg-transparent min-w-[150px] focus-visible:ring-1 focus-visible:ring-blue-500"
                                     />
-                                </TableCell>
-                                <TableCell>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3">
                                     <Select
                                         value={service.branch}
                                         onValueChange={(value: string) => updateService(service.id, 'branch', value)}
                                     >
-                                        <SelectTrigger className="border-0 shadow-none p-2 h-auto focus:ring-0 min-w-[150px]">
+                                        <SelectTrigger className="border-0 shadow-none p-2 text-base bg-transparent focus:ring-1 focus:ring-blue-500 min-w-[150px]">
                                             <SelectValue placeholder="Выберите филиал" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -232,41 +237,43 @@ const ServicesTable: React.FC = () => {
                                             <SelectItem value="branch2">Филиал 2</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                </TableCell>
-                                <TableCell>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3">
                                     <Select
                                         value={service.standardDuration.toString()}
                                         onValueChange={(value: string) =>
                                             updateService(service.id, 'standardDuration', parseInt(value) as TimeColumn)
                                         }
                                     >
-                                        <SelectTrigger className="border-0 shadow-none p-2 h-auto focus:ring-0">
+                                        <SelectTrigger className="border-0 shadow-none p-2 text-base bg-transparent focus:ring-1 focus:ring-blue-500">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {timeColumns.map(time => (
                                                 <SelectItem key={time} value={time.toString()}>
-                                                    {time}
+                                                    {time} мин
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                </TableCell>
-                                <TableCell className="text-center">
-                                    <Switch
-                                        checked={service.isActive}
-                                        onCheckedChange={(checked: boolean) =>
-                                            updateService(service.id, 'isActive', checked)
-                                        }
-                                    />
-                                </TableCell>
+                                </td>
+                                <td className="text-center border border-gray-300 px-4 py-3">
+                                    <div className="flex justify-center">
+                                        <Switch
+                                            checked={service.isActive}
+                                            onCheckedChange={(checked: boolean) =>
+                                                updateService(service.id, 'isActive', checked)
+                                            }
+                                        />
+                                    </div>
+                                </td>
                                 {timeColumns.map(time => {
                                     const cellKey = `${service.id}-${time}`;
                                     const isEditing = editingCell === cellKey;
                                     const price = service.prices[time] || 0;
 
                                     return (
-                                        <TableCell key={time} className="text-center transition-all">
+                                        <td key={time} className="text-center border border-gray-300 px-4 py-3">
                                             {isEditing ? (
                                                 <Input
                                                     value={editValue}
@@ -277,46 +284,43 @@ const ServicesTable: React.FC = () => {
                                                     onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
                                                         handleKeyPress(e, service.id, time)
                                                     }
-                                                    className="w-full text-center h-8 min-w-[80px] transition-all"
+                                                    className="w-full text-center text-base font-medium border border-blue-500 focus:ring-2 focus:ring-blue-500 min-w-[80px]"
                                                     autoFocus
                                                 />
                                             ) : (
                                                 <div
                                                     onClick={() => handleCellClick(service.id, time)}
-                                                    className="cursor-pointer hover:bg-muted rounded p-2 min-h-[32px] flex items-center justify-center transition-colors"
+                                                    className="cursor-pointer hover:bg-blue-100 rounded p-3 min-h-[40px] flex items-center justify-center transition-colors text-base font-medium"
                                                 >
-                                                    {price}
+                                                    {price > 0 ? `${price}` : <Pen width={15} height={15} strokeWidth={1} />}
                                                 </div>
                                             )}
-                                        </TableCell>
+                                        </td>
                                     );
                                 })}
-                                <TableCell>
-                                    <div className="flex gap-1 justify-center">
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <td className="border border-gray-300 px-4 py-3">
+                                    <div className="flex gap-2 justify-center">
+                                        <button className="inline-flex items-center justify-center h-9 w-9 p-0 border border-gray-300 bg-white hover:bg-gray-50 rounded-md transition-colors">
                                             <Check className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                        </button>
+                                        <button
                                             onClick={() => deleteService(service.id)}
+                                            className="inline-flex items-center justify-center h-9 w-9 p-0 border border-gray-300 bg-white text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
                                         >
                                             <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                        </button>
+                                        <button className="inline-flex items-center justify-center h-9 w-9 p-0 border border-gray-300 bg-white hover:bg-gray-50 rounded-md transition-colors">
                                             <Eye className="h-4 w-4" />
-                                        </Button>
+                                        </button>
                                     </div>
-                                </TableCell>
-                            </TableRow>
+                                </td>
+                            </tr>
                         ))}
-                    </TableBody>
-                </Table>
+                    </tbody>
+                </table>
             </div>
         </Card>
     );
 };
-
 
 export default ServicesTable;
