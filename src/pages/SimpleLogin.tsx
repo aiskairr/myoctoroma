@@ -78,10 +78,10 @@ export default function SimpleLogin() {
             }
           })
 
-          console.log(await res.json())
+          const userData = await res.json();
+          console.log(userData);
 
-
-          Cookies.set('user', JSON.stringify(await res.json()))
+          Cookies.set('user', JSON.stringify(userData));
           window.location.href = "/";
         }
       } else {

@@ -3,7 +3,14 @@ import type { QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
+    let text = res.statusText;
+    try {
+      // Пытаемся прочитать текст только если тело не было уже прочитано
+      text = await res.text();
+    } catch (error) {
+      // Если не можем прочитать тело (уже прочитано), используем statusText
+      console.warn("Could not read response body, using statusText:", error);
+    }
     throw new Error(`${res.status}: ${text}`);
   }
 }
@@ -80,7 +87,14 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    
+    try {
+      return await res.json();
+    } catch (error) {
+      console.error("Error parsing JSON response:", error);
+      // Если не можем распарсить JSON, возвращаем null или пустой объект
+      return null;
+    }
   };
 
 export const queryClient = new QueryClient({

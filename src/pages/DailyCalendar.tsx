@@ -23,6 +23,9 @@ import { PaymentMethodIcon } from "@/components/BankIcons";
 interface MassageService {
   id: number;
   name: string;
+  duration10Price?: number;
+  duration15Price?: number;
+  duration20Price?: number;
   duration30Price?: number;
   duration50Price?: number;
   duration60Price?: number;

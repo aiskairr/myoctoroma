@@ -18,8 +18,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        // target: 'https://international-patience-promconsulting-b5fd18f5.koyeb.app',
-        target: 'http://localhost:5000',
+        // target: 'https://puny-noemi-promconsulting-453531f5.koyeb.app',
+        target: 'https://puny-noemi-promconsulting-453531f5.koyeb.app',
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {
