@@ -118,7 +118,13 @@ const AccountingPage = () => {
 
   const fetchMasters = async () => {
     try {
-      const response = await apiGetJson(`${import.meta.env.VITE_BACKEND_URL}/api/masters`);
+      if (!currentBranch?.id) {
+        console.warn('No branch ID available for masters fetch');
+        return [];
+      }
+      const url = `/api/masters?branchID=${currentBranch.id}`;
+      console.log('Fetching masters with URL:', url);
+      const response = await apiGetJson(url);
       console.log('Masters response:', response);
       return response;
     } catch (error) {
@@ -129,7 +135,13 @@ const AccountingPage = () => {
 
   const fetchAdministrators = async () => {
     try {
-      const response = await apiGetJson(`${import.meta.env.VITE_BACKEND_URL}/api/administrators`, currentBranch?.id);
+      if (!currentBranch?.id) {
+        console.warn('No branch ID available for administrators fetch');
+        return [];
+      }
+      const url = `/api/administrators?branchID=${currentBranch.id}`;
+      console.log('Fetching administrators with URL:', url);
+      const response = await apiGetJson(url);
       console.log('Administrators response:', response);
       return response;
     } catch (error) {

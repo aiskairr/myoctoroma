@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useBranch } from '@/contexts/BranchContext';
+import { apiGetJson, apiPost } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -42,6 +44,9 @@ interface AccountingData {
 }
 
 export default function SalaryPage() {
+  const { currentBranch } = useBranch();
+  const { toast } = useToast();
+  
   const [salaryRecords, setSalaryRecords] = useState<SalaryRecord[]>([]);
   const [salaryPayments, setSalaryPayments] = useState<SalaryPayment[]>([]);
   const [accountingData, setAccountingData] = useState<AccountingData[]>([]);
@@ -59,7 +64,6 @@ export default function SalaryPage() {
   const [editedPayments, setEditedPayments] = useState<{[key: number]: number}>({});
   const [editingRows, setEditingRows] = useState<{[key: number]: boolean}>({});
   const [editedData, setEditedData] = useState<{[key: number]: Partial<SalaryRecord>}>({});
-  const { toast } = useToast();
 
   // Загрузка данных зарплат
   const fetchSalaryData = async () => {
@@ -110,11 +114,14 @@ export default function SalaryPage() {
   // Загрузка выплат за период
   const fetchSalaryPayments = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments?startDate=${startDate}&endDate=${endDate}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSalaryPayments(data);
+      if (!currentBranch?.id) {
+        console.warn('No branch ID available for salary payments fetch');
+        return;
       }
+      const url = `/api/salary-payments?startDate=${startDate}&endDate=${endDate}&branchID=${currentBranch.id}`;
+      console.log('Fetching salary payments with URL:', url);
+      const data = await apiGetJson(url, currentBranch.id);
+      setSalaryPayments(data);
     } catch (error) {
       console.error('Ошибка загрузки выплат:', error);
     }
@@ -181,33 +188,39 @@ export default function SalaryPage() {
   // Сохранение выплаты
   const savePayment = async (employeeId: number, employeeName: string, amount: number) => {
     try {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/salary-payments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          employee_id: employeeId,
-          employee_name: employeeName,
-          amount: amount,
-          payment_date: new Date().toISOString().split('T')[0], // Текущая дата
-          period_start: startDate,
-          period_end: endDate
-        }),
-      });
-
-      if (response.ok) {
+      if (!currentBranch?.id) {
+        console.warn('No branch ID available for salary payment');
         toast({
-          title: "Успех",
-          description: "Выплата сохранена",
+          title: 'Ошибка',
+          description: 'Не удается определить филиал для записи',
+          variant: 'destructive'
         });
-        fetchSalaryPayments();
-        setEditedPayments(prev => {
-          const updated = { ...prev };
-          delete updated[employeeId];
-          return updated;
-        });
+        return;
       }
+
+      const data = {
+        employee_id: employeeId,
+        employee_name: employeeName,
+        amount: amount,
+        payment_date: new Date().toISOString().split('T')[0], // Текущая дата
+        period_start: startDate,
+        period_end: endDate,
+        branchID: currentBranch.id
+      };
+
+      console.log('Saving salary payment with data:', data);
+      await apiPost('/api/salary-payments', data);
+      
+      toast({
+        title: "Успех",
+        description: "Выплата сохранена",
+      });
+      fetchSalaryPayments();
+      setEditedPayments(prev => {
+        const updated = { ...prev };
+        delete updated[employeeId];
+        return updated;
+      });
     } catch (error) {
       console.error('Ошибка сохранения выплаты:', error);
       toast({

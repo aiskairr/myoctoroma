@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiGetJson } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from 'lucide-react';
@@ -48,12 +49,11 @@ export default function ReportPage() {
   // Загрузка данных пользователя
   const fetchUserData = async () => {
     try {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/user');
-      if (response.ok) {
-        const data = await response.json();
-        if (data) {
-          setUser({ role: data.role });
-        }
+      console.log('🔍 Loading user data...');
+      const data = await apiGetJson('/api/user');
+      console.log('✅ User data loaded:', data);
+      if (data) {
+        setUser({ role: data.role });
       }
     } catch (error) {
       console.error('Ошибка загрузки данных пользователя:', error);

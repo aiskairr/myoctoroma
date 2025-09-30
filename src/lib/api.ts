@@ -44,6 +44,13 @@ export const apiRequest = async (endpoint: string, options: ApiRequestOptions = 
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
   
+  console.log('🌐 API Request:', {
+    method: config.method || 'GET',
+    url: url,
+    hasAuth: !!headers['Authorization'],
+    contentType: headers['Content-Type']
+  });
+  
   try {
     const response = await fetch(url, config);
     
@@ -58,13 +65,28 @@ export const apiRequest = async (endpoint: string, options: ApiRequestOptions = 
     
     // Проверяем, что ответ действительно JSON, а не HTML
     const contentType = response.headers.get('content-type');
-    if (response.ok && contentType && contentType.includes('application/json')) {
-      return response;
-    } else if (!response.ok) {
-      // Если ошибка, пытаемся получить текст ошибки
+    
+    // Если ответ успешный, но Content-Type не JSON
+    if (response.ok && (!contentType || !contentType.includes('application/json'))) {
+      console.warn('⚠️ Server returned successful response but Content-Type is not JSON:', contentType);
       const text = await response.text();
       if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
-        throw new Error(`Server returned HTML instead of JSON. Status: ${response.status}`);
+        throw new Error(`Server returned HTML instead of JSON. Status: ${response.status}, Content-Type: ${contentType}`);
+      }
+      console.warn('⚠️ Non-JSON response text:', text.substring(0, 200) + '...');
+      throw new Error(`Server returned non-JSON response. Status: ${response.status}, Content-Type: ${contentType}`);
+    }
+    
+    // Если ответ успешный и Content-Type правильный
+    if (response.ok && contentType && contentType.includes('application/json')) {
+      return response;
+    } 
+    
+    // Если ошибка HTTP статуса
+    if (!response.ok) {
+      const text = await response.text();
+      if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
+        throw new Error(`Server returned HTML error page. Status: ${response.status}`);
       }
       throw new Error(`HTTP ${response.status}: ${text}`);
     }
@@ -85,16 +107,17 @@ export const apiGet = async (endpoint: string) => {
 export const apiGetJson = async <T = any>(endpoint: string): Promise<T> => {
   const response = await apiGet(endpoint);
   
-  const contentType = response.headers.get('content-type');
-  if (!response.ok || !contentType || !contentType.includes('application/json')) {
+  // Парсинг уже проверен в apiRequest, но добавим дополнительную проверку
+  try {
+    return await response.json();
+  } catch (error) {
+    console.error('❌ JSON parsing failed for endpoint:', endpoint);
     const text = await response.text();
     if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
       throw new Error(`Server returned HTML instead of JSON. Endpoint: ${endpoint}`);
     }
-    throw new Error(`Invalid JSON response from ${endpoint}: ${text}`);
+    throw new Error(`Failed to parse JSON response from ${endpoint}: ${error}`);
   }
-  
-  return response.json();
 };
 
 // Специальная функция для POST запросов  
