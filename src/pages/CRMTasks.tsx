@@ -891,7 +891,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
     const clientSource = task.client?.source;
     if (clientSource === 'instagram' || clientSource === 'telegram') {
       // Для Instagram и Telegram используем текущий филиал оператора
-      const branch = currentBranch?.waInstance || 'wa1';
+      const branch = currentBranch?.id?.toString() || 'wa1';
       console.log(`Определен филиал из source ${clientSource}: ${branch}`);
       return branch;
     }
@@ -908,7 +908,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
     }
 
     // По умолчанию используем текущий филиал оператора
-    const defaultBranch = currentBranch?.waInstance || 'wa1';
+    const defaultBranch = currentBranch?.id?.toString() || 'wa1';
     console.log(`Не удалось определить филиал по задаче, используем текущий: ${defaultBranch}`);
     return defaultBranch;
   };
@@ -1680,7 +1680,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
   const [formData, setFormData] = useState<ClientFormData>({
     clientName: "",
     phoneNumber: "",
-    branchId: currentBranch && currentBranch.waInstance ? currentBranch.waInstance : 'wa1',
+    branchId: currentBranch && currentBranch.id ? currentBranch.id.toString() : 'wa1',
     massageType: "",
     masterName: "",
     notes: "",
@@ -1691,7 +1691,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
   // Для отладки - проверяем значения при инициализации
   useEffect(() => {
     console.log("CreateClientDialog initialized with branch:",
-      currentBranch && currentBranch.waInstance ? currentBranch.waInstance : 'wa1',
+      currentBranch && currentBranch.id ? currentBranch.id.toString() : 'wa1',
       "currentBranch:", currentBranch);
   }, []);
 
@@ -1702,7 +1702,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
 
       try {
         // Обновляем филиал при каждом открытии
-        const currentInstanceId = currentBranch && currentBranch.waInstance ? currentBranch.waInstance : 'wa1';
+        const currentInstanceId = currentBranch && currentBranch.id ? currentBranch.id.toString() : 'wa1';
 
         // Обновляем форму если нужно
         if (formData.branchId !== currentInstanceId) {
@@ -1908,7 +1908,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
       setFormData({
         clientName: "",
         phoneNumber: "",
-        branchId: currentBranch?.waInstance || 'wa1',
+        branchId: currentBranch?.id?.toString() || 'wa1',
         massageType: "",
         masterName: "",
         notes: "",
@@ -1966,7 +1966,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
         // Устанавливаем текущий филиал если не указан
         setFormData(prev => ({
           ...prev,
-          branchId: currentBranch && currentBranch.waInstance ? currentBranch.waInstance : 'wa1'
+          branchId: currentBranch && currentBranch.id ? currentBranch.id.toString() : 'wa1'
         }));
       }
 
@@ -1992,9 +1992,9 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
             // Инициализация формы при открытии
             setFormData(prev => ({
               ...prev,
-              branchId: currentBranch && currentBranch.waInstance ? currentBranch.waInstance : 'wa1'
+              branchId: currentBranch && currentBranch.id ? currentBranch.id.toString() : 'wa1'
             }));
-            console.log("Филиал для нового клиента:", currentBranch?.waInstance || 'wa1');
+            console.log("Филиал для нового клиента:", currentBranch?.id?.toString() || 'wa1');
 
             // Открываем диалог
             setIsOpen(true);
@@ -2382,7 +2382,7 @@ const CRMTasks: React.FC = () => {
 
   // Запрос на получение задач по статусу
   const { data: tasksData, isLoading, isError, refetch } = useQuery({
-    queryKey: ['/api/tasks', activeTab, currentBranch.waInstance],
+    queryKey: ['/api/tasks', activeTab, currentBranch?.id],
     queryFn: async () => {
       const url = activeTab === 'all'
         ? '/api/tasks'

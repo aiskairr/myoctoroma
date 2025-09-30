@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -532,6 +532,9 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
               {statusStyle.label}
             </Badge>
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Просмотр и редактирование деталей записи клиента
+          </DialogDescription>
         </DialogHeader>
         
         {isFromTask && !isEditing && (

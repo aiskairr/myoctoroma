@@ -48,19 +48,21 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SimpleProtectedRoute>
-      <div className="flex flex-col min-h-screen">
-        {isMobile && getMobileNavbar()}
-        <div className="flex flex-grow">
-          {!isMobile && <Sidebar />}
-          <main className="flex-grow overflow-auto bg-gray-50">
-            <div className="p-6 lg:p-8">
-              <ErrorBoundary>
-                {children}
-              </ErrorBoundary>
-            </div>
-          </main>
+      <BranchProvider>
+        <div className="flex flex-col min-h-screen">
+          {isMobile && getMobileNavbar()}
+          <div className="flex flex-grow">
+            {!isMobile && <Sidebar />}
+            <main className="flex-grow overflow-auto bg-gray-50">
+              <div className="p-6 lg:p-8">
+                <ErrorBoundary>
+                  {children}
+                </ErrorBoundary>
+              </div>
+            </main>
+          </div>
         </div>
-      </div>
+      </BranchProvider>
     </SimpleProtectedRoute>
   );
 }
@@ -81,9 +83,9 @@ function App() {
 
             {/* Защищенные маршруты */}
             <Route path="/">
-              {/* <ProtectedLayout> */}
-              <Dashboard />
-              {/* </ProtectedLayout> */}
+              <ProtectedLayout>
+                <Dashboard />
+              </ProtectedLayout>
             </Route>
 
 

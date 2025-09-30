@@ -1,25 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, LogIn, Eye, EyeOff } from "lucide-react";
-import Cookies from 'js-cookie';
-
-interface User {
-  id: number;
-  email: string;
-  username: string;
-  role: string;
-}
+import { useAuth } from "@/contexts/SimpleAuthContext";
 
 export default function SimpleLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  
+  const { login, isLoading, isAuthenticated, user } = useAuth();
+
+  // Если пользователь уже авторизован, перенаправляем его
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === 'master') {
+        window.location.href = "/crm/calendar";
+      } else {
+        window.location.href = "/";
+      }
+    }
+  }, [isAuthenticated, user]);
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -33,55 +38,16 @@ export default function SimpleLogin() {
       return;
     }
 
-    setIsLoading(true);
     setError("");
 
-    // Получаем URL из переменной окружения
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
-    // Проверяем, что URL существует, чтобы избежать ошибок
-    if (!BACKEND_URL) {
-      setError("Ошибка конфигурации: URL бэкенда не найден.");
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      const response = await fetch(`${BACKEND_URL}/api/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
-      });
+      const result = await login(email, password);
 
-      // Парсим JSON только один раз
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        // Сохраняем результат в localStorage
-        localStorage.setItem('uuid', JSON.stringify(result));
-
+      if (result.success) {
         // Перенаправляем в зависимости от роли
         if (result.user?.role === 'master') {
           window.location.href = "/crm/calendar";
         } else {
-          Cookies.set("token", result.token);
-          const token = Cookies.get('token');
-          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user`, {
-            method: "GET",
-            credentials: "include",
-            headers: {
-              "Accept": "application/json",
-              "Authorization": `Bearer ${token}`
-            }
-          })
-
-          const userData = await res.json();
-          console.log(userData);
-
-          Cookies.set('user', JSON.stringify(userData));
           window.location.href = "/";
         }
       } else {
@@ -91,8 +57,6 @@ export default function SimpleLogin() {
     } catch (err) {
       console.error("Login error:", err);
       setError("Ошибка подключения к серверу");
-    } finally {
-      setIsLoading(false);
     }
   };
 

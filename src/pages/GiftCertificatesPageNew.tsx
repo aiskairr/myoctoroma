@@ -55,9 +55,9 @@ const GiftCertificatesPage = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?branchId=${currentBranch.waInstance}`);
-        if (response.ok) {
-          const allCertificates = await response.json();
+        const fetchResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?branchId=${currentBranch?.id}`);
+        if (fetchResponse.ok) {
+          const allCertificates = await fetchResponse.json();
           
           const active = allCertificates.filter((cert: GiftCertificate) => 
             !cert.is_used && !cert.is_expired && new Date(cert.expiry_date) >= new Date()
@@ -121,7 +121,7 @@ const GiftCertificatesPage = () => {
           payment_method: newCertificate.payment_method,
           discount: newCertificate.discount || '0%',
           expiry_date: newCertificate.expiry_date,
-          branch_id: currentBranch.waInstance,
+          branch_id: currentBranch?.id,
           is_used: false,
           is_expired: false
         }),
@@ -224,7 +224,7 @@ const GiftCertificatesPage = () => {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates/search/${searchNumber}?branchId=${currentBranch.waInstance}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates/search/${searchNumber}?branchId=${currentBranch?.id}`);
       if (response.ok) {
         const found = await response.json();
         setSelectedCertificate(found);

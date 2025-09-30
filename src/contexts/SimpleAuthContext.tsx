@@ -52,50 +52,118 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
 
     try {
+      // Сначала проверяем localStorage
       const storedData = localStorage.getItem('uuid');
+      const token = Cookies.get('token');
 
-      if (!storedData) {
+      if (!storedData && !token) {
         setIsAuthenticated(false);
         setUser(null);
         setIsLoading(false);
         return;
       }
 
-      const parsedData = JSON.parse(storedData);
-      const userId = parsedData?.user?.id;
+      // Если есть токен, проверяем его на сервере
+      if (token) {
+        try {
+          const response = await fetch(`${BACKEND_URL}/api/user`, {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Accept": "application/json",
+              "Authorization": `Bearer ${token}`
+            }
+          });
 
-      if (!userId) {
-        setIsAuthenticated(false);
-        setUser(null);
-        setIsLoading(false);
-        return;
+          if (response.ok) {
+            const userData = await response.json();
+            console.log("Token valid, user data:", userData);
+            
+            setIsAuthenticated(true);
+            setUser({
+              id: userData.id,
+              email: userData.email || '',
+              username: userData.username || '',
+              role: userData.role || '',
+              instanceId: userData.instanceId || null,
+              master_id: userData.master_id || null,
+            });
+            
+            // Обновляем cookie с актуальными данными
+            Cookies.set('user', JSON.stringify(userData));
+            setIsLoading(false);
+            return;
+          } else {
+            console.log("Token invalid, clearing auth data");
+            // Токен невалиден, очищаем все данные
+            setIsAuthenticated(false);
+            setUser(null);
+            localStorage.removeItem('uuid');
+            Cookies.remove('token');
+            Cookies.remove('user');
+            setIsLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.error("Error checking token:", error);
+          // При ошибке проверки токена очищаем данные
+          setIsAuthenticated(false);
+          setUser(null);
+          localStorage.removeItem('uuid');
+          Cookies.remove('token');
+          Cookies.remove('user');
+          setIsLoading(false);
+          return;
+        }
       }
 
-      const user = Cookies.get('user') || ''
+      // Fallback к старому методу через localStorage и cookies
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        const userId = parsedData?.user?.id;
 
-      const userData = JSON.parse(user)
+        if (!userId) {
+          setIsAuthenticated(false);
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
 
-      // Проверяем success и hasValidSession
-      if (userData && userData.success && userData.hasValidSession && userData.userId) {
-        setIsAuthenticated(true);
-        setUser({
-          id: userData.userId,
-          email: userData.email || '',
-          username: userData.username || '',
-          role: userData.role || '',
-          instanceId: userData.instanceId || null,
-          master_id: userData.master_id || null,
-        });
-      } else {
-        setIsAuthenticated(false);
-        setUser(null);
-        localStorage.removeItem('uuid'); // Очищаем невалидные данные
+        const userCookie = Cookies.get('user') || '';
+        
+        if (userCookie) {
+          try {
+            const userData = JSON.parse(userCookie);
+            
+            setIsAuthenticated(true);
+            setUser({
+              id: userData.id || userId,
+              email: userData.email || '',
+              username: userData.username || '',
+              role: userData.role || '',
+              instanceId: userData.instanceId || null,
+              master_id: userData.master_id || null,
+            });
+          } catch (parseError) {
+            console.error("Error parsing user cookie:", parseError);
+            setIsAuthenticated(false);
+            setUser(null);
+            localStorage.removeItem('uuid');
+            Cookies.remove('user');
+          }
+        } else {
+          setIsAuthenticated(false);
+          setUser(null);
+          localStorage.removeItem('uuid');
+        }
       }
     } catch (error) {
       console.error("Auth check failed:", error);
       setIsAuthenticated(false);
       setUser(null);
-      localStorage.removeItem('uuid'); // Очищаем при ошибке
+      localStorage.removeItem('uuid');
+      Cookies.remove('token');
+      Cookies.remove('user');
     } finally {
       setIsLoading(false);
     }
@@ -121,10 +189,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (result.success) {
         // Сохраняем данные в localStorage
         localStorage.setItem('uuid', JSON.stringify(result));
+        
+        // Сохраняем токен в cookies если он есть
+        if (result.token) {
+          Cookies.set('token', result.token);
+        }
 
         // Обновляем состояние
         setIsAuthenticated(true);
         setUser(result.user);
+        
         return { success: true, user: result.user };
       } else {
         setIsAuthenticated(false);
@@ -150,10 +224,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
-      // Очищаем состояние и localStorage
+      // Очищаем состояние и все данные авторизации
       setIsAuthenticated(false);
       setUser(null);
       localStorage.removeItem('uuid');
+      Cookies.remove('token');
+      Cookies.remove('user');
       setIsLoading(false);
       window.location.href = "/login";
     }

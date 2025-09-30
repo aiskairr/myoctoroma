@@ -148,10 +148,10 @@ const AccountingPage = () => {
     const dateString = new Date(targetDate.getTime() - (targetDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
     try {
-      const accountingRecords = await accountingService.getRecordsForDate(dateString, currentBranch.waInstance);
+      const accountingRecords = await accountingService.getRecordsForDate(dateString, currentBranch?.id?.toString() || '');
       setRecords(accountingRecords as AccountingRecord[]);
 
-      const expenseRecords = await expenseService.getExpensesForDate(dateString, currentBranch.waInstance);
+      const expenseRecords = await expenseService.getExpensesForDate(dateString, currentBranch?.id?.toString() || '');
       setExpenses(expenseRecords as ExpenseRecord[]);
     } catch (error) {
       console.error('Ошибка загрузки данных:', error);
@@ -268,7 +268,7 @@ const AccountingPage = () => {
 
     const expenseToAdd = {
       ...newExpense,
-      branchId: currentBranch.waInstance,
+      branchId: currentBranch?.id?.toString() || '',
       date: new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
     };
 
@@ -399,7 +399,7 @@ const AccountingPage = () => {
           </h1>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Building2 className="h-4 w-4" />
-            {currentBranch.name}
+            {currentBranch?.branches}
           </div>
         </div>
 
@@ -1034,7 +1034,7 @@ const AccountingPage = () => {
         <TabsContent value="report" className="space-y-6">
           <DailyCashReport
             selectedDate={selectedDate}
-            branchId={currentBranch.waInstance}
+            branchId={currentBranch?.id?.toString() || ''}
             records={records}
             expenses={expenses}
           />

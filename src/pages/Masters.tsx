@@ -84,7 +84,9 @@ const MasterForm: React.FC<{
     queryKey: ['/api/crm/masters', master?.id, 'user-account'],
     queryFn: async () => {
       if (!master?.id) return null;
-      const response = await fetch(`/api/crm/masters/${master.id}/user-account`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${master.id}/user-account`, {
+        credentials: 'include'
+      });
       if (!response.ok) {
         if (response.status === 404) return null;
         throw new Error('Failed to fetch user account');
@@ -482,7 +484,7 @@ const AdministratorForm: React.FC<{
   const [formData, setFormData] = useState({
     name: administrator?.name || '',
     role: administrator?.role || 'администратор',
-    branchId: administrator?.branchId || currentBranch.waInstance,
+    branchId: administrator?.branchId || currentBranch?.id?.toString(),
     phoneNumber: administrator?.phoneNumber || '',
     email: administrator?.email || '',
     notes: administrator?.notes || ''
@@ -643,9 +645,9 @@ const Masters: React.FC = () => {
   const [isAddAdministratorDialogOpen, setIsAddAdministratorDialogOpen] = useState(false);
 
   const { data: administrators, refetch: refetchAdministrators } = useQuery({
-    queryKey: ['/api/administrators', currentBranch.waInstance],
+    queryKey: ['/api/administrators', currentBranch?.id],
     queryFn: async () => {
-      const res = await fetch(`/api/administrators?branchId=${currentBranch.waInstance}`);
+      const res = await fetch(`/api/administrators?branchId=${currentBranch?.id}`);
       if (!res.ok) {
         throw new Error('Failed to fetch administrators');
       }
@@ -654,13 +656,18 @@ const Masters: React.FC = () => {
   });
 
   const { data: masters, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['/api/crm/masters', currentBranch.waInstance],
+    queryKey: ['/api/crm/masters', currentBranch?.id],
     queryFn: async () => {
-      console.log('Fetching masters data for branch:', currentBranch.waInstance);
+      console.log('Fetching masters data for branch:', currentBranch?.id);
       try {
-        const url = `/api/crm/masters?branchId=${currentBranch.waInstance}`;
+        const url = `${import.meta.env.VITE_BACKEND_URL}/api/crm/masters?branchId=${currentBranch?.id}`;
         console.log('Masters API URL:', url);
-        const res = await fetch(url);
+        const res = await fetch(url, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+          }
+        });
         console.log('Masters API response status:', res.status);
         if (!res.ok) {
           const errorText = await res.text();
@@ -712,7 +719,7 @@ const Masters: React.FC = () => {
   const createMasterMutation = useMutation({
     mutationFn: async (data: Partial<Master>) => {
       const { workingDates, ...masterData } = data;
-      const res = await fetch('/api/crm/masters', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(masterData)
@@ -758,7 +765,7 @@ const Masters: React.FC = () => {
   const updateMasterMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: Partial<Master> }) => {
       const { workingDates, ...masterData } = data;
-      const res = await fetch(`/api/crm/masters/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -817,7 +824,7 @@ const Masters: React.FC = () => {
 
   const deleteMasterMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/crm/masters/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${id}`, {
         method: 'DELETE'
       });
       if (!res.ok) {
@@ -913,7 +920,7 @@ const Masters: React.FC = () => {
     mutationFn: async ({ masterId, file }: { masterId: number, file: File }) => {
       const formData = new FormData();
       formData.append('image', file);
-      const res = await fetch(`/api/crm/masters/${masterId}/upload-image`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${masterId}/upload-image`, {
         method: 'POST',
         body: formData
       });
@@ -961,7 +968,7 @@ const Masters: React.FC = () => {
   const handleAddMaster = (data: Partial<Master>) => {
     const masterData = {
       ...data,
-      branchId: currentBranch.waInstance,
+      branchId: currentBranch?.id?.toString(),
     };
     console.log('Creating master with data:', masterData);
     createMasterMutation.mutate(masterData);
@@ -994,7 +1001,7 @@ const Masters: React.FC = () => {
     if (editMaster) {
       const masterData = {
         ...data,
-        branchId: currentBranch.waInstance,
+        branchId: currentBranch?.id?.toString(),
       };
       console.log('Updating master with data:', masterData);
       updateMasterMutation.mutate({ id: editMaster.id, data: masterData });

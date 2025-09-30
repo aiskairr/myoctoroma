@@ -60,7 +60,7 @@ const GiftCertificatesPage = () => {
       setIsLoading(true);
       try {
         // Загружаем сертификаты
-        const certificatesResponse = await fetch(`/api/gift-certificates?branchId=${currentBranch.waInstance}`);
+        const certificatesResponse = await fetch(`/api/gift-certificates?branchId=${currentBranch?.id}`);
         if (certificatesResponse.ok) {
           const allCertificates = await certificatesResponse.json();
 
@@ -92,7 +92,7 @@ const GiftCertificatesPage = () => {
         }
 
         // Загружаем типы массажа из таблицы client_tasks
-        const massageTypesResponse = await fetch(`/api/massage-types?branchId=${currentBranch.waInstance}`);
+        const massageTypesResponse = await fetch(`/api/massage-types?branchId=${currentBranch?.id}`);
         if (massageTypesResponse.ok) {
           const massageTypesData = await massageTypesResponse.json();
           const typeNames = massageTypesData.map((t: any) => t.massage_type).filter((type: string) => Boolean(type));
@@ -142,7 +142,7 @@ const GiftCertificatesPage = () => {
           amount: Number(newCertificate.amount),
           payment_method: newCertificate.payment_method,
           expiry_date: newCertificate.expiry_date,
-          branch_id: currentBranch.waInstance,
+          branch_id: currentBranch?.id,
           is_used: false,
           is_expired: false
         }),
@@ -224,7 +224,7 @@ const GiftCertificatesPage = () => {
             payment_method: 'Подарочный сертификат',
             admin_name: usageData.admin_name,
             is_gift_certificate_used: true,
-            branch_id: currentBranch.waInstance
+            branch_id: currentBranch?.id
           })
         });
 

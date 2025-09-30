@@ -31,14 +31,14 @@ export function useBranchFilter<T extends Record<string, any>>(
       return;
     }
 
-    // Получаем waInstance для текущего филиала (wa1 или wa2)
-    const branchWaInstance = currentBranch.waInstance;
+    // Получаем id для текущего филиала (numeric ID)
+    const branchWaInstance = currentBranch?.id;
 
     // Фильтруем данные
     const filtered = data.filter(item => {
       // Проверка на задачи с CRM (branchId)
       if (item.branchId) {
-        return item.branchId === branchWaInstance; // Фильтруем по branchId для задач
+        return item.branchId === branchWaInstance?.toString(); // Фильтруем по branchId для задач
       }
       
       // Для клиентов проверяем связанные с ними идентификаторы
@@ -53,15 +53,15 @@ export function useBranchFilter<T extends Record<string, any>>(
       if (!telegramId && !instanceId && !source) {
         // Для задач, у которых нет указан филиал, но есть branchId
         if (item.branchId) {
-          return item.branchId === branchWaInstance;
+          return item.branchId === branchWaInstance?.toString();
         }
         return true; // Если нет идентификаторов, сохраняем элемент
       }
 
       // Проверяем, относится ли элемент к выбранному филиалу WhatsApp
       const isWhatsAppBranch = 
-        (telegramId?.startsWith(branchWaInstance + '_') || 
-         instanceId === branchWaInstance);
+        (telegramId?.startsWith(branchWaInstance?.toString() + '_') || 
+         instanceId === branchWaInstance?.toString());
 
       // Проверяем Instagram
       const isInstagram = source === 'instagram' || 
@@ -78,7 +78,7 @@ export function useBranchFilter<T extends Record<string, any>>(
 
       // Для ручных записей проверяем branchId
       if (isManualEntry && item.branchId) {
-        return item.branchId === branchWaInstance;
+        return item.branchId === branchWaInstance?.toString();
       }
 
       // Включаем запись, если:

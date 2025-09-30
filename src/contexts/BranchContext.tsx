@@ -1,70 +1,140 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import type { ReactNode } from "react";
 
 export interface Branch {
-  id: string;
-  name: string;
+  id: number;
+  branches: string; // название филиала (как в API)
   address: string;
-  waInstance: string;
-  color: string;
+  phoneNumber: string;
+  organisationId: string | number; // может быть строкой или числом
 }
-
-export const BRANCHES: Branch[] = [
-  {
-    id: "toktogula",
-    name: "Токтогула",
-    address: "Токтогула 93",
-    waInstance: "wa1",
-    color: "blue"
-  }
-];
 
 interface BranchContextType {
-  currentBranch: Branch;
+  currentBranch: Branch | null;
   setBranch: (branch: Branch) => void;
   branches: Branch[];
+  isLoading: boolean;
+  error: string | null;
+  refetchBranches: () => Promise<void>;
 }
 
-// Устанавливаем дефолтное значение (первый филиал)
-const defaultBranch = BRANCHES[0];
-
 const BranchContext = createContext<BranchContextType>({
-  currentBranch: defaultBranch,
+  currentBranch: null,
   setBranch: () => {},
-  branches: BRANCHES,
+  branches: [],
+  isLoading: true,
+  error: null,
+  refetchBranches: async () => {},
 });
 
 export const BranchProvider = ({ children }: { children: ReactNode }) => {
-  const [currentBranch, setCurrentBranch] = useState<Branch>(() => {
-    // Пытаемся получить сохраненный филиал из localStorage
-    const saved = localStorage.getItem("currentBranch");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Проверяем, что объект имеет нужные поля
-        if (parsed && parsed.waInstance) {
-          // Находим соответствующий филиал в списке
-          const found = BRANCHES.find(b => b.waInstance === parsed.waInstance);
-          if (found) return found;
+  const [currentBranch, setCurrentBranch] = useState<Branch | null>(null);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Функция для загрузки филиалов
+  const fetchBranches = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Сначала пробуем основной эндпоинт
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/organisation-branches`, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
         }
-      } catch (e) {
-        console.error("Error parsing branch from localStorage:", e);
+      });
+
+      let branchList: Branch[] = [];
+
+      if (response.ok) {
+        const data = await response.json();
+        branchList = data.branches || [];
+        
+        // Сразу после успешного ответа, пробуем fallback эндпоинт
+        // Если у нас есть хотя бы один филиал с organisationId
+        if (branchList.length > 0 && branchList[0].organisationId) {
+          try {
+            console.log('Making fallback request to organisations endpoint...');
+            const organisationId = branchList[0].organisationId;
+            const fallbackResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/organisations/${organisationId}/branches`, {
+              credentials: 'include',
+              headers: {
+                'Accept': 'application/json',
+              }
+            });
+            
+            if (fallbackResponse.ok) {
+              const fallbackData = await fallbackResponse.json();
+              const fallbackBranches = fallbackData.branches || [];
+              if (fallbackBranches.length > 0) {
+                branchList = fallbackBranches; // Используем данные из fallback эндпоинта
+                console.log('Fallback endpoint successful, using branches from organisations endpoint:', branchList.length);
+              }
+            } else {
+              console.log('Fallback endpoint failed, using original branches');
+            }
+          } catch (fallbackErr) {
+            console.log('Fallback request failed, using original branches:', fallbackErr);
+          }
+        }
+      } else {
+        if (response.status === 401) {
+          throw new Error('Необходима авторизация');
+        } else if (response.status === 400) {
+          throw new Error('Пользователь не связан с организацией');
+        } else {
+          throw new Error(`Ошибка сервера: ${response.status}`);
+        }
       }
+
+      setBranches(branchList);
+
+      // Пытаемся восстановить сохраненный филиал
+      const savedBranchId = localStorage.getItem("currentBranchId");
+      if (savedBranchId && branchList.length > 0) {
+        const saved = branchList.find((b: Branch) => b.id.toString() === savedBranchId);
+        if (saved) {
+          setCurrentBranch(saved);
+        } else {
+          // Если сохраненный филиал не найден, выбираем первый
+          setCurrentBranch(branchList[0]);
+          localStorage.setItem("currentBranchId", branchList[0].id.toString());
+        }
+      } else if (branchList.length > 0) {
+        // Если нет сохраненного филиала, выбираем первый
+        setCurrentBranch(branchList[0]);
+        localStorage.setItem("currentBranchId", branchList[0].id.toString());
+      }
+    } catch (err) {
+      console.error('Error fetching branches:', err);
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки филиалов');
+    } finally {
+      setIsLoading(false);
     }
-    // Если не удалось получить из localStorage, используем дефолтный
-    return defaultBranch;
-  });
+  };
 
   // Функция для установки филиала
   const setBranch = (branch: Branch) => {
     setCurrentBranch(branch);
-    localStorage.setItem("currentBranch", JSON.stringify(branch));
+    localStorage.setItem("currentBranchId", branch.id.toString());
   };
+
+  // Загружаем филиалы при монтировании компонента
+  useEffect(() => {
+    fetchBranches();
+  }, []);
 
   // Значение контекста
   const value = {
     currentBranch,
     setBranch,
-    branches: BRANCHES,
+    branches,
+    isLoading,
+    error,
+    refetchBranches: fetchBranches,
   };
 
   return (

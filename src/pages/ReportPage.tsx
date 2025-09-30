@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useBranch } from '@/contexts/BranchContext';
 
 interface DailyCashReport {
   id: number;
@@ -40,7 +41,7 @@ export default function ReportPage() {
   const [selectedBranch, setSelectedBranch] = useState<string>(() => {
     return localStorage.getItem('reportPage_selectedBranch') || '';
   });
-  const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
+  const { branches } = useBranch(); // Используем branches из контекста
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -64,29 +65,7 @@ export default function ReportPage() {
     }
   };
 
-  // Загрузка списка филиалов
-  const fetchBranches = async () => {
-    try {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/daily-cash-reports-branches');
-      if (response.ok) {
-        const data = await response.json();
-        setBranches(data);
-      } else {
-        // Если эндпоинт не существует, создаем статичный список
-        setBranches([
-          { id: 'wa1', name: 'Токтогула 93' },
-          { id: 'wa2', name: 'Токтогула, 93' }
-        ]);
-      }
-    } catch (error) {
-      console.error('Ошибка загрузки филиалов:', error);
-      // Fallback к статичному списку
-      setBranches([
-        { id: 'wa1', name: 'Токтогула 93' },
-        { id: 'wa2', name: 'Токтогула, 93' }
-      ]);
-    }
-  };
+    // Загрузка данных пользователя (removed fetchBranches function since we use context)
 
   // Загрузка данных отчетов
   const fetchReports = async () => {
@@ -114,13 +93,8 @@ export default function ReportPage() {
 
   useEffect(() => {
     fetchUserData();
-    fetchBranches();
     fetchReports();
   }, [startDate, endDate, selectedBranch]);
-
-  useEffect(() => {
-    fetchBranches();
-  }, []);
 
   // Сохранение фильтров в localStorage
   useEffect(() => {
@@ -241,8 +215,8 @@ export default function ReportPage() {
             >
               <option value="">Все филиалы</option>
               {branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
+                <option key={branch.id} value={branch.id.toString()}>
+                  {branch.branches}
                 </option>
               ))}
             </select>
@@ -279,7 +253,7 @@ export default function ReportPage() {
             Отчеты за период с {startDate} по {endDate}
             <span className="text-sm font-normal text-gray-600 ml-2">
               {selectedBranch ? 
-                `• ${branches.find(b => b.id === selectedBranch)?.name || selectedBranch}` : 
+                `• ${branches.find(b => b.id.toString() === selectedBranch)?.branches || selectedBranch}` : 
                 '• Все филиалы'
               }
             </span>

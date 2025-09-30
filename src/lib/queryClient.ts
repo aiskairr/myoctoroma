@@ -1,5 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import type { QueryFunction } from "@tanstack/react-query";
+import Cookies from "js-cookie";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -28,6 +29,12 @@ export async function apiRequest(
     "Pragma": "no-cache"
   };
   
+  // Автоматически добавляем токен авторизации если он есть
+  const token = Cookies.get('token');
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  
   if (data) {
     headers["Content-Type"] = "application/json";
   }
@@ -43,6 +50,10 @@ export async function apiRequest(
   
   if (res.status === 401) {
     console.error("Authentication error - not authorized");
+    // Clear invalid tokens
+    Cookies.remove('token');
+    Cookies.remove('user');
+    localStorage.removeItem('uuid');
     // Redirect to login on unauthorized responses
     if (window.location.pathname !== '/login') {
       console.log("Redirecting to login due to 401 error");
@@ -62,19 +73,32 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     console.log(`Query Request: GET ${queryKey[0]}`);
     
+    const headers: Record<string, string> = {
+      "Accept": "application/json",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      "Pragma": "no-cache"
+    };
+    
+    // Автоматически добавляем токен авторизации если он есть
+    const token = Cookies.get('token');
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    
     const res = await fetch(queryKey[0] as string, {
       credentials: "include",
-      headers: {
-        "Accept": "application/json",
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        "Pragma": "no-cache"
-      }
+      headers
     });
     
     console.log(`Query Response status: ${res.status}`);
 
     if (res.status === 401) {
       console.error("Authentication error in query request");
+      
+      // Clear invalid tokens
+      Cookies.remove('token');
+      Cookies.remove('user');
+      localStorage.removeItem('uuid');
       
       // Handle unauthorized based on behavior
       if (unauthorizedBehavior === "returnNull") {

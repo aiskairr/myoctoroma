@@ -41,9 +41,9 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
 
   // Получаем рабочие даты мастера для текущего месяца
   const { data: workingDates = [], isLoading, refetch } = useQuery<WorkingDate[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/masters', masterId, 'working-dates', currentMonth.getMonth() + 1, currentMonth.getFullYear(), currentBranch.waInstance],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/masters', masterId, 'working-dates', currentMonth.getMonth() + 1, currentMonth.getFullYear(), currentBranch?.id],
     queryFn: async (): Promise<WorkingDate[]> => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates?month=${currentMonth.getMonth() + 1}&year=${currentMonth.getFullYear()}&branchId=${currentBranch.waInstance}`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates?month=${currentMonth.getMonth() + 1}&year=${currentMonth.getFullYear()}&branchId=${currentBranch?.id}`);
       if (!res.ok) throw new Error('Failed to fetch working dates');
       return res.json();
     },
@@ -59,7 +59,7 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
           workDate: data.workDate,
           startTime: data.startTime,
           endTime: data.endTime,
-          branchId: currentBranch.waInstance
+          branchId: currentBranch?.id
         }),
       });
       if (!res.ok) throw new Error('Failed to save working date');
@@ -80,7 +80,7 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
   // Мутация для удаления рабочей даты
   const deleteWorkingDate = useMutation({
     mutationFn: async (workDate: string) => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates/${workDate}?branchId=${currentBranch.waInstance}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates/${workDate}?branchId=${currentBranch?.id}`, {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error('Failed to delete working date');

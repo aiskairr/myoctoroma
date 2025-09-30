@@ -43,21 +43,12 @@ const WEEKDAYS: WeekDay[] = [
   { id: 'Sun', label: 'Воскресенье' },
 ];
 
-// Интерфейс для филиала
-interface Branch {
-  id: string;
-  label: string;
-}
-
-// Список филиалов
-const BRANCHES: Branch[] = [
-  { id: 'wa1', label: 'Токтогула 93 (wa1)' },
-];
+// Интерфейс для дня недели
 
 // Компонент для форматирования расписания в текстовый вид
-export const formatSchedule = (schedule: MasterSchedule): string => {
+export const formatSchedule = (schedule: MasterSchedule, branches: import("@/contexts/BranchContext").Branch[]): string => {
   const days = schedule.days.map(day => WEEKDAYS_MAP[day]).join(', ');
-  return `${days} — ${BRANCHES.find(b => b.id === schedule.branch)?.label.split(' ')[0]} ${schedule.from}–${schedule.to}`;
+  return `${days} — ${branches.find(b => b.id.toString() === schedule.branch)?.branches.split(' ')[0]} ${schedule.from}–${schedule.to}`;
 };
 
 // Пустая схема расписания
@@ -74,12 +65,12 @@ interface MasterScheduleFormProps {
 }
 
 const MasterScheduleForm: React.FC<MasterScheduleFormProps> = ({ schedules, onChange }) => {
-  const { currentBranch } = useBranch();
+  const { currentBranch, branches } = useBranch();
   
   // Создаем пустую схему с текущим филиалом
   const getEmptySchedule = (): MasterSchedule => ({
     ...EMPTY_SCHEDULE,
-    branch: currentBranch.waInstance
+    branch: currentBranch?.id?.toString() || ''
   });
   
   // Локальное состояние для редактирования расписаний
@@ -91,7 +82,7 @@ const MasterScheduleForm: React.FC<MasterScheduleFormProps> = ({ schedules, onCh
   useEffect(() => {
     // Обновляем только пустые филиалы в расписаниях
     const updatedSchedules = editingSchedules.map(schedule => 
-      schedule.branch === '' ? { ...schedule, branch: currentBranch.waInstance } : schedule
+      schedule.branch === '' ? { ...schedule, branch: currentBranch?.id?.toString() || '' } : schedule
     );
     
     if (JSON.stringify(updatedSchedules) !== JSON.stringify(editingSchedules)) {
@@ -186,9 +177,9 @@ const MasterScheduleForm: React.FC<MasterScheduleFormProps> = ({ schedules, onCh
                       <SelectValue placeholder="Выберите филиал" />
                     </SelectTrigger>
                     <SelectContent>
-                      {BRANCHES.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.label}
+                      {branches.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id.toString()}>
+                          {branch.branches}
                         </SelectItem>
                       ))}
                     </SelectContent>

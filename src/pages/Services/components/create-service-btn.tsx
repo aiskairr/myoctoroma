@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useBranch } from '@/contexts/BranchContext';
 
 interface ServiceFormData {
     name: string;
@@ -18,11 +19,6 @@ interface ServiceFormData {
     defaultDuration: string; // Changed from 'duration' to 'defaultDuration'
     isActive: boolean;
 }
-
-const BRANCHES = [
-    { id: 'wa1', name: 'ул. Токтогула 93' },
-    { id: null, name: 'Все филиалы' },
-];
 
 const DURATIONS = [
     { value: '10', label: '10 минут' },
@@ -43,6 +39,7 @@ const DURATIONS = [
 
 const CreateServiceBtn = () => {
     const [isOpen, setIsOpen] = useState(false);
+    const { branches } = useBranch(); // Get branches from context
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
@@ -187,9 +184,10 @@ const CreateServiceBtn = () => {
                                 <SelectValue placeholder="Выберите филиал" />
                             </SelectTrigger>
                             <SelectContent>
-                                {BRANCHES.map((branch) => (
-                                    <SelectItem key={branch.id || 'null'} value={branch.id || 'null'}>
-                                        {branch.name}
+                                <SelectItem value="all">Все филиалы</SelectItem>
+                                {branches.map((branch) => (
+                                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                                        {branch.branches}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

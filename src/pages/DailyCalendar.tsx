@@ -175,11 +175,11 @@ const CreateAppointmentDialog = ({
 
   // Загружаем мастеров для выбранной даты
   const { data: masters = [] } = useQuery<Master[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters', format(selectedDate, 'yyyy-MM-dd'), currentBranch?.waInstance],
-    queryFn: () => fetch(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters/${format(selectedDate, 'yyyy-MM-dd')}?branchId=${currentBranch?.waInstance}`, {
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters', format(selectedDate, 'yyyy-MM-dd'), currentBranch?.id],
+    queryFn: () => fetch(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters/${format(selectedDate, 'yyyy-MM-dd')}?branchId=${currentBranch?.id}`, {
       credentials: 'include'
     }).then(res => res.json()),
-    enabled: !!currentBranch?.waInstance && isOpen
+    enabled: !!currentBranch?.id && isOpen
   });
 
   // Загружаем все мастеров для общего выбора
@@ -201,7 +201,7 @@ const CreateAppointmentDialog = ({
   const [formData, setFormData] = useState<ClientFormData>({
     clientName: "",
     phoneNumber: "",
-    branchId: currentBranch?.waInstance || 'wa1',
+    branchId: currentBranch?.id?.toString() || 'wa1',
     massageType: "",
     masterName: selectedMaster?.name || "",
     masterId: masterId || 0,
@@ -380,7 +380,13 @@ const CreateAppointmentDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0">
-        <form onSubmit={handleSubmit} className="flex gap-5 p-4">
+        <DialogHeader className="p-4 pb-0">
+          <DialogTitle className="text-xl font-semibold text-gray-900">Добавить запись</DialogTitle>
+          <DialogDescription className="text-gray-500">
+            Заполните данные для новой записи клиента
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="flex gap-5 p-4 pt-0">
           {/* Левая колонка - Клиент */}
           <div className="flex-1 bg-white rounded-lg p-4">
             <div className="text-center text-blue-600 font-semibold text-lg mb-4">Клиент</div>
@@ -612,9 +618,9 @@ const EditAppointmentDialog = ({
 
   // Загружаем администраторов для выбора в модальном окне оплаты
   const { data: administrators = [] } = useQuery<{ id: number, name: string }[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/administrators', currentBranch?.waInstance],
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/administrators', currentBranch?.id],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchId=${currentBranch?.waInstance}`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchId=${currentBranch?.id}`);
       if (!res.ok) return [];
       const data = await res.json();
       return data.filter((admin: any) => admin.isActive).map((admin: any) => ({
@@ -1409,6 +1415,12 @@ const EditAppointmentDialog = ({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Информация о записи</DialogTitle>
+            <DialogDescription>
+              Детали записи клиента
+            </DialogDescription>
+          </DialogHeader>
           {/* Статус оплаты в верхней части */}
           <div className={`px-4 py-3 border-b ${task?.paid === 'paid' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
             <div className="flex items-center justify-center gap-2">

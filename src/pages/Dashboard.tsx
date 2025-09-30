@@ -78,8 +78,9 @@ export default function Dashboard() {
   const [mastersChartType, setMastersChartType] = useState<ChartType>('bar');
 
   const { data, isLoading, error } = useQuery({
-    queryKey: [`/api/stats`, currentBranch.waInstance],
+    queryKey: [`/api/stats`, currentBranch?.id],
     refetchInterval: 10000,
+    enabled: !!currentBranch?.id,
     queryFn: async () => {
       const response = await fetch(`/api/stats`, {
         credentials: 'include',
@@ -97,8 +98,9 @@ export default function Dashboard() {
   });
 
   const activitiesQuery = useQuery({
-    queryKey: [`/api/activities`, currentBranch.waInstance],
+    queryKey: [`/api/activities`, currentBranch?.id],
     refetchInterval: 10000,
+    enabled: !!currentBranch?.id,
     queryFn: async () => {
       const response = await fetch(`/api/activities`, {
         credentials: 'include',
@@ -116,10 +118,11 @@ export default function Dashboard() {
   });
 
   const massageStatsQuery = useQuery({
-    queryKey: [`/api/stats/massage-types?branchId=${currentBranch.waInstance}`, currentBranch.waInstance],
+    queryKey: [`/api/stats/massage-types?branchId=${currentBranch?.id}`, currentBranch?.id],
     refetchInterval: 60000,
+    enabled: !!currentBranch?.id,
     queryFn: async () => {
-      const response = await fetch(`/api/stats/massage-types?branchId=${currentBranch.waInstance}`, {
+      const response = await fetch(`/api/stats/massage-types?branchId=${currentBranch?.id}`, {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
@@ -135,10 +138,11 @@ export default function Dashboard() {
   });
 
   const masterStatsQuery = useQuery({
-    queryKey: [`/api/stats/masters?branchId=${currentBranch.waInstance}`, currentBranch.waInstance],
+    queryKey: [`/api/stats/masters?branchId=${currentBranch?.id}`, currentBranch?.id],
     refetchInterval: 60000,
+    enabled: !!currentBranch?.id,
     queryFn: async () => {
-      const response = await fetch(`/api/stats/masters?branchId=${currentBranch.waInstance}`, {
+      const response = await fetch(`/api/stats/masters?branchId=${currentBranch?.id}`, {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',

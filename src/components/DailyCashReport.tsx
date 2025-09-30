@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AlertTriangle, Send } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
 interface AccountingRecord {
@@ -500,6 +500,9 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Подтверждение отправки</DialogTitle>
+              <DialogDescription>
+                Подтвердите отправку отчета в бухгалтерию
+              </DialogDescription>
             </DialogHeader>
             <div className="py-4">
               <p className="text-gray-600">
