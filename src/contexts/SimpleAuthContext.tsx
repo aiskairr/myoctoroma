@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
+import axios from "axios";
 
 // Получаем URL бэкенда из переменной окружения
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -8,6 +9,9 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 if (!BACKEND_URL) {
   console.error("Ошибка конфигурации: URL бэкенда не найден.");
 }
+
+// Настраиваем axios для отправки куки
+axios.defaults.withCredentials = true;
 
 interface User {
   id: number;
@@ -33,8 +37,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
   login: async () => ({}),
-  logout: async () => {},
-  checkAuth: async () => {},
+  logout: async () => { },
+  checkAuth: async () => { },
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -45,36 +49,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Функция для проверки сессии
   const checkAuth = async () => {
     setIsLoading(true);
+
     try {
-      // Отправляем запрос с учетными данными для проверки куки
-      const response = await fetch(`${BACKEND_URL}/api/user`, {
-        method: "GET",
-        credentials: "include",
+      const storedData = localStorage.getItem('uuid');
+
+      if (!storedData) {
+        setIsAuthenticated(false);
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const parsedData = JSON.parse(storedData);
+      const userId = parsedData?.user?.id;
+
+      if (!userId) {
+        setIsAuthenticated(false);
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await axios.get(`${BACKEND_URL}/api/user/${userId}`, {
         headers: {
           "Accept": "application/json",
           "Cache-Control": "no-cache",
         },
+        withCredentials: true,
       });
 
-      if (response.ok) {
-        const userData = await response.json();
-        // Убеждаемся, что получили данные пользователя
-        if (userData && userData.id) {
-          setIsAuthenticated(true);
-          setUser(userData);
-        } else {
-          setIsAuthenticated(false);
-          setUser(null);
-        }
+      const userData: any = response.data;
+
+      // Проверяем success и hasValidSession
+      if (userData && userData.success && userData.hasValidSession && userData.userId) {
+        setIsAuthenticated(true);
+        setUser({
+          id: userData.userId,
+          email: userData.email || '',
+          username: userData.username || '',
+          role: userData.role || '',
+          instanceId: userData.instanceId || null,
+          master_id: userData.master_id || null,
+        });
       } else {
-        // Если ответ не 200, значит, сессия недействительна
         setIsAuthenticated(false);
         setUser(null);
+        localStorage.removeItem('uuid'); // Очищаем невалидные данные
       }
     } catch (error) {
       console.error("Auth check failed:", error);
       setIsAuthenticated(false);
       setUser(null);
+      localStorage.removeItem('uuid'); // Очищаем при ошибке
     } finally {
       setIsLoading(false);
     }
@@ -84,19 +110,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/api/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
-      });
+      const response = await axios.post(
+        `${BACKEND_URL}/api/login`,
+        { email, password },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
 
-      const result = await response.json();
+      const result: any = response.data;
 
-      if (response.ok && result.success) {
-        // Если вход успешен, обновляем состояние и проверяем сессию
+      if (result.success) {
+        // Сохраняем данные в localStorage
+        localStorage.setItem('uuid', JSON.stringify(result));
+
+        // Обновляем состояние
         setIsAuthenticated(true);
         setUser(result.user);
         return { success: true, user: result.user };
@@ -105,9 +136,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         return { success: false, message: result.message || "Ошибка входа" };
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Login error:", err);
-      return { success: false, message: "Ошибка подключения к серверу" };
+      const message = err.response?.data?.message || "Ошибка подключения к серверу";
+      return { success: false, message };
     } finally {
       setIsLoading(false);
     }
@@ -117,16 +149,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     setIsLoading(true);
     try {
-      await fetch(`${BACKEND_URL}/api/logout`, {
-        method: "POST",
-        credentials: "include",
+      await axios.post(`${BACKEND_URL}/api/logout`, {}, {
+        withCredentials: true,
       });
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
-      // Очищаем состояние и перенаправляем на страницу входа
+      // Очищаем состояние и localStorage
       setIsAuthenticated(false);
       setUser(null);
+      localStorage.removeItem('uuid');
       setIsLoading(false);
       window.location.href = "/login";
     }

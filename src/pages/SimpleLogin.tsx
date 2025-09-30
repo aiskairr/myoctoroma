@@ -55,21 +55,22 @@ export default function SimpleLogin() {
         credentials: "include",
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          // Перенаправляем в зависимости от роли
-          if (result.user?.role === 'master') {
-            window.location.href = "/crm/calendar";
-          } else {
-            window.location.href = "/";
-          }
+      // Парсим JSON только один раз
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Сохраняем результат в localStorage
+        localStorage.setItem('uuid', JSON.stringify(result));
+
+        // Перенаправляем в зависимости от роли
+        if (result.user?.role === 'master') {
+          window.location.href = "/crm/calendar";
         } else {
-          setError(result.message || "Ошибка входа");
+          window.location.href = "/";
         }
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Неверный email или пароль");
+        // Обрабатываем ошибку
+        setError(result.message || "Неверный email или пароль");
       }
     } catch (err) {
       console.error("Login error:", err);
