@@ -327,7 +327,7 @@ export default function Dashboard() {
               <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
               <Tooltip
-                formatter={(value) => [`${value.toLocaleString()} ₽`, "Выручка"]}
+                formatter={(value) => [`${value.toLocaleString()} с`, "Выручка"]}
                 contentStyle={{
                   backgroundColor: 'white',
                   border: '1px solid #e5e7eb',
@@ -348,7 +348,7 @@ export default function Dashboard() {
               <PolarAngleAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} />
               <PolarRadiusAxis tick={{ fontSize: 12, fill: '#6b7280' }} />
               <Tooltip
-                formatter={(value) => [`${value.toLocaleString()} ₽`, "Выручка"]}
+                formatter={(value) => [`${value.toLocaleString()} с`, "Выручка"]}
                 contentStyle={{
                   backgroundColor: 'white',
                   border: '1px solid #e5e7eb',

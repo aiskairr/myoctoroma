@@ -459,7 +459,7 @@ const AccountingPage = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-blue-600">Доходы за день</p>
-                <p className="text-2xl font-bold text-blue-800">{calculateDailyTotal()} ₽</p>
+                <p className="text-2xl font-bold text-blue-800">{calculateDailyTotal()} с</p>
               </div>
             </div>
           </CardContent>
@@ -473,7 +473,7 @@ const AccountingPage = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-red-600">Расходы за день</p>
-                <p className="text-2xl font-bold text-red-800">{calculateTotalExpenses()} ₽</p>
+                <p className="text-2xl font-bold text-red-800">{calculateTotalExpenses()} с</p>
               </div>
             </div>
           </CardContent>
@@ -502,7 +502,7 @@ const AccountingPage = () => {
               <div>
                 <p className="text-sm font-medium text-purple-600">Чистая прибыль</p>
                 <p className="text-2xl font-bold text-purple-800">
-                  {(parseFloat(calculateDailyTotal()) - calculateTotalExpenses()).toFixed(2)} ₽
+                  {(parseFloat(calculateDailyTotal()) - calculateTotalExpenses()).toFixed(2)} с
                 </p>
               </div>
             </div>
@@ -782,7 +782,7 @@ const AccountingPage = () => {
                           <div className="lg:col-span-3 space-y-3">
                             <div className="flex items-center gap-2">
                               <DollarSign className="h-4 w-4 text-green-600" />
-                              <span className="text-xl font-bold text-green-700">{record.amount} ₽</span>
+                              <span className="text-xl font-bold text-green-700">{record.amount} с</span>
                             </div>
                             {record.discount !== '0%' && (
                               <div className="flex items-center gap-2 text-sm">
@@ -807,7 +807,7 @@ const AccountingPage = () => {
                               <span>Администратор: {record.adminName}</span>
                             </div>
                             <div className="text-sm text-gray-600">
-                              <span>Дневной отчет: {record.dailyReport || 0} ₽</span>
+                              <span>Дневной отчет: {record.dailyReport || 0} с</span>
                             </div>
                             {record.comment && (
                               <div className="text-sm text-gray-500 italic">
@@ -852,13 +852,13 @@ const AccountingPage = () => {
                                       <p><strong>Клиент:</strong> {record.client}</p>
                                       <p><strong>Услуга:</strong> {record.massageType}</p>
                                       <p><strong>Телефон:</strong> {record.phoneNumber || 'Не указан'}</p>
-                                      <p><strong>Сумма:</strong> {record.amount} ₽</p>
+                                      <p><strong>Сумма:</strong> {record.amount} с</p>
                                     </div>
                                     <div className="space-y-2">
                                       <p><strong>Скидка:</strong> {record.discount}</p>
                                       <p><strong>Длительность:</strong> {record.duration} мин</p>
                                       <p><strong>Оплата:</strong> {record.paymentMethod}</p>
-                                      <p><strong>Дневной отчет:</strong> {record.dailyReport || 0} ₽</p>
+                                      <p><strong>Дневной отчет:</strong> {record.dailyReport || 0} с</p>
                                       <p><strong>Администратор:</strong> {record.adminName}</p>
                                       <p><strong>Дата:</strong> {record.date}</p>
                                     </div>
@@ -905,7 +905,7 @@ const AccountingPage = () => {
                             <p className="text-xs text-green-500">Без подарочных сертификатов</p>
                           </div>
                         </div>
-                        <p className="text-2xl font-bold text-green-800">{calculateDailyTotal()} ₽</p>
+                        <p className="text-2xl font-bold text-green-800">{calculateDailyTotal()} с</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -994,7 +994,7 @@ const AccountingPage = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span className="text-xl font-bold text-red-700">{expense.amount} ₽</span>
+                            <span className="text-xl font-bold text-red-700">{expense.amount} с</span>
                             <Button
                               size="sm"
                               variant="destructive"
@@ -1027,7 +1027,7 @@ const AccountingPage = () => {
                             <p className="text-xs text-red-500">Всего позиций: {expenses.length}</p>
                           </div>
                         </div>
-                        <p className="text-2xl font-bold text-red-800">{calculateTotalExpenses()} ₽</p>
+                        <p className="text-2xl font-bold text-red-800">{calculateTotalExpenses()} с</p>
                       </div>
                     </CardContent>
                   </Card>

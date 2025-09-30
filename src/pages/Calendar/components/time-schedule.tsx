@@ -728,7 +728,7 @@ const AdvancedScheduleComponent: React.FC = () => {
                         {service && (
                             <div className="flex justify-between">
                                 <span className="text-gray-600">Стоимость:</span>
-                                <span className="font-medium">{service.price}₽</span>
+                                <span className="font-medium">{service.price}с</span>
                             </div>
                         )}
 
@@ -1094,7 +1094,7 @@ const AdvancedScheduleComponent: React.FC = () => {
                                     <option value="">Выберите услугу</option>
                                     {SERVICES.map(service => (
                                         <option key={service.name} value={service.name}>
-                                            {service.name} ({service.duration} мин, {service.price}₽)
+                                            {service.name} ({service.duration} мин, {service.price}с)
                                         </option>
                                     ))}
                                 </select>

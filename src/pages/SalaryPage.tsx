@@ -120,7 +120,7 @@ export default function SalaryPage() {
       }
       const url = `/api/salary-payments?startDate=${startDate}&endDate=${endDate}&branchID=${currentBranch.id}`;
       console.log('Fetching salary payments with URL:', url);
-      const data = await apiGetJson(url, currentBranch.id);
+      const data = await apiGetJson(url);
       setSalaryPayments(data);
     } catch (error) {
       console.error('Ошибка загрузки выплат:', error);
