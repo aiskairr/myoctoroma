@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../contexts/SimpleAuthContext";
-import { 
-  LayoutDashboard, 
-  Users, 
-  Settings as SettingsIcon, 
-  LogOut, 
+import {
+  LayoutDashboard,
+  Users,
+  Settings as SettingsIcon,
+  LogOut,
   Bot,
   Menu,
   X,
@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { BranchSelectorDialog, BranchIndicator } from "./BranchSelector";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import LOGO from "./assets/PROM_logo_big_white.svg"
 
 export function MobileNavbar() {
   const [location] = useLocation();
@@ -42,7 +43,7 @@ export function MobileNavbar() {
   const navItems = [
     { path: "/", label: "Дашборд", icon: <LayoutDashboard className="h-5 w-5" /> },
     { path: "/clients", label: "Клиенты", icon: <Users className="h-5 w-5" /> },
-    { 
+    {
       label: "CRM",
       icon: <FileClock className="h-5 w-5" />,
       children: [
@@ -60,13 +61,14 @@ export function MobileNavbar() {
   return (
     <div className="bg-background border-b shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center">
-        <Bot className="text-primary h-6 w-6 mr-2" />
+
+        <img width={20} height={10} src={LOGO} alt="logo" />
         <h1 className="font-medium text-lg">Octo CRM</h1>
       </div>
-      
+
       <div className="flex items-center gap-2">
         <BranchIndicator compact />
-        
+
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -84,11 +86,11 @@ export function MobileNavbar() {
                   <X className="h-5 w-5" />
                 </Button>
               </div>
-              
+
               <div className="mt-4 mb-2 px-4">
                 <BranchSelectorDialog />
               </div>
-              
+
               <nav className="flex-grow py-2 overflow-y-auto">
                 <ul className="space-y-1">
                   {navItems.map((item, index) => (
@@ -140,7 +142,7 @@ export function MobileNavbar() {
                   ))}
                 </ul>
               </nav>
-              
+
               <div className="p-4 border-t mt-auto">
                 <Button
                   variant="ghost"

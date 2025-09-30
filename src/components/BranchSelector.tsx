@@ -143,7 +143,7 @@ export const BranchIndicator: React.FC<BranchIndicatorProps> = ({ compact = fals
   return (
     <div className={compact ? "" : "px-4 py-2"}>
       <div className={cn(
-        "flex items-center gap-2 text-sm font-medium rounded-md text-primary bg-primary/10",
+        "flex items-center gap-2  text-sm font-medium rounded-md text-white bg-primary/10",
         compact ? "px-2 py-1" : "p-2"
       )}>
         <Building className="h-4 w-4" />

@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { BranchSelectorDialog, BranchIndicator } from "./BranchSelector";
 import { useState, useEffect } from "react";
+import LOGO from "./assets/PROM_logo_big_white.svg"
 
 // Интерфейс для типов navItems
 interface NavItem {
@@ -148,7 +149,7 @@ function MasterSidebar() {
         <div className="p-6">
           <div className="flex items-center justify-start space-x-3">
             <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-lg">
-              <Bot className="text-white h-6 w-6" />
+              <img width={20} height={10} src={LOGO} alt="logo" />
             </div>
             <div>
               <h1 className="font-bold text-xl bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
@@ -343,7 +344,7 @@ function AdminOnlySidebar() {
         <div className="p-6">
           <div className="flex items-center justify-start space-x-3">
             <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-lg">
-              <Bot className="text-white h-6 w-6" />
+              <img width={20} height={10} src={LOGO} alt="logo" />
             </div>
             <div>
               <h1 className="font-bold text-xl bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
@@ -583,7 +584,9 @@ function AdminSidebar() {
         <div className="p-6">
           <div className="flex items-center justify-start space-x-3">
             <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-lg">
-              <Bot className="text-white h-6 w-6" />
+              <div>
+                <img width={20} height={10} src={LOGO} alt="logo" />
+              </div>
             </div>
             <div>
               <h1 className="font-bold text-xl bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
