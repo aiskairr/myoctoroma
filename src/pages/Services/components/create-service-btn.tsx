@@ -1,41 +1,50 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Plus, X } from "lucide-react";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Plus } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
-// Типы для формы
 interface ServiceFormData {
     name: string;
     description: string;
-    branch: string;
-    duration: string;
+    instanceId: string;
+    defaultDuration: string; // Changed from 'duration' to 'defaultDuration'
     isActive: boolean;
 }
 
-// Данные для селекта филиалов
-const branches = [
-    { value: "all", label: "Все филиалы" },
-    { value: "branch1", label: "Филиал 1" },
-    { value: "branch2", label: "Филиал 2" },
-    { value: "branch3", label: "Филиал 3" },
+const BRANCHES = [
+    { id: 'wa1', name: 'ул. Токтогула 93' },
+    { id: null, name: 'Все филиалы' },
 ];
 
-// Данные для селекта длительности
-const durations = [
-    { value: "30", label: "30 минут" },
-    { value: "60", label: "60 минут" },
-    { value: "90", label: "90 минут" },
-    { value: "120", label: "120 минут" },
+const DURATIONS = [
+    { value: '10', label: '10 минут' },
+    { value: '15', label: '15 минут' },
+    { value: '20', label: '20 минут' },
+    { value: '30', label: '30 минут' },
+    { value: '40', label: '40 минут' },
+    { value: '50', label: '50 минут' },
+    { value: '60', label: '60 минут' },
+    { value: '75', label: '75 минут' },
+    { value: '80', label: '80 минут' },
+    { value: '90', label: '90 минут' },
+    { value: '110', label: '110 минут' },
+    { value: '120', label: '120 минут' },
+    { value: '150', label: '150 минут' },
+    { value: '220', label: '220 минут' },
 ];
 
 const CreateServiceBtn = () => {
     const [isOpen, setIsOpen] = useState(false);
+    const { toast } = useToast();
+    const queryClient = useQueryClient();
 
     const {
         register,
@@ -43,31 +52,84 @@ const CreateServiceBtn = () => {
         formState: { errors },
         reset,
         setValue,
-        watch
+        watch,
     } = useForm<ServiceFormData>({
         defaultValues: {
             name: '',
             description: '',
-            branch: 'all',
-            duration: '60',
-            isActive: true
-        }
+            instanceId: 'null',
+            defaultDuration: '60',
+            isActive: true,
+        },
     });
 
-    const watchedBranch = watch('branch');
-    const watchedDuration = watch('duration');
+    const watchedInstanceId = watch('instanceId');
+    const watchedDefaultDuration = watch('defaultDuration');
     const watchedIsActive = watch('isActive');
 
+    const createMutation = useMutation({
+        mutationFn: async (service: Omit<any, 'id' | 'createdAt'>) => {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: service.name,
+                    description: service.description,
+                    isActive: service.isActive,
+                    instanceId: service.instanceId,
+                    defaultDuration: service.defaultDuration,
+                    duration10_price: null,
+                    duration15_price: null,
+                    duration20_price: null,
+                    duration30_price: null,
+                    duration40_price: null,
+                    duration50_price: null,
+                    duration60_price: null,
+                    duration75_price: null,
+                    duration80_price: null,
+                    duration90_price: null,
+                    duration110_price: null,
+                    duration120_price: null,
+                    duration150_price: null,
+                    duration220_price: null,
+                }),
+            });
+            if (!response.ok) throw new Error('Ошибка создания услуги');
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/services`] });
+            toast({ title: 'Услуга создана успешно' });
+            setIsOpen(false);
+            reset();
+        },
+        onError: (error: Error) => {
+            toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+        },
+    });
+
     const onSubmit = (data: ServiceFormData) => {
-        console.log('Данные формы:', data);
-        // Здесь будет логика отправки данных
-        alert('Услуга создана успешно!');
-        handleClose();
+        if (!data.name.trim()) {
+            toast({
+                title: 'Ошибка',
+                description: 'Название услуги обязательно для заполнения',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        createMutation.mutate({
+            name: data.name,
+            description: data.description || null,
+            isActive: data.isActive,
+            instanceId: data.instanceId === 'null' ? null : data.instanceId,
+            defaultDuration: parseInt(data.defaultDuration),
+        } as Omit<any, 'id' | 'createdAt'>);
     };
 
     const handleClose = () => {
         setIsOpen(false);
-        reset(); // Сбрасываем форму при закрытии
+        reset();
     };
 
     return (
@@ -78,18 +140,11 @@ const CreateServiceBtn = () => {
                     Создать новую услугу
                 </Button>
             </DialogTrigger>
-
-            <DialogContent className="sm:max-w-[500px] p-0">
-                {/* Заголовок с кнопкой закрытия */}
-                <div className="flex items-center justify-between p-6 pb-4 rounded-t-lg">
-                    <DialogTitle className="text-lg font-medium">
-                        Создать новую услугу
-                    </DialogTitle>
-                </div>
-
-                {/* Форма */}
-                <div className="p-6 pt-4 space-y-6">
-                    {/* Поле "Название" */}
+            <DialogContent className="sm:max-w-[500px] p-6">
+                <DialogHeader>
+                    <DialogTitle>Создать новую услугу</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     <div className="space-y-2">
                         <Label htmlFor="name" className="text-sm font-medium text-gray-700">
                             Название
@@ -97,25 +152,15 @@ const CreateServiceBtn = () => {
                         <Input
                             id="name"
                             placeholder="Введите название услуги"
-                            className={`w-full ${errors.name ? 'border-red-500' : ''}`}
+                            className={errors.name ? 'border-red-500' : ''}
                             {...register('name', {
                                 required: 'Название услуги обязательно',
-                                minLength: {
-                                    value: 2,
-                                    message: 'Название должно содержать минимум 2 символа'
-                                },
-                                maxLength: {
-                                    value: 100,
-                                    message: 'Название не должно превышать 100 символов'
-                                }
+                                minLength: { value: 2, message: 'Название должно содержать минимум 2 символа' },
+                                maxLength: { value: 100, message: 'Название не должно превышать 100 символов' },
                             })}
                         />
-                        {errors.name && (
-                            <p className="text-sm text-red-500">{errors.name.message}</p>
-                        )}
+                        {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
                     </div>
-
-                    {/* Поле "Описание" */}
                     <div className="space-y-2">
                         <Label htmlFor="description" className="text-sm font-medium text-gray-700">
                             Описание
@@ -124,60 +169,43 @@ const CreateServiceBtn = () => {
                             id="description"
                             placeholder="Введите описание услуги"
                             rows={4}
-                            className={`w-full resize-none ${errors.description ? 'border-red-500' : ''}`}
+                            className={`resize-none ${errors.description ? 'border-red-500' : ''}`}
                             {...register('description', {
-                                required: 'Описание услуги обязательно',
-                                minLength: {
-                                    value: 10,
-                                    message: 'Описание должно содержать минимум 10 символов'
-                                },
-                                maxLength: {
-                                    value: 500,
-                                    message: 'Описание не должно превышать 500 символов'
-                                }
+                                minLength: { value: 10, message: 'Описание должно содержать минимум 10 символов' },
+                                maxLength: { value: 500, message: 'Описание не должно превышать 500 символов' },
                             })}
                         />
-                        {errors.description && (
-                            <p className="text-sm text-red-500">{errors.description.message}</p>
-                        )}
+                        {errors.description && <p className="text-sm text-red-500">{errors.description.message}</p>}
                     </div>
-
-                    {/* Поле "Филиал" */}
                     <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">
-                            Филиал
-                        </Label>
+                        <Label className="text-sm font-medium text-gray-700">Филиал</Label>
                         <Select
-                            value={watchedBranch}
-                            onValueChange={(value) => setValue('branch', value)}
+                            value={watchedInstanceId}
+                            onValueChange={(value) => setValue('instanceId', value)}
                         >
                             <SelectTrigger className="w-full">
-                                <SelectValue />
+                                <SelectValue placeholder="Выберите филиал" />
                             </SelectTrigger>
                             <SelectContent>
-                                {branches.map((branch) => (
-                                    <SelectItem key={branch.value} value={branch.value}>
-                                        {branch.label}
+                                {BRANCHES.map((branch) => (
+                                    <SelectItem key={branch.id || 'null'} value={branch.id || 'null'}>
+                                        {branch.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </div>
-
-                    {/* Поле "Стандартная длительность" */}
                     <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">
-                            Стандартная длительность
-                        </Label>
+                        <Label className="text-sm font-medium text-gray-700">Стандартная длительность</Label>
                         <Select
-                            value={watchedDuration}
-                            onValueChange={(value) => setValue('duration', value)}
+                            value={watchedDefaultDuration}
+                            onValueChange={(value) => setValue('defaultDuration', value)} // Changed 'duration' to 'defaultDuration'
                         >
                             <SelectTrigger className="w-full">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                {durations.map((duration) => (
+                                {DURATIONS.map((duration) => (
                                     <SelectItem key={duration.value} value={duration.value}>
                                         {duration.label}
                                     </SelectItem>
@@ -185,36 +213,22 @@ const CreateServiceBtn = () => {
                             </SelectContent>
                         </Select>
                     </div>
-
-                    {/* Переключатель "Активна" */}
                     <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium text-gray-700">
-                            Активна
-                        </Label>
+                        <Label className="text-sm font-medium text-gray-700">Активна</Label>
                         <Switch
                             checked={watchedIsActive}
                             onCheckedChange={(checked) => setValue('isActive', checked)}
                         />
                     </div>
-
-                    {/* Кнопки действий */}
-                    <div className="flex justify-end gap-3 pt-4">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleClose}
-                        >
+                    <div className="flex justify-end gap-3">
+                        <Button type="button" variant="outline" onClick={handleClose}>
                             Отмена
                         </Button>
-                        <Button
-                            onClick={handleSubmit(onSubmit)}
-                            className=""
-                            variant={"outline"}
-                        >
+                        <Button type="submit" disabled={createMutation.isPending}>
                             Создать услугу
                         </Button>
                     </div>
-                </div>
+                </form>
             </DialogContent>
         </Dialog>
     );
