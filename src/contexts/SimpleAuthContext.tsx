@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import axios from "axios";
+import Cookies from "js-cookie";
 
 // Получаем URL бэкенда из переменной окружения
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
@@ -70,15 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const response = await axios.get(`${BACKEND_URL}/api/user/${userId}`, {
-        headers: {
-          "Accept": "application/json",
-          "Cache-Control": "no-cache",
-        },
-        withCredentials: true,
-      });
+      const user = Cookies.get('user') || ''
 
-      const userData: any = response.data;
+      const userData = JSON.parse(user)
 
       // Проверяем success и hasValidSession
       if (userData && userData.success && userData.hasValidSession && userData.userId) {

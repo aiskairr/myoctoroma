@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, LogIn, Eye, EyeOff } from "lucide-react";
+import Cookies from 'js-cookie';
 
 interface User {
   id: number;
@@ -66,6 +67,21 @@ export default function SimpleLogin() {
         if (result.user?.role === 'master') {
           window.location.href = "/crm/calendar";
         } else {
+          Cookies.set("token", result.token);
+          const token = Cookies.get('token');
+          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user`, {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              "Accept": "application/json",
+              "Authorization": `Bearer ${token}`
+            }
+          })
+
+          console.log(await res.json())
+
+
+          Cookies.set('user', JSON.stringify(await res.json()))
           window.location.href = "/";
         }
       } else {

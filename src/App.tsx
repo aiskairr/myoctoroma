@@ -81,8 +81,15 @@ function App() {
 
             {/* Защищенные маршруты */}
             <Route path="/">
+              {/* <ProtectedLayout> */}
+              <Dashboard />
+              {/* </ProtectedLayout> */}
+            </Route>
+
+
+            <Route path="/settings">
               <ProtectedLayout>
-                <Dashboard />
+                <Settings />
               </ProtectedLayout>
             </Route>
 
@@ -92,11 +99,6 @@ function App() {
               </ProtectedLayout>
             </Route>
 
-            <Route path="/settings">
-              <ProtectedLayout>
-                <Settings />
-              </ProtectedLayout>
-            </Route>
 
             <Route path="/crm/tasks">
               <ProtectedLayout>
