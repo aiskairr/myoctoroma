@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { apiGetJson, apiPost, apiPut, apiDelete } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -636,6 +637,15 @@ const AdministratorCard: React.FC<{
 const Masters: React.FC = () => {
   const { toast } = useToast();
   const { currentBranch } = useBranch();
+  
+  // Отладка состояния BranchContext
+  console.log('🏢 Masters page - BranchContext state:', {
+    currentBranch,
+    hasId: !!currentBranch?.id,
+    id: currentBranch?.id,
+    name: currentBranch?.branches
+  });
+  
   const [editMaster, setEditMaster] = useState<Master | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -647,67 +657,37 @@ const Masters: React.FC = () => {
   const { data: administrators, refetch: refetchAdministrators } = useQuery({
     queryKey: ['/api/administrators', currentBranch?.id],
     queryFn: async () => {
-      const res = await fetch(`/api/administrators?branchId=${currentBranch?.id}`);
-      if (!res.ok) {
-        throw new Error('Failed to fetch administrators');
+      console.log('🔍 Administrators Query - Branch ID:', currentBranch?.id);
+      console.log('🔍 Administrators Query - Full Branch:', currentBranch);
+      if (!currentBranch?.id || currentBranch.id === undefined || currentBranch.id === null) {
+        console.warn('❌ No valid branch ID available, skipping administrators fetch');
+        return [];
       }
-      return res.json();
-    }
+      const url = `/api/administrators?branchID=${currentBranch.id}`;
+      console.log('📡 Administrators API URL:', url);
+      return await apiGetJson(url);
+    },
+    enabled: !!currentBranch?.id && currentBranch.id !== undefined && currentBranch.id !== null
   });
 
   const { data: masters, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['/api/crm/masters', currentBranch?.id],
     queryFn: async () => {
-      console.log('Fetching masters data for branch:', currentBranch?.id);
-      try {
-        const url = `${import.meta.env.VITE_BACKEND_URL}/api/crm/masters?branchId=${currentBranch?.id}`;
-        console.log('Masters API URL:', url);
-        const res = await fetch(url, {
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-          }
-        });
-        console.log('Masters API response status:', res.status);
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.error('API Error Response:', errorText);
-          throw new Error(`Failed to fetch masters: ${res.status} ${errorText}`);
-        }
-        const data = await res.json();
-        console.log('Successfully loaded masters data:', data.length, 'items found');
-        const mastersWithWorkingDates = await Promise.all(
-          data.map(async (master: Master) => {
-            try {
-              const currentDate = new Date();
-              const workingDatesRes = await fetch(
-                `/api/masters/${master.id}/working-dates?month=${currentDate.getMonth() + 1}&year=${currentDate.getFullYear()}`
-              );
-              if (workingDatesRes.ok) {
-                const workingDates = await workingDatesRes.json();
-                return {
-                  ...master,
-                  workingDates: workingDates.map((wd: any) => ({
-                    date: wd.work_date,
-                    startTime: wd.start_time,
-                    endTime: wd.end_time,
-                    branchId: wd.branch_id
-                  }))
-                };
-              }
-              return { ...master, workingDates: [] };
-            } catch (err) {
-              console.error(`Failed to load working dates for master ${master.id}:`, err);
-              return { ...master, workingDates: [] };
-            }
-          })
-        );
-        return mastersWithWorkingDates;
-      } catch (err) {
-        console.error('Error in masters fetch:', err);
-        throw err;
+      console.log('🔍 Masters Query - Branch ID:', currentBranch?.id);
+      if (!currentBranch?.id || currentBranch.id === undefined || currentBranch.id === null) {
+        console.warn('❌ No valid branch ID available, skipping masters fetch');
+        return [];
       }
-    }
+      try {
+        const url = `/api/crm/masters?branchId=${currentBranch.id}`;
+        console.log('📡 Masters API URL:', url);
+        return await apiGetJson(url);
+      } catch (error) {
+        console.error('❌ Failed to fetch masters:', error);
+        throw error;
+      }
+    },
+    enabled: !!currentBranch?.id && currentBranch.id !== undefined && currentBranch.id !== null
   });
 
   React.useEffect(() => {
@@ -730,7 +710,7 @@ const Masters: React.FC = () => {
       const newMaster = await res.json();
       if (workingDates && workingDates.length > 0) {
         await Promise.all(workingDates.map(async (wd) => {
-          await fetch(`/api/masters/${newMaster.id}/working-dates`, {
+          await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${newMaster.id}/working-dates`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -783,13 +763,13 @@ const Masters: React.FC = () => {
         if (currentWorkingDatesRes.ok) {
           const currentWorkingDates = await currentWorkingDatesRes.json();
           await Promise.all(currentWorkingDates.map(async (cwd: any) => {
-            await fetch(`/api/masters/${id}/working-dates/${cwd.work_date}?branchId=${cwd.branch_id}`, {
+            await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${id}/working-dates/${cwd.work_date}?branchId=${cwd.branch_id}`, {
               method: 'DELETE'
             });
           }));
         }
         await Promise.all(workingDates.map(async (wd) => {
-          await fetch(`/api/masters/${id}/working-dates`, {
+          await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${id}/working-dates`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -851,7 +831,7 @@ const Masters: React.FC = () => {
 
   const createAdministratorMutation = useMutation({
     mutationFn: async (data: Partial<Administrator>) => {
-      const res = await fetch('/api/administrators', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -881,7 +861,7 @@ const Masters: React.FC = () => {
 
   const deleteAdministratorMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/administrators/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators/${id}`, {
         method: 'DELETE',
       });
       if (!res.ok) {

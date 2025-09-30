@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card } from '@/components/ui/card';
 import { Check, Trash2, Eye, Pen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { apiGet, apiPut, apiDelete } from '@/lib/api';
 
 const BRANCHES = [
     { id: 'wa1', name: 'ул. Токтогула 93' },
@@ -23,9 +24,16 @@ const ServicesTable: React.FC = () => {
     const [editingCell, setEditingCell] = useState<string | null>(null);
     const [editValue, setEditValue] = useState<string>('');
 
-    // Fetch services
+    // Fetch services using our custom API function
     const { data: services = [], isLoading, error } = useQuery<any[]>({
-        queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/services`],
+        queryKey: ['crm-services'],
+        queryFn: async () => {
+            const response = await apiGet('/api/crm/services');
+            if (!response.ok) {
+                throw new Error('Failed to fetch services');
+            }
+            return response.json();
+        }
     });
 
     // Initialize editing state
@@ -42,36 +50,21 @@ const ServicesTable: React.FC = () => {
     // Update service mutation
     const updateMutation = useMutation({
         mutationFn: async (service: any) => {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${service.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: service.name,
-                    description: service.description,
-                    isActive: service.isActive,
-                    instanceId: service.instanceId,
-                    defaultDuration: service.defaultDuration,
-                    duration10_price: service.duration10_price,
-                    duration15_price: service.duration15_price,
-                    duration20_price: service.duration20_price,
-                    duration30_price: service.duration30_price,
-                    duration40_price: service.duration40_price,
-                    duration50_price: service.duration50_price,
-                    duration60_price: service.duration60_price,
-                    duration75_price: service.duration75_price,
-                    duration80_price: service.duration80_price,
-                    duration90_price: service.duration90_price,
-                    duration110_price: service.duration110_price,
-                    duration120_price: service.duration120_price,
-                    duration150_price: service.duration150_price,
-                    duration220_price: service.duration220_price,
-                }),
+            const response = await apiPut(`/api/crm/services/${service.id}`, {
+                name: service.name,
+                description: service.description,
+                isActive: service.isActive,
+                instanceId: service.instanceId,
+                duration: service.duration
             });
-            if (!response.ok) throw new Error('Ошибка обновления услуги');
+            
+            if (!response.ok) {
+                throw new Error('Failed to update service');
+            }
             return response.json();
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/services`] });
+            queryClient.invalidateQueries({ queryKey: ['crm-services'] });
             toast({ title: 'Услуга обновлена успешно' });
         },
         onError: (error: Error) => {
@@ -82,14 +75,12 @@ const ServicesTable: React.FC = () => {
     // Delete service mutation
     const deleteMutation = useMutation({
         mutationFn: async (serviceId: number) => {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${serviceId}`, {
-                method: 'DELETE',
-            });
+            const response = await apiDelete(`/api/crm/services/${serviceId}`);
             if (!response.ok) throw new Error('Ошибка удаления услуги');
             return response.json();
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/services`] });
+            queryClient.invalidateQueries({ queryKey: ['crm-services'] });
             toast({ title: 'Услуга удалена успешно' });
         },
         onError: (error: Error) => {

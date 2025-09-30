@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
+import { useAuth } from "./SimpleAuthContext";
 
 export interface Branch {
   id: number;
@@ -28,6 +29,7 @@ const BranchContext = createContext<BranchContextType>({
 });
 
 export const BranchProvider = ({ children }: { children: ReactNode }) => {
+  const { user, isAuthenticated } = useAuth(); // Получаем пользователя из AuthContext
   const [currentBranch, setCurrentBranch] = useState<Branch | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,58 +41,90 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       setError(null);
       
-      // Сначала пробуем основной эндпоинт
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/organisation-branches`, {
+      console.log('🏢 BranchContext: Starting branch loading...');
+      
+      // Сначала получаем organisationId из API пользователя
+      console.log('� Getting organisationId from user API...');
+      // Проверяем, что пользователь авторизован и данные доступны
+      if (!isAuthenticated || !user) {
+        throw new Error('Пользователь не авторизован');
+      }
+      
+      console.log('👤 Using user data from AuthContext:', user);
+      
+      // Ищем organisationId в данных пользователя из AuthContext
+      const organisationId = user.organisationId || user.organization_id || user.orgId;
+      
+      if (!organisationId) {
+        console.log('⚠️ No organisationId found in user data, trying with organisationId = 1');
+        // Fallback: пробуем с organisationId = 1
+        const fallbackOrgId = 1;
+        console.log('🆔 Using fallback organisationId:', fallbackOrgId);
+        
+        const branchesUrl = `${import.meta.env.VITE_BACKEND_URL}/api/organisations/${fallbackOrgId}/branches`;
+        console.log('🌐 Fetching branches from (fallback):', branchesUrl);
+        
+        const branchesResponse = await fetch(branchesUrl, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+          }
+        });
+
+        if (!branchesResponse.ok) {
+          throw new Error('Пользователь не связан с организацией');
+        }
+
+        const branchesData = await branchesResponse.json();
+        console.log('📄 Branches response data (fallback):', branchesData);
+        
+        const branchList: Branch[] = branchesData.branches || [];
+        console.log('✅ Loaded branches (fallback):', branchList.length, branchList.map(b => ({ id: b.id, name: b.branches })));
+
+        setBranches(branchList);
+        
+        // Выбираем первый филиал
+        if (branchList.length > 0) {
+          setCurrentBranch(branchList[0]);
+          localStorage.setItem("currentBranchId", branchList[0].id.toString());
+          console.log('📍 Selected first branch (fallback):', branchList[0].branches);
+        }
+        
+        return; // Выходим из функции, так как обработали fallback случай
+      }
+      
+      console.log('🆔 Using organisationId:', organisationId);
+      
+      // Теперь загружаем филиалы напрямую через organisations endpoint
+      const branchesUrl = `${import.meta.env.VITE_BACKEND_URL}/api/organisations/${organisationId}/branches`;
+      console.log('🌐 Fetching branches from:', branchesUrl);
+      
+      const branchesResponse = await fetch(branchesUrl, {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
         }
       });
 
-      let branchList: Branch[] = [];
-
-      if (response.ok) {
-        const data = await response.json();
-        branchList = data.branches || [];
-        
-        // Сразу после успешного ответа, пробуем fallback эндпоинт
-        // Если у нас есть хотя бы один филиал с organisationId
-        if (branchList.length > 0 && branchList[0].organisationId) {
-          try {
-            console.log('Making fallback request to organisations endpoint...');
-            const organisationId = branchList[0].organisationId;
-            const fallbackResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/organisations/${organisationId}/branches`, {
-              credentials: 'include',
-              headers: {
-                'Accept': 'application/json',
-              }
-            });
-            
-            if (fallbackResponse.ok) {
-              const fallbackData = await fallbackResponse.json();
-              const fallbackBranches = fallbackData.branches || [];
-              if (fallbackBranches.length > 0) {
-                branchList = fallbackBranches; // Используем данные из fallback эндпоинта
-                console.log('Fallback endpoint successful, using branches from organisations endpoint:', branchList.length);
-              }
-            } else {
-              console.log('Fallback endpoint failed, using original branches');
-            }
-          } catch (fallbackErr) {
-            console.log('Fallback request failed, using original branches:', fallbackErr);
-          }
-        }
-      } else {
-        if (response.status === 401) {
+      if (!branchesResponse.ok) {
+        if (branchesResponse.status === 401) {
           throw new Error('Необходима авторизация');
-        } else if (response.status === 400) {
-          throw new Error('Пользователь не связан с организацией');
+        } else if (branchesResponse.status === 404) {
+          throw new Error('Организация не найдена');
         } else {
-          throw new Error(`Ошибка сервера: ${response.status}`);
+          const errorText = await branchesResponse.text();
+          throw new Error(`Ошибка загрузки филиалов: ${branchesResponse.status} - ${errorText}`);
         }
       }
 
+      const branchesData = await branchesResponse.json();
+      console.log('📄 Branches response data:', branchesData);
+      
+      const branchList: Branch[] = branchesData.branches || [];
+      console.log('✅ Loaded branches:', branchList.length, branchList.map(b => ({ id: b.id, name: b.branches })));
+
       setBranches(branchList);
+      console.log('🎯 Final branches set:', branchList.length);
 
       // Пытаемся восстановить сохраненный филиал
       const savedBranchId = localStorage.getItem("currentBranchId");
@@ -98,21 +132,25 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
         const saved = branchList.find((b: Branch) => b.id.toString() === savedBranchId);
         if (saved) {
           setCurrentBranch(saved);
+          console.log('📍 Restored saved branch:', saved.branches);
         } else {
           // Если сохраненный филиал не найден, выбираем первый
           setCurrentBranch(branchList[0]);
           localStorage.setItem("currentBranchId", branchList[0].id.toString());
+          console.log('📍 Selected first branch:', branchList[0].branches);
         }
       } else if (branchList.length > 0) {
         // Если нет сохраненного филиала, выбираем первый
         setCurrentBranch(branchList[0]);
         localStorage.setItem("currentBranchId", branchList[0].id.toString());
+        console.log('📍 Selected first branch:', branchList[0].branches);
       }
     } catch (err) {
-      console.error('Error fetching branches:', err);
+      console.error('❌ Error fetching branches:', err);
       setError(err instanceof Error ? err.message : 'Ошибка загрузки филиалов');
     } finally {
       setIsLoading(false);
+      console.log('🏁 BranchContext: Loading completed');
     }
   };
 
@@ -122,10 +160,12 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem("currentBranchId", branch.id.toString());
   };
 
-  // Загружаем филиалы при монтировании компонента
+  // Загружаем филиалы при монтировании компонента и когда пользователь загружен
   useEffect(() => {
-    fetchBranches();
-  }, []);
+    if (isAuthenticated && user) {
+      fetchBranches();
+    }
+  }, [isAuthenticated, user]);
 
   // Значение контекста
   const value = {

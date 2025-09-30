@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiPost } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -132,7 +133,7 @@ const GiftCertificatesPage = () => {
     }
 
     try {
-      const response = await fetch('/api/gift-certificates', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -209,7 +210,7 @@ const GiftCertificatesPage = () => {
         const updatedCert = await response.json();
 
         // Создаем запись в бухгалтерии для использованного сертификата
-        const accountingResponse = await fetch('/api/accounting', {
+        const accountingResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

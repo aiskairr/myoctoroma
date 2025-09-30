@@ -21,6 +21,9 @@ interface User {
   role: string;
   instanceId?: string | null;
   master_id?: number | null;
+  organisationId?: number | null;
+  organization_id?: number | null;
+  orgId?: number | null;
 }
 
 interface AuthContextType {

@@ -20,7 +20,7 @@ interface AccountingRecord {
 class AccountingService {
   async getRecordsForDate(date: string, branchId: string): Promise<AccountingRecord[]> {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}${import.meta.env.VITE_BACKEND_URL}/api/accounting?date=${date}&branchId=${branchId}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting?date=${date}&branchId=${branchId}`);
       if (response.ok) {
         return await response.json();
       }

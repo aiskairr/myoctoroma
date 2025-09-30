@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useBranch } from '@/contexts/BranchContext';
 import { accountingService } from '@/services/accounting-service';
 import { expenseService, type ExpenseRecord } from '@/services/expense-service';
+import { apiGetJson } from '@/lib/api';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import {
@@ -117,32 +118,25 @@ const AccountingPage = () => {
 
   const fetchMasters = async () => {
     try {
-      const response = await fetch('/api/masters');
-      if (response.ok) {
-        const mastersData = await response.json();
-        setMasters(mastersData);
-      }
+      const response = await apiGetJson(`${import.meta.env.VITE_BACKEND_URL}/api/masters`);
+      console.log('Masters response:', response);
+      return response;
     } catch (error) {
-      console.error('Ошибка загрузки мастеров:', error);
+      console.error('Error fetching masters:', error);
+      throw error;
     }
   };
 
   const fetchAdministrators = async () => {
     try {
-      const response = await fetch('/api/administrators');
-      if (response.ok) {
-        const administratorsData = await response.json();
-        const activeAdmins = administratorsData.filter((admin: Administrator) =>
-          admin.isActive
-        );
-        setAdministrators(activeAdmins);
-      }
+      const response = await apiGetJson(`${import.meta.env.VITE_BACKEND_URL}/api/administrators`, currentBranch?.id);
+      console.log('Administrators response:', response);
+      return response;
     } catch (error) {
-      console.error('Ошибка загрузки администраторов:', error);
+      console.error('Error fetching administrators:', error);
+      throw error;
     }
-  };
-
-  const fetchData = async (date?: Date) => {
+  };  const fetchData = async (date?: Date) => {
     setIsLoading(true);
     const targetDate = date || selectedDate;
     const dateString = new Date(targetDate.getTime() - (targetDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];

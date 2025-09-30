@@ -1,5 +1,5 @@
 import React from "react";
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "./contexts/SimpleAuthContext";
 import { BranchProvider } from "./contexts/BranchContext";
@@ -70,43 +70,40 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <AuthProvider>
-      <BranchProvider>
-        <div className="min-h-screen">
-          <Switch>
-            {/* Публичные маршруты */}
-            <Route path="/login" component={SimpleLogin} />
-            <Route path="/public/booking" component={BookingPage} />
-            <Route path="/booking" component={Booking} />
+      <div className="min-h-screen">
+        <Switch>
+          {/* Публичные маршруты */}
+          <Route path="/login" component={SimpleLogin} />
+          <Route path="/public/booking" component={BookingPage} />
+          <Route path="/booking" component={Booking} />
 
-            {/* Мобильная версия для мастеров */}
-            <Route path="/mobile" component={MobileApp} />
+          {/* Мобильная версия для мастеров */}
+          <Route path="/mobile" component={MobileApp} />
 
-            {/* Защищенные маршруты */}
-            <Route path="/">
-              <ProtectedLayout>
-                <Dashboard />
-              </ProtectedLayout>
-            </Route>
+          {/* Защищенные маршруты */}
+          <Route path="/">
+            <ProtectedLayout>
+              <Dashboard />
+            </ProtectedLayout>
+          </Route>
 
+          <Route path="/settings">
+            <ProtectedLayout>
+              <Settings />
+            </ProtectedLayout>
+          </Route>
 
-            <Route path="/settings">
-              <ProtectedLayout>
-                <Settings />
-              </ProtectedLayout>
-            </Route>
+          <Route path="/clients">
+            <ProtectedLayout>
+              <Clients />
+            </ProtectedLayout>
+          </Route>
 
-            <Route path="/clients">
-              <ProtectedLayout>
-                <Clients />
-              </ProtectedLayout>
-            </Route>
-
-
-            <Route path="/crm/tasks">
-              <ProtectedLayout>
-                <CRMTasks />
-              </ProtectedLayout>
-            </Route>
+          <Route path="/crm/tasks">
+            <ProtectedLayout>
+              <CRMTasks />
+            </ProtectedLayout>
+          </Route>
 
             <Route path="/crm/calendar">
               <ProtectedLayout>
@@ -190,14 +187,13 @@ function App() {
               </ProtectedLayout>
             </Route>
 
-            {/* 404 страница */}
-            <Route>
-              <NotFound />
-            </Route>
-          </Switch>
-        </div>
-        <Toaster />
-      </BranchProvider>
+          {/* 404 страница */}
+          <Route>
+            <NotFound />
+          </Route>
+        </Switch>
+      </div>
+      <Toaster />
     </AuthProvider>
   );
 }

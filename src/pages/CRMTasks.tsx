@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiGetJson, apiPost } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -244,7 +245,7 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
     queryFn: async () => {
       if (!taskData.massageType) return null;
 
-      const res = await fetch('/api/massage-services/durations', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -309,7 +310,7 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
   // Мутация для создания дополнительной услуги
   const createAdditionalServiceMutation = useMutation({
     mutationFn: async (serviceData: { serviceId: number; serviceName: string; duration: number; price: number }) => {
-      const res = await fetch('/api/tasks', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1022,7 +1023,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
 
       console.log(`Загружаем длительности для услуги: ${dateTime.massageType}`);
 
-      const res = await fetch('/api/massage-services/durations', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1751,7 +1752,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
     queryFn: async () => {
       if (!formData.massageType) return null;
 
-      const res = await fetch('/api/massage-services/durations', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1830,7 +1831,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
       console.log("Отправляем данные для создания клиента:", payload);
 
       // Отправляем запрос на создание клиента
-      const response = await fetch('/api/clients', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/clients`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1879,7 +1880,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
           console.log("Создаем задачу для клиента:", taskPayload);
 
           // Отправляем запрос на создание задачи
-          const taskResponse = await fetch('/api/tasks', {
+          const taskResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
