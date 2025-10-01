@@ -9,12 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Check, Trash2, Eye, Plus } from "lucide-react";
-
-// Константы филиалов
-const BRANCHES = [
-  { id: "wa1", name: "ул. Токтогула 93" },
-  { id: null, name: "Все филиалы" }
-];
+import { useBranch } from "@/contexts/BranchContext";
 
 interface MassageService {
   id: number;
@@ -41,6 +36,7 @@ interface MassageService {
 }
 
 export default function CRMServices() {
+  const { branches } = useBranch();
   const [editingServices, setEditingServices] = useState<Record<number, MassageService>>({});
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newServiceData, setNewServiceData] = useState({
@@ -53,14 +49,25 @@ export default function CRMServices() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Создаем список филиалов с опцией "Все филиалы"
+  const branchOptions = [
+    { id: null, name: "Все филиалы" },
+    ...branches.map(branch => ({ id: branch.id.toString(), name: branch.branches }))
+  ];
+
   // Функция для получения названия филиала
   const getBranchName = (instanceId: string | null) => {
-    const branch = BRANCHES.find(b => b.id === instanceId);
+    const branch = branchOptions.find(b => b.id === instanceId);
     return branch ? branch.name : "Все филиалы";
   };
 
   const { data: services = [], isLoading, error } = useQuery<MassageService[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'],
+    queryKey: ['crm-services'],
+    queryFn: async () => {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services`);
+      if (!response.ok) throw new Error('Ошибка загрузки услуг');
+      return response.json();
+    },
   });
 
   // Инициализация состояния редактирования при загрузке данных
@@ -106,7 +113,7 @@ export default function CRMServices() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
+      queryClient.invalidateQueries({ queryKey: ['crm-services'] });
       toast({ title: "Услуга обновлена успешно" });
     },
     onError: (error: Error) => {
@@ -146,7 +153,7 @@ export default function CRMServices() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
+      queryClient.invalidateQueries({ queryKey: ['crm-services'] });
       toast({ title: "Услуга создана успешно" });
     },
     onError: (error: Error) => {
@@ -175,7 +182,7 @@ export default function CRMServices() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
+      queryClient.invalidateQueries({ queryKey: ['crm-services'] });
       toast({ title: "Услуга удалена успешно" });
     },
     onError: (error: Error) => {
@@ -336,7 +343,7 @@ export default function CRMServices() {
                           <SelectValue placeholder="Выберите филиал" />
                         </SelectTrigger>
                         <SelectContent>
-                          {BRANCHES.map((branch) => (
+                          {branchOptions.map((branch) => (
                             <SelectItem key={branch.id || "null"} value={branch.id || "null"}>
                               {branch.name}
                             </SelectItem>
@@ -569,7 +576,7 @@ export default function CRMServices() {
                           <SelectValue placeholder="Выберите филиал" />
                         </SelectTrigger>
                         <SelectContent>
-                          {BRANCHES.map((branch) => (
+                          {branchOptions.map((branch) => (
                             <SelectItem key={branch.id || "null"} value={branch.id || "null"}>
                               {branch.name}
                             </SelectItem>
@@ -827,7 +834,7 @@ export default function CRMServices() {
                   <SelectValue placeholder="Выберите филиал" />
                 </SelectTrigger>
                 <SelectContent>
-                  {BRANCHES.map((branch) => (
+                  {branchOptions.map((branch) => (
                     <SelectItem key={branch.id || "null"} value={branch.id || "null"}>
                       {branch.name}
                     </SelectItem>

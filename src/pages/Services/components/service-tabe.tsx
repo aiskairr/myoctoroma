@@ -8,11 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Check, Trash2, Eye, Pen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiGet, apiPut, apiDelete } from '@/lib/api';
-
-const BRANCHES = [
-    { id: 'wa1', name: 'ул. Токтогула 93' },
-    { id: null, name: 'Все филиалы' },
-];
+import { useBranch } from '@/contexts/BranchContext';
 
 const TIME_COLUMNS = [10, 15, 20, 30, 40, 50, 60, 75, 80, 90, 110, 120, 150, 220] as const;
 type TimeColumn = (typeof TIME_COLUMNS)[number];
@@ -20,9 +16,16 @@ type TimeColumn = (typeof TIME_COLUMNS)[number];
 const ServicesTable: React.FC = () => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const { branches } = useBranch();
     const [editingServices, setEditingServices] = useState<Record<number, any>>({});
     const [editingCell, setEditingCell] = useState<string | null>(null);
     const [editValue, setEditValue] = useState<string>('');
+
+    // Создаем список филиалов с опцией "Все филиалы"
+    const branchOptions = [
+        { id: null, name: "Все филиалы" },
+        ...branches.map(branch => ({ id: branch.id.toString(), name: branch.branches }))
+    ];
 
     // Fetch services using our custom API function
     const { data: services = [], isLoading, error } = useQuery<any[]>({
@@ -143,7 +146,7 @@ const ServicesTable: React.FC = () => {
     };
 
     const getBranchName = (instanceId: string | null) => {
-        const branch = BRANCHES.find((b) => b.id === instanceId);
+        const branch = branchOptions.find((b) => b.id === instanceId);
         return branch ? branch.name : 'Все филиалы';
     };
 
@@ -203,7 +206,7 @@ const ServicesTable: React.FC = () => {
                                                 <SelectValue placeholder="Выберите филиал" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {BRANCHES.map((branch) => (
+                                                {branchOptions.map((branch) => (
                                                     <SelectItem key={branch.id || 'null'} value={branch.id || 'null'}>
                                                         {branch.name}
                                                     </SelectItem>
