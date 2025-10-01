@@ -1192,7 +1192,7 @@ const EditAppointmentDialog = ({
           dailyReport: calculateTotalPrice() - Math.round(calculateTotalPrice() * formData.discount / 100),
           adminName: selectedAdministrator,
           isGiftCertificateUsed: selectedPaymentMethod === 'Подарочный Сертификат',
-          branchId: currentBranch?.waInstance || 'wa1',
+          branchId: currentBranch?.id || '1',
           date: task.scheduleDate || new Date().toISOString().split('T')[0]
         }),
       });
