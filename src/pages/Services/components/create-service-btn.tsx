@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ interface ServiceFormData {
     name: string;
     description: string;
     instanceId: string;
-    defaultDuration: string; // Changed from 'duration' to 'defaultDuration'
+    defaultDuration: string;
     isActive: boolean;
 }
 
@@ -39,7 +39,7 @@ const DURATIONS = [
 
 const CreateServiceBtn = () => {
     const [isOpen, setIsOpen] = useState(false);
-    const { branches } = useBranch(); // Get branches from context
+    const { branches } = useBranch();
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
@@ -54,7 +54,7 @@ const CreateServiceBtn = () => {
         defaultValues: {
             name: '',
             description: '',
-            instanceId: 'null',
+            instanceId: branches.length > 0 ? branches[0].id.toString() : '',
             defaultDuration: '60',
             isActive: true,
         },
@@ -63,6 +63,12 @@ const CreateServiceBtn = () => {
     const watchedInstanceId = watch('instanceId');
     const watchedDefaultDuration = watch('defaultDuration');
     const watchedIsActive = watch('isActive');
+
+    useEffect(() => {
+        if (isOpen && branches.length > 0) {
+            setValue('instanceId', branches[0].id.toString());
+        }
+    }, [isOpen, branches, setValue]);
 
     const createMutation = useMutation({
         mutationFn: async (service: Omit<any, 'id' | 'createdAt'>) => {
@@ -73,29 +79,30 @@ const CreateServiceBtn = () => {
                     name: service.name,
                     description: service.description,
                     isActive: service.isActive,
-                    instanceId: service.instanceId,
+                    branchID: service.instanceId,
+                    branchId: service.instanceId,
                     defaultDuration: service.defaultDuration,
-                    duration10_price: null,
-                    duration15_price: null,
-                    duration20_price: null,
-                    duration30_price: null,
-                    duration40_price: null,
-                    duration50_price: null,
-                    duration60_price: null,
-                    duration75_price: null,
-                    duration80_price: null,
-                    duration90_price: null,
-                    duration110_price: null,
-                    duration120_price: null,
-                    duration150_price: null,
-                    duration220_price: null,
+                    duration10_price: 0,
+                    duration15_price: 0,
+                    duration20_price: 0,
+                    duration30_price: 0,
+                    duration40_price: 0,
+                    duration50_price: 0,
+                    duration60_price: 0,
+                    duration75_price: 0,
+                    duration80_price: 0,
+                    duration90_price: 0,
+                    duration110_price: 0,
+                    duration120_price: 0,
+                    duration150_price: 0,
+                    duration220_price: 0,
                 }),
             });
             if (!response.ok) throw new Error('Ошибка создания услуги');
             return response.json();
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/services`] });
+            queryClient.invalidateQueries({ queryKey: ['crm-services'] });
             toast({ title: 'Услуга создана успешно' });
             setIsOpen(false);
             reset();
@@ -166,13 +173,9 @@ const CreateServiceBtn = () => {
                             id="description"
                             placeholder="Введите описание услуги"
                             rows={4}
-                            className={`resize-none ${errors.description ? 'border-red-500' : ''}`}
-                            {...register('description', {
-                                minLength: { value: 10, message: 'Описание должно содержать минимум 10 символов' },
-                                maxLength: { value: 500, message: 'Описание не должно превышать 500 символов' },
-                            })}
+                            className="resize-none"
+                            {...register('description')}
                         />
-                        {errors.description && <p className="text-sm text-red-500">{errors.description.message}</p>}
                     </div>
                     <div className="space-y-2">
                         <Label className="text-sm font-medium text-gray-700">Филиал</Label>
@@ -184,7 +187,6 @@ const CreateServiceBtn = () => {
                                 <SelectValue placeholder="Выберите филиал" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">Все филиалы</SelectItem>
                                 {branches.map((branch) => (
                                     <SelectItem key={branch.id} value={branch.id.toString()}>
                                         {branch.branches}
@@ -197,7 +199,7 @@ const CreateServiceBtn = () => {
                         <Label className="text-sm font-medium text-gray-700">Стандартная длительность</Label>
                         <Select
                             value={watchedDefaultDuration}
-                            onValueChange={(value) => setValue('defaultDuration', value)} // Changed 'duration' to 'defaultDuration'
+                            onValueChange={(value) => setValue('defaultDuration', value)}
                         >
                             <SelectTrigger className="w-full">
                                 <SelectValue />
