@@ -71,7 +71,7 @@ const formatTimeRange = (startTime: string, endTime: string): string => {
 };
 
 // Интерфейс для услуги
-interface MassageService {
+interface serviceService {
   id: number;
   name: string;
   duration30Price?: number;
@@ -94,14 +94,14 @@ interface DurationOption {
 }
 
 // Интерфейс для ответа API с доступными длительностями
-interface MassageDurationsResponse {
-  massageType: string;
+interface serviceDurationsResponse {
+  serviceType: string;
   availableDurations: DurationOption[];
   defaultDuration: number;
 }
 
 // Интерфейс для расчета услуги
-interface MassageServiceCalculation {
+interface serviceServiceCalculation {
   name: string;
   duration: number;
   price: number;
@@ -135,15 +135,15 @@ interface Task {
   };
   status: string;
   source?: string;           // Источник задачи (manual, instagram, telegram и т.д.)
-  massageType?: string;
-  massageServiceId?: number; // ID услуги массажа
-  massageDuration?: number;  // Длительность услуги в минутах
-  massagePrice?: number;     // Цена услуги
+  serviceType?: string;
+  serviceServiceId?: number; // ID услуги массажа
+  serviceDuration?: number;  // Длительность услуги в минутах
+  servicePrice?: number;     // Цена услуги
   discount?: number;         // Скидка в процентах
   finalPrice?: number;       // Итоговая цена после скидки
   scheduleDate?: string;
   scheduleTime?: string;     // Время начала услуги
-  endTime?: string;          // Время окончания услуги (вычисляется на основе scheduleTime и massageDuration)
+  endTime?: string;          // Время окончания услуги (вычисляется на основе scheduleTime и serviceDuration)
   masterName?: string;
   branchId?: string;         // Идентификатор филиала (wa1, wa2)
   notes?: string;
@@ -195,14 +195,14 @@ const StatusBadge = ({ status }: { status: string }) => {
 const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => void }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [taskData, setTaskData] = useState({
-    massageType: task.massageType || "",
+    serviceType: task.serviceType || "",
     scheduleDate: task.scheduleDate || "",
     scheduleTime: task.scheduleTime || "",
     masterName: task.masterName || "",
     notes: task.notes || "",
     discount: task.discount || 0,
     finalPrice: task.finalPrice || 0,
-    massageDuration: task.massageDuration || 0,
+    serviceDuration: task.serviceDuration || 0,
   });
 
   // Состояние для дополнительных услуг
@@ -212,8 +212,8 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
   const { toast } = useToast();
 
   // Получаем список доступных услуг
-  const { data: massageServices, isLoading: isLoadingServices } = useQuery<MassageService[]>({
-    queryKey: ['/api/public/massage-services'],
+  const { data: serviceServices, isLoading: isLoadingServices } = useQuery<serviceService[]>({
+    queryKey: ['/api/public/service-services'],
     enabled: isOpen, // Запрашиваем только когда диалог открыт
   });
 
@@ -235,22 +235,22 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
   }, [childTasksData]);
 
   // Получаем доступные длительности для выбранной услуги
-  const [selectedDuration, setSelectedDuration] = useState<number | null>(task.massageDuration || null);
+  const [selectedDuration, setSelectedDuration] = useState<number | null>(task.serviceDuration || null);
   const [customDuration, setCustomDuration] = useState<string>("");
   const [isCustomDuration, setIsCustomDuration] = useState(false);
 
-  const { data: massageDurations, isLoading: isLoadingDurations } = useQuery<MassageDurationsResponse>({
-    queryKey: ['/api/massage-services/durations', taskData.massageType],
-    enabled: !!taskData.massageType && isOpen,
+  const { data: serviceDurations, isLoading: isLoadingDurations } = useQuery<serviceDurationsResponse>({
+    queryKey: ['/api/service-services/durations', taskData.serviceType],
+    enabled: !!taskData.serviceType && isOpen,
     queryFn: async () => {
-      if (!taskData.massageType) return null;
+      if (!taskData.serviceType) return null;
 
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ massageType: taskData.massageType }),
+        body: JSON.stringify({ serviceType: taskData.serviceType }),
       });
       if (!res.ok) return null;
 
@@ -260,17 +260,17 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
 
   // Устанавливаем длительность по умолчанию, когда данные загружены
   useEffect(() => {
-    if (massageDurations && massageDurations.availableDurations &&
+    if (serviceDurations && serviceDurations.availableDurations &&
       (!selectedDuration ||
-        !massageDurations.availableDurations.some((d: DurationOption) => d.duration === selectedDuration))) {
-      setSelectedDuration(massageDurations.defaultDuration);
+        !serviceDurations.availableDurations.some((d: DurationOption) => d.duration === selectedDuration))) {
+      setSelectedDuration(serviceDurations.defaultDuration);
     }
-  }, [massageDurations, selectedDuration]);
+  }, [serviceDurations, selectedDuration]);
 
   // Получаем информацию о выбранной услуге для отображения цены
-  const selectedDurationOption = massageDurations?.availableDurations?.find((d: DurationOption) => d.duration === selectedDuration);
-  const massageDetails = selectedDurationOption && massageDurations ? {
-    name: massageDurations.massageType,
+  const selectedDurationOption = serviceDurations?.availableDurations?.find((d: DurationOption) => d.duration === selectedDuration);
+  const serviceDetails = selectedDurationOption && serviceDurations ? {
+    name: serviceDurations.serviceType,
     duration: selectedDurationOption.duration,
     price: selectedDurationOption.price
   } : null;
@@ -316,16 +316,16 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
         body: JSON.stringify({
           clientId: task.client.id,
           status: task.status,
-          massageType: serviceData.serviceName,
-          massageServiceId: serviceData.serviceId,
+          serviceType: serviceData.serviceName,
+          serviceServiceId: serviceData.serviceId,
           scheduleDate: task.scheduleDate,
           scheduleTime: task.scheduleTime,
           masterName: task.masterName,
           notes: task.notes,
           branchId: task.branchId,
           source: task.source,
-          massageDuration: serviceData.duration,
-          massagePrice: serviceData.price,
+          serviceDuration: serviceData.duration,
+          servicePrice: serviceData.price,
           finalPrice: serviceData.price,
           mother: task.id // Устанавливаем связь с материнской задачей
         })
@@ -409,14 +409,14 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
 
   // Расчет общей цены и времени с учетом дополнительных услуг
   const calculateTotalPrice = (): number => {
-    const mainPrice = task.massagePrice || 0;
-    const childrenPrice = childTasks.reduce((sum, child) => sum + (child.massagePrice || 0), 0);
+    const mainPrice = task.servicePrice || 0;
+    const childrenPrice = childTasks.reduce((sum, child) => sum + (child.servicePrice || 0), 0);
     return mainPrice + childrenPrice;
   };
 
   const calculateTotalDuration = (): number => {
-    const mainDuration = task.massageDuration || 0;
-    const childrenDuration = childTasks.reduce((sum, child) => sum + (child.massageDuration || 0), 0);
+    const mainDuration = task.serviceDuration || 0;
+    const childrenDuration = childTasks.reduce((sum, child) => sum + (child.serviceDuration || 0), 0);
     return mainDuration + childrenDuration;
   };
 
@@ -430,13 +430,13 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
     }
 
     // Включаем выбранную длительность услуги, если она есть
-    let massageDurationUpdate = {};
+    let serviceDurationUpdate = {};
     const finalDuration = isCustomDuration ? parseInt(customDuration) : selectedDuration;
 
     if (finalDuration) {
-      massageDurationUpdate = {
-        massageDuration: finalDuration,
-        massagePrice: isCustomDuration ? 0 : (selectedDurationOption?.price || 0) // Не заполняем цену для произвольной длительности
+      serviceDurationUpdate = {
+        serviceDuration: finalDuration,
+        servicePrice: isCustomDuration ? 0 : (selectedDurationOption?.price || 0) // Не заполняем цену для произвольной длительности
       };
     }
 
@@ -458,9 +458,9 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
     updateTaskMutation.mutate({
       ...taskData,
       ...statusUpdate,
-      ...massageDurationUpdate,
+      ...serviceDurationUpdate,
       ...endTimeUpdate,
-      massageDuration: taskData.massageDuration,
+      serviceDuration: taskData.serviceDuration,
       discount: taskData.discount,
       finalPrice: taskData.finalPrice || undefined
     });
@@ -495,19 +495,19 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
             <div className="grid gap-6 py-4">
               <div className="space-y-4">
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="massageType" className="text-right font-medium">Вид услуги</Label>
+                  <Label htmlFor="serviceType" className="text-right font-medium">Вид услуги</Label>
                   <div className="col-span-3">
                     <Select
-                      name="massageType"
-                      value={taskData.massageType}
-                      onValueChange={(value) => handleSelectChange("massageType", value)}
+                      name="serviceType"
+                      value={taskData.serviceType}
+                      onValueChange={(value) => handleSelectChange("serviceType", value)}
                       disabled={isLoadingServices}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Выберите тип услуги" />
                       </SelectTrigger>
                       <SelectContent>
-                        {massageServices?.map((service) => (
+                        {serviceServices?.map((service) => (
                           <SelectItem key={service.id} value={service.name}>
                             {service.name}
                           </SelectItem>
@@ -518,7 +518,7 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
                 </div>
 
                 {/* Добавляем выбор длительности, если услуга выбрана */}
-                {taskData.massageType && massageDurations && massageDurations.availableDurations && massageDurations.availableDurations.length > 0 && (
+                {taskData.serviceType && serviceDurations && serviceDurations.availableDurations && serviceDurations.availableDurations.length > 0 && (
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="duration" className="text-right font-medium">Длительность</Label>
                     <div className="col-span-3">
@@ -541,7 +541,7 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
                           <SelectValue placeholder="Выберите длительность" />
                         </SelectTrigger>
                         <SelectContent>
-                          {massageDurations.availableDurations.map((option: DurationOption) => (
+                          {serviceDurations.availableDurations.map((option: DurationOption) => (
                             <SelectItem key={option.duration} value={option.duration.toString()}>
                               <div className="flex items-center gap-2">
                                 <Timer className="h-4 w-4" />
@@ -577,11 +577,11 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
                 )}
 
                 {/* Отображаем детали выбранной услуги */}
-                {massageDetails && massageDetails.name && massageDetails.duration && massageDetails.price && (
+                {serviceDetails && serviceDetails.name && serviceDetails.duration && serviceDetails.price && (
                   <Alert>
                     <Star className="h-4 w-4" />
                     <AlertDescription>
-                      <strong>Выбрано:</strong> {massageDetails.name}, {massageDetails.duration} мин, {massageDetails.price} сом
+                      <strong>Выбрано:</strong> {serviceDetails.name}, {serviceDetails.duration} мин, {serviceDetails.price} сом
                     </AlertDescription>
                   </Alert>
                 )}
@@ -624,18 +624,18 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
                 </div>
 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="massageDuration" className="text-right font-medium">Длительность (мин)</Label>
+                  <Label htmlFor="serviceDuration" className="text-right font-medium">Длительность (мин)</Label>
                   <Input
-                    id="massageDuration"
-                    name="massageDuration"
+                    id="serviceDuration"
+                    name="serviceDuration"
                     type="number"
                     min="1"
-                    value={taskData.massageDuration}
+                    value={taskData.serviceDuration}
                     onChange={(e) => {
                       const duration = parseInt(e.target.value) || 0;
                       setTaskData(prev => ({
                         ...prev,
-                        massageDuration: duration
+                        serviceDuration: duration
                       }));
                     }}
                     className="col-span-3"
@@ -669,7 +669,7 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
                     onChange={(e) => {
                       const discount = parseInt(e.target.value) || 0;
                       setTaskData(prev => {
-                        const basePrice = task.massagePrice || massageDetails?.price || 0;
+                        const basePrice = task.servicePrice || serviceDetails?.price || 0;
                         const finalPrice = basePrice - (basePrice * discount / 100);
                         return {
                           ...prev,
@@ -919,7 +919,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
     date: task.scheduleDate ? task.scheduleDate.split('T')[0] : '',
     time: task.scheduleTime || '',
     master: task.masterName || '',
-    massageType: task.massageType || '',
+    serviceType: task.serviceType || '',
     branch: determineTaskBranch(), // Используем функцию для определения филиала
   });
 
@@ -958,8 +958,8 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
   });
 
   // Получаем список услуг для диалога выбора времени
-  const { data: massageServicesForSchedule, isLoading: isLoadingScheduleServices } = useQuery<MassageService[]>({
-    queryKey: ['/api/public/massage-services'],
+  const { data: serviceServicesForSchedule, isLoading: isLoadingScheduleServices } = useQuery<serviceService[]>({
+    queryKey: ['/api/public/service-services'],
   });
 
   // Состояние для управления диалогом
@@ -1013,52 +1013,52 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
   });
 
   // Получаем доступные длительности для выбранной услуги
-  const { data: scheduleMassageDurations, isLoading: isLoadingScheduleDurations } = useQuery<MassageDurationsResponse>({
-    queryKey: ['/api/massage-services/durations', dateTime.massageType],
-    enabled: !!dateTime.massageType,
+  const { data: scheduleserviceDurations, isLoading: isLoadingScheduleDurations } = useQuery<serviceDurationsResponse>({
+    queryKey: ['/api/service-services/durations', dateTime.serviceType],
+    enabled: !!dateTime.serviceType,
     queryFn: async () => {
-      if (!dateTime.massageType) {
-        return { massageType: '', availableDurations: [], defaultDuration: 0 } as MassageDurationsResponse;
+      if (!dateTime.serviceType) {
+        return { serviceType: '', availableDurations: [], defaultDuration: 0 } as serviceDurationsResponse;
       }
 
-      console.log(`Загружаем длительности для услуги: ${dateTime.massageType}`);
+      console.log(`Загружаем длительности для услуги: ${dateTime.serviceType}`);
 
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ massageType: dateTime.massageType }),
+        body: JSON.stringify({ serviceType: dateTime.serviceType }),
       });
       if (!res.ok) {
-        console.error('Failed to fetch massage durations', await res.text());
+        console.error('Failed to fetch service durations', await res.text());
         return {
-          massageType: dateTime.massageType,
+          serviceType: dateTime.serviceType,
           availableDurations: [],
           defaultDuration: 0
-        } as MassageDurationsResponse;
+        } as serviceDurationsResponse;
       }
 
       const data = await res.json();
       console.log(`Получены данные о длительностях услуги:`, data);
 
-      return data as MassageDurationsResponse;
+      return data as serviceDurationsResponse;
     }
   });
 
   // Устанавливаем длительность по умолчанию, когда данные загружены
   useEffect(() => {
-    if (scheduleMassageDurations && scheduleMassageDurations.availableDurations &&
+    if (scheduleserviceDurations && scheduleserviceDurations.availableDurations &&
       (!selectedScheduleDuration ||
-        !scheduleMassageDurations.availableDurations.some((d: DurationOption) => d.duration === selectedScheduleDuration))) {
-      setSelectedScheduleDuration(scheduleMassageDurations.defaultDuration);
+        !scheduleserviceDurations.availableDurations.some((d: DurationOption) => d.duration === selectedScheduleDuration))) {
+      setSelectedScheduleDuration(scheduleserviceDurations.defaultDuration);
     }
-  }, [scheduleMassageDurations, selectedScheduleDuration]);
+  }, [scheduleserviceDurations, selectedScheduleDuration]);
 
   // Получаем информацию о выбранной длительности услуги для отображения цены
-  const selectedScheduleDurationOption = scheduleMassageDurations?.availableDurations?.find((d: DurationOption) => d.duration === selectedScheduleDuration);
-  const selectedMassageDetails = selectedScheduleDurationOption && scheduleMassageDurations ? {
-    name: scheduleMassageDurations.massageType,
+  const selectedScheduleDurationOption = scheduleserviceDurations?.availableDurations?.find((d: DurationOption) => d.duration === selectedScheduleDuration);
+  const selectedserviceDetails = selectedScheduleDurationOption && scheduleserviceDurations ? {
+    name: scheduleserviceDurations.serviceType,
     duration: selectedScheduleDurationOption.duration,
     price: selectedScheduleDurationOption.price
   } : null;
@@ -1068,18 +1068,18 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
       scheduleDate: string,
       scheduleTime: string,
       masterName: string,
-      massageType?: string,
-      massageDuration?: number,
-      massagePrice?: number,
+      serviceType?: string,
+      serviceDuration?: number,
+      servicePrice?: number,
       branchId?: string
     }) => {
       // Вычисляем время окончания услуги на основе даты, времени и длительности
       let endTime;
-      if (data.scheduleDate && data.scheduleTime && data.massageDuration) {
+      if (data.scheduleDate && data.scheduleTime && data.serviceDuration) {
         endTime = calculateEndTime(
           data.scheduleDate,
           data.scheduleTime,
-          data.massageDuration
+          data.serviceDuration
         );
         console.log(`Вычисленное время окончания (быстрая запись): ${endTime}`);
       }
@@ -1149,11 +1149,11 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
     }
 
     // Включаем выбранную длительность услуги, если она есть
-    let massageDurationData = {};
+    let serviceDurationData = {};
     if (selectedScheduleDuration && selectedScheduleDurationOption) {
-      massageDurationData = {
-        massageDuration: selectedScheduleDuration,
-        massagePrice: selectedScheduleDurationOption.price
+      serviceDurationData = {
+        serviceDuration: selectedScheduleDuration,
+        servicePrice: selectedScheduleDurationOption.price
       };
     }
 
@@ -1161,9 +1161,9 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
       scheduleDate: dateTime.date,
       scheduleTime: dateTime.time,
       masterName: dateTime.master,
-      massageType: dateTime.massageType,
+      serviceType: dateTime.serviceType,
       branchId: dateTime.branch,
-      ...massageDurationData
+      ...serviceDurationData
     }, {
       onSuccess: () => {
         // Закрываем диалог после успешной мутации
@@ -1188,17 +1188,17 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
                   <span className="text-sm">{task.client.phoneNumber}</span>
                 </div>
               )}
-              {task.massageType && (
+              {task.serviceType && (
                 <div className="space-y-1">
                   <Badge variant="outline" className="text-xs">
-                    {task.massageType}
+                    {task.serviceType}
                   </Badge>
-                  {task.massageDuration && task.massagePrice && (
+                  {task.serviceDuration && task.servicePrice && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Timer className="h-3 w-3" />
-                      <span>{task.massageDuration} мин</span>
+                      <span>{task.serviceDuration} мин</span>
                       <DollarSign className="h-3 w-3" />
-                      <span>{task.massagePrice} сом</span>
+                      <span>{task.servicePrice} сом</span>
                     </div>
                   )}
                 </div>
@@ -1280,7 +1280,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
                     date: todayDate,
                     time: '',
                     master: '',
-                    massageType: task.massageType || '',
+                    serviceType: task.serviceType || '',
                     branch: branch
                   });
                 }
@@ -1319,14 +1319,14 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
 
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="massageType" className="text-right font-medium">Вид услуги</Label>
+                    <Label htmlFor="serviceType" className="text-right font-medium">Вид услуги</Label>
                     <div className="col-span-3">
                       <Select
-                        name="massageType"
-                        value={dateTime.massageType}
+                        name="serviceType"
+                        value={dateTime.serviceType}
                         onValueChange={(value) => {
                           console.log(`Выбран тип услуги: ${value}`);
-                          setDateTime({ ...dateTime, massageType: value });
+                          setDateTime({ ...dateTime, serviceType: value });
 
                           // При выборе типа услуги длительности загрузятся через отдельный useQuery
                           console.log(`Загружаем длительности для услуги через query hook: ${value}`);
@@ -1337,7 +1337,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
                           <SelectValue placeholder="Выберите тип услуги" />
                         </SelectTrigger>
                         <SelectContent>
-                          {massageServicesForSchedule?.map((service) => (
+                          {serviceServicesForSchedule?.map((service) => (
                             <SelectItem key={service.id} value={service.name}>
                               {service.name}
                             </SelectItem>
@@ -1348,7 +1348,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
                   </div>
 
                   {/* Добавляем выбор длительности, если услуга выбрана */}
-                  {dateTime.massageType && scheduleMassageDurations && scheduleMassageDurations.availableDurations && scheduleMassageDurations.availableDurations.length > 0 && (
+                  {dateTime.serviceType && scheduleserviceDurations && scheduleserviceDurations.availableDurations && scheduleserviceDurations.availableDurations.length > 0 && (
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="scheduleDuration" className="text-right font-medium">Длительность</Label>
                       <div className="col-span-3">
@@ -1362,7 +1362,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
                             <SelectValue placeholder="Выберите длительность" />
                           </SelectTrigger>
                           <SelectContent>
-                            {scheduleMassageDurations.availableDurations.map((option: DurationOption) => (
+                            {scheduleserviceDurations.availableDurations.map((option: DurationOption) => (
                               <SelectItem key={option.duration} value={option.duration.toString()}>
                                 <div className="flex items-center gap-2">
                                   <Timer className="h-4 w-4" />
@@ -1380,11 +1380,11 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
                   )}
 
                   {/* Отображаем детали выбранной услуги */}
-                  {selectedMassageDetails && selectedMassageDetails.name && selectedMassageDetails.duration && selectedMassageDetails.price && (
+                  {selectedserviceDetails && selectedserviceDetails.name && selectedserviceDetails.duration && selectedserviceDetails.price && (
                     <Alert>
                       <Star className="h-4 w-4" />
                       <AlertDescription>
-                        <strong>Выбрано:</strong> {selectedMassageDetails.name}, {selectedMassageDetails.duration} мин, {selectedMassageDetails.price} сом
+                        <strong>Выбрано:</strong> {selectedserviceDetails.name}, {selectedserviceDetails.duration} мин, {selectedserviceDetails.price} сом
                       </AlertDescription>
                     </Alert>
                   )}
@@ -1671,7 +1671,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
     clientName: string;
     phoneNumber: string;
     branchId: string;
-    massageType: string;
+    serviceType: string;
     masterName: string;
     notes: string;
     discount: number;
@@ -1682,7 +1682,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
     clientName: "",
     phoneNumber: "",
     branchId: currentBranch && currentBranch.id ? currentBranch.id.toString() : 'wa1',
-    massageType: "",
+    serviceType: "",
     masterName: "",
     notes: "",
     discount: 0,
@@ -1738,26 +1738,26 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
   });
 
   // Список услуг
-  const { data: massageServices, isLoading: isLoadingServices } = useQuery<MassageService[]>({
-    queryKey: ['/api/public/massage-services'],
+  const { data: serviceServices, isLoading: isLoadingServices } = useQuery<serviceService[]>({
+    queryKey: ['/api/public/service-services'],
     enabled: isOpen,
   });
 
   // Доступные длительности для выбранного типа услуги
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
 
-  const { data: massageDurations, isLoading: isLoadingDurations } = useQuery<MassageDurationsResponse>({
-    queryKey: ['/api/massage-services/durations', formData.massageType],
-    enabled: !!formData.massageType && isOpen,
+  const { data: serviceDurations, isLoading: isLoadingDurations } = useQuery<serviceDurationsResponse>({
+    queryKey: ['/api/service-services/durations', formData.serviceType],
+    enabled: !!formData.serviceType && isOpen,
     queryFn: async () => {
-      if (!formData.massageType) return null;
+      if (!formData.serviceType) return null;
 
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ massageType: formData.massageType }),
+        body: JSON.stringify({ serviceType: formData.serviceType }),
       });
       if (!res.ok) return null;
 
@@ -1767,17 +1767,17 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
 
   // Устанавливаем длительность по умолчанию, когда данные загружены
   useEffect(() => {
-    if (massageDurations && massageDurations.availableDurations &&
+    if (serviceDurations && serviceDurations.availableDurations &&
       (!selectedDuration ||
-        !massageDurations.availableDurations.some((d: DurationOption) => d.duration === selectedDuration))) {
-      setSelectedDuration(massageDurations.defaultDuration);
+        !serviceDurations.availableDurations.some((d: DurationOption) => d.duration === selectedDuration))) {
+      setSelectedDuration(serviceDurations.defaultDuration);
     }
-  }, [massageDurations, selectedDuration]);
+  }, [serviceDurations, selectedDuration]);
 
   // Автоматически рассчитываем цену при изменении типа услуги или длительности
   useEffect(() => {
-    if (massageDurations && selectedDuration) {
-      const selectedOption = massageDurations.availableDurations.find((d: DurationOption) => d.duration === selectedDuration);
+    if (serviceDurations && selectedDuration) {
+      const selectedOption = serviceDurations.availableDurations.find((d: DurationOption) => d.duration === selectedDuration);
       if (selectedOption) {
         const basePrice = selectedOption.price;
         const discountAmount = (basePrice * formData.discount) / 100;
@@ -1791,7 +1791,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
         console.log(`Автоматически рассчитана цена: базовая ${basePrice}, скидка ${formData.discount}%, итоговая ${finalPrice}`);
       }
     }
-  }, [massageDurations, selectedDuration, formData.discount]);
+  }, [serviceDurations, selectedDuration, formData.discount]);
 
   // Мутация для создания клиента
   const createClientMutation = useMutation({
@@ -1819,7 +1819,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
         // Дополнительная информация для задачи
         clientName: formData.clientName,
         branchId: formData.branchId,
-        massageType: formData.massageType,
+        serviceType: formData.serviceType,
         masterName: formData.masterName,
         notes: formData.notes,
         scheduleDate: dateTime.date,
@@ -1858,21 +1858,21 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
         if (data && data.client && data.client.id) {
           const clientId = data.client.id;
           // Получаем базовую цену услуги
-          const selectedOption = massageDurations?.availableDurations.find((d: DurationOption) => d.duration === selectedDuration);
-          const massagePrice = selectedOption ? selectedOption.price : 0;
+          const selectedOption = serviceDurations?.availableDurations.find((d: DurationOption) => d.duration === selectedDuration);
+          const servicePrice = selectedOption ? selectedOption.price : 0;
 
           const taskPayload = {
             clientId: clientId,
             status: 'new', // Статус "Неразобранные"
-            massageType: formData.massageType,
+            serviceType: formData.serviceType,
             scheduleDate: dateTime.date || null,
             scheduleTime: dateTime.time || null,
             masterName: formData.masterName || null,
             notes: formData.notes || null,
             branchId: formData.branchId,
             source: 'manual', // Вручную созданная задача
-            massageDuration: selectedDuration,
-            massagePrice: massagePrice, // Базовая цена услуги
+            serviceDuration: selectedDuration,
+            servicePrice: servicePrice, // Базовая цена услуги
             discount: formData.discount,
             finalPrice: formData.finalPrice // Цена с учетом скидки
           };
@@ -1910,7 +1910,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
         clientName: "",
         phoneNumber: "",
         branchId: currentBranch?.id?.toString() || 'wa1',
-        massageType: "",
+        serviceType: "",
         masterName: "",
         notes: "",
         discount: 0,
@@ -2080,19 +2080,19 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
                 </div>
 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="massageType" className="text-right font-medium">Тип услуги</Label>
+                  <Label htmlFor="serviceType" className="text-right font-medium">Тип услуги</Label>
                   <div className="col-span-3">
                     <Select
-                      name="massageType"
-                      value={formData.massageType}
-                      onValueChange={(value) => setFormData({ ...formData, massageType: value })}
+                      name="serviceType"
+                      value={formData.serviceType}
+                      onValueChange={(value) => setFormData({ ...formData, serviceType: value })}
                       disabled={isLoadingServices}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Выберите тип услуги" />
                       </SelectTrigger>
                       <SelectContent>
-                        {massageServices?.map((service) => (
+                        {serviceServices?.map((service) => (
                           <SelectItem key={service.id} value={service.name}>
                             {service.name}
                           </SelectItem>
@@ -2109,13 +2109,13 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
                       name="duration"
                       value={selectedDuration?.toString() || ""}
                       onValueChange={(value) => setSelectedDuration(Number(value))}
-                      disabled={isLoadingDurations || !formData.massageType}
+                      disabled={isLoadingDurations || !formData.serviceType}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Выберите длительность" />
                       </SelectTrigger>
                       <SelectContent>
-                        {massageDurations?.availableDurations?.map((duration: DurationOption) => (
+                        {serviceDurations?.availableDurations?.map((duration: DurationOption) => (
                           <SelectItem key={duration.duration} value={duration.duration.toString()}>
                             <div className="flex items-center gap-2">
                               <Timer className="h-4 w-4" />
@@ -2203,7 +2203,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
                       const discount = parseFloat(e.target.value) || 0;
                       setFormData(prev => {
                         // Get the base price from selected duration
-                        const selectedDurationOption = massageDurations?.availableDurations?.find((d: DurationOption) => d.duration === selectedDuration);
+                        const selectedDurationOption = serviceDurations?.availableDurations?.find((d: DurationOption) => d.duration === selectedDuration);
                         const basePrice = selectedDurationOption?.price || 0;
                         const finalPrice = basePrice - (basePrice * discount / 100);
                         return {

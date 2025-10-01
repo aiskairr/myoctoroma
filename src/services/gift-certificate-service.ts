@@ -9,7 +9,7 @@ interface GiftCertificate {
   expiryDate: string;
   clientName?: string;
   phoneNumber?: string;
-  massageType?: string;
+  serviceType?: string;
   duration?: string;
   masterName?: string;
   isUsed: boolean;

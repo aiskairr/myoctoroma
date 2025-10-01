@@ -136,8 +136,8 @@ export const clientTasks = pgTable("client_tasks", {
   id: serial("id").primaryKey(),
   clientId: integer("client_id").notNull(),
   status: taskStatusEnum("status").notNull().default('new'),
-  massageType: text("massage_type"), // Вид массажа (для обратной совместимости)
-  massageServiceId: integer("massage_service_id"), // Прямая связь с massage_services
+  serviceType: text("service_type"), // Вид массажа (для обратной совместимости)
+  serviceServiceId: integer("service_service_id"), // Прямая связь с service_services
   scheduleDate: timestamp("schedule_date"), // Желаемая дата
   scheduleTime: text("schedule_time"), // Желаемое время (в текстовом формате для гибкости)
   endTime: text("end_time"), // Время окончания (в формате ISO)
@@ -148,8 +148,8 @@ export const clientTasks = pgTable("client_tasks", {
   branchId: text("branch_id"), // Филиал (wa1, wa3, wa4)
   source: text("source"), // Источник задачи (whatsapp, telegram, instagram, manual)
   chatId: text("chat_id"), // ID чата (null для вручную созданных задач)
-  massageDuration: integer("massage_duration"), // Длительность массажа в минутах
-  massagePrice: integer("massage_price"), // Стоимость массажа в сомах
+  serviceDuration: integer("service_duration"), // Длительность массажа в минутах
+  servicePrice: integer("service_price"), // Стоимость массажа в сомах
   discount: integer("discount").default(0), // Скидка в процентах
   finalPrice: integer("final_price"), // Итоговая цена после скидки
   mother: integer("mother"), // ID материнской записи для дополнительных услуг
@@ -161,8 +161,8 @@ export const clientTasks = pgTable("client_tasks", {
 export const insertClientTaskSchema = createInsertSchema(clientTasks).pick({
   clientId: true,
   status: true,
-  massageType: true,
-  massageServiceId: true,
+  serviceType: true,
+  serviceServiceId: true,
   scheduleDate: true,
   scheduleTime: true,
   endTime: true,
@@ -173,8 +173,8 @@ export const insertClientTaskSchema = createInsertSchema(clientTasks).pick({
   branchId: true,
   source: true,
   chatId: true,
-  massageDuration: true,
-  massagePrice: true,
+  serviceDuration: true,
+  servicePrice: true,
   discount: true,
   finalPrice: true,
   mother: true,
@@ -304,13 +304,13 @@ export interface AppointmentWithDetails extends Appointment {
       customName?: string;
       phoneNumber?: string;
     };
-    massageType?: string;
+    serviceType?: string;
     notes?: string;
   };
 }
 
 // Таблица услуг массажа
-export const massageServices = pgTable("massage_services", {
+export const serviceServices = pgTable("service_services", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(), // Название услуги
   duration10Price: integer("duration10_price"), // Цена за 10 минут  
@@ -332,16 +332,16 @@ export const massageServices = pgTable("massage_services", {
   category: text("category"), // Категория: body, face, zone, child, ritual
   ageRestriction: text("age_restriction"), // Возрастные ограничения
   recommendations: text("recommendations"), // Рекомендации для использования
-  massageGroup: text("massage_group").notNull().default('Массаж всего тела'), // Группа массажа: "Массаж всего тела", "Массаж отдельных зон", "Эксклюзивные ритуалы"
+  serviceGroup: text("service_group").notNull().default('Массаж всего тела'), // Группа массажа: "Массаж всего тела", "Массаж отдельных зон", "Эксклюзивные ритуалы"
 });
 
-export const insertMassageServiceSchema = createInsertSchema(massageServices).omit({
+export const insertserviceServiceSchema = createInsertSchema(serviceServices).omit({
   id: true
 });
 
 // Типы для услуг массажа
-export type MassageService = typeof massageServices.$inferSelect;
-export type InsertMassageService = z.infer<typeof insertMassageServiceSchema>;
+export type serviceService = typeof serviceServices.$inferSelect;
+export type InsertserviceService = z.infer<typeof insertserviceServiceSchema>;
 
 // Таблица для хранения статуса пауз чатов с ботом
 export const chatStatus = pgTable("chat_status", {
@@ -388,8 +388,8 @@ export const tempClientTasks = pgTable("crm_temp_tasks", {
   id: serial("id").primaryKey(),
   clientId: integer("client_id").notNull(),
   status: taskStatusEnum("status").notNull().default('new'),
-  massageType: text("massage_type"), // Вид массажа (для обратной совместимости)
-  massageServiceId: integer("massage_service_id"), // Прямая связь с massage_services
+  serviceType: text("service_type"), // Вид массажа (для обратной совместимости)
+  serviceServiceId: integer("service_service_id"), // Прямая связь с service_services
   scheduleDate: timestamp("schedule_date"), // Желаемая дата
   scheduleTime: text("schedule_time"), // Желаемое время (в текстовом формате для гибкости)
   endTime: text("end_time"), // Время окончания (в формате ISO)
@@ -400,8 +400,8 @@ export const tempClientTasks = pgTable("crm_temp_tasks", {
   branchId: text("branch_id"), // Филиал (wa1, wa3, wa4)
   source: text("source"), // Источник задачи (whatsapp, telegram, instagram, manual)
   chatId: text("chat_id"), // ID чата (null для вручную созданных задач)
-  massageDuration: integer("massage_duration"), // Длительность массажа в минутах
-  massagePrice: integer("massage_price"), // Стоимость массажа в сомах
+  serviceDuration: integer("service_duration"), // Длительность массажа в минутах
+  servicePrice: integer("service_price"), // Стоимость массажа в сомах
   discount: integer("discount").default(0), // Скидка в процентах
   finalPrice: integer("final_price"), // Итоговая цена после скидки
   masterGender: text("master_gender"), // Предпочтительный пол мастера
@@ -413,8 +413,8 @@ export const tempClientTasks = pgTable("crm_temp_tasks", {
 export const insertTempClientTaskSchema = createInsertSchema(tempClientTasks).pick({
   clientId: true,
   status: true,
-  massageType: true,
-  massageServiceId: true,
+  serviceType: true,
+  serviceServiceId: true,
   scheduleDate: true,
   scheduleTime: true,
   endTime: true,
@@ -423,8 +423,8 @@ export const insertTempClientTaskSchema = createInsertSchema(tempClientTasks).pi
   branchId: true,
   source: true,
   chatId: true,
-  massageDuration: true,
-  massagePrice: true,
+  serviceDuration: true,
+  servicePrice: true,
   discount: true,
   finalPrice: true,
   masterGender: true,
@@ -497,7 +497,7 @@ export const giftCertificates = pgTable("gift_certificates", {
   expiryDate: timestamp("expiry_date").notNull(),
   clientName: text("client_name"),
   phoneNumber: text("phone_number"),
-  massageType: text("massage_type"),
+  serviceType: text("service_type"),
   duration: text("duration"),
   masterName: text("master_name"),
   isUsed: boolean("is_used").notNull().default(false),
@@ -516,7 +516,7 @@ export const insertGiftCertificateSchema = createInsertSchema(giftCertificates).
   expiryDate: true,
   clientName: true,
   phoneNumber: true,
-  massageType: true,
+  serviceType: true,
   duration: true,
   masterName: true,
   isUsed: true,
@@ -533,7 +533,7 @@ export const accounting = pgTable("accounting", {
   id: serial("id").primaryKey(),
   master: text("master").notNull(),
   client: text("client").notNull(),
-  massageType: text("massage_type").notNull(),
+  serviceType: text("service_type").notNull(),
   phoneNumber: text("phone_number"),
   amount: integer("amount").notNull(), // Сумма в сомах
   discount: text("discount").default('0%'),
@@ -552,7 +552,7 @@ export const accounting = pgTable("accounting", {
 export const insertAccountingSchema = createInsertSchema(accounting).pick({
   master: true,
   client: true,
-  massageType: true,
+  serviceType: true,
   phoneNumber: true,
   amount: true,
   discount: true,

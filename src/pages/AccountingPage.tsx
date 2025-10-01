@@ -45,7 +45,7 @@ interface AccountingRecord {
   id?: number;
   master: string;
   client: string;
-  massageType: string;
+  serviceType: string;
   phoneNumber: string;
   amount: number;
   discount: string;
@@ -84,12 +84,14 @@ const AccountingPage = () => {
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
   const [masters, setMasters] = useState<Master[]>([]);
   const [administrators, setAdministrators] = useState<Administrator[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [newRecord, setNewRecord] = useState<AccountingRecord>({
     master: '',
     client: '',
-    massageType: '',
+    serviceType: '',
     phoneNumber: '',
     amount: 0,
     discount: '0%',
@@ -148,7 +150,35 @@ const AccountingPage = () => {
       console.error('Error fetching administrators:', error);
       throw error;
     }
-  };  const fetchData = async (date?: Date) => {
+  };
+
+  const fetchServices = async () => {
+    try {
+      const response = await apiGetJson('/api/crm/services');
+      console.log('Services response:', response);
+      return response;
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      throw error;
+    }
+  };
+
+  const fetchBranches = async () => {
+    try {
+      if (!currentBranch?.organisationId) {
+        console.warn('No organisation ID available for branches fetch');
+        return [];
+      }
+      const response = await apiGetJson(`/api/organisations/${currentBranch.organisationId}/branches`);
+      console.log('Branches response:', response);
+      return response;
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+      throw error;
+    }
+  };
+
+  const fetchData = async (date?: Date) => {
     setIsLoading(true);
     const targetDate = date || selectedDate;
     const dateString = new Date(targetDate.getTime() - (targetDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
@@ -168,9 +198,36 @@ const AccountingPage = () => {
 
   useEffect(() => {
     fetchData();
-    fetchMasters();
-    fetchAdministrators();
+    loadMastersAndAdministrators();
+    loadServicesAndBranches();
   }, [currentBranch, selectedDate]);
+
+  const loadMastersAndAdministrators = async () => {
+    try {
+      const [mastersData, adminsData] = await Promise.all([
+        fetchMasters(),
+        fetchAdministrators()
+      ]);
+      setMasters(mastersData);
+      setAdministrators(adminsData);
+    } catch (error) {
+      console.error('Error loading masters and administrators:', error);
+    }
+  };
+
+  const loadServicesAndBranches = async () => {
+    try {
+      const [servicesData, branchesData] = await Promise.all([
+        fetchServices(),
+        fetchBranches()
+      ]);
+      setServices(servicesData);
+      // Если ответ содержит поле branches, используем его, иначе используем весь ответ
+      setBranches(branchesData.branches || branchesData);
+    } catch (error) {
+      console.error('Error loading services and branches:', error);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>, index: number) => {
     const { name, value } = e.target;
@@ -204,7 +261,7 @@ const AccountingPage = () => {
   };
 
   const addRecord = async () => {
-    if (!newRecord.master || !newRecord.client || !newRecord.massageType || !newRecord.amount || !newRecord.adminName) {
+    if (!newRecord.master || !newRecord.client || !newRecord.serviceType || !newRecord.amount || !newRecord.adminName) {
       alert('Пожалуйста, заполните все обязательные поля: Мастер, Клиент, Вид массажа, Сумма, Имя администратора');
       return;
     }
@@ -236,7 +293,7 @@ const AccountingPage = () => {
         setNewRecord({
           master: '',
           client: '',
-          massageType: '',
+          serviceType: '',
           phoneNumber: '',
           amount: 0,
           discount: '0%',
@@ -254,15 +311,23 @@ const AccountingPage = () => {
         setIsAddRecordOpen(false);
         alert('Запись успешно добавлена');
       } else {
-        alert('Ошибка при добавлении записи');
+        alert('Ошибка при добавлении записи: Не удалось сохранить данные');
       }
     } catch (error: any) {
-      console.error('Ошибка при добавлении записи:', error);
-      if (error.response && error.response.data && error.response.data.message) {
-        alert(error.response.data.message);
-      } else {
-        alert('Ошибка при добавлении записи');
+      console.error('Error saving accounting record:', error);
+      let errorMessage = 'Ошибка при добавлении записи';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('HTML instead of JSON')) {
+          errorMessage = 'Ошибка сервера: получен HTML вместо JSON. Проверьте правильность API эндпоинта.';
+        } else if (error.message.includes('Server returned')) {
+          errorMessage = `Ошибка сервера: ${error.message}`;
+        } else {
+          errorMessage = `Ошибка: ${error.message}`;
+        }
       }
+      
+      alert(errorMessage);
     }
   };
 
@@ -377,7 +442,7 @@ const AccountingPage = () => {
   const filteredRecords = records.filter(record =>
     record.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
     record.master.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.massageType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    record.serviceType.toLowerCase().includes(searchTerm.toLowerCase()) ||
     record.phoneNumber.includes(searchTerm)
   );
 
@@ -583,14 +648,22 @@ const AccountingPage = () => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="massageType">Услуга *</Label>
-                          <Input
-                            id="massageType"
-                            name="massageType"
-                            value={newRecord.massageType}
-                            onChange={handleNewRecordChange}
-                            placeholder="Вид услуги"
-                          />
+                          <Label htmlFor="serviceType">Услуга *</Label>
+                          <Select
+                            value={newRecord.serviceType}
+                            onValueChange={(value) => setNewRecord({ ...newRecord, serviceType: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Выберите услугу" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {services.map((service) => (
+                                <SelectItem key={service.id} value={service.name}>
+                                  {service.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="phoneNumber">Телефон</Label>
@@ -690,7 +763,11 @@ const AccountingPage = () => {
                               <SelectValue placeholder="Выберите филиал" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="wa1">Токтогула 93</SelectItem>
+                              {branches.map((branch) => (
+                                <SelectItem key={branch.id} value={branch.id.toString()}>
+                                  {branch.branches} - {branch.address}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -768,7 +845,7 @@ const AccountingPage = () => {
                             </div>
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <Receipt className="h-4 w-4" />
-                              <span>{record.massageType}</span>
+                              <span>{record.serviceType}</span>
                             </div>
                             {record.phoneNumber && (
                               <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -850,7 +927,7 @@ const AccountingPage = () => {
                                       <p><strong>ID:</strong> {record.id || 'Не указан'}</p>
                                       <p><strong>Мастер:</strong> {record.master}</p>
                                       <p><strong>Клиент:</strong> {record.client}</p>
-                                      <p><strong>Услуга:</strong> {record.massageType}</p>
+                                      <p><strong>Услуга:</strong> {record.serviceType}</p>
                                       <p><strong>Телефон:</strong> {record.phoneNumber || 'Не указан'}</p>
                                       <p><strong>Сумма:</strong> {record.amount} с</p>
                                     </div>

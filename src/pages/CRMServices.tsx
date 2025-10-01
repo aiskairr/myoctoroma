@@ -12,14 +12,14 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Sparkles, Search, Edit, Trash2, Eye, Clock, DollarSign } from "lucide-react";
 
-interface MassageService {
+interface serviceService {
   id: number;
   name: string;
   description?: string;
   isActive: boolean;
   instanceId?: string;
   createdAt: string;
-  massageGroup?: string;
+  serviceGroup?: string;
   availableDurations: Array<{
     duration: number;
     price: number;
@@ -30,7 +30,7 @@ interface ServiceFormData {
   name: string;
   description?: string;
   isActive: boolean;
-  massageGroup: string;
+  serviceGroup: string;
   durationPrices: { [duration: string]: number };
 }
 
@@ -41,12 +41,12 @@ export default function CRMServices() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState<MassageService | null>(null);
+  const [selectedService, setSelectedService] = useState<serviceService | null>(null);
   const [formData, setFormData] = useState<ServiceFormData>({
     name: "",
     description: "",
     isActive: true,
-    massageGroup: "Массаж всего тела",
+    serviceGroup: "Массаж всего тела",
     durationPrices: {}
   });
   const { toast } = useToast();
@@ -56,7 +56,7 @@ export default function CRMServices() {
   const durationOptions = [10, 15, 20, 30, 40, 50, 60, 75, 80, 90, 110, 120, 150, 220];
 
   // Get services data
-  const { data: services = [], isLoading } = useQuery<MassageService[]>({
+  const { data: services = [], isLoading } = useQuery<serviceService[]>({
     queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'],
   });
 
@@ -104,7 +104,7 @@ export default function CRMServices() {
           name: updatedService.name,
           description: updatedService.description,
           isActive: updatedService.isActive,
-          massageGroup: updatedService.massageGroup,
+          serviceGroup: updatedService.serviceGroup,
           durationPrices: updatedService.durationPrices
         }),
       });
@@ -166,22 +166,22 @@ export default function CRMServices() {
     },
   });
 
-  // Massage group options
-  const massageGroups = ["Массаж всего тела", "Массаж отдельных зон", "Эксклюзивные ритуалы"];
+  // service group options
+  const serviceGroups = ["Массаж всего тела", "Массаж отдельных зон", "Эксклюзивные ритуалы"];
 
   // Filter services
-  const filteredServices = services.filter((service: MassageService) => {
+  const filteredServices = services.filter((service: serviceService) => {
     const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (service.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     const matchesStatus = statusFilter === "all" || 
                          (statusFilter === "active" && service.isActive) ||
                          (statusFilter === "inactive" && !service.isActive);
-    const matchesGroup = groupFilter === "all" || service.massageGroup === groupFilter;
+    const matchesGroup = groupFilter === "all" || service.serviceGroup === groupFilter;
     return matchesSearch && matchesStatus && matchesGroup;
   });
 
   // Sort services by status and name
-  const sortedServices = filteredServices.sort((a: MassageService, b: MassageService) => {
+  const sortedServices = filteredServices.sort((a: serviceService, b: serviceService) => {
     if (a.isActive !== b.isActive) {
       return a.isActive ? -1 : 1; // Active services first
     }
@@ -193,7 +193,7 @@ export default function CRMServices() {
       name: "",
       description: "",
       isActive: true,
-      massageGroup: "Массаж всего тела",
+      serviceGroup: "Массаж всего тела",
       durationPrices: {}
     });
   };
@@ -203,7 +203,7 @@ export default function CRMServices() {
     setIsAddDialogOpen(true);
   };
 
-  const handleEditService = (service: MassageService) => {
+  const handleEditService = (service: serviceService) => {
     setSelectedService(service);
     // Convert availableDurations back to durationPrices format
     const durationPrices: { [duration: string]: number } = {};
@@ -215,18 +215,18 @@ export default function CRMServices() {
       name: service.name,
       description: service.description || "",
       isActive: service.isActive,
-      massageGroup: service.massageGroup || "Массаж всего тела",
+      serviceGroup: service.serviceGroup || "Массаж всего тела",
       durationPrices
     });
     setIsEditDialogOpen(true);
   };
 
-  const handleViewService = (service: MassageService) => {
+  const handleViewService = (service: serviceService) => {
     setSelectedService(service);
     setIsViewDialogOpen(true);
   };
 
-  const handleDeleteService = async (service: MassageService) => {
+  const handleDeleteService = async (service: serviceService) => {
     if (window.confirm(`Вы уверены, что хотите удалить услугу "${service.name}"?`)) {
       deleteMutation.mutate(service.id);
     }
@@ -270,7 +270,7 @@ export default function CRMServices() {
     }));
   };
 
-  const getServicePriceRange = (service: MassageService) => {
+  const getServicePriceRange = (service: serviceService) => {
     if (service.availableDurations.length === 0) return "Цена не указана";
     if (service.availableDurations.length === 1) {
       return `${service.availableDurations[0].price} сом`;
@@ -281,7 +281,7 @@ export default function CRMServices() {
     return `${minPrice} - ${maxPrice} сом`;
   };
 
-  const getServiceDurationRange = (service: MassageService) => {
+  const getServiceDurationRange = (service: serviceService) => {
     if (service.availableDurations.length === 0) return "Длительность не указана";
     if (service.availableDurations.length === 1) {
       return `${service.availableDurations[0].duration} мин`;
@@ -341,7 +341,7 @@ export default function CRMServices() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Все группы</SelectItem>
-            {massageGroups.map(group => (
+            {serviceGroups.map(group => (
               <SelectItem key={group} value={group}>{group}</SelectItem>
             ))}
           </SelectContent>
@@ -464,13 +464,13 @@ export default function CRMServices() {
             </div>
             
             <div>
-              <Label htmlFor="massageGroup">Группа массажа *</Label>
-              <Select value={formData.massageGroup} onValueChange={(value) => setFormData(prev => ({ ...prev, massageGroup: value }))}>
+              <Label htmlFor="serviceGroup">Группа массажа *</Label>
+              <Select value={formData.serviceGroup} onValueChange={(value) => setFormData(prev => ({ ...prev, serviceGroup: value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Выберите группу массажа" />
                 </SelectTrigger>
                 <SelectContent>
-                  {massageGroups.map(group => (
+                  {serviceGroups.map(group => (
                     <SelectItem key={group} value={group}>{group}</SelectItem>
                   ))}
                 </SelectContent>
@@ -564,7 +564,7 @@ export default function CRMServices() {
               <div>
                 <Label className="font-medium">Группа массажа</Label>
                 <p className="text-sm">
-                  <Badge variant="outline">{selectedService.massageGroup}</Badge>
+                  <Badge variant="outline">{selectedService.serviceGroup}</Badge>
                 </p>
               </div>
               

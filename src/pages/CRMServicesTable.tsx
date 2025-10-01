@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Check, Trash2, Eye, Plus } from "lucide-react";
 import { useBranch } from "@/contexts/BranchContext";
 
-interface MassageService {
+interface serviceService {
   id: number;
   name: string;
   description: string | null;
@@ -37,7 +37,7 @@ interface MassageService {
 
 export default function CRMServices() {
   const { branches } = useBranch();
-  const [editingServices, setEditingServices] = useState<Record<number, MassageService>>({});
+  const [editingServices, setEditingServices] = useState<Record<number, serviceService>>({});
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newServiceData, setNewServiceData] = useState({
     name: '',
@@ -54,7 +54,7 @@ export default function CRMServices() {
     ...branches.map(branch => ({ id: branch.id.toString(), name: branch.branches }))
   ];
 
-  const { data: services = [], isLoading, error } = useQuery<MassageService[]>({
+  const { data: services = [], isLoading, error } = useQuery<serviceService[]>({
     queryKey: ['crm-services'],
     queryFn: async () => {
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services`);
@@ -66,7 +66,7 @@ export default function CRMServices() {
   // Инициализация состояния редактирования при загрузке данных
   useEffect(() => {
     if (services.length > 0) {
-      const initialState: Record<number, MassageService> = {};
+      const initialState: Record<number, serviceService> = {};
       services.forEach(service => {
         initialState[service.id] = { ...service };
       });
@@ -75,7 +75,7 @@ export default function CRMServices() {
   }, [services]);
 
   const updateMutation = useMutation({
-    mutationFn: async (service: MassageService) => {
+    mutationFn: async (service: serviceService) => {
       // Отправляем все поля напрямую без преобразования в durationPrices
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${service.id}`, {
         method: 'PUT',
@@ -115,7 +115,7 @@ export default function CRMServices() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (service: Omit<MassageService, 'id' | 'createdAt'>) => {
+    mutationFn: async (service: Omit<serviceService, 'id' | 'createdAt'>) => {
       // Отправляем все поля напрямую без преобразования в durationPrices
       const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/crm/services', {
         method: 'POST',
@@ -154,7 +154,7 @@ export default function CRMServices() {
     },
   });
 
-  const handleInputChange = (serviceId: number, field: keyof MassageService, value: string | number | boolean | null) => {
+  const handleInputChange = (serviceId: number, field: keyof serviceService, value: string | number | boolean | null) => {
     setEditingServices(prev => ({
       ...prev,
       [serviceId]: {
@@ -240,7 +240,7 @@ export default function CRMServices() {
     }
   };
 
-  const handleViewService = (service: MassageService) => {
+  const handleViewService = (service: serviceService) => {
     toast({ 
       title: "Информация об услуге", 
       description: `${service.name}: ${service.description || 'Описание отсутствует'}` 

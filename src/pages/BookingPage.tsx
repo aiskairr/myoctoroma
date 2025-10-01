@@ -5,19 +5,19 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Clock, DollarSign, ChevronRight, Star } from "lucide-react";
 import { useBranch } from "@/contexts/BranchContext";
 
-interface MassageService {
+interface serviceService {
   id: number;
   name: string;
   description?: string;
   defaultDuration: number;
-  massageGroup: string;
+  serviceGroup: string;
   availableDurations: Array<{
     duration: number;
     price: number;
   }>;
 }
 
-interface MassageGroup {
+interface serviceGroup {
   name: string;
   description: string;
   icon: React.ReactNode;
@@ -25,11 +25,11 @@ interface MassageGroup {
 
 const BookingPage = () => {
   const { currentBranch } = useBranch();
-  const [services, setServices] = useState<MassageService[]>([]);
+  const [services, setServices] = useState<serviceService[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const massageGroups: MassageGroup[] = [
+  const serviceGroups: serviceGroup[] = [
     {
       name: "Массаж всего тела",
       description: "Комплексные процедуры для полного расслабления и восстановления организма",
@@ -50,7 +50,7 @@ const BookingPage = () => {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/massage-services?branchId=${currentBranch?.id}`);
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/service-services?branchId=${currentBranch?.id}`);
         if (response.ok) {
           const data = await response.json();
           setServices(data);
@@ -66,10 +66,10 @@ const BookingPage = () => {
   }, []);
 
   const getServicesByGroup = (groupName: string) => {
-    return services.filter(service => service.massageGroup === groupName);
+    return services.filter(service => service.serviceGroup === groupName);
   };
 
-  const getServicePriceRange = (service: MassageService) => {
+  const getServicePriceRange = (service: serviceService) => {
     if (service.availableDurations.length === 0) return "Цена не указана";
     if (service.availableDurations.length === 1) {
       return `${service.availableDurations[0].price} сом`;
@@ -80,7 +80,7 @@ const BookingPage = () => {
     return `${minPrice} - ${maxPrice} сом`;
   };
 
-  const getServiceDurationRange = (service: MassageService) => {
+  const getServiceDurationRange = (service: serviceService) => {
     if (service.availableDurations.length === 0) return "Длительность не указана";
     if (service.availableDurations.length === 1) {
       return `${service.availableDurations[0].duration} мин`;
@@ -118,13 +118,13 @@ const BookingPage = () => {
       <div className="container mx-auto px-6 py-12">
         {!selectedGroup ? (
           <>
-            {/* Massage Type Selection */}
+            {/* service Type Selection */}
             <div className="mb-12">
               <h2 className="text-3xl font-light text-white text-center mb-8">
                 Выберите тип массажа
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                {massageGroups.map((group) => (
+                {serviceGroups.map((group) => (
                   <Card 
                     key={group.name}
                     className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-all duration-300 cursor-pointer hover:scale-105 hover:shadow-xl hover:shadow-amber-500/20"
@@ -161,7 +161,7 @@ const BookingPage = () => {
                   {selectedGroup}
                 </h2>
                 <p className="text-slate-300">
-                  {massageGroups.find(g => g.name === selectedGroup)?.description}
+                  {serviceGroups.find(g => g.name === selectedGroup)?.description}
                 </p>
               </div>
               <Button 
