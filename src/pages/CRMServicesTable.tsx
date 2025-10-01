@@ -49,17 +49,10 @@ export default function CRMServices() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Создаем список филиалов с опцией "Все филиалы"
+  // Создаем список филиалов
   const branchOptions = [
-    { id: null, name: "Все филиалы" },
     ...branches.map(branch => ({ id: branch.id.toString(), name: branch.branches }))
   ];
-
-  // Функция для получения названия филиала
-  const getBranchName = (instanceId: string | null) => {
-    const branch = branchOptions.find(b => b.id === instanceId);
-    return branch ? branch.name : "Все филиалы";
-  };
 
   const { data: services = [], isLoading, error } = useQuery<MassageService[]>({
     queryKey: ['crm-services'],
