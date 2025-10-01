@@ -39,7 +39,8 @@ const DURATIONS = [
 
 const CreateServiceBtn = () => {
     const [isOpen, setIsOpen] = useState(false);
-    const { branches } = useBranch();
+    const { branches, currentBranch } = useBranch();
+    const branchID = currentBranch?.id;
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
@@ -72,7 +73,7 @@ const CreateServiceBtn = () => {
 
     const createMutation = useMutation({
         mutationFn: async (service: Omit<any, 'id' | 'createdAt'>) => {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services`, {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchID}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

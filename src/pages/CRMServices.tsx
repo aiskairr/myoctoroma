@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { useBranch } from "@/contexts/BranchContext";
 import { Plus, Sparkles, Search, Edit, Trash2, Eye, Clock, DollarSign } from "lucide-react";
 
 interface serviceService {
@@ -35,6 +36,9 @@ interface ServiceFormData {
 }
 
 export default function CRMServices() {
+  const { currentBranch } = useBranch();
+  const branchID = currentBranch?.id;
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [groupFilter, setGroupFilter] = useState("all");
@@ -57,13 +61,13 @@ export default function CRMServices() {
 
   // Get services data
   const { data: services = [], isLoading } = useQuery<serviceService[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchID}`],
   });
 
   // Create service mutation
   const createMutation = useMutation({
     mutationFn: async (newService: ServiceFormData) => {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/crm/services', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchID}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newService),
@@ -77,7 +81,7 @@ export default function CRMServices() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
+      queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchID}`] });
       setIsAddDialogOpen(false);
       resetForm();
       toast({
@@ -117,7 +121,7 @@ export default function CRMServices() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
+      queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchID}`] });
       setIsEditDialogOpen(false);
       setSelectedService(null);
       resetForm();
@@ -150,7 +154,7 @@ export default function CRMServices() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
+      queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchID}`] });
       setSelectedService(null);
       toast({
         title: "Успех",

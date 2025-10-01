@@ -154,7 +154,7 @@ const AccountingPage = () => {
 
   const fetchServices = async () => {
     try {
-      const response = await apiGetJson('/api/crm/services');
+      const response = await apiGetJson(`/api/crm/services/${branchID}`);
       console.log('Services response:', response);
       return response;
     } catch (error) {

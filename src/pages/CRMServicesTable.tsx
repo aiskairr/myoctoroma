@@ -36,7 +36,9 @@ interface serviceService {
 }
 
 export default function CRMServices() {
-  const { branches } = useBranch();
+  const { branches, currentBranch } = useBranch();
+  const branchID = currentBranch?.id;
+  
   const [editingServices, setEditingServices] = useState<Record<number, serviceService>>({});
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newServiceData, setNewServiceData] = useState({
@@ -57,7 +59,7 @@ export default function CRMServices() {
   const { data: services = [], isLoading, error } = useQuery<serviceService[]>({
     queryKey: ['crm-services'],
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchID}`);
       if (!response.ok) throw new Error('Ошибка загрузки услуг');
       return response.json();
     },
@@ -117,7 +119,7 @@ export default function CRMServices() {
   const createMutation = useMutation({
     mutationFn: async (service: Omit<serviceService, 'id' | 'createdAt'>) => {
       // Отправляем все поля напрямую без преобразования в durationPrices
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/crm/services', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchID}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

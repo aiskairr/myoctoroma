@@ -18,7 +18,8 @@ type TimeColumn = (typeof TIME_COLUMNS)[number];
 const ServicesTable: React.FC = () => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
-    const { branches } = useBranch();
+    const { branches, currentBranch } = useBranch();
+    const branchID = currentBranch?.id;
     const [editingServices, setEditingServices] = useState<Record<number, any>>({});
     const [editingCell, setEditingCell] = useState<string | null>(null);
     const [editValue, setEditValue] = useState<string>('');
@@ -34,7 +35,7 @@ const ServicesTable: React.FC = () => {
     const { data: services = [], isLoading, error } = useQuery<any[]>({
         queryKey: ['crm-services'],
         queryFn: async () => {
-            const response = await apiGet('/api/crm/services');
+            const response = await apiGet(`/api/crm/services/${branchID}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch services');
             }

@@ -1,29 +1,30 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Plus, X, Clock, User, Calendar, GripVertical, Coins } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
-import { useBranch } from '@/contexts/BranchContext';
-import { format } from 'date-fns';
-import { useLocation } from 'wouter';
-import { Loader2, CreditCard } from 'lucide-react';
-import { PaymentMethodIcon } from '@/components/BankIcons';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { useBranch } from "@/contexts/BranchContext";
+import { format, addMinutes, isSameDay } from "date-fns";
+import { ru } from "date-fns/locale";
+import TaskDialogBtn from './task-dialog-btn';
 
-// Types
+// Types matching DailyCalendar
 interface DragState {
     isDragging: boolean;
-    draggedAppointment: Task | null;
+    draggedAppointment: AppointmentDisplay | null;
     dragStartPosition: { x: number; y: number };
     currentPosition: { x: number; y: number };
     targetSlot: { employeeId: number; timeSlot: string } | null;
     dragOffset: { x: number; y: number };
+}
+
+interface ResizeState {
+    isResizing: boolean;
+    resizedAppointment: AppointmentDisplay | null;
+    originalDuration: number;
+    direction: 'top' | 'bottom' | null;
 }
 
 interface Master {
@@ -33,9 +34,14 @@ interface Master {
     isActive: boolean;
     startWorkHour?: string;
     endWorkHour?: string;
-    photoUrl?: string;
+    schedules?: Array<{
+        days: string[];
+        from: string;
+        to: string;
+        branch: string;
+    }>;
     branchId: string;
-    color: string;
+    photoUrl?: string;
 }
 
 interface Task {
@@ -63,9 +69,47 @@ interface Task {
     masterId?: number;
     branchId?: string;
     notes?: string;
-    mother?: number;
-    paid?: string;
+    mother?: number; // ID материнской записи для дополнительных услуг
+    paid?: string; // Статус оплаты: 'paid' или 'unpaid'
     createdAt: string;
+}
+
+interface serviceDurationsResponse {
+    serviceType: string;
+    availableDurations: Array<{
+        duration: number;
+        price: number;
+    }>;
+    defaultDuration: number;
+}
+
+// UI compatibility interface
+interface Employee {
+    id: string;
+    name: string;
+    specialization?: string;
+    isActive: boolean;
+    startWorkHour?: string;
+    endWorkHour?: string;
+    photoUrl?: string;
+    branchId: string;
+    color: string;
+}
+
+interface AppointmentDisplay {
+    id: string;
+    employeeId: string;
+    clientName: string;
+    service: string;
+    startTime: string;
+    endTime: string;
+    duration: number;
+    status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
+    notes?: string;
+    paid?: string;
+    phone?: string;
+    mother?: number;
+    originalTask?: Task; // Keep reference to original task data
 }
 
 interface ServiceService {
@@ -982,25 +1026,87 @@ const EditAppointmentDialog = ({
 
 // Main Component
 const AdvancedScheduleComponent: React.FC = () => {
-    const [location, setLocation] = useLocation();
     const { toast } = useToast();
     const { currentBranch } = useBranch();
     const queryClient = useQueryClient();
-
-    const urlParams = new URLSearchParams(location.split('?')[1] || '');
-    const dateParam = urlParams.get('date');
-    const [currentDate, setCurrentDate] = useState(() => dateParam ? new Date(dateParam) : new Date());
-
-    useEffect(() => {
-        const formattedDate = format(currentDate, 'yyyy-MM-dd');
-        setLocation(`/crm/calendar?date=${formattedDate}`, { replace: true });
-    }, [currentDate, setLocation]);
-
-    const [showCreateDialog, setShowCreateDialog] = useState(false);
-    const [showEditDialog, setShowEditDialog] = useState(false);
-    const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-    const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ time: string; masterId: number } | null>(null);
+    
+    // State
+    const [selectedDate, setSelectedDate] = useState(() => new Date());
+    const [isAddAppointmentOpen, setIsAddAppointmentOpen] = useState(false);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+    const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
     const [currentTimePosition, setCurrentTimePosition] = useState(getCurrentTimePosition());
+
+    // API calls for real data
+    const { data: masters = [], isLoading: mastersLoading } = useQuery<Master[]>({
+        queryKey: ['masters', format(selectedDate, 'yyyy-MM-dd'), currentBranch?.id],
+        queryFn: async () => {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters/${format(selectedDate, 'yyyy-MM-dd')}?branchId=${currentBranch?.id}`, {
+                credentials: 'include'
+            });
+            if (!response.ok) throw new Error('Failed to fetch masters');
+            return response.json();
+        },
+        enabled: !!currentBranch?.id,
+        refetchInterval: 10000, // Auto-refresh every 10 seconds
+    });
+
+    const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
+        queryKey: ['tasks', format(selectedDate, 'yyyy-MM-dd'), currentBranch?.id],
+        queryFn: async () => {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks?date=${format(selectedDate, 'yyyy-MM-dd')}&branchId=${currentBranch?.id}`, {
+                credentials: 'include'
+            });
+            if (!response.ok) throw new Error('Failed to fetch tasks');
+            return response.json();
+        },
+        enabled: !!currentBranch?.id,
+        refetchInterval: 10000, // Auto-refresh every 10 seconds
+    });
+
+    const { data: serviceDurations = [] } = useQuery<serviceDurationsResponse[]>({
+        queryKey: ['service-durations'],
+        queryFn: async () => {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations`, {
+                credentials: 'include'
+            });
+            if (!response.ok) throw new Error('Failed to fetch service durations');
+            return response.json();
+        }
+    });
+
+    // Convert masters to employees format for existing UI compatibility
+    const employees = useMemo(() => {
+        return masters.map((master, index) => ({
+            id: master.id.toString(),
+            name: master.name,
+            role: master.specialization || 'Мастер',
+            workHours: {
+                start: master.startWorkHour || '09:00',
+                end: master.endWorkHour || '20:00'
+            },
+            color: EMPLOYEE_COLORS[index % EMPLOYEE_COLORS.length]
+        }));
+    }, [masters]);
+
+    // Convert tasks to appointments format for existing UI compatibility
+    const appointments = useMemo(() => {
+        return tasks.map(task => ({
+            id: task.id.toString(),
+            employeeId: task.masterId?.toString() || '',
+            clientName: task.client?.customName || task.client?.firstName || 'Клиент',
+            service: task.serviceType || 'Услуга',
+            startTime: task.scheduleTime || '',
+            endTime: task.endTime || '',
+            duration: task.duration || task.serviceDuration || 60,
+            status: task.status as 'scheduled' | 'in-progress' | 'completed' | 'cancelled',
+            notes: task.notes,
+            paid: task.paid,
+            phone: task.client?.phoneNumber,
+            mother: task.mother,
+            originalTask: task // Keep reference to original task data
+        }));
+    }, [tasks]);
 
     const [dragState, setDragState] = useState<DragState>({
         isDragging: false,
@@ -1014,26 +1120,7 @@ const AdvancedScheduleComponent: React.FC = () => {
     const scheduleRef = useRef<HTMLDivElement>(null);
     const formattedDate = format(currentDate, 'yyyy-MM-dd');
 
-    const { data: masters = [], isLoading: mastersLoading } = useQuery<Master[]>({
-        queryKey: ['calendar-masters', formattedDate, currentBranch?.id],
-        queryFn: () => fetch(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters/${formattedDate}?branchId=${currentBranch?.id}`, {
-            credentials: 'include'
-        }).then(res => res.json()),
-        enabled: !!currentBranch?.id,
-    });
-
-    const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
-        queryKey: ['calendar-tasks', formattedDate, currentBranch?.id],
-        queryFn: async () => {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks?date=${formattedDate}&branchId=${currentBranch?.id}`, {
-                credentials: 'include'
-            });
-            if (!res.ok) throw new Error('Failed to fetch tasks');
-            return res.json();
-        },
-        enabled: !!currentBranch?.id
-    });
-
+    // Update current time line
     useEffect(() => {
         const interval = setInterval(() => {
             queryClient.invalidateQueries({ queryKey: ['calendar-masters'] });
@@ -1046,22 +1133,24 @@ const AdvancedScheduleComponent: React.FC = () => {
     const timeSlots = useMemo(() => generateTimeSlots(), []);
     const dateString = useMemo(() => currentDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }), [currentDate]);
 
-    const activeMasters = useMemo(() => {
-        return masters.filter((m: Master) => m.isActive).map((m, idx) => ({
-            ...m,
-            color: m.color || EMPLOYEE_COLORS[idx % EMPLOYEE_COLORS.length]
-        }));
-    }, [masters]);
+    const dateString = useMemo(() => {
+        return selectedDate.toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'long'
+        });
+    }, [selectedDate]);
 
     const getEmployeeColumnWidth = useCallback(() => {
         if (!scheduleRef.current) return 200;
         return Math.max(200, scheduleRef.current.clientWidth / activeMasters.length);
     }, [activeMasters.length]);
 
-    const moveTaskMutation = useMutation({
-        mutationFn: async ({ taskId, newTime, newMasterId }: { taskId: number; newTime: string; newMasterId: number }) => {
-            const newMaster = activeMasters.find(m => m.id === newMasterId);
-            if (!newMaster) throw new Error('Мастер не найден');
+    // Appointment management - now using API mutations instead of local state
+    const updateAppointment = useCallback((appointmentId: string, updates: Partial<AppointmentDisplay>) => {
+        // This will be replaced with actual API mutation
+        console.log('Update appointment:', appointmentId, updates);
+        // TODO: Implement API call to update task
+    }, []);
 
             const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
                 method: 'POST',
@@ -1101,7 +1190,8 @@ const AdvancedScheduleComponent: React.FC = () => {
         return null;
     }, [activeMasters, timeSlots, getEmployeeColumnWidth]);
 
-    const handleMouseDown = useCallback((e: React.MouseEvent, appointment: Task) => {
+    // Drag and drop handlers
+    const handleMouseDown = useCallback((e: React.MouseEvent, appointment: AppointmentDisplay, action: 'drag' | 'resize-top' | 'resize-bottom') => {
         e.preventDefault();
         e.stopPropagation();
 
@@ -1168,27 +1258,55 @@ const AdvancedScheduleComponent: React.FC = () => {
         }
     }, [dragState.isDragging, handleMouseMove, handleMouseUp]);
 
-    const handleTimeSlotClick = useCallback((employeeId: number, timeSlot: string) => {
-        const existingTask = tasks.find(t =>
-            t.masterId === employeeId &&
-            t.scheduleTime === timeSlot &&
-            t.scheduleDate?.split('T')[0] === formattedDate
-        );
+    // Click handlers for creating appointments
+    const handleTimeSlotClick = useCallback((timeSlot: string, employeeId: string) => {
+        setSelectedEmployeeId(employeeId);
+        setSelectedTimeSlot(timeSlot);
+        setIsAddAppointmentOpen(true);
+    }, []);
 
-        if (existingTask) {
-            setSelectedTask(existingTask);
-            setShowEditDialog(true);
-        } else {
-            setSelectedTimeSlot({ time: timeSlot, masterId: employeeId });
-            setShowCreateDialog(true);
+    // Status helper functions from DailyCalendar
+    const getStatusColors = (status: string) => {
+        switch (status.toLowerCase()) {
+            case 'scheduled':
+            case 'new':
+                return { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200' };
+            case 'in_progress':
+                return { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-200' };
+            case 'completed':
+                return { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-200' };
+            case 'cancelled':
+                return { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-200' };
+            default:
+                return { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-200' };
         }
-    }, [tasks, formattedDate]);
+    };
+            setSelectedTimeSlot('');
+            setIsAddAppointmentOpen(false);
+        }
+    }, [newAppointment, selectedEmployeeId, selectedTimeSlot, doesAppointmentFitWorkingHours]);
 
-    const getAppointmentLayout = useCallback((employeeId: number) => {
-        const employeeAppointments = tasks.filter(apt =>
-            apt.masterId === employeeId &&
-            apt.scheduleDate?.split('T')[0] === formattedDate
-        );
+    const handleTimeSlotClick = useCallback((employeeId: string, timeSlot: string) => {
+        if (!isWithinWorkingHours(employeeId, timeSlot)) return;
+
+        setSelectedEmployeeId(employeeId);
+        setSelectedTimeSlot(timeSlot);
+        setNewAppointment(prev => ({ ...prev, startTime: timeSlot }));
+        setIsAddAppointmentOpen(true);
+    }, [isWithinWorkingHours]);
+
+    const handleServiceChange = useCallback((serviceName: string) => {
+        const service = SERVICES.find(s => s.name === serviceName);
+        setNewAppointment(prev => ({
+            ...prev,
+            service: serviceName,
+            duration: service?.duration || 45
+        }));
+    }, []);
+
+    // Get overlapping appointments and calculate positioning
+    const getAppointmentLayout = useCallback((employeeId: string) => {
+        const employeeAppointments = appointments.filter(apt => apt.employeeId === employeeId);
 
         const sortedAppointments = employeeAppointments.sort((a, b) => {
             const aStart = timeToMinutes(a.scheduleTime || '');
@@ -1198,7 +1316,7 @@ const AdvancedScheduleComponent: React.FC = () => {
         });
 
         const layoutData: Array<{
-            appointment: Task;
+            appointment: AppointmentDisplay;
             column: number;
             width: number;
             totalColumns: number;
@@ -1234,8 +1352,30 @@ const AdvancedScheduleComponent: React.FC = () => {
         return layoutData;
     }, [tasks, formattedDate]);
 
+    // Generate unique colors for overlapping appointments
+    const getOverlapColor = useCallback((appointment: AppointmentDisplay, column: number, totalColumns: number) => {
+        if (totalColumns === 1) {
+            const employee = employees.find(emp => emp.id === appointment.employeeId);
+            return employee?.color || '#3B82F6';
+        }
+
+        const colors = [
+            '#3B82F6',
+            '#10B981',
+            '#F59E0B',
+            '#EF4444',
+            '#8B5CF6',
+            '#06B6D4',
+            '#84CC16',
+            '#F97316',
+        ];
+
+        return colors[column % colors.length];
+    }, [employees]);
+
+    // Render appointment block with smart positioning
     const renderAppointmentBlock = (layoutInfo: {
-        appointment: Task;
+        appointment: AppointmentDisplay;
         column: number;
         width: number;
         totalColumns: number;
@@ -1247,12 +1387,17 @@ const AdvancedScheduleComponent: React.FC = () => {
         const durationSlots = Math.ceil(duration / 15);
         const height = durationSlots * TIME_SLOT_HEIGHT - 2;
 
-        const statusColors = getStatusColors(appointment.status || 'scheduled');
-        const relatedStyles = getRelatedTaskStyles(appointment, tasks);
+        const statusColors = getStatusColors(appointment.status);
+
         const isDragging = dragState.isDragging && dragState.draggedAppointment?.id === appointment.id;
 
         const isSmall = height <= 32;
         const isMedium = height > 32 && height <= 64;
+
+        const employee = employees.find(emp => emp.id === appointment.employeeId);
+
+        // Child tasks count for mother tasks
+        const childTasksCount = appointment.mother ? 0 : appointments.filter(apt => apt.mother === parseInt(appointment.id)).length;
 
         return (
             <Tooltip key={appointment.id}>
