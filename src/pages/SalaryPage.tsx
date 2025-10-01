@@ -114,16 +114,22 @@ export default function SalaryPage() {
   // Загрузка выплат за период
   const fetchSalaryPayments = async () => {
     try {
+      console.log('🔍 Current branch data:', currentBranch);
+      console.log('🔍 Branch ID:', currentBranch?.id);
+      
       if (!currentBranch?.id) {
         console.warn('No branch ID available for salary payments fetch');
         return;
       }
-      const url = `/api/salary-payments?startDate=${startDate}&endDate=${endDate}&branchID=${currentBranch.id}`;
-      console.log('Fetching salary payments with URL:', url);
+      const url = `/api/salary-payments?startDate=${startDate}&endDate=${endDate}&branchId=${currentBranch.id}`;
+      console.log('📡 Fetching salary payments with URL:', url);
+      console.log('📡 branchId parameter:', currentBranch.id);
+      
       const data = await apiGetJson(url);
+      console.log('✅ Salary payments data received:', data);
       setSalaryPayments(data);
     } catch (error) {
-      console.error('Ошибка загрузки выплат:', error);
+      console.error('❌ Ошибка загрузки выплат:', error);
     }
   };
 
@@ -205,7 +211,7 @@ export default function SalaryPage() {
         payment_date: new Date().toISOString().split('T')[0], // Текущая дата
         period_start: startDate,
         period_end: endDate,
-        branchID: currentBranch.id
+        branchId: currentBranch.id
       };
 
       console.log('Saving salary payment with data:', data);
