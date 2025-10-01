@@ -165,14 +165,20 @@ const AccountingPage = () => {
 
   const fetchBranches = async () => {
     try {
-      const response = await apiGetJson('/api/organisations/branches');
+      if (!currentBranch?.organisationId) {
+        console.warn('No organisation ID available for branches fetch');
+        return [];
+      }
+      const response = await apiGetJson(`/api/organisations/${currentBranch.organisationId}/branches`);
       console.log('Branches response:', response);
       return response;
     } catch (error) {
       console.error('Error fetching branches:', error);
       throw error;
     }
-  };  const fetchData = async (date?: Date) => {
+  };
+
+  const fetchData = async (date?: Date) => {
     setIsLoading(true);
     const targetDate = date || selectedDate;
     const dateString = new Date(targetDate.getTime() - (targetDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
