@@ -84,6 +84,8 @@ const AccountingPage = () => {
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
   const [masters, setMasters] = useState<Master[]>([]);
   const [administrators, setAdministrators] = useState<Administrator[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [newRecord, setNewRecord] = useState<AccountingRecord>({
@@ -122,7 +124,7 @@ const AccountingPage = () => {
         console.warn('No branch ID available for masters fetch');
         return [];
       }
-      const url = `/api/masters?branchID=${currentBranch.id}`;
+      const url = `/api/masters?branchId=${currentBranch.id}`;
       console.log('Fetching masters with URL:', url);
       const response = await apiGetJson(url);
       console.log('Masters response:', response);
@@ -139,13 +141,35 @@ const AccountingPage = () => {
         console.warn('No branch ID available for administrators fetch');
         return [];
       }
-      const url = `/api/administrators?branchID=${currentBranch.id}`;
+      const url = `/api/administrators?branchId=${currentBranch.id}`;
       console.log('Fetching administrators with URL:', url);
       const response = await apiGetJson(url);
       console.log('Administrators response:', response);
       return response;
     } catch (error) {
       console.error('Error fetching administrators:', error);
+      throw error;
+    }
+  };
+
+  const fetchServices = async () => {
+    try {
+      const response = await apiGetJson('/api/crm/services');
+      console.log('Services response:', response);
+      return response;
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      throw error;
+    }
+  };
+
+  const fetchBranches = async () => {
+    try {
+      const response = await apiGetJson('/api/organisations/branches');
+      console.log('Branches response:', response);
+      return response;
+    } catch (error) {
+      console.error('Error fetching branches:', error);
       throw error;
     }
   };  const fetchData = async (date?: Date) => {
@@ -168,9 +192,35 @@ const AccountingPage = () => {
 
   useEffect(() => {
     fetchData();
-    fetchMasters();
-    fetchAdministrators();
+    loadMastersAndAdministrators();
+    loadServicesAndBranches();
   }, [currentBranch, selectedDate]);
+
+  const loadMastersAndAdministrators = async () => {
+    try {
+      const [mastersData, adminsData] = await Promise.all([
+        fetchMasters(),
+        fetchAdministrators()
+      ]);
+      setMasters(mastersData);
+      setAdministrators(adminsData);
+    } catch (error) {
+      console.error('Error loading masters and administrators:', error);
+    }
+  };
+
+  const loadServicesAndBranches = async () => {
+    try {
+      const [servicesData, branchesData] = await Promise.all([
+        fetchServices(),
+        fetchBranches()
+      ]);
+      setServices(servicesData);
+      setBranches(branchesData);
+    } catch (error) {
+      console.error('Error loading services and branches:', error);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>, index: number) => {
     const { name, value } = e.target;
@@ -584,13 +634,21 @@ const AccountingPage = () => {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="massageType">Услуга *</Label>
-                          <Input
-                            id="massageType"
-                            name="massageType"
+                          <Select
                             value={newRecord.massageType}
-                            onChange={handleNewRecordChange}
-                            placeholder="Вид услуги"
-                          />
+                            onValueChange={(value) => setNewRecord({ ...newRecord, massageType: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Выберите услугу" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {services.map((service) => (
+                                <SelectItem key={service.id} value={service.name}>
+                                  {service.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="phoneNumber">Телефон</Label>
@@ -690,7 +748,11 @@ const AccountingPage = () => {
                               <SelectValue placeholder="Выберите филиал" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="wa1">Токтогула 93</SelectItem>
+                              {branches.map((branch) => (
+                                <SelectItem key={branch.id} value={branch.id.toString()}>
+                                  {branch.branches} - {branch.address}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
