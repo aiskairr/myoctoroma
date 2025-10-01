@@ -20,7 +20,7 @@ import { Loader2, Plus, UserPlus, Edit, X, User, Clock, MapPin, CalendarIcon, Ch
 import { PaymentMethodIcon } from "@/components/BankIcons";
 
 // Интерфейсы для массажных услуг (из CRMTasks)
-interface MassageService {
+interface serviceService {
   id: number;
   name: string;
   duration10Price?: number;
@@ -44,8 +44,8 @@ interface DurationOption {
   price: number;
 }
 
-interface MassageDurationsResponse {
-  massageType: string;
+interface serviceDurationsResponse {
+  serviceType: string;
   availableDurations: DurationOption[];
   defaultDuration: number;
 }
@@ -80,11 +80,11 @@ interface Task {
     phoneNumber?: string;
   };
   status: string;
-  massageType?: string;
-  massageServiceId?: number; // ID услуги массажа
-  massageDuration?: number;
+  serviceType?: string;
+  serviceServiceId?: number; // ID услуги массажа
+  serviceDuration?: number;
   duration?: number; // Добавляем поле duration для совместимости
-  massagePrice?: number;
+  servicePrice?: number;
   finalPrice?: number;
   scheduleDate?: string;
   scheduleTime?: string;
@@ -115,7 +115,7 @@ interface PaymentMethod {
   description: string;
 }
 
-interface MassageService {
+interface serviceService {
   id: number;
   name: string;
   duration30Price?: number;
@@ -143,7 +143,7 @@ interface ClientFormData {
   clientName: string;
   phoneNumber: string;
   branchId: string;
-  massageType: string;
+  serviceType: string;
   masterName: string;
   masterId: number;
   notes: string;
@@ -189,8 +189,8 @@ const CreateAppointmentDialog = ({
   });
 
   // Список услуг
-  const { data: massageServices = [] } = useQuery<MassageService[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/public/massage-services'],
+  const { data: serviceServices = [] } = useQuery<serviceService[]>({
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/public/service-services'],
     enabled: isOpen,
   });
 
@@ -202,7 +202,7 @@ const CreateAppointmentDialog = ({
     clientName: "",
     phoneNumber: "",
     branchId: currentBranch?.id?.toString() || 'wa1',
-    massageType: "",
+    serviceType: "",
     masterName: selectedMaster?.name || "",
     masterId: masterId || 0,
     notes: "",
@@ -233,16 +233,16 @@ const CreateAppointmentDialog = ({
   const [customDuration, setCustomDuration] = useState<number | null>(null);
   const [isCustomDuration, setIsCustomDuration] = useState(false);
 
-  const { data: massageDurations } = useQuery<MassageDurationsResponse>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', formData.massageType],
-    enabled: !!formData.massageType && isOpen,
+  const { data: serviceDurations } = useQuery<serviceDurationsResponse>({
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations', formData.serviceType],
+    enabled: !!formData.serviceType && isOpen,
     queryFn: async () => {
-      if (!formData.massageType) return null;
+      if (!formData.serviceType) return null;
 
-      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', {
+      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ massageType: formData.massageType }),
+        body: JSON.stringify({ serviceType: formData.serviceType }),
       });
       if (!res.ok) return null;
 
@@ -252,18 +252,18 @@ const CreateAppointmentDialog = ({
 
   // Устанавливаем длительность по умолчанию
   useEffect(() => {
-    if (massageDurations && massageDurations.availableDurations &&
+    if (serviceDurations && serviceDurations.availableDurations &&
       (!selectedDuration ||
-        !massageDurations.availableDurations.some((d: DurationOption) => d.duration === selectedDuration))) {
-      setSelectedDuration(massageDurations.defaultDuration);
+        !serviceDurations.availableDurations.some((d: DurationOption) => d.duration === selectedDuration))) {
+      setSelectedDuration(serviceDurations.defaultDuration);
     }
-  }, [massageDurations, selectedDuration]);
+  }, [serviceDurations, selectedDuration]);
 
   // Автоматически рассчитываем цену
   useEffect(() => {
-    if (massageDurations && (selectedDuration || customDuration)) {
+    if (serviceDurations && (selectedDuration || customDuration)) {
       const currentDuration = isCustomDuration ? customDuration : selectedDuration;
-      const selectedOption = massageDurations.availableDurations.find((d: DurationOption) => d.duration === currentDuration);
+      const selectedOption = serviceDurations.availableDurations.find((d: DurationOption) => d.duration === currentDuration);
       if (selectedOption) {
         const basePrice = selectedOption.price;
         const discountAmount = (basePrice * formData.discount) / 100;
@@ -272,7 +272,7 @@ const CreateAppointmentDialog = ({
         setFormData(prev => ({ ...prev, finalPrice: finalPrice }));
       }
     }
-  }, [massageDurations, selectedDuration, customDuration, isCustomDuration, formData.discount]);
+  }, [serviceDurations, selectedDuration, customDuration, isCustomDuration, formData.discount]);
 
 
 
@@ -300,7 +300,7 @@ const CreateAppointmentDialog = ({
       const payload = {
         clientName: formData.clientName,
         clientPhone: formData.phoneNumber,
-        massageType: formData.massageType,
+        serviceType: formData.serviceType,
         scheduleDate: formData.scheduleDate,
         scheduleTime: formData.scheduleTime,
         masterName: formData.masterName,
@@ -337,7 +337,7 @@ const CreateAppointmentDialog = ({
         clientName: "",
         phoneNumber: "",
         branchId: currentBranch?.waInstance || 'wa1',
-        massageType: "",
+        serviceType: "",
         masterName: "",
         masterId: 0,
         notes: "",
@@ -451,13 +451,13 @@ const CreateAppointmentDialog = ({
                 <Select
                   value={selectedDuration?.toString() || ""}
                   onValueChange={(value) => setSelectedDuration(Number(value))}
-                  disabled={!formData.massageType}
+                  disabled={!formData.serviceType}
                 >
                   <SelectTrigger className="w-full text-sm">
                     <SelectValue placeholder="В минутах" />
                   </SelectTrigger>
                   <SelectContent>
-                    {massageDurations?.availableDurations?.map((duration: DurationOption) => (
+                    {serviceDurations?.availableDurations?.map((duration: DurationOption) => (
                       <SelectItem key={duration.duration} value={duration.duration.toString()}>
                         {duration.duration} мин - {duration.price} сом
                       </SelectItem>
@@ -467,16 +467,16 @@ const CreateAppointmentDialog = ({
               </div>
 
               <div>
-                <Label htmlFor="massageType" className="block font-semibold text-gray-700 text-sm mb-1">Тип услуги</Label>
+                <Label htmlFor="serviceType" className="block font-semibold text-gray-700 text-sm mb-1">Тип услуги</Label>
                 <Select
-                  value={formData.massageType}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, massageType: value }))}
+                  value={formData.serviceType}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, serviceType: value }))}
                 >
                   <SelectTrigger className="w-full text-sm">
                     <SelectValue placeholder="Выберите тип услуги" />
                   </SelectTrigger>
                   <SelectContent>
-                    {massageServices?.map((service) => (
+                    {serviceServices?.map((service) => (
                       <SelectItem key={service.id} value={service.name}>
                         {service.name}
                       </SelectItem>
@@ -611,8 +611,8 @@ const EditAppointmentDialog = ({
   });
 
   // Список услуг
-  const { data: massageServices = [] } = useQuery<MassageService[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/public/massage-services'],
+  const { data: serviceServices = [] } = useQuery<serviceService[]>({
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/public/service-services'],
     enabled: isOpen,
   });
 
@@ -636,7 +636,7 @@ const EditAppointmentDialog = ({
     clientName: task?.client?.customName || task?.client?.firstName || "",
     phoneNumber: task?.client?.phoneNumber || "",
     branchId: task?.branchId || currentBranch?.waInstance || 'wa1',
-    massageType: task?.massageType || "",
+    serviceType: task?.serviceType || "",
     masterName: task?.masterName || "",
     masterId: task?.masterId || 0,
     notes: task?.notes || "",
@@ -654,7 +654,7 @@ const EditAppointmentDialog = ({
         clientName: task.client?.customName || task.client?.firstName || "",
         phoneNumber: task.client?.phoneNumber || "",
         branchId: task.branchId || currentBranch?.waInstance || 'wa1',
-        massageType: task.massageType || "",
+        serviceType: task.serviceType || "",
         masterName: task.masterName || "",
         masterId: task.masterId || 0,
         notes: task.notes || "",
@@ -773,31 +773,31 @@ const EditAppointmentDialog = ({
 
   // ✅ Проверка есть ли несохраненные изменения длительности
   const hasUnsavedDurationChanges = (): boolean => {
-    const mainDurationChanged = localMainDuration !== (task?.massageDuration || task?.duration || 0);
+    const mainDurationChanged = localMainDuration !== (task?.serviceDuration || task?.duration || 0);
     const childDurationChanged = childTasks.some(childTask => {
-      const currentDuration = childTask.massageDuration || childTask.duration || 0;
+      const currentDuration = childTask.serviceDuration || childTask.duration || 0;
       const localDuration = localChildDurations[childTask.id] || 0;
       return currentDuration !== localDuration;
     });
     return mainDurationChanged || childDurationChanged;
   };
 
-  // ✅ Проверяем является ли длительность стандартной (из massage_services)
+  // ✅ Проверяем является ли длительность стандартной (из service_services)
   const isStandardDuration = (duration: number): boolean => {
-    return massageDurations?.availableDurations?.some((option: any) => option.duration === duration) || false;
+    return serviceDurations?.availableDurations?.some((option: any) => option.duration === duration) || false;
   };
   const queryClient = useQueryClient();
 
-  const { data: massageDurations } = useQuery<MassageDurationsResponse>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', formData.massageType],
-    enabled: !!formData.massageType && isOpen,
+  const { data: serviceDurations } = useQuery<serviceDurationsResponse>({
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations', formData.serviceType],
+    enabled: !!formData.serviceType && isOpen,
     queryFn: async () => {
-      if (!formData.massageType) return null;
+      if (!formData.serviceType) return null;
 
-      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/massage-services/durations', {
+      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ massageType: formData.massageType }),
+        body: JSON.stringify({ serviceType: formData.serviceType }),
       });
       if (!res.ok) return null;
 
@@ -822,7 +822,7 @@ const EditAppointmentDialog = ({
       // ✅ Инициализируем локальные длительности дочерних задач
       const initialChildDurations: { [key: number]: number } = {};
       childTasksData.forEach(child => {
-        initialChildDurations[child.id] = child.massageDuration || child.duration || 0;
+        initialChildDurations[child.id] = child.serviceDuration || child.duration || 0;
       });
       setLocalChildDurations(initialChildDurations);
     }
@@ -831,31 +831,31 @@ const EditAppointmentDialog = ({
   // ✅ Инициализируем локальную длительность основной задачи
   useEffect(() => {
     if (task) {
-      setLocalMainDuration(task.massageDuration || task.duration || massageDurations?.defaultDuration || 0);
+      setLocalMainDuration(task.serviceDuration || task.duration || serviceDurations?.defaultDuration || 0);
     }
-  }, [task, massageDurations]);
+  }, [task, serviceDurations]);
 
   // Устанавливаем длительность по умолчанию
   useEffect(() => {
-    if (massageDurations && massageDurations.availableDurations) {
-      if (!selectedDuration || !massageDurations.availableDurations.some((d: DurationOption) => d.duration === selectedDuration)) {
-        setSelectedDuration(task?.duration || massageDurations.defaultDuration);
+    if (serviceDurations && serviceDurations.availableDurations) {
+      if (!selectedDuration || !serviceDurations.availableDurations.some((d: DurationOption) => d.duration === selectedDuration)) {
+        setSelectedDuration(task?.duration || serviceDurations.defaultDuration);
       }
     }
-  }, [massageDurations, selectedDuration, task]);
+  }, [serviceDurations, selectedDuration, task]);
 
   // ✅ Упрощенная функция расчета цены основной услуги с учетом произвольной длительности
   const calculateMainServicePrice = (): number => {
-    if (!massageDurations || !task?.massageDuration) return task?.massagePrice || task?.finalPrice || 0;
+    if (!serviceDurations || !task?.serviceDuration) return task?.servicePrice || task?.finalPrice || 0;
 
-    const duration = task.massageDuration;
+    const duration = task.serviceDuration;
 
     // ✅ Если длительность произвольная (не стандартная), возвращаем сохраненную цену без изменений
     if (!isStandardDuration(duration)) {
-      return task?.massagePrice || task?.finalPrice || 0;
+      return task?.servicePrice || task?.finalPrice || 0;
     }
 
-    const durationOption = massageDurations.availableDurations.find((d: DurationOption) => d.duration === duration);
+    const durationOption = serviceDurations.availableDurations.find((d: DurationOption) => d.duration === duration);
 
     // Если есть точное соответствие стандартной длительности, используем его цену
     if (durationOption) {
@@ -863,13 +863,13 @@ const EditAppointmentDialog = ({
     }
 
     // Иначе используем сохраненную цену
-    return task?.massagePrice || task?.finalPrice || 0;
+    return task?.servicePrice || task?.finalPrice || 0;
   };
 
   // Расчет общей цены с учетом дополнительных услуг
   const calculateTotalPrice = (): number => {
     const mainPrice = calculateMainServicePrice();
-    const childrenPrice = childTasks.reduce((sum, child) => sum + (child.massagePrice || child.finalPrice || 0), 0);
+    const childrenPrice = childTasks.reduce((sum, child) => sum + (child.servicePrice || child.finalPrice || 0), 0);
     return mainPrice + childrenPrice;
   };
 
@@ -903,7 +903,7 @@ const EditAppointmentDialog = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          massageDuration: newDuration,
+          serviceDuration: newDuration,
           endTime: calculateEndTime(task.scheduleTime || '', newDuration)
         }),
         credentials: 'include'
@@ -919,7 +919,7 @@ const EditAppointmentDialog = ({
         let currentStartTime = calculateEndTime(task.scheduleTime || '', newDuration);
 
         for (const childTask of childTasks) {
-          const childEndTime = calculateEndTime(currentStartTime, childTask.massageDuration || 0);
+          const childEndTime = calculateEndTime(currentStartTime, childTask.serviceDuration || 0);
 
           await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTask.id}`, {
             method: 'POST',
@@ -960,12 +960,12 @@ const EditAppointmentDialog = ({
 
       // Рассчитываем новое время начала для данной дочерней услуги
       let currentStartTime = task?.scheduleTime || '';
-      const mainDuration = task?.massageDuration || task?.duration || 0;
+      const mainDuration = task?.serviceDuration || task?.duration || 0;
       currentStartTime = calculateEndTime(currentStartTime, mainDuration);
 
       // Добавляем длительности предыдущих дочерних услуг
       for (let i = 0; i < childIndex; i++) {
-        currentStartTime = calculateEndTime(currentStartTime, childTasks[i].massageDuration || 0);
+        currentStartTime = calculateEndTime(currentStartTime, childTasks[i].serviceDuration || 0);
       }
 
       const childEndTime = calculateEndTime(currentStartTime, newDuration);
@@ -974,7 +974,7 @@ const EditAppointmentDialog = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          massageDuration: newDuration,
+          serviceDuration: newDuration,
           scheduleTime: currentStartTime,
           endTime: childEndTime
         }),
@@ -990,7 +990,7 @@ const EditAppointmentDialog = ({
       let nextStartTime = childEndTime;
       for (let i = childIndex + 1; i < childTasks.length; i++) {
         const nextChildTask = childTasks[i];
-        const nextEndTime = calculateEndTime(nextStartTime, nextChildTask.massageDuration || 0);
+        const nextEndTime = calculateEndTime(nextStartTime, nextChildTask.serviceDuration || 0);
 
         await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${nextChildTask.id}`, {
           method: 'POST',
@@ -1025,20 +1025,20 @@ const EditAppointmentDialog = ({
 
   // ✅ Упрощенный автоматический расчет итоговой цены
   useEffect(() => {
-    if (massageDurations && task) {
+    if (serviceDurations && task) {
       const totalPriceAllServices = calculateTotalPrice();
       const discountAmount = (totalPriceAllServices * formData.discount) / 100;
       const finalPriceAllServices = Math.round(totalPriceAllServices - discountAmount);
 
       setFormData(prev => ({ ...prev, finalPrice: finalPriceAllServices }));
     }
-  }, [massageDurations, task?.massageDuration, formData.discount, childTasks]);
+  }, [serviceDurations, task?.serviceDuration, formData.discount, childTasks]);
 
   // Мутация для создания дополнительной услуги
   const createAdditionalServiceMutation = useMutation({
     mutationFn: async (serviceData: { serviceId: number; serviceName: string; duration: number; price: number }) => {
       // Вычисляем время начала дочерней услуги = время окончания основной услуги
-      const mainDuration = task?.massageDuration || task?.duration || massageDurations?.defaultDuration || 0;
+      const mainDuration = task?.serviceDuration || task?.duration || serviceDurations?.defaultDuration || 0;
       const childStartTime = calculateEndTime(task?.scheduleTime || '', mainDuration);
       const childEndTime = calculateEndTime(childStartTime, serviceData.duration);
 
@@ -1048,8 +1048,8 @@ const EditAppointmentDialog = ({
         body: JSON.stringify({
           clientId: task?.clientId,
           status: task?.status, // ✅ Дочерние услуги наследуют статус материнской записи
-          massageType: serviceData.serviceName,
-          massageServiceId: serviceData.serviceId,
+          serviceType: serviceData.serviceName,
+          serviceServiceId: serviceData.serviceId,
           scheduleDate: task?.scheduleDate,
           scheduleTime: childStartTime, // Время начала = время окончания основной услуги
           endTime: childEndTime,        // Время окончания дочерней услуги
@@ -1058,8 +1058,8 @@ const EditAppointmentDialog = ({
           notes: task?.notes,
           branchId: task?.branchId,
           source: 'manual',
-          massageDuration: serviceData.duration,
-          massagePrice: serviceData.price,
+          serviceDuration: serviceData.duration,
+          servicePrice: serviceData.price,
           finalPrice: serviceData.price,
           mother: task?.id // Устанавливаем связь с материнской задачей
         })
@@ -1182,7 +1182,7 @@ const EditAppointmentDialog = ({
         body: JSON.stringify({
           master: task.masterName || 'Неизвестный мастер',
           client: task.client?.customName || task.client?.firstName || 'Неизвестный клиент',
-          massageType: task.massageType || 'Услуга',
+          serviceType: task.serviceType || 'Услуга',
           phoneNumber: task.client?.phoneNumber || '',
           amount: calculateTotalPrice() - Math.round(calculateTotalPrice() * formData.discount / 100),
           discount: formData.discount || 0,
@@ -1276,7 +1276,7 @@ const EditAppointmentDialog = ({
 
   // Функция для добавления дополнительной услуги
   const handleAddAdditionalService = async (serviceName: string) => {
-    const service = massageServices.find(s => s.name === serviceName);
+    const service = serviceServices.find(s => s.name === serviceName);
     if (service) {
       const duration = service.defaultDuration;
       const price = service.duration60Price || 0; // Используем цену за 60 минут по умолчанию
@@ -1307,7 +1307,7 @@ const EditAppointmentDialog = ({
       const payload = {
         clientName: formData.clientName,
         phoneNumber: formData.phoneNumber,
-        massageType: formData.massageType,
+        serviceType: formData.serviceType,
         masterName: formData.masterName,
         masterId: formData.masterId,
         notes: formData.notes,
@@ -1337,13 +1337,13 @@ const EditAppointmentDialog = ({
       }
 
       // ✅ Сохранение локальных изменений длительности при нажатии кнопки "Сохранить"
-      if (localMainDuration !== (task?.massageDuration || task?.duration || 0)) {
+      if (localMainDuration !== (task?.serviceDuration || task?.duration || 0)) {
         await updateMainServiceDuration(localMainDuration);
       }
 
       // Сохраняем изменения дочерних задач
       for (const childTask of childTasks) {
-        const currentDuration = childTask.massageDuration || childTask.duration || 0;
+        const currentDuration = childTask.serviceDuration || childTask.duration || 0;
         const newDuration = localChildDurations[childTask.id] || 0;
 
         if (currentDuration !== newDuration) {
@@ -1353,7 +1353,7 @@ const EditAppointmentDialog = ({
 
       // Синхронизируем дочерние записи если они есть
       if (childTasks.length > 0) {
-        const mainDuration = selectedDuration || task?.massageDuration || 0;
+        const mainDuration = selectedDuration || task?.serviceDuration || 0;
         let currentStartTime = formData.scheduleTime;
 
         // Сдвигаем время основной записи
@@ -1361,7 +1361,7 @@ const EditAppointmentDialog = ({
 
         // Обновляем каждую дочернюю запись
         for (const childTask of childTasks) {
-          const childEndTime = calculateEndTime(currentStartTime, childTask.massageDuration || 0);
+          const childEndTime = calculateEndTime(currentStartTime, childTask.serviceDuration || 0);
 
           const childPayload = {
             scheduleDate: formData.scheduleDate,
@@ -1496,13 +1496,13 @@ const EditAppointmentDialog = ({
                   <Select
                     value={selectedDuration?.toString() || ""}
                     onValueChange={(value) => setSelectedDuration(Number(value))}
-                    disabled={!formData.massageType}
+                    disabled={!formData.serviceType}
                   >
                     <SelectTrigger className="w-full text-sm">
                       <SelectValue placeholder="В минутах" />
                     </SelectTrigger>
                     <SelectContent>
-                      {massageDurations?.availableDurations?.map((duration: DurationOption) => (
+                      {serviceDurations?.availableDurations?.map((duration: DurationOption) => (
                         <SelectItem key={duration.duration} value={duration.duration.toString()}>
                           {duration.duration} мин - {duration.price} сом
                         </SelectItem>
@@ -1512,16 +1512,16 @@ const EditAppointmentDialog = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="massageType" className="block font-semibold text-gray-700 text-sm mb-1">Тип услуги</Label>
+                  <Label htmlFor="serviceType" className="block font-semibold text-gray-700 text-sm mb-1">Тип услуги</Label>
                   <Select
-                    value={formData.massageType}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, massageType: value }))}
+                    value={formData.serviceType}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, serviceType: value }))}
                   >
                     <SelectTrigger className="w-full text-sm">
                       <SelectValue placeholder="Выберите тип услуги" />
                     </SelectTrigger>
                     <SelectContent>
-                      {massageServices?.map((service) => (
+                      {serviceServices?.map((service) => (
                         <SelectItem key={service.id} value={service.name}>
                           {service.name}
                         </SelectItem>
@@ -1662,7 +1662,7 @@ const EditAppointmentDialog = ({
                           <div className="flex items-center justify-between text-sm">
                             <div className="flex items-center gap-2">
                               <span className="text-amber-600 font-medium">🏆 Основная:</span>
-                              <span className="text-gray-700">{task?.massageType}</span>
+                              <span className="text-gray-700">{task?.serviceType}</span>
                               <div className="flex items-center gap-1">
                                 <Input
                                   type="number"
@@ -1671,7 +1671,7 @@ const EditAppointmentDialog = ({
                                     const newDuration = parseInt(e.target.value) || 0;
                                     setLocalMainDuration(newDuration);
                                   }}
-                                  className={`w-16 h-6 text-xs text-center ${localMainDuration !== (task?.massageDuration || task?.duration || 0)
+                                  className={`w-16 h-6 text-xs text-center ${localMainDuration !== (task?.serviceDuration || task?.duration || 0)
                                     ? 'border-amber-400 bg-amber-50'
                                     : ''
                                     }`}
@@ -1690,7 +1690,7 @@ const EditAppointmentDialog = ({
                             <div className="flex items-center justify-between text-sm">
                               <div className="flex items-center gap-2">
                                 <span className="text-amber-500 font-medium">📎 Доп. услуга {index + 1}:</span>
-                                <span className="text-gray-700">{childTask.massageType}</span>
+                                <span className="text-gray-700">{childTask.serviceType}</span>
                                 <div className="flex items-center gap-1">
                                   <Input
                                     type="number"
@@ -1702,7 +1702,7 @@ const EditAppointmentDialog = ({
                                         [childTask.id]: newDuration
                                       }));
                                     }}
-                                    className={`w-16 h-6 text-xs text-center ${(localChildDurations[childTask.id] || 0) !== (childTask.massageDuration || childTask.duration || 0)
+                                    className={`w-16 h-6 text-xs text-center ${(localChildDurations[childTask.id] || 0) !== (childTask.serviceDuration || childTask.duration || 0)
                                       ? 'border-amber-400 bg-amber-50'
                                       : ''
                                       }`}
@@ -1712,7 +1712,7 @@ const EditAppointmentDialog = ({
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="font-medium text-gray-800">{childTask.massagePrice} сом</span>
+                                <span className="font-medium text-gray-800">{childTask.servicePrice} сом</span>
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -1773,7 +1773,7 @@ const EditAppointmentDialog = ({
                           <SelectValue placeholder={createAdditionalServiceMutation.isPending ? "Добавление..." : "Добавить дополнительную услугу"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {massageServices?.map((service) => (
+                          {serviceServices?.map((service) => (
                             <SelectItem key={service.id} value={service.name}>
                               {service.name} (по умолчанию: {service.defaultDuration} мин)
                             </SelectItem>
@@ -1857,7 +1857,7 @@ const EditAppointmentDialog = ({
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm">Услуга:</span>
-                  <span className="text-sm font-medium">{task?.massageType}</span>
+                  <span className="text-sm font-medium">{task?.serviceType}</span>
                 </div>
 
                 <div className="flex justify-between">
@@ -2150,8 +2150,8 @@ export default function DailyCalendar() {
   });
 
   // Загружаем услуги массажа для правильного расчета длительности
-  const { data: massageServices = [] } = useQuery<MassageService[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/public/massage-services'],
+  const { data: serviceServices = [] } = useQuery<serviceService[]>({
+    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/public/service-services'],
   });
 
   // Генерируем временные слоты с 9:00 до 22:00 с шагом 30 минут
@@ -2221,7 +2221,7 @@ export default function DailyCalendar() {
       if (taskDateStr !== format(selectedDate, 'yyyy-MM-dd')) return false;
 
       const taskStartMinutes = timeToMinutes(task.scheduleTime || '');
-      const taskDuration = task.massageDuration || task.duration || 60;
+      const taskDuration = task.serviceDuration || task.duration || 60;
       const taskEndMinutes = taskStartMinutes + taskDuration;
 
       // Проверяем, попадает ли слот в диапазон записи (с учетом 30-минутных интервалов)
@@ -2248,7 +2248,7 @@ export default function DailyCalendar() {
       if (taskDateStr !== format(selectedDate, 'yyyy-MM-dd')) return false;
 
       const taskStartMinutes = timeToMinutes(task.scheduleTime || '');
-      const taskDuration = task.massageDuration || task.duration || 60;
+      const taskDuration = task.serviceDuration || task.duration || 60;
       const taskEndMinutes = taskStartMinutes + taskDuration;
 
       // Возвращаем задачу только если слот является началом записи или попадает в её диапазон
@@ -2275,7 +2275,7 @@ export default function DailyCalendar() {
       if (taskDateStr !== format(selectedDate, 'yyyy-MM-dd')) return false;
 
       const taskStartMinutes = timeToMinutes(task.scheduleTime || '');
-      const taskDuration = task.massageDuration || task.duration || 60;
+      const taskDuration = task.serviceDuration || task.duration || 60;
       const taskEndMinutes = taskStartMinutes + taskDuration;
 
       return slotMinutes >= taskStartMinutes && slotMinutes < taskEndMinutes;
@@ -2618,12 +2618,12 @@ export default function DailyCalendar() {
 
                             // Логика для определения длительности (как в оригинале)
                             const childTasks = (tasks || []).filter(t => t.mother === overlappingTask.id);
-                            const childrenDuration = childTasks.reduce((sum, child) => sum + (child.massageDuration || child.duration || 0), 0);
+                            const childrenDuration = childTasks.reduce((sum, child) => sum + (child.serviceDuration || child.duration || 0), 0);
 
-                            let mainDuration = overlappingTask.massageDuration || overlappingTask.duration;
+                            let mainDuration = overlappingTask.serviceDuration || overlappingTask.duration;
 
-                            if (!mainDuration && overlappingTask.massageServiceId && massageServices.length > 0) {
-                              const service = massageServices.find(s => s.id === overlappingTask.massageServiceId);
+                            if (!mainDuration && overlappingTask.serviceServiceId && serviceServices.length > 0) {
+                              const service = serviceServices.find(s => s.id === overlappingTask.serviceServiceId);
                               if (service) {
                                 mainDuration = service.defaultDuration || 60;
                               }
@@ -2686,7 +2686,7 @@ export default function DailyCalendar() {
                                       )}
 
                                       <div className="text-gray-600 truncate text-xs leading-none">
-                                        {overlappingTask.massageType}
+                                        {overlappingTask.serviceType}
                                       </div>
 
                                       {childTasksMap[overlappingTask.id] && childTasksMap[overlappingTask.id].length > 0 && (
@@ -2700,13 +2700,13 @@ export default function DailyCalendar() {
                                 <TooltipContent side="top" className="max-w-xs">
                                   <div className="space-y-1">
                                     <p><strong>Клиент:</strong> {overlappingTask.client?.customName || overlappingTask.client?.firstName}</p>
-                                    <p><strong>Услуга:</strong> {overlappingTask.massageType}</p>
+                                    <p><strong>Услуга:</strong> {overlappingTask.serviceType}</p>
                                     <p><strong>Время:</strong> {overlappingTask.scheduleTime} - {overlappingTask.endTime}</p>
                                     <p><strong>Мастер:</strong> {overlappingTask.masterName}</p>
                                     <p><strong>Статус:</strong> {overlappingTask.status}</p>
                                     {overlappingTask.paid !== 'paid' && <p><strong>Оплата:</strong> Не оплачено</p>}
                                     {childTasksMap[overlappingTask.id] && childTasksMap[overlappingTask.id].length > 0 && (
-                                      <p><strong>Доп. услуги:</strong> {childTasksMap[overlappingTask.id].map(child => child.massageType).join(', ')}</p>
+                                      <p><strong>Доп. услуги:</strong> {childTasksMap[overlappingTask.id].map(child => child.serviceType).join(', ')}</p>
                                     )}
                                   </div>
                                 </TooltipContent>
@@ -2732,14 +2732,14 @@ export default function DailyCalendar() {
                         if (shouldShowTaskContent && task) {
                           // ✅ Используем общую длительность включая дополнительные услуги
                           const childTasks = (tasks || []).filter(t => t.mother === task.id);
-                          const childrenDuration = childTasks.reduce((sum, child) => sum + (child.massageDuration || child.duration || 0), 0);
+                          const childrenDuration = childTasks.reduce((sum, child) => sum + (child.serviceDuration || child.duration || 0), 0);
 
                           // Улучшенная логика определения длительности основной услуги
-                          let mainDuration = task.massageDuration || task.duration;
+                          let mainDuration = task.serviceDuration || task.duration;
 
                           // Если длительность не установлена, пытаемся найти её в данных услуги
-                          if (!mainDuration && task.massageServiceId && massageServices.length > 0) {
-                            const service = massageServices.find(s => s.id === task.massageServiceId);
+                          if (!mainDuration && task.serviceServiceId && serviceServices.length > 0) {
+                            const service = serviceServices.find(s => s.id === task.serviceServiceId);
                             if (service) {
                               mainDuration = service.defaultDuration || 60;
                             }
@@ -2814,7 +2814,7 @@ export default function DailyCalendar() {
                                     )}
 
                                     <div className="text-gray-600 truncate text-xs leading-none">
-                                      {task.massageType}
+                                      {task.serviceType}
                                     </div>
 
                                     {/* Показываем если есть дополнительные услуги */}
@@ -2850,12 +2850,12 @@ export default function DailyCalendar() {
                                     {task.client?.customName || task.client?.firstName || 'Клиент'}
                                   </div>
                                   <div className="text-sm">
-                                    <div><strong>Услуга:</strong> {task.massageType}</div>
+                                    <div><strong>Услуга:</strong> {task.serviceType}</div>
                                     {task.client?.phoneNumber && (
                                       <div><strong>Телефон:</strong> {task.client.phoneNumber}</div>
                                     )}
                                     <div><strong>Время:</strong> {task.scheduleTime} - {task.endTime}</div>
-                                    <div><strong>Длительность:</strong> {task.duration || task.massageDuration || 60} мин</div>
+                                    <div><strong>Длительность:</strong> {task.duration || task.serviceDuration || 60} мин</div>
                                     <div><strong>Мастер:</strong> {task.masterName || 'Не назначен'}</div>
                                     <div><strong>Статус:</strong> {getStatusLabel(task.status || 'scheduled')}</div>
                                     <div><strong>Оплата:</strong> <span className={task.paid === 'paid' ? 'text-green-600' : 'text-red-600'}>{task.paid === 'paid' ? 'Оплачено' : 'Не оплачено'}</span></div>
@@ -2869,7 +2869,7 @@ export default function DailyCalendar() {
                                         <ul className="ml-2 mt-1">
                                           {childTasksMap[task.id].map((childTask, index) => (
                                             <li key={index} className="text-xs">
-                                              • {childTask.massageType} ({childTask.massageDuration || 0}мин - {childTask.finalPrice || 0}сом)
+                                              • {childTask.serviceType} ({childTask.serviceDuration || 0}мин - {childTask.finalPrice || 0}сом)
                                             </li>
                                           ))}
                                         </ul>

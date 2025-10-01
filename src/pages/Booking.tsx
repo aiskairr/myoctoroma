@@ -291,7 +291,7 @@ const InfoLabel = ({
 };
 
 // Примечание о массажах
-const MassageNote: React.FC = () => {
+const serviceNote: React.FC = () => {
   return (
     <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mt-3 flex items-start">
       <AlertTriangle className="text-yellow-500 h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
@@ -371,7 +371,7 @@ const BookingPage: React.FC = () => {
   const fetchServices = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/public/massage-services');
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/public/service-services');
       if (response.ok) {
         const data = await response.json();
         console.log("Loaded services from API:", data);
@@ -991,7 +991,7 @@ const BookingPage: React.FC = () => {
         {/* Выбор конкретной услуги (первый этап) */}
         {!bookingData.serviceId ? (
           <div className="mt-4">
-            <MassageNote />
+            <serviceNote />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               {services.length > 0 ? (
                 services.map((service: Service) => (

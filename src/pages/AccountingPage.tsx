@@ -45,7 +45,7 @@ interface AccountingRecord {
   id?: number;
   master: string;
   client: string;
-  massageType: string;
+  serviceType: string;
   phoneNumber: string;
   amount: number;
   discount: string;
@@ -91,7 +91,7 @@ const AccountingPage = () => {
   const [newRecord, setNewRecord] = useState<AccountingRecord>({
     master: '',
     client: '',
-    massageType: '',
+    serviceType: '',
     phoneNumber: '',
     amount: 0,
     discount: '0%',
@@ -124,7 +124,7 @@ const AccountingPage = () => {
         console.warn('No branch ID available for masters fetch');
         return [];
       }
-      const url = `/api/masters?branchId=${currentBranch.id}`;
+      const url = `/api/masters?branchID=${currentBranch.id}`;
       console.log('Fetching masters with URL:', url);
       const response = await apiGetJson(url);
       console.log('Masters response:', response);
@@ -141,7 +141,7 @@ const AccountingPage = () => {
         console.warn('No branch ID available for administrators fetch');
         return [];
       }
-      const url = `/api/administrators?branchId=${currentBranch.id}`;
+      const url = `/api/administrators?branchID=${currentBranch.id}`;
       console.log('Fetching administrators with URL:', url);
       const response = await apiGetJson(url);
       console.log('Administrators response:', response);
@@ -222,7 +222,8 @@ const AccountingPage = () => {
         fetchBranches()
       ]);
       setServices(servicesData);
-      setBranches(branchesData);
+      // Если ответ содержит поле branches, используем его, иначе используем весь ответ
+      setBranches(branchesData.branches || branchesData);
     } catch (error) {
       console.error('Error loading services and branches:', error);
     }
@@ -260,7 +261,7 @@ const AccountingPage = () => {
   };
 
   const addRecord = async () => {
-    if (!newRecord.master || !newRecord.client || !newRecord.massageType || !newRecord.amount || !newRecord.adminName) {
+    if (!newRecord.master || !newRecord.client || !newRecord.serviceType || !newRecord.amount || !newRecord.adminName) {
       alert('Пожалуйста, заполните все обязательные поля: Мастер, Клиент, Вид массажа, Сумма, Имя администратора');
       return;
     }
@@ -292,7 +293,7 @@ const AccountingPage = () => {
         setNewRecord({
           master: '',
           client: '',
-          massageType: '',
+          serviceType: '',
           phoneNumber: '',
           amount: 0,
           discount: '0%',
@@ -310,15 +311,23 @@ const AccountingPage = () => {
         setIsAddRecordOpen(false);
         alert('Запись успешно добавлена');
       } else {
-        alert('Ошибка при добавлении записи');
+        alert('Ошибка при добавлении записи: Не удалось сохранить данные');
       }
     } catch (error: any) {
-      console.error('Ошибка при добавлении записи:', error);
-      if (error.response && error.response.data && error.response.data.message) {
-        alert(error.response.data.message);
-      } else {
-        alert('Ошибка при добавлении записи');
+      console.error('Error saving accounting record:', error);
+      let errorMessage = 'Ошибка при добавлении записи';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('HTML instead of JSON')) {
+          errorMessage = 'Ошибка сервера: получен HTML вместо JSON. Проверьте правильность API эндпоинта.';
+        } else if (error.message.includes('Server returned')) {
+          errorMessage = `Ошибка сервера: ${error.message}`;
+        } else {
+          errorMessage = `Ошибка: ${error.message}`;
+        }
       }
+      
+      alert(errorMessage);
     }
   };
 
@@ -433,7 +442,7 @@ const AccountingPage = () => {
   const filteredRecords = records.filter(record =>
     record.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
     record.master.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.massageType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    record.serviceType.toLowerCase().includes(searchTerm.toLowerCase()) ||
     record.phoneNumber.includes(searchTerm)
   );
 
@@ -639,10 +648,10 @@ const AccountingPage = () => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="massageType">Услуга *</Label>
+                          <Label htmlFor="serviceType">Услуга *</Label>
                           <Select
-                            value={newRecord.massageType}
-                            onValueChange={(value) => setNewRecord({ ...newRecord, massageType: value })}
+                            value={newRecord.serviceType}
+                            onValueChange={(value) => setNewRecord({ ...newRecord, serviceType: value })}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Выберите услугу" />
@@ -836,7 +845,7 @@ const AccountingPage = () => {
                             </div>
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <Receipt className="h-4 w-4" />
-                              <span>{record.massageType}</span>
+                              <span>{record.serviceType}</span>
                             </div>
                             {record.phoneNumber && (
                               <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -918,7 +927,7 @@ const AccountingPage = () => {
                                       <p><strong>ID:</strong> {record.id || 'Не указан'}</p>
                                       <p><strong>Мастер:</strong> {record.master}</p>
                                       <p><strong>Клиент:</strong> {record.client}</p>
-                                      <p><strong>Услуга:</strong> {record.massageType}</p>
+                                      <p><strong>Услуга:</strong> {record.serviceType}</p>
                                       <p><strong>Телефон:</strong> {record.phoneNumber || 'Не указан'}</p>
                                       <p><strong>Сумма:</strong> {record.amount} с</p>
                                     </div>

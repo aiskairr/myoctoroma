@@ -19,7 +19,7 @@ export interface Appointment {
   start_time: string;      // Время начала (формат HH:MM)
   end_time: string;        // Время окончания (формат HH:MM)
   status: string;          // Статус (Booked, Completed, Canceled)
-  massage_type: string;    // Тип массажа
+  service_type: string;    // Тип массажа
   price: number;           // Цена услуги
   notes?: string;          // Дополнительные заметки
   created_at?: string;     // Дата создания записи
@@ -42,13 +42,13 @@ export interface ClientTask {
   clientId: number;
   clientName: string;
   status: string;
-  massageType: string | null;
+  serviceType: string | null;
   scheduleDate: string | null;
   scheduleTime: string | null;
   endTime: string | null;
   masterName: string | null;
-  massageDuration: number | null;
-  massagePrice: number | null;
+  serviceDuration: number | null;
+  servicePrice: number | null;
   notes: string | null;
   instanceId: number | null;
 }

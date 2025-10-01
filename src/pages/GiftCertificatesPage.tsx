@@ -21,7 +21,7 @@ interface GiftCertificate {
   expiry_date: string;
   client_name?: string;
   phone_number?: string;
-  massage_type?: string;
+  service_type?: string;
   duration?: string;
   master_name?: string;
   is_used: boolean;
@@ -43,7 +43,7 @@ const GiftCertificatesPage = () => {
   const [usageData, setUsageData] = useState({
     client_name: '',
     phone_number: '',
-    massage_type: '',
+    service_type: '',
     duration: '',
     master_name: '',
     admin_name: ''
@@ -53,7 +53,7 @@ const GiftCertificatesPage = () => {
   const [isUsageDialogOpen, setIsUsageDialogOpen] = useState(false);
   const [masters, setMasters] = useState<string[]>([]);
   const [administrators, setAdministrators] = useState<string[]>([]);
-  const [massageTypes, setMassageTypes] = useState<string[]>([]);
+  const [serviceTypes, setserviceTypes] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -93,11 +93,11 @@ const GiftCertificatesPage = () => {
         }
 
         // Загружаем типы массажа из таблицы client_tasks
-        const massageTypesResponse = await fetch(`/api/massage-types?branchId=${currentBranch?.id}`);
-        if (massageTypesResponse.ok) {
-          const massageTypesData = await massageTypesResponse.json();
-          const typeNames = massageTypesData.map((t: any) => t.massage_type).filter((type: string) => Boolean(type));
-          setMassageTypes(Array.from(new Set(typeNames)));
+        const serviceTypesResponse = await fetch(`/api/service-types?branchId=${currentBranch?.id}`);
+        if (serviceTypesResponse.ok) {
+          const serviceTypesData = await serviceTypesResponse.json();
+          const typeNames = serviceTypesData.map((t: any) => t.service_type).filter((type: string) => Boolean(type));
+          setserviceTypes(Array.from(new Set(typeNames)));
         }
       } catch (error) {
         toast({
@@ -181,7 +181,7 @@ const GiftCertificatesPage = () => {
   };
 
   const markAsUsed = async (certificate: GiftCertificate) => {
-    if (!usageData.client_name || !usageData.massage_type || !usageData.duration || !usageData.master_name || !usageData.admin_name) {
+    if (!usageData.client_name || !usageData.service_type || !usageData.duration || !usageData.master_name || !usageData.admin_name) {
       toast({
         title: "Ошибка",
         description: "Заполните все поля для использования сертификата",
@@ -198,7 +198,7 @@ const GiftCertificatesPage = () => {
           ...certificate,
           client_name: usageData.client_name,
           phone_number: usageData.phone_number,
-          massage_type: usageData.massage_type,
+          service_type: usageData.service_type,
           duration: usageData.duration,
           master_name: usageData.master_name,
           admin_name: usageData.admin_name,
@@ -216,7 +216,7 @@ const GiftCertificatesPage = () => {
           body: JSON.stringify({
             master: usageData.master_name,
             client: usageData.client_name,
-            massage_type: usageData.massage_type,
+            service_type: usageData.service_type,
             phone_number: usageData.phone_number || '',
             amount: certificate.amount,
             discount: certificate.discount || '0%',
@@ -240,7 +240,7 @@ const GiftCertificatesPage = () => {
         setUsageData({
           client_name: '',
           phone_number: '',
-          massage_type: '',
+          service_type: '',
           duration: '',
           master_name: '',
           admin_name: ''
@@ -505,14 +505,14 @@ const GiftCertificatesPage = () => {
                             className="rounded-lg"
                           />
                           <Select
-                            value={usageData.massage_type}
-                            onValueChange={(value) => setUsageData({ ...usageData, massage_type: value })}
+                            value={usageData.service_type}
+                            onValueChange={(value) => setUsageData({ ...usageData, service_type: value })}
                           >
                             <SelectTrigger className="rounded-lg">
                               <SelectValue placeholder="Выберите тип массажа*" />
                             </SelectTrigger>
                             <SelectContent>
-                              {massageTypes.map(type => (
+                              {serviceTypes.map(type => (
                                 <SelectItem key={type} value={type}>{type}</SelectItem>
                               ))}
                             </SelectContent>
@@ -597,7 +597,7 @@ const GiftCertificatesPage = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">Тип массажа:</span>
-                        <span>{cert.massage_type || 'Не указан'}</span>
+                        <span>{cert.service_type || 'Не указан'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">Длительность:</span>

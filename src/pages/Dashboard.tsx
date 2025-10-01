@@ -41,7 +41,7 @@ import { useIsMaster } from "@/hooks/use-master-role";
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
 
-interface MassageTypeStats {
+interface serviceTypeStats {
   name: string;
   count: number;
   revenue: number;
@@ -69,7 +69,7 @@ export default function Dashboard() {
     apiUsage: 0,
   });
   const [activities, setActivities] = useState<any[]>([]);
-  const [massageTypes, setMassageTypes] = useState<MassageTypeStats[]>([]);
+  const [serviceTypes, setserviceTypes] = useState<serviceTypeStats[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [masterStats, setMasterStats] = useState<MasterStats[]>([]);
 
@@ -117,12 +117,12 @@ export default function Dashboard() {
     }
   });
 
-  const massageStatsQuery = useQuery({
-    queryKey: [`/api/stats/massage-types?branchId=${currentBranch?.id}`, currentBranch?.id],
+  const serviceStatsQuery = useQuery({
+    queryKey: [`/api/stats/service-types?branchId=${currentBranch?.id}`, currentBranch?.id],
     refetchInterval: 60000,
     enabled: !!currentBranch?.id,
     queryFn: async () => {
-      const response = await fetch(`/api/stats/massage-types?branchId=${currentBranch?.id}`, {
+      const response = await fetch(`/api/stats/service-types?branchId=${currentBranch?.id}`, {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
@@ -179,12 +179,12 @@ export default function Dashboard() {
   }, [activitiesQuery.data]);
 
   useEffect(() => {
-    if (massageStatsQuery.data && typeof massageStatsQuery.data === 'object') {
-      const apiData = massageStatsQuery.data as any;
-      setMassageTypes(apiData.massageTypes || []);
+    if (serviceStatsQuery.data && typeof serviceStatsQuery.data === 'object') {
+      const apiData = serviceStatsQuery.data as any;
+      setserviceTypes(apiData.serviceTypes || []);
       setTotalRevenue(apiData.totalRevenue || 0);
     }
-  }, [massageStatsQuery.data]);
+  }, [serviceStatsQuery.data]);
 
   useEffect(() => {
     if (masterStatsQuery.data && typeof masterStatsQuery.data === 'object') {
@@ -202,7 +202,7 @@ export default function Dashboard() {
 
   // Рендер графика услуг в зависимости от выбранного типа
   const renderServicesChart = () => {
-    if (massageStatsQuery.isLoading) {
+    if (serviceStatsQuery.isLoading) {
       return (
         <div className="h-80 flex items-center justify-center">
           <div className="text-center">
@@ -213,7 +213,7 @@ export default function Dashboard() {
       );
     }
 
-    if (massageStatsQuery.error) {
+    if (serviceStatsQuery.error) {
       return (
         <div className="h-80 flex items-center justify-center">
           <div className="text-center text-red-600">
@@ -224,7 +224,7 @@ export default function Dashboard() {
       );
     }
 
-    if (massageTypes.length === 0) {
+    if (serviceTypes.length === 0) {
       return (
         <div className="h-80 flex items-center justify-center">
           <p className="text-gray-500 text-center">
@@ -241,7 +241,7 @@ export default function Dashboard() {
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={massageTypes}
+                data={serviceTypes}
                 cx="50%"
                 cy="50%"
                 innerRadius={60}
@@ -249,7 +249,7 @@ export default function Dashboard() {
                 paddingAngle={2}
                 dataKey="revenue"
               >
-                {massageTypes.map((entry, index) => (
+                {serviceTypes.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
@@ -270,7 +270,7 @@ export default function Dashboard() {
       case 'bar':
         return (
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={massageTypes} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <BarChart data={serviceTypes} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
@@ -284,7 +284,7 @@ export default function Dashboard() {
                 }}
               />
               <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]}>
-                {massageTypes.map((entry, index) => (
+                {serviceTypes.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Bar>
@@ -295,7 +295,7 @@ export default function Dashboard() {
       case 'line':
         return (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={massageTypes} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <LineChart data={serviceTypes} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
@@ -316,7 +316,7 @@ export default function Dashboard() {
       case 'area':
         return (
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={massageTypes} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <AreaChart data={serviceTypes} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <defs>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
@@ -343,7 +343,7 @@ export default function Dashboard() {
       case 'radar':
         return (
           <ResponsiveContainer width="100%" height={300}>
-            <RadarChart data={massageTypes}>
+            <RadarChart data={serviceTypes}>
               <PolarGrid stroke="#e5e7eb" />
               <PolarAngleAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} />
               <PolarRadiusAxis tick={{ fontSize: 12, fill: '#6b7280' }} />
@@ -362,8 +362,8 @@ export default function Dashboard() {
         );
 
       case 'radialBar':
-        const maxRevenue = Math.max(...massageTypes.map(m => m.revenue));
-        const normalizedData = massageTypes.map(item => ({
+        const maxRevenue = Math.max(...serviceTypes.map(m => m.revenue));
+        const normalizedData = serviceTypes.map(item => ({
           ...item,
           percentage: (item.revenue / maxRevenue) * 100
         }));

@@ -40,12 +40,12 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
   const [masters, setMasters] = useState<any[]>([]);
   const [clientTask, setClientTask] = useState<ClientTask | null>(null);
   const [additionalServices, setAdditionalServices] = useState<any[]>([]);
-  const [massageServices, setMassageServices] = useState<any[]>([]);
+  const [serviceServices, setserviceServices] = useState<any[]>([]);
   
   // Определение типа для редактируемых полей
   interface EditedAppointmentData {
     client_name: string;
-    massage_type: string;
+    service_type: string;
     master_name: string;
     price: number;
     start_time: string;
@@ -57,7 +57,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
   // Состояния для редактируемых полей
   const [editedData, setEditedData] = useState<EditedAppointmentData>({
     client_name: '',
-    massage_type: '',
+    service_type: '',
     master_name: '',
     price: 0,
     start_time: '',
@@ -72,14 +72,14 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
       loadClientTask(appointment.id);
       loadMasters();
       loadAdditionalServices(appointment.id);
-      loadMassageServices();
+      loadserviceServices();
     }
     
     // Инициализация формы при открытии диалога
     if (appointment && open) {
       setEditedData({
         client_name: appointment.client_name,
-        massage_type: appointment.massage_type,
+        service_type: appointment.service_type,
         master_name: appointment.master_name,
         price: appointment.price,
         start_time: appointment.start_time,
@@ -132,23 +132,23 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
   };
 
   // Загрузка списка массажных услуг
-  const loadMassageServices = async () => {
+  const loadserviceServices = async () => {
     try {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/public/massage-services', {
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/public/service-services', {
         credentials: 'include'
       });
       
       if (response.ok) {
         const services = await response.json();
-        setMassageServices(services);
+        setserviceServices(services);
       }
     } catch (error) {
-      console.error('Error loading massage services:', error);
+      console.error('Error loading service services:', error);
     }
   };
 
   // Добавление дополнительной услуги
-  const addAdditionalService = async (massageType: string, duration: number = 60) => {
+  const addAdditionalService = async (serviceType: string, duration: number = 60) => {
     if (!appointment) return;
     
     try {
@@ -157,7 +157,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          massageType,
+          serviceType,
           duration
         })
       });
@@ -171,7 +171,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
         
         toast({
           title: "Услуга добавлена",
-          description: `Дополнительная услуга "${massageType}" добавлена`
+          description: `Дополнительная услуга "${serviceType}" добавлена`
         });
       }
     } catch (error) {
@@ -229,8 +229,8 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
         // Обновляем отображаемые данные
         setEditedData(prev => ({
           ...prev,
-          price: updatedTask.final_price || updatedTask.massage_price || 0,
-          duration: updatedTask.massage_duration || 60,
+          price: updatedTask.final_price || updatedTask.service_price || 0,
+          duration: updatedTask.service_duration || 60,
           end_time: updatedTask.end_time || prev.end_time
         }));
       }
@@ -333,8 +333,8 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
         
         // Маппинг полей формы к полям API
         switch (fieldName) {
-          case 'massage_type':
-            taskUpdateData.massageType = newValue;
+          case 'service_type':
+            taskUpdateData.serviceType = newValue;
             break;
           case 'start_time':
             taskUpdateData.scheduleTime = newValue;
@@ -346,10 +346,10 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
             taskUpdateData.masterName = newValue;
             break;
           case 'price':
-            taskUpdateData.massagePrice = newValue;
+            taskUpdateData.servicePrice = newValue;
             break;
           case 'duration':
-            taskUpdateData.massageDuration = newValue;
+            taskUpdateData.serviceDuration = newValue;
             break;
           case 'notes':
             taskUpdateData.notes = newValue;
@@ -366,7 +366,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
     } catch (error: any) {
       console.error('Error auto-saving changes:', error);
       // Показываем уведомление об ошибке только для критичных полей
-      if (fieldName === 'start_time' || fieldName === 'master_name' || fieldName === 'massage_type') {
+      if (fieldName === 'start_time' || fieldName === 'master_name' || fieldName === 'service_type') {
         toast({
           title: "Ошибка сохранения",
           description: `Не удалось сохранить изменения в поле "${fieldName}"`,
@@ -457,12 +457,12 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
       if (appointment.is_from_task) {
         // Формируем данные для обновления задачи клиента
         const taskUpdateData = {
-          massageType: editedData.massage_type,
+          serviceType: editedData.service_type,
           scheduleTime: editedData.start_time,
           endTime: editedData.end_time,
           masterName: editedData.master_name,
-          massagePrice: editedData.price,
-          massageDuration: editedData.duration,
+          servicePrice: editedData.price,
+          serviceDuration: editedData.duration,
           notes: editedData.notes
         };
         
@@ -470,7 +470,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
       } else {
         // Формируем данные для обновления записи в календаре
         const appointmentUpdateData = {
-          massage_type: editedData.massage_type,
+          service_type: editedData.service_type,
           start_time: editedData.start_time,
           end_time: editedData.end_time,
           master_name: editedData.master_name,
@@ -564,11 +564,11 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="massage_type">Тип массажа</Label>
+                <Label htmlFor="service_type">Тип массажа</Label>
                 <Input 
-                  id="massage_type" 
-                  name="massage_type" 
-                  value={editedData.massage_type} 
+                  id="service_type" 
+                  name="service_type" 
+                  value={editedData.service_type} 
                   onChange={handleChange}
                 />
               </div>
@@ -666,9 +666,9 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
                 <div className="space-y-2 mb-3">
                   {additionalServices.map((service) => (
                     <div key={service.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm">
-                      <span className="font-medium">{service.massage_type}</span>
+                      <span className="font-medium">{service.service_type}</span>
                       <div className="flex items-center gap-3">
-                        <span className="text-gray-600">{service.massage_duration} мин</span>
+                        <span className="text-gray-600">{service.service_duration} мин</span>
                         <span className="font-semibold">{service.final_price} сом</span>
                         <Button 
                           type="button" 
@@ -689,9 +689,9 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
                 <div className="flex-1">
                   <Select
                     value=""
-                    onValueChange={(massageType) => {
-                      if (massageType) {
-                        addAdditionalService(massageType, 60);
+                    onValueChange={(serviceType) => {
+                      if (serviceType) {
+                        addAdditionalService(serviceType, 60);
                       }
                     }}
                   >
@@ -699,7 +699,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
                       <SelectValue placeholder="Добавить дополнительную услугу" />
                     </SelectTrigger>
                     <SelectContent>
-                      {massageServices?.map((service) => (
+                      {serviceServices?.map((service) => (
                         <SelectItem key={service.id} value={service.name}>
                           {service.name}
                         </SelectItem>
@@ -724,7 +724,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
           // Режим просмотра
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold">{appointment.massage_type}</h3>
+              <h3 className="text-lg font-semibold">{appointment.service_type}</h3>
               <p className="text-sm text-muted-foreground">
                 {appointment.notes || "Без дополнительных заметок"}
               </p>

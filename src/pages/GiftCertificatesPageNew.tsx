@@ -19,7 +19,7 @@ interface GiftCertificate {
   expiry_date: string;
   client_name?: string;
   phone_number?: string;
-  massage_type?: string;
+  service_type?: string;
   duration?: string;
   master_name?: string;
   is_used: boolean;
@@ -41,14 +41,14 @@ const GiftCertificatesPage = () => {
     expiry_date: '',
     client_name: '',
     phone_number: '',
-    massage_type: '',
+    service_type: '',
     duration: '',
     master_name: '',
   });
   const [searchNumber, setSearchNumber] = useState('');
   const [selectedCertificate, setSelectedCertificate] = useState<GiftCertificate | null>(null);
   const [masters, setMasters] = useState<string[]>([]);
-  const [massageTypes, setMassageTypes] = useState<string[]>([]);
+  const [serviceTypes, setserviceTypes] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -73,12 +73,12 @@ const GiftCertificatesPage = () => {
           const allMasters = allCertificates
             .map((c: GiftCertificate) => c.master_name)
             .filter((name: string | undefined): name is string => Boolean(name));
-          const allMassageTypes = allCertificates
-            .map((c: GiftCertificate) => c.massage_type)
+          const allserviceTypes = allCertificates
+            .map((c: GiftCertificate) => c.service_type)
             .filter((type: string | undefined): type is string => Boolean(type));
           
           setMasters(Array.from(new Set(allMasters)));
-          setMassageTypes(Array.from(new Set(allMassageTypes)));
+          setserviceTypes(Array.from(new Set(allserviceTypes)));
         }
       } catch (error) {
         toast({
@@ -144,7 +144,7 @@ const GiftCertificatesPage = () => {
           expiry_date: '',
           client_name: '',
           phone_number: '',
-          massage_type: '',
+          service_type: '',
           duration: '',
           master_name: '',
         });
@@ -159,7 +159,7 @@ const GiftCertificatesPage = () => {
   };
 
   const markAsUsed = async (certificate: GiftCertificate) => {
-    if (!newCertificate.client_name || !newCertificate.massage_type || !newCertificate.duration || !newCertificate.master_name) {
+    if (!newCertificate.client_name || !newCertificate.service_type || !newCertificate.duration || !newCertificate.master_name) {
       toast({
         title: "Ошибка валидации",
         description: "Заполните все поля для использования сертификата",
@@ -177,7 +177,7 @@ const GiftCertificatesPage = () => {
         body: JSON.stringify({
           client_name: newCertificate.client_name,
           phone_number: newCertificate.phone_number,
-          massage_type: newCertificate.massage_type,
+          service_type: newCertificate.service_type,
           duration: newCertificate.duration,
           master_name: newCertificate.master_name,
           is_used: true
@@ -199,7 +199,7 @@ const GiftCertificatesPage = () => {
           ...newCertificate,
           client_name: '',
           phone_number: '',
-          massage_type: '',
+          service_type: '',
           duration: '',
           master_name: '',
         });
@@ -483,7 +483,7 @@ const GiftCertificatesPage = () => {
                           <div className="flex items-center gap-2">
                             <span className="font-medium">Услуга:</span>
                             <Badge variant="outline" className="rounded-full">
-                              {cert.massage_type}
+                              {cert.service_type}
                             </Badge>
                           </div>
                           <div className="flex items-center gap-2">
@@ -531,14 +531,14 @@ const GiftCertificatesPage = () => {
                 className="rounded-lg"
               />
               <Select
-                value={newCertificate.massage_type}
-                onValueChange={(value) => setNewCertificate({...newCertificate, massage_type: value})}
+                value={newCertificate.service_type}
+                onValueChange={(value) => setNewCertificate({...newCertificate, service_type: value})}
               >
                 <SelectTrigger className="rounded-lg">
                   <SelectValue placeholder="Вид массажа*" />
                 </SelectTrigger>
                 <SelectContent>
-                  {massageTypes.map(type => (
+                  {serviceTypes.map(type => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>

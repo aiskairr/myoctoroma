@@ -68,7 +68,7 @@ const AppointmentItem: React.FC<AppointmentItemProps> = ({ appointment, onClick 
               ) : (
                 <Calendar className="h-3.5 w-3.5 mr-1 text-primary" />
               )}
-              <h4 className="font-medium text-sm">{appointment.massage_type}</h4>
+              <h4 className="font-medium text-sm">{appointment.service_type}</h4>
             </div>
             <div className="flex items-center text-xs text-muted-foreground mt-1">
               <User className="h-3 w-3 mr-1" />

@@ -27,7 +27,7 @@ interface Task {
   startTime: string;
   endTime: string;
   duration: number;
-  massageType: string;
+  serviceType: string;
   totalPrice: number;
   finalPrice: number;
   status: string;
@@ -84,7 +84,7 @@ export const MobileMasterCalendar: React.FC<MobileMasterCalendarProps> = ({ mast
     startTime: task.start_time,
     endTime: task.end_time,
     duration: task.duration,
-    massageType: task.massage_type,
+    serviceType: task.service_type,
     totalPrice: task.price,
     finalPrice: task.price,
     status: task.status,
@@ -252,7 +252,7 @@ export const MobileMasterCalendar: React.FC<MobileMasterCalendarProps> = ({ mast
                     <div className="flex items-center space-x-2">
                       <MapPin className="w-4 h-4 text-gray-500" />
                       <span className="text-sm text-gray-600">
-                        {task.massageType || 'Массаж'}
+                        {task.serviceType || 'Массаж'}
                       </span>
                     </div>
                   </div>

@@ -38,7 +38,7 @@ interface Task {
     phoneNumber?: string;
   };
   status: string;
-  massageType?: string;
+  serviceType?: string;
   scheduleDate: string;
   scheduleTime: string;
   endTime?: string;
@@ -46,15 +46,15 @@ interface Task {
   notes?: string;
   branchId: string;
   source?: string;
-  massageDuration?: number;
-  massagePrice?: number;
+  serviceDuration?: number;
+  servicePrice?: number;
   discount?: number;
   finalPrice?: number;
   paymentMethod?: string;
   paid?: string;
   createdAt: string;
   updatedAt: string;
-  massageServiceId?: number;
+  serviceServiceId?: number;
   additionalServices?: Array<{
     id: number;
     name: string;
@@ -211,13 +211,13 @@ export default function MasterCalendar() {
     const updatedData = {
       id: editingTask.id,
       status: editingTask.status,
-      massageType: editingTask.massageType,
+      serviceType: editingTask.serviceType,
       scheduleDate: editingTask.scheduleDate,
       scheduleTime: editingTask.scheduleTime,
       masterName: editingTask.masterName,
       notes: editingTask.notes,
-      massageDuration: editingTask.massageDuration,
-      massagePrice: editingTask.massagePrice,
+      serviceDuration: editingTask.serviceDuration,
+      servicePrice: editingTask.servicePrice,
       discount: editingTask.discount,
       finalPrice: editingTask.finalPrice,
     };
@@ -509,10 +509,10 @@ export default function MasterCalendar() {
                                  'Клиент'}
                               </div>
                               <div className="text-xs opacity-75 truncate">
-                                {primaryTask.massageType}
+                                {primaryTask.serviceType}
                               </div>
                               <div className="text-xs opacity-75">
-                                {primaryTask.massageDuration}мин • {primaryTask.finalPrice || primaryTask.massagePrice}сом
+                                {primaryTask.serviceDuration}мин • {primaryTask.finalPrice || primaryTask.servicePrice}сом
                               </div>
                               <Badge 
                                 variant="secondary" 
@@ -584,9 +584,9 @@ export default function MasterCalendar() {
                 <Label htmlFor="edit-service">Тип массажа</Label>
                 <Input
                   id="edit-service"
-                  value={editingTask.massageType || ""}
+                  value={editingTask.serviceType || ""}
                   onChange={(e) =>
-                    setEditingTask({ ...editingTask, massageType: e.target.value })
+                    setEditingTask({ ...editingTask, serviceType: e.target.value })
                   }
                 />
               </div>
@@ -597,9 +597,9 @@ export default function MasterCalendar() {
                   <Input
                     id="edit-duration"
                     type="number"
-                    value={editingTask.massageDuration || ""}
+                    value={editingTask.serviceDuration || ""}
                     onChange={(e) =>
-                      setEditingTask({ ...editingTask, massageDuration: Number(e.target.value) })
+                      setEditingTask({ ...editingTask, serviceDuration: Number(e.target.value) })
                     }
                   />
                 </div>
@@ -609,9 +609,9 @@ export default function MasterCalendar() {
                   <Input
                     id="edit-price"
                     type="number"
-                    value={editingTask.massagePrice || ""}
+                    value={editingTask.servicePrice || ""}
                     onChange={(e) =>
-                      setEditingTask({ ...editingTask, massagePrice: Number(e.target.value) })
+                      setEditingTask({ ...editingTask, servicePrice: Number(e.target.value) })
                     }
                   />
                 </div>

@@ -10,7 +10,7 @@ interface AccountingRecord {
   id?: number;
   master: string;
   client: string;
-  massageType: string;
+  serviceType: string;
   phoneNumber: string;
   amount: number;
   discount: string;
