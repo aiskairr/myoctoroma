@@ -105,87 +105,87 @@ function App() {
             </ProtectedLayout>
           </Route>
 
-            <Route path="/crm/calendar">
-              <ProtectedLayout>
-                <CalendarScreen />
-              </ProtectedLayout>
-            </Route>
+          <Route path="/crm/calendar">
+            <ProtectedLayout>
+              <DailyCalendar />
+            </ProtectedLayout>
+          </Route>
 
-            <Route path={'/crm/calendarscreen'}>
-              <ProtectedLayout>
-                <DailyCalendar />
-              </ProtectedLayout>
-            </Route>
+          <Route path={'/crm/calendarscreen'}>
+            <ProtectedLayout>
+              <CalendarScreen />
+            </ProtectedLayout>
+          </Route>
 
-            <Route path="/master/calendar">
-              <ProtectedLayout>
-                <MasterCalendar />
-              </ProtectedLayout>
-            </Route>
+          <Route path="/master/calendar">
+            <ProtectedLayout>
+              <MasterCalendar />
+            </ProtectedLayout>
+          </Route>
 
-            <Route path="/master-calendar">
-              <ProtectedLayout>
-                <MasterCalendar />
-              </ProtectedLayout>
-            </Route>
-
-
-
-            <Route path="/crm/masters">
-              <ProtectedLayout>
-                <Masters />
-              </ProtectedLayout>
-            </Route>
+          <Route path="/master-calendar">
+            <ProtectedLayout>
+              <MasterCalendar />
+            </ProtectedLayout>
+          </Route>
 
 
-            <Route path="/accounting">
-              <ProtectedLayout>
-                <AccountingPage />
-              </ProtectedLayout>
-            </Route>
 
-            <Route path="/salary">
-              <ProtectedLayout>
-                <SalaryPage />
-              </ProtectedLayout>
-            </Route>
+          <Route path="/crm/masters">
+            <ProtectedLayout>
+              <Masters />
+            </ProtectedLayout>
+          </Route>
 
-            <Route path="/gift-certificates">
-              <ProtectedLayout>
-                <GiftCertificatesPage />
-              </ProtectedLayout>
-            </Route>
 
-            <Route path="/report">
-              <ProtectedLayout>
-                <ReportPage />
-              </ProtectedLayout>
-            </Route>
+          <Route path="/accounting">
+            <ProtectedLayout>
+              <AccountingPage />
+            </ProtectedLayout>
+          </Route>
 
-            <Route path="/reports">
-              <ProtectedLayout>
-                <ReportPage />
-              </ProtectedLayout>
-            </Route>
+          <Route path="/salary">
+            <ProtectedLayout>
+              <SalaryPage />
+            </ProtectedLayout>
+          </Route>
 
-            <Route path="/services">
-              <ProtectedLayout>
-                {/* <CRMServices /> */}
-                <ServicesPage />
-              </ProtectedLayout>
-            </Route>
+          <Route path="/gift-certificates">
+            <ProtectedLayout>
+              <GiftCertificatesPage />
+            </ProtectedLayout>
+          </Route>
 
-            <Route path="/crm/services">
-              <ProtectedLayout>
-                <CRMServices />
-              </ProtectedLayout>
-            </Route>
+          <Route path="/report">
+            <ProtectedLayout>
+              <ReportPage />
+            </ProtectedLayout>
+          </Route>
 
-            <Route path="/how-to-use">
-              <ProtectedLayout>
-                <HowToUsePage />
-              </ProtectedLayout>
-            </Route>
+          <Route path="/reports">
+            <ProtectedLayout>
+              <ReportPage />
+            </ProtectedLayout>
+          </Route>
+
+          <Route path="/services">
+            <ProtectedLayout>
+              {/* <CRMServices /> */}
+              <ServicesPage />
+            </ProtectedLayout>
+          </Route>
+
+          <Route path="/crm/services">
+            <ProtectedLayout>
+              <CRMServices />
+            </ProtectedLayout>
+          </Route>
+
+          <Route path="/how-to-use">
+            <ProtectedLayout>
+              <HowToUsePage />
+            </ProtectedLayout>
+          </Route>
 
           {/* 404 страница */}
           <Route>

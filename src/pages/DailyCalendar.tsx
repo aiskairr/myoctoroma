@@ -175,7 +175,7 @@ const CreateAppointmentDialog = ({
 
   // Загружаем мастеров для выбранной даты
   const { data: masters = [] } = useQuery<Master[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters', format(selectedDate, 'yyyy-MM-dd'), currentBranch?.id],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters`, format(selectedDate, 'yyyy-MM-dd'), currentBranch?.id],
     queryFn: () => fetch(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters/${format(selectedDate, 'yyyy-MM-dd')}?branchId=${currentBranch?.id}`, {
       credentials: 'include'
     }).then(res => res.json()),
@@ -184,13 +184,13 @@ const CreateAppointmentDialog = ({
 
   // Загружаем все мастеров для общего выбора
   const { data: allMasters = [] } = useQuery<Master[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/masters'],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/masters`],
     enabled: isOpen,
   });
 
   // Список услуг
   const { data: serviceServices = [] } = useQuery<serviceService[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/public/service-services'],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/public/service-services`],
     enabled: isOpen,
   });
 
@@ -234,12 +234,12 @@ const CreateAppointmentDialog = ({
   const [isCustomDuration, setIsCustomDuration] = useState(false);
 
   const { data: serviceDurations } = useQuery<serviceDurationsResponse>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations', formData.serviceType],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations`, formData.serviceType],
     enabled: !!formData.serviceType && isOpen,
     queryFn: async () => {
       if (!formData.serviceType) return null;
 
-      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ serviceType: formData.serviceType }),
@@ -312,7 +312,7 @@ const CreateAppointmentDialog = ({
         branchId: formData.branchId // Добавляем branchId в payload
       };
 
-      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -606,19 +606,19 @@ const EditAppointmentDialog = ({
 
   // Загружаем все мастеров для выбора
   const { data: allMasters = [] } = useQuery<Master[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/masters'],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/masters`],
     enabled: isOpen,
   });
 
   // Список услуг
   const { data: serviceServices = [] } = useQuery<serviceService[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/public/service-services'],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/public/service-services`],
     enabled: isOpen,
   });
 
   // Загружаем администраторов для выбора в модальном окне оплаты
   const { data: administrators = [] } = useQuery<{ id: number, name: string }[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/administrators', currentBranch?.id],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/administrators`, currentBranch?.id],
     queryFn: async () => {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchId=${currentBranch?.id}`);
       if (!res.ok) return [];
@@ -789,12 +789,12 @@ const EditAppointmentDialog = ({
   const queryClient = useQueryClient();
 
   const { data: serviceDurations } = useQuery<serviceDurationsResponse>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations', formData.serviceType],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations`, formData.serviceType],
     enabled: !!formData.serviceType && isOpen,
     queryFn: async () => {
       if (!formData.serviceType) return null;
 
-      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ serviceType: formData.serviceType }),
@@ -807,7 +807,7 @@ const EditAppointmentDialog = ({
 
   // Получаем дочерние задачи (дополнительные услуги)
   const { data: childTasksData } = useQuery<Task[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task?.id],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/tasks/children`, task?.id],
     enabled: isOpen && !!task?.id,
     queryFn: async () => {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task?.id}/children`);
@@ -935,7 +935,7 @@ const EditAppointmentDialog = ({
         }
       }
 
-      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task.id] });
+      queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/tasks/children`, task.id] });
       onTaskUpdated();
 
       toast({
@@ -1005,7 +1005,7 @@ const EditAppointmentDialog = ({
         nextStartTime = nextEndTime;
       }
 
-      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task?.id] });
+      queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/tasks/children`, task?.id] });
       onTaskUpdated();
 
       toast({
@@ -1042,7 +1042,7 @@ const EditAppointmentDialog = ({
       const childStartTime = calculateEndTime(task?.scheduleTime || '', mainDuration);
       const childEndTime = calculateEndTime(childStartTime, serviceData.duration);
 
-      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/tasks', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1079,7 +1079,7 @@ const EditAppointmentDialog = ({
       });
 
       // Обновляем список дочерних задач
-      await queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task?.id] });
+      await queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/tasks/children`, task?.id] });
 
       // Обновляем final_price основной задачи после добавления дочерней услуги
       if (task?.id) {
@@ -1132,7 +1132,7 @@ const EditAppointmentDialog = ({
       });
 
       // Обновляем список дочерних задач
-      await queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/tasks/children', task?.id] });
+      await queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/tasks/children`, task?.id] });
 
       // Обновляем final_price основной задачи после удаления дочерней услуги
       if (task?.id) {
@@ -1176,7 +1176,7 @@ const EditAppointmentDialog = ({
       }
 
       // Создаем основную запись об оплате
-      const res = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/accounting', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2059,7 +2059,7 @@ export default function DailyCalendar() {
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const { currentBranch } = useBranch();
+  const { currentBranch }: { currentBranch: any } = useBranch();
   const queryClient = useQueryClient();
 
   // Обновляем текущее время каждую минуту
@@ -2087,14 +2087,14 @@ export default function DailyCalendar() {
 
       // Обновляем данные мастеров
       queryClient.invalidateQueries({
-        queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters', formattedDate, currentBranch?.waInstance]
+        queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters`, formattedDate, currentBranch?.waInstance]
       });
     }, 10000); // Синхронизация каждые 10 секунд
 
     return () => clearInterval(syncTimer);
   }, [formattedDate, currentBranch?.waInstance, queryClient]);
   const { data: masters = [], isLoading: mastersLoading } = useQuery<Master[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters', formattedDate, currentBranch?.waInstance],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters`, formattedDate, currentBranch?.waInstance],
     queryFn: () => fetch(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters/${formattedDate}?branchId=${currentBranch?.waInstance}`, {
       credentials: 'include'
     }).then(res => res.json()),
@@ -2105,7 +2105,7 @@ export default function DailyCalendar() {
 
   // Загружаем все записи из crm_tasks для выбранной даты
   const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks', formattedDate, currentBranch?.waInstance],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks`, formattedDate, currentBranch?.waInstance],
     queryFn: async () => {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks?date=${formattedDate}&branchId=${currentBranch?.waInstance}`, {
         credentials: 'include'
@@ -2120,7 +2120,7 @@ export default function DailyCalendar() {
 
   // Загружаем дочерние задачи для всех основных задач
   const { data: childTasksMap = {} } = useQuery<{ [taskId: number]: Task[] }>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/child-tasks', formattedDate, currentBranch?.waInstance],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/calendar/child-tasks`, formattedDate, currentBranch?.waInstance],
     queryFn: async () => {
       const childrenMap: { [taskId: number]: Task[] } = {};
 
@@ -2151,7 +2151,7 @@ export default function DailyCalendar() {
 
   // Загружаем услуги массажа для правильного расчета длительности
   const { data: serviceServices = [] } = useQuery<serviceService[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/public/service-services'],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/public/service-services`],
   });
 
   // Генерируем временные слоты с 9:00 до 22:00 с шагом 30 минут
@@ -2308,14 +2308,14 @@ export default function DailyCalendar() {
   };
 
   const handleTaskCreated = () => {
-    queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks'] });
-    queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters'] });
+    queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks`] });
+    queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters`] });
     setSelectedTimeSlot(null);
   };
 
   const handleTaskUpdated = () => {
-    queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks'] });
-    queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters'] });
+    queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks`] });
+    queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters`] });
     setSelectedTask(null);
   };
 
@@ -2370,7 +2370,7 @@ export default function DailyCalendar() {
         title: "Запись перемещена",
         description: "Запись успешно перемещена"
       });
-      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks'] });
+      queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks`] });
     },
     onError: (error) => {
       toast({
