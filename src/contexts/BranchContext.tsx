@@ -8,6 +8,7 @@ export interface Branch {
   address: string;
   phoneNumber: string;
   organisationId: string | number; // может быть строкой или числом
+  waInstance?: string; // WhatsApp instance ID (wa1, wa2, wa3, etc.) для обратной совместимости
 }
 
 interface BranchContextType {

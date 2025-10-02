@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useBranch } from "@/contexts/BranchContext";
 import { useIsMaster } from "@/hooks/use-master-role";
+import { getBranchIdWithFallback } from "@/utils/branch-utils";
 import { format, addMinutes, isSameDay, addDays, subDays, isToday } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Loader2, Plus, UserPlus, Edit, X, User, Clock, MapPin, CalendarIcon, ChevronLeft, ChevronRight, CreditCard, Banknote, QrCode, Coins } from "lucide-react";
@@ -171,7 +172,7 @@ const CreateAppointmentDialog = ({
   onTaskCreated: () => void;
 }) => {
   const { toast } = useToast();
-  const { currentBranch } = useBranch();
+  const { currentBranch, branches } = useBranch();
 
   // Загружаем мастеров для выбранной даты
   const { data: masters = [] } = useQuery<Master[]>({
@@ -201,7 +202,7 @@ const CreateAppointmentDialog = ({
   const [formData, setFormData] = useState<ClientFormData>({
     clientName: "",
     phoneNumber: "",
-    branchId: currentBranch?.id?.toString() || 'wa1',
+    branchId: getBranchIdWithFallback(currentBranch, branches),
     serviceType: "",
     masterName: selectedMaster?.name || "",
     masterId: masterId || 0,
@@ -217,14 +218,14 @@ const CreateAppointmentDialog = ({
     if (isOpen) {
       setFormData(prev => ({
         ...prev,
-        branchId: currentBranch?.waInstance || 'wa1',
+        branchId: getBranchIdWithFallback(currentBranch, branches),
         scheduleDate: format(selectedDate, 'yyyy-MM-dd'),
         scheduleTime: selectedTime || prev.scheduleTime,
         masterName: selectedMaster?.name || prev.masterName,
         masterId: masterId || prev.masterId
       }));
     }
-  }, [isOpen, currentBranch, selectedDate, selectedTime, masterId, selectedMaster]);
+  }, [isOpen, currentBranch, branches, selectedDate, selectedTime, masterId, selectedMaster]);
 
   // Доступные длительности для выбранного типа услуги
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
@@ -336,7 +337,7 @@ const CreateAppointmentDialog = ({
       setFormData({
         clientName: "",
         phoneNumber: "",
-        branchId: currentBranch?.waInstance || 'wa1',
+        branchId: getBranchIdWithFallback(currentBranch, branches),
         serviceType: "",
         masterName: "",
         masterId: 0,
@@ -602,7 +603,7 @@ const EditAppointmentDialog = ({
   onTaskUpdated: () => void;
 }) => {
   const { toast } = useToast();
-  const { currentBranch } = useBranch();
+  const { currentBranch, branches } = useBranch();
 
   // Загружаем все мастеров для выбора
   const { data: allMasters = [] } = useQuery<Master[]>({
@@ -635,7 +636,7 @@ const EditAppointmentDialog = ({
   const [formData, setFormData] = useState<ClientFormData>({
     clientName: task?.client?.customName || task?.client?.firstName || "",
     phoneNumber: task?.client?.phoneNumber || "",
-    branchId: task?.branchId || currentBranch?.waInstance || 'wa1',
+    branchId: task?.branchId || getBranchIdWithFallback(currentBranch, branches),
     serviceType: task?.serviceType || "",
     masterName: task?.masterName || "",
     masterId: task?.masterId || 0,
@@ -653,7 +654,7 @@ const EditAppointmentDialog = ({
       setFormData({
         clientName: task.client?.customName || task.client?.firstName || "",
         phoneNumber: task.client?.phoneNumber || "",
-        branchId: task.branchId || currentBranch?.waInstance || 'wa1',
+        branchId: task.branchId || getBranchIdWithFallback(currentBranch, branches),
         serviceType: task.serviceType || "",
         masterName: task.masterName || "",
         masterId: task.masterId || 0,
@@ -1192,7 +1193,7 @@ const EditAppointmentDialog = ({
           dailyReport: calculateTotalPrice() - Math.round(calculateTotalPrice() * formData.discount / 100),
           adminName: selectedAdministrator,
           isGiftCertificateUsed: selectedPaymentMethod === 'Подарочный Сертификат',
-          branchId: currentBranch?.id || '1',
+          branchId: getBranchIdWithFallback(currentBranch, branches),
           date: task.scheduleDate || new Date().toISOString().split('T')[0]
         }),
       });
@@ -2059,7 +2060,7 @@ export default function DailyCalendar() {
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const { currentBranch }: { currentBranch: any } = useBranch();
+  const { currentBranch, branches }: { currentBranch: any; branches: any[] } = useBranch();
   const queryClient = useQueryClient();
 
   // Обновляем текущее время каждую минуту

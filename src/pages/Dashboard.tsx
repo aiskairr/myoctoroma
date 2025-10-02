@@ -12,7 +12,8 @@ import {
   MessageSquare,
   FileX2,
   TrendingUp,
-  Activity
+  Activity,
+  DollarSign
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -72,17 +73,25 @@ export default function Dashboard() {
   const [serviceTypes, setserviceTypes] = useState<serviceTypeStats[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [masterStats, setMasterStats] = useState<MasterStats[]>([]);
+  const [dailyAccountingStats, setDailyAccountingStats] = useState({
+    recordsCount: 0
+  });
+  const [dailyCashData, setDailyCashData] = useState({
+    dailyIncome: 0,
+    dailyExpenses: 0,
+    netProfit: 0
+  });
 
   // Состояния для выбора типов графиков
   const [servicesChartType, setServicesChartType] = useState<ChartType>('pie');
   const [mastersChartType, setMastersChartType] = useState<ChartType>('bar');
 
   const { data, isLoading, error } = useQuery({
-    queryKey: [`/api/stats`, currentBranch?.id],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/stats?branchID=branch${currentBranch?.id}`, currentBranch?.id],
     refetchInterval: 10000,
     enabled: !!currentBranch?.id,
     queryFn: async () => {
-      const response = await fetch(`/api/stats`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/stats?branchID=branch${currentBranch?.id}`, {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
@@ -98,11 +107,11 @@ export default function Dashboard() {
   });
 
   const activitiesQuery = useQuery({
-    queryKey: [`/api/activities`, currentBranch?.id],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/activities?branchID=branch${currentBranch?.id}`, currentBranch?.id],
     refetchInterval: 10000,
     enabled: !!currentBranch?.id,
     queryFn: async () => {
-      const response = await fetch(`/api/activities`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/activities?branchID=branch${currentBranch?.id}`, {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
@@ -118,11 +127,11 @@ export default function Dashboard() {
   });
 
   const serviceStatsQuery = useQuery({
-    queryKey: [`/api/stats/service-types?branchId=${currentBranch?.id}`, currentBranch?.id],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/stats/service-types?branchId=${currentBranch?.id}`, currentBranch?.id],
     refetchInterval: 60000,
     enabled: !!currentBranch?.id,
     queryFn: async () => {
-      const response = await fetch(`/api/stats/service-types?branchId=${currentBranch?.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/stats/service-types?branchId=${currentBranch?.id}`, {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
@@ -138,11 +147,32 @@ export default function Dashboard() {
   });
 
   const masterStatsQuery = useQuery({
-    queryKey: [`/api/stats/masters?branchId=${currentBranch?.id}`, currentBranch?.id],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/stats/masters?branchId=${currentBranch?.id}`, currentBranch?.id],
     refetchInterval: 60000,
     enabled: !!currentBranch?.id,
     queryFn: async () => {
-      const response = await fetch(`/api/stats/masters?branchId=${currentBranch?.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/stats/masters?branchId=${currentBranch?.id}`, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    }
+  });
+
+  const accountingStatsQuery = useQuery({
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/statistics/accounting`, currentBranch?.id],
+    refetchInterval: 60000,
+    enabled: !!currentBranch?.id,
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/statistics/accounting/${today}/${today}?branchId=${currentBranch?.id}`, {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
@@ -194,6 +224,32 @@ export default function Dashboard() {
       }
     }
   }, [masterStatsQuery.data]);
+
+  useEffect(() => {
+    if (accountingStatsQuery.data && typeof accountingStatsQuery.data === 'object') {
+      const apiData = accountingStatsQuery.data as any;
+      
+      // Новый формат данных: data = [доходы, расходы, записей, прибыль]
+      if (apiData.success && Array.isArray(apiData.data) && apiData.data.length >= 4) {
+        const [dailyIncome, dailyExpenses, recordsCount, netProfit] = apiData.data;
+        
+        setDailyAccountingStats({
+          recordsCount: recordsCount || 0
+        });
+        
+        setDailyCashData({
+          dailyIncome: dailyIncome || 0,
+          dailyExpenses: dailyExpenses || 0,
+          netProfit: netProfit || 0
+        });
+      } else {
+        // Fallback для старого формата
+        setDailyAccountingStats({
+          recordsCount: apiData.recordsCount || 0
+        });
+      }
+    }
+  }, [accountingStatsQuery.data]);
 
   const formatActivityTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -627,16 +683,19 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+         
+
+          {/* Accounting Stats Cards */}
           <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Активных пользователей</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{stats.activeUsers.toLocaleString()}</p>
+                  <p className="text-sm font-medium text-gray-600">Доходы за день</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{(dailyCashData?.dailyIncome || 0).toLocaleString()}</p>
                 </div>
                 <div className="p-2 bg-blue-50 rounded-lg">
-                  <Users className="h-6 w-6 text-blue-600" />
+                  <DollarSign className="h-6 w-6 text-blue-600" />
                 </div>
               </div>
             </CardContent>
@@ -646,11 +705,25 @@ export default function Dashboard() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Сообщений сегодня</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{stats.messagesToday.toLocaleString()}</p>
+                  <p className="text-sm font-medium text-gray-600">Расходы за день</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{(dailyCashData?.dailyExpenses || 0).toLocaleString()}</p>
+                </div>
+                <div className="p-2 bg-red-50 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-red-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Записей за день</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{dailyAccountingStats.recordsCount}</p>
                 </div>
                 <div className="p-2 bg-green-50 rounded-lg">
-                  <MessageSquare className="h-6 w-6 text-green-600" />
+                  <Activity className="h-6 w-6 text-green-600" />
                 </div>
               </div>
             </CardContent>
@@ -660,11 +733,11 @@ export default function Dashboard() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Использование API</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{stats.apiUsage}%</p>
+                  <p className="text-sm font-medium text-gray-600">Прибыль за день</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{(dailyCashData?.netProfit || 0).toLocaleString()}</p>
                 </div>
-                <div className="p-2 bg-yellow-50 rounded-lg">
-                  <Cpu className="h-6 w-6 text-yellow-600" />
+                <div className="p-2 bg-purple-50 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-purple-600" />
                 </div>
               </div>
             </CardContent>

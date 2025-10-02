@@ -61,7 +61,7 @@ const GiftCertificatesPage = () => {
       setIsLoading(true);
       try {
         // Загружаем сертификаты
-        const certificatesResponse = await fetch(`/api/gift-certificates?branchId=${currentBranch?.id}`);
+        const certificatesResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?branchId=${currentBranch?.id}`);
         if (certificatesResponse.ok) {
           const allCertificates = await certificatesResponse.json();
 
@@ -77,7 +77,7 @@ const GiftCertificatesPage = () => {
         }
 
         // Загружаем мастеров из таблицы salaries
-        const mastersResponse = await fetch(`/api/employees?role=мастер`);
+        const mastersResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/employees?role=мастер`);
         if (mastersResponse.ok) {
           const mastersData = await mastersResponse.json();
           const masterNames = mastersData.map((m: any) => m.name).filter((name: string) => Boolean(name));
@@ -85,7 +85,7 @@ const GiftCertificatesPage = () => {
         }
 
         // Загружаем администраторов из таблицы salaries
-        const administratorsResponse = await fetch(`/api/employees?role=администратор`);
+        const administratorsResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/employees?role=администратор`);
         if (administratorsResponse.ok) {
           const administratorsData = await administratorsResponse.json();
           const adminNames = administratorsData.map((a: any) => a.name).filter((name: string) => Boolean(name));
@@ -93,7 +93,7 @@ const GiftCertificatesPage = () => {
         }
 
         // Загружаем типы массажа из таблицы client_tasks
-        const serviceTypesResponse = await fetch(`/api/service-types?branchId=${currentBranch?.id}`);
+        const serviceTypesResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/service-types?branchId=${currentBranch?.id}`);
         if (serviceTypesResponse.ok) {
           const serviceTypesData = await serviceTypesResponse.json();
           const typeNames = serviceTypesData.map((t: any) => t.service_type).filter((type: string) => Boolean(type));
@@ -191,7 +191,7 @@ const GiftCertificatesPage = () => {
     }
 
     try {
-      const response = await fetch(`/api/gift-certificates/${certificate.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates/${certificate.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -277,7 +277,7 @@ const GiftCertificatesPage = () => {
     }
 
     try {
-      const response = await fetch(`/api/gift-certificates/search/${searchNumber}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates/search/${searchNumber}`);
       if (response.ok) {
         const certificate = await response.json();
         toast({

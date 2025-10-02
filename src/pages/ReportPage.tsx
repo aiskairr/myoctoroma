@@ -181,12 +181,12 @@ export default function ReportPage() {
     );
   }
 
-  if (user?.role !== 'superadmin') {
+  if (user?.role !== 'superadmin' && user?.role !== 'admin') {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
           <div className="text-lg text-red-600 font-semibold">
-            Только для учредителей!
+            Доступ только для администраторов!
           </div>
         </div>
       </div>
@@ -213,7 +213,6 @@ export default function ReportPage() {
               onChange={(e) => setSelectedBranch(e.target.value)}
               className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">Все филиалы</option>
               {branches.map((branch) => (
                 <option key={branch.id} value={branch.id.toString()}>
                   {branch.branches}
@@ -265,7 +264,6 @@ export default function ReportPage() {
               <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">Дата</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">Администратор</th>
                   <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Доходы</th>
                   <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Расходы</th>
                   <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Итого</th>
@@ -287,7 +285,6 @@ export default function ReportPage() {
                     <td className="px-4 py-3 border-b">
                       {new Date(report.date).toLocaleDateString('ru-RU')}
                     </td>
-                    <td className="px-4 py-3 border-b">{report.admin_name}</td>
                     <td className="px-4 py-3 text-right border-b text-green-600 font-medium">
                       {(report.total_revenue || 0).toLocaleString()} сом
                     </td>
@@ -333,7 +330,6 @@ export default function ReportPage() {
                 {/* Totals Row */}
                 <tr className="bg-blue-50 font-bold">
                   <td className="px-4 py-3 border-b font-bold">ИТОГО</td>
-                  <td className="px-4 py-3 border-b"></td>
                   <td className="px-4 py-3 text-right border-b text-green-600">
                     {totals.totalRevenue.toLocaleString()} сом
                   </td>

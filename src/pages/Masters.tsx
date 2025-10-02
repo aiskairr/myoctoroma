@@ -348,7 +348,6 @@ const MasterForm: React.FC<{
         <h3 className="text-xl font-semibold text-gray-900">Рабочие дни и часы</h3>
         <Separator />
         <MasterWorkingDatesManager
-          masterId={master?.id}
           workingDates={workingDates}
           onWorkingDatesChange={handleWorkingDatesChange}
         />
@@ -442,7 +441,10 @@ const MasterCard: React.FC<{
               {master.startWorkHour} - {master.endWorkHour}
             </span>
           </div>
-          <MasterWorkingDatesDisplay workingDates={master.workingDates || []} />
+          <MasterWorkingDatesDisplay 
+            masterId={master.id}
+            masterName={master.name}
+          />
           {master.description && (
             <p className="text-sm text-gray-500 line-clamp-3">
               {master.description}

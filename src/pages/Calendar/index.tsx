@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import TimeScheduleComponent from "./components/time-schedule";
+import AdvancedScheduleComponent from "./components/time-schedule";
 
 const CalendarScreen = () => {
     // Функция для извлечения даты из URL
@@ -84,7 +84,7 @@ const CalendarScreen = () => {
 
     return (
         <div>
-            <TimeScheduleComponent key={selectedDate.toISOString()} initialDate={selectedDate} />
+            <AdvancedScheduleComponent key={selectedDate.toISOString()} initialDate={selectedDate} />
         </div>
     )
 }

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { AlertTriangle, Send } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/SimpleAuthContext';
 
 interface AccountingRecord {
   id?: number;
@@ -67,6 +68,9 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
   records, 
   expenses 
 }) => {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  
   const [reportData, setReportData] = useState<DailyCashReportData>({
     startBalance: 0,
     totalRevenue: 0,
@@ -88,7 +92,6 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
   
   const [cashCollection, setCashCollection] = useState<number>(0);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const { toast } = useToast();
 
   // Функция для получения остатка на начало смены (из вчерашнего отчета)
   useEffect(() => {
@@ -168,8 +171,8 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
             todayGiftCerts: todayGiftCerts.length,
             giftCertificatesRevenue,
             sampleCert: todayGiftCerts[0],
-            allCerts: giftCerts.map(c => ({ id: c.id, amount: c.amount, payment_method: c.payment_method, branch_id: c.branch_id, createdAt: c.createdAt })),
-            filteredTodayCerts: todayGiftCerts.map(c => ({ id: c.id, amount: c.amount, payment_method: c.payment_method })),
+            allCerts: giftCerts.map((c: any) => ({ id: c.id, amount: c.amount, payment_method: c.payment_method, branch_id: c.branch_id, createdAt: c.createdAt })),
+            filteredTodayCerts: todayGiftCerts.map((c: any) => ({ id: c.id, amount: c.amount, payment_method: c.payment_method })),
             paymentMethodBreakdown: {
               cash: giftCertificatesByPaymentMethod.cash,
               mbank: giftCertificatesByPaymentMethod.mbank,
@@ -325,12 +328,28 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
       const reportPayload = {
         date: new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
         branchId,
-        adminName: 'Текущий администратор', // Можно получить из контекста пользователя
-        ...reportData,
-        cashCollection
+        adminName: user?.username || user?.email || 'Неизвестно',
+        startBalance: reportData.startBalance,
+        totalRevenue: reportData.totalRevenue,
+        pettyExpenses: reportData.pettyExpenses,
+        totalIncome: reportData.totalIncome,
+        endBalance: reportData.endBalance,
+        cashCollection,
+        cashPayments: reportData.cashPayments,
+        cardPayments: reportData.cardPayments,
+        transferPayments: reportData.transferPayments,
+        giftCertificatePayments: reportData.giftCertificatePayments,
+        optimaPayments: reportData.optimaPayments,
+        mbankPayments: reportData.mbankPayments,
+        mbusinessPayments: reportData.mbusinessPayments,
+        demirPayments: reportData.demirPayments,
+        bakaiPayments: reportData.bakaiPayments,
+        obankPayments: reportData.obankPayments,
       };
 
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/daily-cash-reports', {
+      console.log('Sending daily cash report payload:', reportPayload);
+
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/daily-cash-reports`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

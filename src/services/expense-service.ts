@@ -23,7 +23,7 @@ class ExpenseService {
 
   async createExpense(expense: Omit<ExpenseRecord, 'id'>): Promise<ExpenseRecord | null> {
     try {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/expenses', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/expenses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

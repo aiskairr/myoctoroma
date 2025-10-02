@@ -134,7 +134,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
   // Загрузка списка массажных услуг
   const loadserviceServices = async () => {
     try {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/public/service-services', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/service-services`, {
         credentials: 'include'
       });
       

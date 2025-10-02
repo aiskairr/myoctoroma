@@ -88,6 +88,17 @@ const AccountingPage = () => {
   const [branches, setBranches] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [dailyStats, setDailyStats] = useState({
+    dailyIncome: 0,
+    dailyExpenses: 0,
+    recordsCount: 0,
+    netProfit: 0
+  });
+  const [dailyCashData, setDailyCashData] = useState({
+    dailyIncome: 0,
+    dailyExpenses: 0,
+    netProfit: 0
+  });
   const [newRecord, setNewRecord] = useState<AccountingRecord>({
     master: '',
     client: '',
@@ -154,7 +165,7 @@ const AccountingPage = () => {
 
   const fetchServices = async () => {
     try {
-      const response = await apiGetJson(`/api/crm/services/${branchID}`);
+      const response = await apiGetJson(`/api/crm/services/${currentBranch?.id}`);
       console.log('Services response:', response);
       return response;
     } catch (error) {
@@ -178,17 +189,69 @@ const AccountingPage = () => {
     }
   };
 
+  const fetchAccountingStatistics = async (date?: Date) => {
+    try {
+      const targetDate = date || selectedDate;
+      const dateString = new Date(targetDate.getTime() - (targetDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+      
+      if (!currentBranch?.id) {
+        console.warn('No branch ID available for statistics fetch');
+        return;
+      }
+
+      const url = `${import.meta.env.VITE_BACKEND_URL}/api/statistics/accounting/${dateString}/${dateString}?branchId=${currentBranch.id}`;
+      console.log('Fetching accounting statistics with URL:', url);
+      
+      const response = await fetch(url);
+      if (response.ok) {
+        const apiData = await response.json();
+        console.log('Accounting statistics response:', apiData);
+        
+        // Новый формат данных: data = [доходы, расходы, записей, прибыль]
+        if (apiData.success && Array.isArray(apiData.data) && apiData.data.length >= 4) {
+          const [dailyIncome, dailyExpenses, recordsCount, netProfit] = apiData.data;
+          
+          setDailyStats({
+            dailyIncome,
+            dailyExpenses, 
+            recordsCount,
+            netProfit
+          });
+          
+          setDailyCashData({
+            dailyIncome,
+            dailyExpenses,
+            netProfit
+          });
+        } else {
+          console.error('Invalid data format from accounting statistics API');
+        }
+      } else {
+        console.error('Failed to fetch accounting statistics:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching accounting statistics:', error);
+    }
+  };
+
   const fetchData = async (date?: Date) => {
     setIsLoading(true);
     const targetDate = date || selectedDate;
     const dateString = new Date(targetDate.getTime() - (targetDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
     try {
-      const accountingRecords = await accountingService.getRecordsForDate(dateString, currentBranch?.id?.toString() || '');
-      setRecords(accountingRecords as AccountingRecord[]);
-
-      const expenseRecords = await expenseService.getExpensesForDate(dateString, currentBranch?.id?.toString() || '');
-      setExpenses(expenseRecords as ExpenseRecord[]);
+      // Загружаем данные параллельно
+      await Promise.all([
+        (async () => {
+          const accountingRecords = await accountingService.getRecordsForDate(dateString, currentBranch?.id?.toString() || '');
+          setRecords(accountingRecords as AccountingRecord[]);
+        })(),
+        (async () => {
+          const expenseRecords = await expenseService.getExpensesForDate(dateString, currentBranch?.id?.toString() || '');
+          setExpenses(expenseRecords as ExpenseRecord[]);
+        })(),
+        fetchAccountingStatistics(targetDate)
+      ]);
     } catch (error) {
       console.error('Ошибка загрузки данных:', error);
     } finally {
@@ -506,11 +569,6 @@ const AccountingPage = () => {
               </div>
             </DialogContent>
           </Dialog>
-
-          <Button variant="outline" size="sm" className="gap-2">
-            <Download className="h-4 w-4" />
-            Экспорт
-          </Button>
         </div>
       </div>
 
@@ -524,7 +582,7 @@ const AccountingPage = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-blue-600">Доходы за день</p>
-                <p className="text-2xl font-bold text-blue-800">{calculateDailyTotal()} с</p>
+                <p className="text-2xl font-bold text-blue-800">{(dailyCashData?.dailyIncome || 0).toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -538,7 +596,7 @@ const AccountingPage = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-red-600">Расходы за день</p>
-                <p className="text-2xl font-bold text-red-800">{calculateTotalExpenses()} с</p>
+                <p className="text-2xl font-bold text-red-800">{(dailyCashData?.dailyExpenses || 0).toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -552,7 +610,7 @@ const AccountingPage = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-green-600">Записей за день</p>
-                <p className="text-2xl font-bold text-green-800">{records.length}</p>
+                <p className="text-2xl font-bold text-green-800">{dailyStats.recordsCount}</p>
               </div>
             </div>
           </CardContent>
@@ -567,7 +625,7 @@ const AccountingPage = () => {
               <div>
                 <p className="text-sm font-medium text-purple-600">Чистая прибыль</p>
                 <p className="text-2xl font-bold text-purple-800">
-                  {(parseFloat(calculateDailyTotal()) - calculateTotalExpenses()).toFixed(2)} с
+                  {(dailyCashData?.netProfit || 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -1104,7 +1162,7 @@ const AccountingPage = () => {
                             <p className="text-xs text-red-500">Всего позиций: {expenses.length}</p>
                           </div>
                         </div>
-                        <p className="text-2xl font-bold text-red-800">{calculateTotalExpenses()} с</p>
+                        <p className="text-2xl font-bold text-red-800">{(dailyCashData?.dailyExpenses || 0).toLocaleString()}</p>
                       </div>
                     </CardContent>
                   </Card>

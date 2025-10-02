@@ -35,7 +35,7 @@ class GiftCertificateService {
 
   async saveCertificate(certificate: Omit<GiftCertificate, 'id' | 'createdAt' | 'updatedAt'>): Promise<GiftCertificate | null> {
     try {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -33,7 +33,7 @@ export function MobileMasterLogin({ onLogin, isMobile }: MobileMasterLoginProps)
 
     try {
       // Используем специальный endpoint для мобильного входа мастеров
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/auth/mobile-login', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/mobile-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

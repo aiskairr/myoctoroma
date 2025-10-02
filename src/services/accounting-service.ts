@@ -33,7 +33,7 @@ class AccountingService {
 
   async saveRecord(record: Omit<AccountingRecord, 'id'>): Promise<AccountingRecord | null> {
     try {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/accounting', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -99,7 +99,7 @@ class AccountingService {
 
   async updateRecords(records: AccountingRecord[]): Promise<boolean> {
     try {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/accounting/bulk-update', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting/bulk-update`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

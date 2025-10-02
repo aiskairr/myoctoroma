@@ -382,7 +382,7 @@ const ServicesTable: React.FC = () => {
                                             return (
                                                 <div key={time} className="flex justify-between border-b pb-1">
                                                     <span>{time} минут:</span>
-                                                    <span className="font-medium">{price} ₸</span>
+                                                    <span className="font-medium">{price} с</span>
                                                 </div>
                                             );
                                         }

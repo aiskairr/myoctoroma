@@ -109,7 +109,7 @@ const GiftCertificatesPage = () => {
     }
 
     try {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

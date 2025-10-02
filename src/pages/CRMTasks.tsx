@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "../lib/queryClient";
 import { useBranchFilter } from "@/hooks/use-branch-filter";
 import { useBranch } from "@/contexts/BranchContext";
+import { getBranchIdWithFallback } from "@/utils/branch-utils";
 import { useLocation } from "wouter";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -222,7 +223,7 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
     queryKey: ['/api/tasks/children', task.id],
     enabled: isOpen,
     queryFn: async () => {
-      const res = await fetch(`/api/tasks/${task.id}/children`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}/children`);
       if (!res.ok) return [];
       return res.json();
     }
@@ -730,8 +731,16 @@ const TaskDetailDialog = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: 
 // Компонент карточки задачи
 const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => void }) => {
   const { toast } = useToast();
-  const { currentBranch } = useBranch();
+  const { currentBranch, branches } = useBranch();
   const [, setLocation] = useLocation();
+
+  // Создаем карту филиалов для быстрого поиска
+  const branchMap = React.useMemo(() => {
+    return branches.reduce((acc, branch) => {
+      acc[branch.id.toString()] = branch.branches;
+      return acc;
+    }, {} as Record<string, string>);
+  }, [branches]);
 
   // Функция для определения цвета карточки в зависимости от источника и филиала
   const getCardBackgroundColor = () => {
@@ -1242,7 +1251,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
           <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
             <MapPin className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm">
-              {task.branchId === 'wa1' ? 'Токтогула 93' : task.branchId}
+              {branchMap[task.branchId] || task.branchId}
             </span>
           </div>
         )}
@@ -1415,12 +1424,14 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
                           <SelectValue placeholder="Выберите филиал" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="wa1">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4" />
-                              Токтогула 93 (wa1)
-                            </div>
-                          </SelectItem>
+                          {branches.map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id.toString()}>
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4" />
+                                {branch.branches} ({branch.id})
+                              </div>
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1664,7 +1675,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
   // Состояние для управления диалогом
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
-  const { currentBranch } = useBranch();
+  const { currentBranch, branches } = useBranch();
 
   // Начальное состояние формы
   interface ClientFormData {
@@ -1681,7 +1692,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
   const [formData, setFormData] = useState<ClientFormData>({
     clientName: "",
     phoneNumber: "",
-    branchId: currentBranch && currentBranch.id ? currentBranch.id.toString() : 'wa1',
+    branchId: getBranchIdWithFallback(currentBranch, branches),
     serviceType: "",
     masterName: "",
     notes: "",
@@ -1909,7 +1920,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
       setFormData({
         clientName: "",
         phoneNumber: "",
-        branchId: currentBranch?.id?.toString() || 'wa1',
+        branchId: getBranchIdWithFallback(currentBranch, branches),
         serviceType: "",
         masterName: "",
         notes: "",
@@ -1967,7 +1978,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
         // Устанавливаем текущий филиал если не указан
         setFormData(prev => ({
           ...prev,
-          branchId: currentBranch && currentBranch.id ? currentBranch.id.toString() : 'wa1'
+          branchId: getBranchIdWithFallback(currentBranch, branches)
         }));
       }
 
@@ -1993,9 +2004,9 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
             // Инициализация формы при открытии
             setFormData(prev => ({
               ...prev,
-              branchId: currentBranch && currentBranch.id ? currentBranch.id.toString() : 'wa1'
+              branchId: getBranchIdWithFallback(currentBranch, branches)
             }));
-            console.log("Филиал для нового клиента:", currentBranch?.id?.toString() || 'wa1');
+            console.log("Филиал для нового клиента:", getBranchIdWithFallback(currentBranch, branches));
 
             // Открываем диалог
             setIsOpen(true);
@@ -2068,12 +2079,14 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
                         <SelectValue placeholder="Выберите филиал" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="wa1">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />
-                            Токтогула 93
-                          </div>
-                        </SelectItem>
+                        {branches.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id.toString()}>
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4" />
+                              {branch.branches}
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -2284,10 +2297,15 @@ const IntegrationsFilter = ({
   setSelectedIntegrations: React.Dispatch<React.SetStateAction<IntegrationType[]>>
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { branches } = useBranch();
 
   // Список всех доступных интеграций
   const integrations = [
-    { id: 'wa1', label: 'WhatsApp Токтогула (wa1)', icon: Phone },
+    ...branches.map(branch => ({ 
+      id: branch.id.toString() as IntegrationType, 
+      label: `WhatsApp ${branch.branches} (${branch.id})`, 
+      icon: Phone 
+    })),
     { id: 'telegram', label: 'Telegram', icon: Phone },
     { id: 'instagram', label: 'Instagram', icon: Phone },
   ];
@@ -2372,7 +2390,7 @@ const IntegrationsFilter = ({
 const CRMTasks: React.FC = () => {
   const [activeTab, setActiveTab] = useState('new');
   const { toast } = useToast();
-  const { currentBranch } = useBranch();
+  const { currentBranch, branches } = useBranch();
 
   // Состояние для сортировки
   const [sortType, setSortType] = useState<SortType>('date');

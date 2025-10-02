@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, User, DollarSign, Calculator, Trash2, Edit, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useBranch } from '@/contexts/BranchContext';
 
 interface SalaryRecord {
   id?: number;
@@ -42,6 +43,7 @@ interface AccountingData {
 }
 
 export default function SalaryPage() {
+  const { currentBranch } = useBranch();
   const [salaryRecords, setSalaryRecords] = useState<SalaryRecord[]>([]);
   const [salaryPayments, setSalaryPayments] = useState<SalaryPayment[]>([]);
   const [accountingData, setAccountingData] = useState<AccountingData[]>([]);
@@ -65,7 +67,12 @@ export default function SalaryPage() {
   const fetchSalaryData = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/salaries');
+      const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/salaries`);
+      if (currentBranch?.id) {
+        url.searchParams.append('branchId', currentBranch.id.toString());
+      }
+      
+      const response = await fetch(url.toString());
       if (response.ok) {
         const data = await response.json();
         // Новый формат API возвращает объект с полем salaries
@@ -97,7 +104,14 @@ export default function SalaryPage() {
   // Загрузка данных из accounting для расчетов
   const fetchAccountingData = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting/period?startDate=${startDate}&endDate=${endDate}`);
+      const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/accounting/period`);
+      url.searchParams.append('startDate', startDate);
+      url.searchParams.append('endDate', endDate);
+      if (currentBranch?.id) {
+        url.searchParams.append('branchId', currentBranch.id.toString());
+      }
+      
+      const response = await fetch(url.toString());
       if (response.ok) {
         const data = await response.json();
         setAccountingData(data);
@@ -110,10 +124,19 @@ export default function SalaryPage() {
   // Загрузка выплат за период
   const fetchSalaryPayments = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments?startDate=${startDate}&endDate=${endDate}`);
+      if (!currentBranch?.id) {
+        console.log('Филиал не выбран, пропускаем загрузку выплат');
+        setSalaryPayments([]);
+        return;
+      }
+      
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments?startDate=${startDate}&endDate=${endDate}&branchId=${currentBranch.id}`);
       if (response.ok) {
         const data = await response.json();
-        setSalaryPayments(data);
+        console.log('Данные выплат:', data);
+        // Убеждаемся что данные это массив
+        const paymentsArray = Array.isArray(data) ? data : (data.payments || []);
+        setSalaryPayments(paymentsArray);
       }
     } catch (error) {
       console.error('Ошибка загрузки выплат:', error);
@@ -124,7 +147,7 @@ export default function SalaryPage() {
     fetchSalaryData();
     fetchAccountingData();
     fetchSalaryPayments();
-  }, [startDate, endDate]);
+  }, [startDate, endDate, currentBranch?.id]);
 
   // Расчет зарплаты для администраторов
   const calculateAdminSalary = (employee: string, baseSalary: number, commissionRate: number) => {
@@ -173,6 +196,11 @@ export default function SalaryPage() {
 
   // Получение общей выплаченной суммы для сотрудника за период
   const getTotalPaidAmount = (employeeName: string) => {
+    if (!Array.isArray(salaryPayments)) {
+      console.warn('salaryPayments is not an array:', salaryPayments);
+      return 0;
+    }
+    
     return salaryPayments
       .filter(payment => payment.employee_name === employeeName)
       .reduce((sum, payment) => sum + payment.amount, 0);
@@ -181,7 +209,7 @@ export default function SalaryPage() {
   // Сохранение выплаты
   const savePayment = async (employeeId: number, employeeName: string, amount: number) => {
     try {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/salary-payments', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -475,7 +503,7 @@ export default function SalaryPage() {
                   const editData = editedData[record.id!] || record;
                   
                   return (
-                    <tr key={record.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <tr key={`${record.id}-${index}`} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                       <td className="border border-gray-200 p-3">
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-gray-600" />
