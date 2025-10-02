@@ -285,6 +285,28 @@ const MasterForm: React.FC<{
         </div>
         <Separator />
         
+        {/* Информация о связанном пользователе из нового эндпоинта */}
+        {(() => {
+          console.log('🔍 Finding user for master:', formData.name, 'in branchUsers:', branchUsers);
+          const linkedUser = findUserByName(branchUsers, formData.name);
+          console.log('🎯 Found linked user:', linkedUser);
+          if (linkedUser && !accountData.createAccount) {
+            return (
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 transition-all duration-200">
+                <p className="text-sm font-medium text-blue-800 mb-2">🔗 Связанный пользователь найден:</p>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <p><strong>Логин:</strong> {linkedUser.username}</p>
+                  <p><strong>Email:</strong> {linkedUser.email}</p>
+                  <p><strong>Роль:</strong> {linkedUser.role}</p>
+                  <p><strong>ID:</strong> {linkedUser.id}</p>
+                  <p><strong>Филиал:</strong> {linkedUser.branchId}</p>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
+
         {master && userAccountData && !accountData.createAccount && (
           <div className="p-4 bg-green-50 rounded-lg border border-green-200 transition-all duration-200">
             <p className="text-sm font-medium text-green-800 mb-2">Аккаунт существует (новый эндпоинт):</p>
@@ -692,15 +714,35 @@ const AdministratorForm: React.FC<{
         </div>
         <Separator />
         
+        {/* Информация о связанном пользователе из нового эндпоинта */}
+        {(() => {
+          console.log('🔍 Finding user for admin:', formData.name, 'in branchUsers:', branchUsers);
+          const linkedUser = findUserByName(branchUsers, formData.name);
+          console.log('🎯 Found linked user:', linkedUser);
+          if (linkedUser && !accountData.createAccount) {
+            return (
+              <div className="p-4 bg-purple-50 rounded-lg border border-purple-200 transition-all duration-200">
+                <p className="text-sm font-medium text-purple-800 mb-2">🔗 Связанный пользователь найден:</p>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <p><strong>Логин:</strong> {linkedUser.username}</p>
+                  <p><strong>Email:</strong> {linkedUser.email}</p>
+                  <p><strong>Роль:</strong> {linkedUser.role}</p>
+                  <p><strong>ID:</strong> {linkedUser.id}</p>
+                  <p><strong>Филиал:</strong> {linkedUser.branchId}</p>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
+
         {administrator && userAccountData && !accountData.createAccount && (
           <div className="p-4 bg-green-50 rounded-lg border border-green-200 transition-all duration-200">
-            <p className="text-sm font-medium text-green-800 mb-2">Аккаунт существует (новый эндпоинт):</p>
+            <p className="text-sm font-medium text-green-800 mb-2">Аккаунт существует (старый эндпоинт):</p>
             <div className="space-y-1 text-sm text-gray-600">
               <p><strong>Логин:</strong> {userAccountData.username}</p>
               <p><strong>Email:</strong> {userAccountData.email}</p>
               <p><strong>Роль:</strong> {userAccountData.role}</p>
-              <p><strong>ID:</strong> {userAccountData.id}</p>
-              <p><strong>Филиал:</strong> {userAccountData.branchId}</p>
             </div>
           </div>
         )}

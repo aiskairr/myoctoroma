@@ -178,6 +178,7 @@ function App() {
           <Route path="/crm/services">
             <ProtectedLayout>
               <CRMServices />
+              <div></div>
             </ProtectedLayout>
           </Route>
 

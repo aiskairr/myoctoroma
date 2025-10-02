@@ -160,12 +160,10 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem("currentBranchId", branch.id.toString());
   };
 
-  // Загружаем филиалы при монтировании компонента и когда пользователь загружен
+  // Загружаем филиалы при монтировании компонента
   useEffect(() => {
-    if (isAuthenticated && user) {
-      fetchBranches();
-    }
-  }, [isAuthenticated, user]);
+    fetchBranches();
+  }, []);
 
   // Значение контекста
   const value = {

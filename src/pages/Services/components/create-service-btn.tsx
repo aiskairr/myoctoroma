@@ -73,7 +73,7 @@ const CreateServiceBtn = () => {
 
     const createMutation = useMutation({
         mutationFn: async (service: Omit<any, 'id' | 'createdAt'>) => {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchID}`, {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -81,7 +81,6 @@ const CreateServiceBtn = () => {
                     description: service.description,
                     isActive: service.isActive,
                     branchID: service.instanceId,
-                    branchId: service.instanceId,
                     defaultDuration: service.defaultDuration,
                     duration10_price: 0,
                     duration15_price: 0,

@@ -1,6 +1,4 @@
 
-import { apiGetJson, apiPost, apiPut, apiDelete } from '@/lib/api';
-
 interface AccountingRecord {
   id?: number;
   master: string;
@@ -22,8 +20,11 @@ interface AccountingRecord {
 class AccountingService {
   async getRecordsForDate(date: string, branchId: string): Promise<AccountingRecord[]> {
     try {
-      const response = await apiGetJson(`/api/accounting?date=${date}&branchId=${branchId}`);
-      return response;
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting?date=${date}&branchId=${branchId}`);
+      if (response.ok) {
+        return await response.json();
+      }
+      return [];
     } catch (error) {
       console.error('Error fetching accounting records:', error);
       return [];
@@ -32,61 +33,63 @@ class AccountingService {
 
   async saveRecord(record: Omit<AccountingRecord, 'id'>): Promise<AccountingRecord | null> {
     try {
-      const recordData = {
-        master: record.master,
-        client: record.client,
-        serviceType: record.serviceType,
-        phoneNumber: record.phoneNumber,
-        amount: Number(record.amount),
-        discount: record.discount,
-        duration: record.duration,
-        comment: record.comment,
-        paymentMethod: record.paymentMethod,
-        dailyReport: record.dailyReport,
-        adminName: record.adminName,
-        isGiftCertificateUsed: record.isGiftCertificateUsed,
-        branchId: record.branchId,
-        date: record.date,
-        schedule_date: record.date // Добавляем schedule_date для корректного сохранения
-      };
-      
-      console.log('Saving accounting record with data:', recordData);
-      const response = await apiPost('/api/accounting', recordData);
-      
-      // Проверяем, что ответ успешный
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/accounting', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          master: record.master,
+          client: record.client,
+          serviceType: record.serviceType,
+          phoneNumber: record.phoneNumber,
+          amount: Number(record.amount),
+          discount: record.discount,
+          duration: record.duration,
+          comment: record.comment,
+          paymentMethod: record.paymentMethod,
+          dailyReport: record.dailyReport,
+          adminName: record.adminName,
+          isGiftCertificateUsed: record.isGiftCertificateUsed,
+          branchId: record.branchId,
+          date: record.date,
+          schedule_date: record.date // Добавляем schedule_date для корректного сохранения
+        }),
+      });
       if (response.ok) {
         return await response.json();
-      } else {
-        const errorText = await response.text();
-        console.error('Server response error:', response.status, errorText);
-        throw new Error(`Server returned ${response.status}: ${errorText}`);
       }
+      return null;
     } catch (error) {
       console.error('Error saving accounting record:', error);
-      throw error; // Пробрасываем ошибку для обработки в UI
+      return null;
     }
   }
 
   async updateRecord(record: AccountingRecord): Promise<boolean> {
     try {
-      const recordData = {
-        master: record.master,
-        client: record.client,
-        serviceType: record.serviceType,
-        phoneNumber: record.phoneNumber,
-        amount: Number(record.amount),
-        discount: record.discount,
-        duration: record.duration,
-        comment: record.comment,
-        paymentMethod: record.paymentMethod,
-        dailyReport: record.dailyReport,
-        adminName: record.adminName,
-        isGiftCertificateUsed: record.isGiftCertificateUsed,
-        branchId: record.branchId,
-        date: record.date
-      };
-      
-      const response = await apiPut(`/api/accounting/${record.id}`, recordData);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting/${record.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          master: record.master,
+          client: record.client,
+          serviceType: record.serviceType,
+          phoneNumber: record.phoneNumber,
+          amount: Number(record.amount),
+          discount: record.discount,
+          duration: record.duration,
+          comment: record.comment,
+          paymentMethod: record.paymentMethod,
+          dailyReport: record.dailyReport,
+          adminName: record.adminName,
+          isGiftCertificateUsed: record.isGiftCertificateUsed,
+          branchId: record.branchId,
+          date: record.date
+        }),
+      });
       return response.ok;
     } catch (error) {
       console.error('Error updating accounting record:', error);
@@ -96,7 +99,13 @@ class AccountingService {
 
   async updateRecords(records: AccountingRecord[]): Promise<boolean> {
     try {
-      const response = await apiPut('/api/accounting/bulk-update', records);
+      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/accounting/bulk-update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(records),
+      });
       return response.ok;
     } catch (error) {
       console.error('Error updating accounting records:', error);
@@ -106,7 +115,9 @@ class AccountingService {
 
   async deleteRecord(id: number): Promise<boolean> {
     try {
-      const response = await apiDelete(`/api/accounting/${id}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting/${id}`, {
+        method: 'DELETE',
+      });
       return response.ok;
     } catch (error) {
       console.error('Error deleting accounting record:', error);

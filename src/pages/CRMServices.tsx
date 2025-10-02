@@ -67,10 +67,21 @@ export default function CRMServices() {
   // Create service mutation
   const createMutation = useMutation({
     mutationFn: async (newService: ServiceFormData) => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchID}`, {
+      const url = `${import.meta.env.VITE_BACKEND_URL}/api/crm/services`;
+      console.log('CREATE SERVICE - URL:', url);
+      console.log('CREATE SERVICE - Data:', { ...newService, branchID });
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newService),
+        body: JSON.stringify({
+          name: newService.name,
+          description: newService.description,
+          isActive: newService.isActive,
+          branchID: branchID,
+          serviceGroup: newService.serviceGroup,
+          durationPrices: newService.durationPrices
+        }),
       });
       
       if (!response.ok) {
@@ -81,7 +92,7 @@ export default function CRMServices() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchID}`] });
+      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
       setIsAddDialogOpen(false);
       resetForm();
       toast({
@@ -108,6 +119,7 @@ export default function CRMServices() {
           name: updatedService.name,
           description: updatedService.description,
           isActive: updatedService.isActive,
+          branchID: branchID,
           serviceGroup: updatedService.serviceGroup,
           durationPrices: updatedService.durationPrices
         }),
@@ -121,7 +133,7 @@ export default function CRMServices() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchID}`] });
+      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
       setIsEditDialogOpen(false);
       setSelectedService(null);
       resetForm();
@@ -154,7 +166,7 @@ export default function CRMServices() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchID}`] });
+      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
       setSelectedService(null);
       toast({
         title: "Успех",

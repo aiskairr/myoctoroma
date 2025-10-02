@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Trash2, Plus } from "lucide-react";
 import { format, addMonths, startOfMonth, endOfMonth, isSameDay } from "date-fns";
 import { ru } from "date-fns/locale";
-import { useBranch } from "@/contexts/BranchContext";
 
 interface WorkingDate {
   date: string; // ISO date string
@@ -30,7 +29,6 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
   onWorkingDatesChange,
   currentMonth = new Date()
 }) => {
-  const { branches } = useBranch();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [newWorkingDate, setNewWorkingDate] = useState({
     startTime: '09:00',
@@ -50,6 +48,10 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
 
   // Получаем массив дат для выделения в календаре
   const workingDays = workingDatesInMonth.map(wd => new Date(wd.date));
+
+  const branches = [
+    { id: 'wa1', name: 'Токтогула 93' }
+  ];
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -153,7 +155,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                     >
                       {branches.map(branch => (
                         <option key={branch.id} value={branch.id}>
-                          {branch.branches}
+                          {branch.name}
                         </option>
                       ))}
                     </select>
@@ -234,8 +236,8 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
               ) : (
                 workingDatesInMonth
                   .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                  .map((workingDate) => {
-                    const branch = branches.find(b => b.id.toString() === workingDate.branchId);
+                  .map((workingDate, index) => {
+                    const branch = branches.find(b => b.id === workingDate.branchId);
                     return (
                       <div 
                         key={`${workingDate.date}-${workingDate.branchId}`}
@@ -249,7 +251,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                             {workingDate.startTime} - {workingDate.endTime}
                           </div>
                           <Badge variant="secondary" className="text-xs mt-1">
-                            {branch?.branches || workingDate.branchId}
+                            {branch?.name || workingDate.branchId}
                           </Badge>
                         </div>
                         <Button
