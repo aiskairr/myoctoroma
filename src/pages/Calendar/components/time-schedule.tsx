@@ -1,102 +1,38 @@
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Plus, X, Clock, User, Calendar, GripVertical, Coins } from 'lucide-react';
+import { Plus, X, Clock, User, Calendar, GripVertical } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { useBranch } from "@/contexts/BranchContext";
-import { format, addMinutes, isSameDay } from "date-fns";
-import { ru } from "date-fns/locale";
 import TaskDialogBtn from './task-dialog-btn';
 
-// Types matching DailyCalendar
+// Types
 interface DragState {
     isDragging: boolean;
-    draggedAppointment: AppointmentDisplay | null;
+    draggedAppointment: Appointment | null;
     dragStartPosition: { x: number; y: number };
     currentPosition: { x: number; y: number };
-    targetSlot: { employeeId: number; timeSlot: string } | null;
+    targetSlot: { employeeId: string; timeSlot: string } | null;
     dragOffset: { x: number; y: number };
 }
 
 interface ResizeState {
     isResizing: boolean;
-    resizedAppointment: AppointmentDisplay | null;
+    resizedAppointment: Appointment | null;
     originalDuration: number;
     direction: 'top' | 'bottom' | null;
 }
 
-interface Master {
-    id: number;
-    name: string;
-    specialization?: string;
-    isActive: boolean;
-    startWorkHour?: string;
-    endWorkHour?: string;
-    schedules?: Array<{
-        days: string[];
-        from: string;
-        to: string;
-        branch: string;
-    }>;
-    branchId: string;
-    photoUrl?: string;
-}
-
-interface Task {
-    id: number;
-    clientId: number;
-    client: {
-        id: number;
-        telegramId: string;
-        firstName?: string;
-        lastName?: string;
-        customName?: string;
-        phoneNumber?: string;
-    };
-    status: string;
-    serviceType?: string;
-    serviceServiceId?: number;
-    serviceDuration?: number;
-    duration?: number;
-    servicePrice?: number;
-    finalPrice?: number;
-    scheduleDate?: string;
-    scheduleTime?: string;
-    endTime?: string;
-    masterName?: string;
-    masterId?: number;
-    branchId?: string;
-    notes?: string;
-    mother?: number; // ID материнской записи для дополнительных услуг
-    paid?: string; // Статус оплаты: 'paid' или 'unpaid'
-    createdAt: string;
-}
-
-interface serviceDurationsResponse {
-    serviceType: string;
-    availableDurations: Array<{
-        duration: number;
-        price: number;
-    }>;
-    defaultDuration: number;
-}
-
-// UI compatibility interface
 interface Employee {
     id: string;
     name: string;
-    specialization?: string;
-    isActive: boolean;
-    startWorkHour?: string;
-    endWorkHour?: string;
-    photoUrl?: string;
-    branchId: string;
+    role: string;
+    workHours: {
+        start: string;
+        end: string;
+    };
     color: string;
 }
 
-interface AppointmentDisplay {
+interface Appointment {
     id: string;
     employeeId: string;
     clientName: string;
@@ -106,66 +42,44 @@ interface AppointmentDisplay {
     duration: number;
     status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
     notes?: string;
-    paid?: string;
-    phone?: string;
-    mother?: number;
-    originalTask?: Task; // Keep reference to original task data
 }
 
-interface ServiceService {
-    id: number;
+interface NewEmployeeForm {
     name: string;
-    defaultDuration: number;
-    duration10_price?: number;
-    duration15_price?: number;
-    duration20_price?: number;
-    duration30_price?: number;
-    duration40_price?: number;
-    duration50_price?: number;
-    duration60_price?: number;
-    duration75_price?: number;
-    duration80_price?: number;
-    duration90_price?: number;
-    duration110_price?: number;
-    duration120_price?: number;
-    duration150_price?: number;
-    duration220_price?: number;
+    role: string;
+    startTime: string;
+    endTime: string;
 }
 
-interface DurationOption {
-    duration: number;
-    price: number;
-}
-
-interface ServiceDurationsResponse {
-    serviceType: string;
-    availableDurations: DurationOption[];
-    defaultDuration: number;
-}
-
-interface ClientFormData {
+interface NewAppointmentForm {
     clientName: string;
-    phoneNumber: string;
-    branchId: string;
-    serviceType: string;
-    masterName: string;
-    masterId: number;
+    service: string;
+    startTime: string;
+    duration: number;
     notes: string;
-    discount: number;
-    finalPrice: number;
-    scheduleDate: string;
-    scheduleTime: string;
-    status?: string;
-}
-
-interface PaymentMethod {
-    value: string;
-    label: string;
-    icon: string;
-    description: string;
 }
 
 // Constants
+const ROLES = [
+    'Мужской стилист',
+    'Женский стилист',
+    'Универсальный стилист',
+    'Колорист',
+    'Барбер',
+    'Мастер маникюра',
+    'Массажист'
+] as const;
+
+const SERVICES = [
+    { name: 'Мужская стрижка', duration: 45, price: 1500 },
+    { name: 'Женская стрижка', duration: 60, price: 2500 },
+    { name: 'Окрашивание', duration: 120, price: 4500 },
+    { name: 'Укладка', duration: 30, price: 1200 },
+    { name: 'Борода', duration: 30, price: 800 },
+    { name: 'Маникюр', duration: 60, price: 1800 },
+    { name: 'Массаж', duration: 90, price: 3000 }
+] as const;
+
 const EMPLOYEE_COLORS = [
     '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
     '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
@@ -204,909 +118,65 @@ const getCurrentTimePosition = (): number => {
     return Math.max(0, (currentMinutes - startMinutes) / 15) * TIME_SLOT_HEIGHT;
 };
 
-const getStatusColors = (status: string) => {
-    switch (status) {
-        case 'new':
-            return { bg: 'bg-blue-200', border: 'border-blue-400', text: 'text-blue-900', badge: 'bg-blue-600' };
-        case 'scheduled':
-            return { bg: 'bg-green-200', border: 'border-green-400', text: 'text-green-900', badge: 'bg-green-600' };
-        case 'in_progress':
-            return { bg: 'bg-orange-200', border: 'border-orange-400', text: 'text-orange-900', badge: 'bg-orange-600' };
-        case 'completed':
-            return { bg: 'bg-purple-200', border: 'border-purple-400', text: 'text-purple-900', badge: 'bg-purple-600' };
-        case 'cancelled':
-            return { bg: 'bg-red-200', border: 'border-red-400', text: 'text-red-900', badge: 'bg-red-600' };
-        case 'regular':
-            return { bg: 'bg-yellow-200', border: 'border-yellow-400', text: 'text-yellow-900', badge: 'bg-yellow-600' };
-        default:
-            return { bg: 'bg-gray-200', border: 'border-gray-400', text: 'text-gray-900', badge: 'bg-gray-500' };
-    }
-};
-
-const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-        'new': 'Неразобранные',
-        'scheduled': 'Записан',
-        'in_progress': 'В процессе',
-        'completed': 'Обслуженные',
-        'cancelled': 'Отмененные',
-        'regular': 'Постоянные'
-    };
-    return labels[status] || 'Неизвестный';
-};
-
-const getRelatedTaskStyles = (task: Task, allTasks: Task[]) => {
-    const isMainTask = !task.mother;
-    const hasChildren = allTasks.some(t => t.mother === task.id);
-    const isChildTask = !!task.mother;
-
-    if (isMainTask && hasChildren) {
-        return {
-            indicator: '🔗',
-            borderStyle: 'border-l-4 border-l-amber-500 bg-amber-50 shadow-lg border-2 border-amber-300',
-        };
-    }
-
-    if (isChildTask) {
-        return {
-            indicator: '📎',
-            borderStyle: 'border-l-4 border-l-amber-400 bg-amber-25 border-2 border-amber-200 ml-2',
-        };
-    }
-
-    return { indicator: '', borderStyle: '' };
-};
-
-// Create Appointment Dialog
-const CreateAppointmentDialog = ({
-    isOpen,
-    onClose,
-    selectedDate,
-    selectedTime,
-    masterId,
-    onTaskCreated
-}: {
-    isOpen: boolean;
-    onClose: () => void;
-    selectedDate: Date;
-    selectedTime?: string;
-    masterId?: number;
-    onTaskCreated: () => void;
-}) => {
-    const { toast } = useToast();
-    const { currentBranch } = useBranch();
-
-    const { data: allMasters = [] } = useQuery<Master[]>({
-        queryKey: ['all-masters'],
-        enabled: isOpen,
-    });
-
-    const { data: serviceServices = [] } = useQuery<ServiceService[]>({
-        queryKey: ['service-services'],
-        enabled: isOpen,
-    });
-
-    const selectedMaster = allMasters.find(m => m.id === masterId);
-
-    const [formData, setFormData] = useState<ClientFormData>({
-        clientName: "",
-        phoneNumber: "",
-        branchId: currentBranch?.id?.toString() || 'wa1',
-        serviceType: "",
-        masterName: selectedMaster?.name || "",
-        masterId: masterId || 0,
-        notes: "",
-        discount: 0,
-        finalPrice: 0,
-        scheduleDate: format(selectedDate, 'yyyy-MM-dd'),
-        scheduleTime: selectedTime || ""
-    });
-
-    const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
-
-    const { data: serviceDurations } = useQuery<ServiceDurationsResponse>({
-        queryKey: ['service-durations', formData.serviceType],
-        enabled: !!formData.serviceType && isOpen,
-        queryFn: async () => {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ serviceType: formData.serviceType }),
-            });
-            if (!res.ok) return null;
-            return res.json();
-        }
-    });
-
-    useEffect(() => {
-        if (serviceDurations && serviceDurations.availableDurations && !selectedDuration) {
-            setSelectedDuration(serviceDurations.defaultDuration);
-        }
-    }, [serviceDurations, selectedDuration]);
-
-    useEffect(() => {
-        if (serviceDurations && selectedDuration) {
-            const selectedOption = serviceDurations.availableDurations.find((d: DurationOption) => d.duration === selectedDuration);
-            if (selectedOption) {
-                const basePrice = selectedOption.price;
-                const discountAmount = (basePrice * formData.discount) / 100;
-                const finalPrice = Math.round(basePrice - discountAmount);
-                setFormData(prev => ({ ...prev, finalPrice }));
-            }
-        }
-    }, [serviceDurations, selectedDuration, formData.discount]);
-
-    const createClientMutation = useMutation({
-        mutationFn: async () => {
-            const payload = {
-                clientName: formData.clientName,
-                clientPhone: formData.phoneNumber,
-                serviceType: formData.serviceType,
-                scheduleDate: formData.scheduleDate,
-                scheduleTime: formData.scheduleTime,
-                masterName: formData.masterName,
-                notes: formData.notes,
-                status: 'scheduled',
-                duration: selectedDuration,
-                finalPrice: formData.finalPrice,
-                discount: formData.discount,
-                branchId: formData.branchId
-            };
-
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                credentials: 'include'
-            });
-
-            if (!res.ok) throw new Error('Ошибка создания записи');
-            return res.json();
-        },
-        onSuccess: () => {
-            toast({ title: "Запись создана" });
-            onTaskCreated();
-            onClose();
-        },
-        onError: (error) => {
-            toast({ title: "Ошибка", description: `${error}`, variant: "destructive" });
-        }
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!formData.masterId) {
-            toast({ title: "Ошибка", description: "Выберите мастера", variant: "destructive" });
-            return;
-        }
-        createClientMutation.mutate();
-    };
-
-    return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[700px]">
-                <DialogHeader>
-                    <DialogTitle>Добавить запись</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="flex gap-5">
-                    <div className="flex-1 space-y-3">
-                        <h3 className="text-blue-600 font-semibold">Клиент</h3>
-                        <div>
-                            <Label>Имя клиента</Label>
-                            <Input value={formData.clientName} onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))} required />
-                        </div>
-                        <div>
-                            <Label>Телефон</Label>
-                            <Input value={formData.phoneNumber} onChange={(e) => setFormData(prev => ({ ...prev, phoneNumber: e.target.value }))} />
-                        </div>
-                        <div>
-                            <Label>Примечания</Label>
-                            <Textarea value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} />
-                        </div>
-                    </div>
-
-                    <div className="flex-1 space-y-3">
-                        <h3 className="text-blue-600 font-semibold">Запись</h3>
-                        <div>
-                            <Label>Время</Label>
-                            <Input type="time" value={formData.scheduleTime} onChange={(e) => setFormData(prev => ({ ...prev, scheduleTime: e.target.value }))} />
-                        </div>
-                        <div>
-                            <Label>Длительность</Label>
-                            <Select value={selectedDuration?.toString()} onValueChange={(v) => setSelectedDuration(Number(v))} disabled={!formData.serviceType}>
-                                <SelectTrigger><SelectValue placeholder="Выберите" /></SelectTrigger>
-                                <SelectContent>
-                                    {serviceDurations?.availableDurations?.map((d: DurationOption) => (
-                                        <SelectItem key={d.duration} value={d.duration.toString()}>{d.duration} мин - {d.price} сом</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div>
-                            <Label>Тип услуги</Label>
-                            <Select value={formData.serviceType} onValueChange={(v) => setFormData(prev => ({ ...prev, serviceType: v }))}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    {serviceServices?.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div>
-                            <Label>Мастер *</Label>
-                            <Select value={formData.masterName} onValueChange={(v) => {
-                                const master = allMasters.find(m => m.name === v);
-                                setFormData(prev => ({ ...prev, masterName: v, masterId: master?.id || 0 }));
-                            }} required>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    {allMasters?.map((m) => <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div>
-                            <Label>Скидка (%)</Label>
-                            <Input type="number" min="0" max="100" value={formData.discount} onChange={(e) => setFormData(prev => ({ ...prev, discount: parseFloat(e.target.value) || 0 }))} />
-                        </div>
-                        {formData.finalPrice > 0 && (
-                            <div className="text-right">
-                                <Label>Стоимость:</Label>
-                                <Input type="number" value={formData.finalPrice} readOnly className="w-32 inline-block ml-2" />
-                            </div>
-                        )}
-                        <div className="flex justify-between mt-4">
-                            <Button type="button" variant="outline" onClick={onClose} className="bg-red-500 text-white">Отмена</Button>
-                            <Button type="submit" disabled={createClientMutation.isPending} className="bg-green-500 text-white">
-                                {createClientMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Создать
-                            </Button>
-                        </div>
-                    </div>
-                </form>
-            </DialogContent>
-        </Dialog>
-    );
-};
-
-// Edit Appointment Dialog
-const EditAppointmentDialog = ({
-    task,
-    isOpen,
-    onClose,
-    onTaskUpdated
-}: {
-    task: Task | null;
-    isOpen: boolean;
-    onClose: () => void;
-    onTaskUpdated: () => void;
-}) => {
-    const { toast } = useToast();
-    const { currentBranch } = useBranch();
-    const queryClient = useQueryClient();
-
-    const { data: allMasters = [] } = useQuery<Master[]>({
-        queryKey: ['all-masters'],
-        enabled: isOpen,
-    });
-
-    const { data: serviceServices = [] } = useQuery<ServiceService[]>({
-        queryKey: ['service-services'],
-        enabled: isOpen,
-    });
-
-    const { data: administrators = [] } = useQuery<{ id: number; name: string }[]>({
-        queryKey: ['administrators', currentBranch?.id],
-        queryFn: async () => {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchId=${currentBranch?.id}`);
-            if (!res.ok) return [];
-            const data = await res.json();
-            return data.filter((admin: any) => admin.isActive).map((admin: any) => ({
-                id: admin.id,
-                name: admin.name
-            }));
-        },
-        enabled: isOpen,
-    });
-
-    const [formData, setFormData] = useState({
-        clientName: task?.client?.customName || task?.client?.firstName || "",
-        phoneNumber: task?.client?.phoneNumber || "",
-        branchId: task?.branchId || currentBranch?.id || 'wa1',
-        serviceType: task?.serviceType || "",
-        masterName: task?.masterName || "",
-        masterId: task?.masterId || 0,
-        notes: task?.notes || "",
-        discount: 0,
-        finalPrice: task?.finalPrice || 0,
-        scheduleDate: task?.scheduleDate?.split('T')[0] || "",
-        scheduleTime: task?.scheduleTime || "",
-        status: task?.status || 'scheduled'
-    });
-
-    const [selectedDuration, setSelectedDuration] = useState<number | null>(task?.duration || null);
-    const [childTasks, setChildTasks] = useState<Task[]>([]);
-    const [localMainDuration, setLocalMainDuration] = useState<number>(0);
-    const [localChildDurations, setLocalChildDurations] = useState<{ [key: number]: number }>({});
-    const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("");
-    const [selectedAdministrator, setSelectedAdministrator] = useState<string>("");
-
-    const paymentMethods: PaymentMethod[] = [
-        { value: "Наличные", label: "Наличные", icon: "💰", description: "Оплата наличными" },
-        { value: "МБанк - Перевод", label: "МБанк - Перевод", icon: "🏦", description: "Перевод МБанк" },
-        { value: "МБанк - POS", label: "МБанк - POS", icon: "💳", description: "POS МБанк" },
-        { value: "О!Банк - Перевод", label: "О!Банк - Перевод", icon: "🔴", description: "Перевод О!Банк" },
-        { value: "О!Банк - POS", label: "О!Банк - POS", icon: "💳", description: "POS О!Банк" },
-        { value: "Подарочный Сертификат", label: "Подарочный Сертификат", icon: "🎁", description: "Сертификат" },
-    ];
-
-    useEffect(() => {
-        if (task) {
-            setFormData({
-                clientName: task.client?.customName || task.client?.firstName || "",
-                phoneNumber: task.client?.phoneNumber || "",
-                branchId: task.branchId || currentBranch?.id || 'wa1',
-                serviceType: task.serviceType || "",
-                masterName: task.masterName || "",
-                masterId: task.masterId || 0,
-                notes: task.notes || "",
-                discount: 0,
-                finalPrice: task.finalPrice || 0,
-                scheduleDate: task.scheduleDate?.split('T')[0] || "",
-                scheduleTime: task.scheduleTime || "",
-                status: task.status || 'scheduled'
-            });
-            setLocalMainDuration(task.serviceDuration || task.duration || 0);
-        }
-    }, [task, currentBranch]);
-
-    const { data: childTasksData } = useQuery<Task[]>({
-        queryKey: ['child-tasks', task?.id],
-        enabled: isOpen && !!task?.id,
-        queryFn: async () => {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task?.id}/children`);
-            if (!res.ok) return [];
-            return res.json();
-        }
-    });
-
-    useEffect(() => {
-        if (childTasksData) {
-            setChildTasks(childTasksData);
-            const initialChildDurations: { [key: number]: number } = {};
-            childTasksData.forEach(child => {
-                initialChildDurations[child.id] = child.serviceDuration || child.duration || 0;
-            });
-            setLocalChildDurations(initialChildDurations);
-        }
-    }, [childTasksData]);
-
-    const { data: serviceDurations } = useQuery<ServiceDurationsResponse>({
-        queryKey: ['service-durations', formData.serviceType],
-        enabled: !!formData.serviceType && isOpen,
-        queryFn: async () => {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ serviceType: formData.serviceType }),
-            });
-            if (!res.ok) return null;
-            return res.json();
-        }
-    });
-
-    const calculateMainServicePrice = (): number => {
-        if (!serviceDurations || !task?.serviceDuration) return task?.servicePrice || task?.finalPrice || 0;
-        const duration = task.serviceDuration;
-        const durationOption = serviceDurations.availableDurations.find((d: DurationOption) => d.duration === duration);
-        return durationOption ? durationOption.price : (task?.servicePrice || task?.finalPrice || 0);
-    };
-
-    const calculateTotalPrice = (): number => {
-        const mainPrice = calculateMainServicePrice();
-        const childrenPrice = childTasks.reduce((sum, child) => sum + (child.servicePrice || child.finalPrice || 0), 0);
-        return mainPrice + childrenPrice;
-    };
-
-    const calculateTotalDuration = (): number => {
-        const mainDuration = localMainDuration;
-        const childrenDuration = Object.values(localChildDurations).reduce((sum, duration) => sum + duration, 0);
-        return mainDuration + childrenDuration;
-    };
-
-    const calculateEndTime = (startTime: string, duration: number): string => {
-        const [hours, minutes] = startTime.split(':').map(Number);
-        const totalMinutes = hours * 60 + minutes + duration;
-        const newHours = Math.floor(totalMinutes / 60);
-        const newMinutes = totalMinutes % 60;
-        return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
-    };
-
-    const updateMainServiceDuration = async (newDuration: number) => {
-        if (!task?.id) return;
-        try {
-            await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    serviceDuration: newDuration,
-                    endTime: calculateEndTime(task.scheduleTime || '', newDuration)
-                }),
-                credentials: 'include'
-            });
-
-            if (childTasks.length > 0) {
-                let currentStartTime = calculateEndTime(task.scheduleTime || '', newDuration);
-                for (const childTask of childTasks) {
-                    const childEndTime = calculateEndTime(currentStartTime, childTask.serviceDuration || 0);
-                    await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTask.id}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ scheduleTime: currentStartTime, endTime: childEndTime }),
-                        credentials: 'include'
-                    });
-                    currentStartTime = childEndTime;
-                }
-            }
-
-            queryClient.invalidateQueries({ queryKey: ['child-tasks', task.id] });
-            onTaskUpdated();
-            toast({ title: "Длительность обновлена" });
-        } catch (error) {
-            toast({ title: "Ошибка", variant: "destructive" });
-        }
-    };
-
-    const createAdditionalServiceMutation = useMutation({
-        mutationFn: async (serviceData: { serviceId: number; serviceName: string; duration: number; price: number }) => {
-            const mainDuration = task?.serviceDuration || task?.duration || 0;
-            const childStartTime = calculateEndTime(task?.scheduleTime || '', mainDuration);
-            const childEndTime = calculateEndTime(childStartTime, serviceData.duration);
-
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    clientId: task?.clientId,
-                    status: task?.status,
-                    serviceType: serviceData.serviceName,
-                    serviceServiceId: serviceData.serviceId,
-                    scheduleDate: task?.scheduleDate,
-                    scheduleTime: childStartTime,
-                    endTime: childEndTime,
-                    masterName: task?.masterName,
-                    masterId: task?.masterId,
-                    notes: task?.notes,
-                    branchId: task?.branchId,
-                    source: 'manual',
-                    serviceDuration: serviceData.duration,
-                    servicePrice: serviceData.price,
-                    finalPrice: serviceData.price,
-                    mother: task?.id
-                })
-            });
-
-            if (!res.ok) throw new Error('Failed to create additional service');
-            return res.json();
-        },
-        onSuccess: async () => {
-            toast({ title: "Дополнительная услуга добавлена" });
-            await queryClient.invalidateQueries({ queryKey: ['child-tasks', task?.id] });
-            onTaskUpdated();
-        },
-        onError: (error) => {
-            toast({ title: "Ошибка", description: `${error}`, variant: "destructive" });
-        }
-    });
-
-    const deleteAdditionalServiceMutation = useMutation({
-        mutationFn: async (childTaskId: number) => {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTaskId}`, {
-                method: 'DELETE',
-            });
-            if (!res.ok) throw new Error('Failed to delete');
-            return res.json();
-        },
-        onSuccess: async () => {
-            toast({ title: "Дополнительная услуга удалена" });
-            await queryClient.invalidateQueries({ queryKey: ['child-tasks', task?.id] });
-            onTaskUpdated();
-        },
-        onError: (error) => {
-            toast({ title: "Ошибка", description: `${error}`, variant: "destructive" });
-        }
-    });
-
-    const createPaymentMutation = useMutation({
-        mutationFn: async () => {
-            if (!selectedPaymentMethod || !task?.id || !selectedAdministrator) {
-                throw new Error('Не выбран способ оплаты или администратор');
-            }
-
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    master: task.masterName || 'Неизвестный мастер',
-                    client: task.client?.customName || task.client?.firstName || 'Неизвестный клиент',
-                    serviceType: task.serviceType || 'Услуга',
-                    phoneNumber: task.client?.phoneNumber || '',
-                    amount: calculateTotalPrice() - Math.round(calculateTotalPrice() * formData.discount / 100),
-                    discount: formData.discount || 0,
-                    duration: task.duration || 60,
-                    comment: `Оплата через ${selectedPaymentMethod}`,
-                    paymentMethod: selectedPaymentMethod,
-                    dailyReport: calculateTotalPrice() - Math.round(calculateTotalPrice() * formData.discount / 100),
-                    adminName: selectedAdministrator,
-                    isGiftCertificateUsed: selectedPaymentMethod === 'Подарочный Сертификат',
-                    branchId: currentBranch?.id || '1',
-                    date: task.scheduleDate || new Date().toISOString().split('T')[0]
-                }),
-            });
-
-            if (!res.ok) throw new Error('Failed to create payment');
-
-            await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    paymentMethod: selectedPaymentMethod,
-                    adminName: selectedAdministrator,
-                    paid: 'paid'
-                }),
-            });
-
-            if (childTasks.length > 0) {
-                await Promise.all(childTasks.map(childTask =>
-                    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTask.id}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            paymentMethod: selectedPaymentMethod,
-                            adminName: selectedAdministrator,
-                            paid: 'paid'
-                        }),
-                    })
-                ));
-            }
-
-            return res.json();
-        },
-        onSuccess: () => {
-            toast({ title: "Оплата зафиксирована", description: `Платеж через ${selectedPaymentMethod}` });
-            setShowPaymentDialog(false);
-            setSelectedPaymentMethod("");
-            setSelectedAdministrator("");
-            onTaskUpdated();
-            onClose();
-        },
-        onError: (error) => {
-            toast({ title: "Ошибка", description: `${error}`, variant: "destructive" });
-        }
-    });
-
-    const updateTaskMutation = useMutation({
-        mutationFn: async () => {
-            if (!task) throw new Error("Нет данных");
-
-            const payload = {
-                clientName: formData.clientName,
-                phoneNumber: formData.phoneNumber,
-                serviceType: formData.serviceType,
-                masterName: formData.masterName,
-                masterId: formData.masterId,
-                notes: formData.notes,
-                scheduleDate: formData.scheduleDate,
-                scheduleTime: formData.scheduleTime,
-                duration: selectedDuration,
-                finalPrice: formData.finalPrice,
-                discount: formData.discount,
-                branchId: formData.branchId,
-                status: formData.status
-            };
-
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                credentials: 'include'
-            });
-
-            if (!res.ok) throw new Error('Ошибка обновления');
-
-            if (localMainDuration !== (task?.serviceDuration || task?.duration || 0)) {
-                await updateMainServiceDuration(localMainDuration);
-            }
-
-            return res.json();
-        },
-        onSuccess: () => {
-            toast({ title: "Запись обновлена" });
-            onTaskUpdated();
-            onClose();
-        },
-        onError: (error) => {
-            toast({ title: "Ошибка", description: `${error}`, variant: "destructive" });
-        }
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        updateTaskMutation.mutate();
-    };
-
-    const handleAddService = (serviceName: string) => {
-        const service = serviceServices.find(s => s.name === serviceName);
-        if (service) {
-            createAdditionalServiceMutation.mutate({
-                serviceId: service.id,
-                serviceName: service.name,
-                duration: service.defaultDuration,
-                price: service.duration60_price || 0
-            });
-        }
-    };
-
-    if (!task) return null;
-
-    return (
-        <>
-            <Dialog open={isOpen} onOpenChange={onClose}>
-                <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-                    <DialogHeader className="sr-only">
-                        <DialogTitle>Редактировать запись</DialogTitle>
-                    </DialogHeader>
-                    <div className={`px-4 py-3 border-b ${task?.paid === 'paid' ? 'bg-green-50' : 'bg-red-50'}`}>
-                        <div className="flex items-center justify-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${task?.paid === 'paid' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                            <span className={`font-semibold ${task?.paid === 'paid' ? 'text-green-700' : 'text-red-700'}`}>
-                                {task?.paid === 'paid' ? 'ОПЛАЧЕНО' : 'НЕ ОПЛАЧЕНО'}
-                            </span>
-                        </div>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="flex gap-5 p-4">
-                        <div className="flex-1 space-y-3">
-                            <h3 className="text-blue-600 font-semibold">Клиент</h3>
-                            <div><Label>Имя</Label><Input value={formData.clientName} onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))} /></div>
-                            <div><Label>Телефон</Label><Input value={formData.phoneNumber} onChange={(e) => setFormData(prev => ({ ...prev, phoneNumber: e.target.value }))} /></div>
-                            <div><Label>Примечания</Label><Textarea value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} /></div>
-                        </div>
-
-                        <div className="flex-1 space-y-3">
-                            <h3 className="text-blue-600 font-semibold">Запись</h3>
-                            <div><Label>Время</Label><Input type="time" value={formData.scheduleTime} onChange={(e) => setFormData(prev => ({ ...prev, scheduleTime: e.target.value }))} /></div>
-                            <div><Label>Услуга</Label><Input value={formData.serviceType} readOnly /></div>
-                            <div>
-                                <Label>Мастер</Label>
-                                <Select value={formData.masterName} onValueChange={(v) => {
-                                    const master = allMasters.find(m => m.name === v);
-                                    setFormData(prev => ({ ...prev, masterName: v, masterId: master?.id || 0 }));
-                                }}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        {allMasters?.map((m) => <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label>Статус</Label>
-                                <Select value={formData.status} onValueChange={(v) => setFormData(prev => ({ ...prev, status: v }))}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="new">Неразобранные</SelectItem>
-                                        <SelectItem value="scheduled">Записан</SelectItem>
-                                        <SelectItem value="in_progress">В процессе</SelectItem>
-                                        <SelectItem value="completed">Обслуженные</SelectItem>
-                                        <SelectItem value="cancelled">Отмененные</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="border-t pt-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <Label>Дополнительные услуги</Label>
-                                    <span className="text-sm text-gray-600">Общее время: {calculateTotalDuration()} мин</span>
-                                </div>
-
-                                <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
-                                    {childTasks.length > 0 ? (
-                                        <div className="space-y-2">
-                                            <div className="bg-white rounded p-2 border-l-4 border-amber-400">
-                                                <div className="flex justify-between text-sm">
-                                                    <span>🏆 Основная: {task?.serviceType}</span>
-                                                    <span>{calculateMainServicePrice()} сом</span>
-                                                </div>
-                                            </div>
-                                            {childTasks.map((child, idx) => (
-                                                <div key={child.id} className="bg-white rounded p-2 border-l-4 border-amber-300">
-                                                    <div className="flex justify-between text-sm items-center">
-                                                        <span>📎 Доп. {idx + 1}: {child.serviceType}</span>
-                                                        <div className="flex items-center gap-2">
-                                                            <span>{child.servicePrice} сом</span>
-                                                            <Button type="button" variant="ghost" size="sm" onClick={() => deleteAdditionalServiceMutation.mutate(child.id)} className="h-6 w-6 p-0">
-                                                                <X className="h-3 w-3" />
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                            <div className="bg-amber-100 rounded p-2">
-                                                <div className="flex justify-between font-bold">
-                                                    <span>Итого: {calculateTotalDuration()} мин</span>
-                                                    <span>{calculateTotalPrice()} сом</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-2 text-amber-600 text-sm">Нет дополнительных услуг</div>
-                                    )}
-                                </div>
-
-                                <Select value="" onValueChange={handleAddService} disabled={createAdditionalServiceMutation.isPending}>
-                                    <SelectTrigger className="w-full mt-2"><SelectValue placeholder="Добавить услугу" /></SelectTrigger>
-                                    <SelectContent>
-                                        {serviceServices?.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="flex justify-between mt-4">
-                                <div className="flex gap-2">
-                                    <Button type="button" variant="outline" onClick={onClose} className="bg-red-500 text-white">Отмена</Button>
-                                    <Button type="button" variant="outline" onClick={() => setShowPaymentDialog(true)} className="bg-amber-500 text-white">
-                                        <CreditCard className="h-4 w-4 mr-2" />Оплатить
-                                    </Button>
-                                </div>
-                                <Button type="submit" disabled={updateTaskMutation.isPending} className="bg-green-500 text-white">
-                                    {updateTaskMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Сохранить
-                                </Button>
-                            </div>
-                        </div>
-                    </form>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader><DialogTitle>Оплата услуг</DialogTitle></DialogHeader>
-                    <div className="flex gap-6">
-                        <div className="flex-1">
-                            <h3 className="text-lg font-semibold mb-4">Способ оплаты</h3>
-                            <div className="space-y-2">
-                                {paymentMethods.map((method) => (
-                                    <div key={method.value} onClick={() => setSelectedPaymentMethod(method.value)}
-                                        className={`p-3 border rounded-lg cursor-pointer ${selectedPaymentMethod === method.value ? 'border-amber-400 bg-amber-50' : 'hover:bg-gray-50'}`}>
-                                        <div className="flex items-center gap-3">
-                                            <div className="text-2xl">{method.icon}</div>
-                                            <div>
-                                                <div className="font-medium">{method.label}</div>
-                                                <div className="text-sm text-gray-600">{method.description}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="w-64 bg-gray-50 rounded-lg p-4">
-                            <h3 className="font-semibold mb-4">Детали</h3>
-                            <div className="space-y-2 text-sm">
-                                <div className="flex justify-between"><span>Услуга:</span><span className="font-medium">{task?.serviceType}</span></div>
-                                <div className="flex justify-between"><span>Мастер:</span><span className="font-medium">{task?.masterName}</span></div>
-                                <div className="flex justify-between"><span>Клиент:</span><span className="font-medium">{task?.client?.customName || task?.client?.firstName}</span></div>
-                                <hr />
-                                <div className="flex justify-between"><span>Сумма:</span><span>{calculateTotalPrice()} сом</span></div>
-                                {formData.discount > 0 && <div className="flex justify-between text-green-600"><span>Скидка:</span><span>-{Math.round(calculateTotalPrice() * formData.discount / 100)} сом</span></div>}
-                                <hr />
-                                <div className="flex justify-between font-bold text-lg"><span>К оплате:</span><span className="text-amber-600">{calculateTotalPrice() - Math.round(calculateTotalPrice() * formData.discount / 100)} сом</span></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="border-t pt-4">
-                        <Label>Администратор</Label>
-                        <Select value={selectedAdministrator} onValueChange={setSelectedAdministrator}>
-                            <SelectTrigger><SelectValue placeholder="Выберите администратора" /></SelectTrigger>
-                            <SelectContent>
-                                {administrators.map((admin) => <SelectItem key={admin.id} value={admin.name}>{admin.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>Отмена</Button>
-                        <Button onClick={() => createPaymentMutation.mutate()} disabled={!selectedPaymentMethod || !selectedAdministrator || createPaymentMutation.isPending} className="bg-amber-500">
-                            {createPaymentMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Зафиксировать оплату
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </>
-    );
-};
-
 // Main Component
 const AdvancedScheduleComponent: React.FC = () => {
-    const { toast } = useToast();
-    const { currentBranch } = useBranch();
-    const queryClient = useQueryClient();
-    
     // State
-    const [selectedDate, setSelectedDate] = useState(() => new Date());
+    const [currentDate] = useState(() => new Date());
+    const [employees, setEmployees] = useState<Employee[]>([
+        {
+            id: '1',
+            name: 'Алладин',
+            role: 'Мужской стилист',
+            workHours: { start: '09:00', end: '20:00' },
+            color: EMPLOYEE_COLORS[0]
+        },
+        {
+            id: '2',
+            name: 'Антон',
+            role: 'Мужской стилист',
+            workHours: { start: '09:00', end: '20:00' },
+            color: EMPLOYEE_COLORS[1]
+        }
+    ]);
+
+    const [appointments, setAppointments] = useState<Appointment[]>([
+        {
+            id: '1',
+            employeeId: '1',
+            clientName: 'Иван Петров',
+            service: 'Мужская стрижка',
+            startTime: '11:15',
+            endTime: '12:00',
+            duration: 45,
+            status: 'in-progress'
+        },
+        {
+            id: '2',
+            employeeId: '1',
+            clientName: 'шоферов',
+            service: 'Мужская стрижка',
+            startTime: '13:30',
+            endTime: '14:30',
+            duration: 60,
+            status: 'scheduled'
+        },
+        {
+            id: '3',
+            employeeId: '1',
+            clientName: 'Петр Сидоров',
+            service: 'Борода',
+            startTime: '13:45',
+            endTime: '14:15',
+            duration: 30,
+            status: 'scheduled'
+        }
+    ]);
+
+    const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
     const [isAddAppointmentOpen, setIsAddAppointmentOpen] = useState(false);
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
     const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
     const [currentTimePosition, setCurrentTimePosition] = useState(getCurrentTimePosition());
-
-    // API calls for real data
-    const { data: masters = [], isLoading: mastersLoading } = useQuery<Master[]>({
-        queryKey: ['masters', format(selectedDate, 'yyyy-MM-dd'), currentBranch?.id],
-        queryFn: async () => {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters/${format(selectedDate, 'yyyy-MM-dd')}?branchId=${currentBranch?.id}`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to fetch masters');
-            return response.json();
-        },
-        enabled: !!currentBranch?.id,
-        refetchInterval: 10000, // Auto-refresh every 10 seconds
-    });
-
-    const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
-        queryKey: ['tasks', format(selectedDate, 'yyyy-MM-dd'), currentBranch?.id],
-        queryFn: async () => {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks?date=${format(selectedDate, 'yyyy-MM-dd')}&branchId=${currentBranch?.id}`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to fetch tasks');
-            return response.json();
-        },
-        enabled: !!currentBranch?.id,
-        refetchInterval: 10000, // Auto-refresh every 10 seconds
-    });
-
-    const { data: serviceDurations = [] } = useQuery<serviceDurationsResponse[]>({
-        queryKey: ['service-durations'],
-        queryFn: async () => {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations`, {
-                credentials: 'include'
-            });
-            if (!response.ok) throw new Error('Failed to fetch service durations');
-            return response.json();
-        }
-    });
-
-    // Convert masters to employees format for existing UI compatibility
-    const employees = useMemo(() => {
-        return masters.map((master, index) => ({
-            id: master.id.toString(),
-            name: master.name,
-            role: master.specialization || 'Мастер',
-            workHours: {
-                start: master.startWorkHour || '09:00',
-                end: master.endWorkHour || '20:00'
-            },
-            color: EMPLOYEE_COLORS[index % EMPLOYEE_COLORS.length]
-        }));
-    }, [masters]);
-
-    // Convert tasks to appointments format for existing UI compatibility
-    const appointments = useMemo(() => {
-        return tasks.map(task => ({
-            id: task.id.toString(),
-            employeeId: task.masterId?.toString() || '',
-            clientName: task.client?.customName || task.client?.firstName || 'Клиент',
-            service: task.serviceType || 'Услуга',
-            startTime: task.scheduleTime || '',
-            endTime: task.endTime || '',
-            duration: task.duration || task.serviceDuration || 60,
-            status: task.status as 'scheduled' | 'in-progress' | 'completed' | 'cancelled',
-            notes: task.notes,
-            paid: task.paid,
-            phone: task.client?.phoneNumber,
-            mother: task.mother,
-            originalTask: task // Keep reference to original task data
-        }));
-    }, [tasks]);
 
     const [dragState, setDragState] = useState<DragState>({
         isDragging: false,
@@ -1117,92 +187,127 @@ const AdvancedScheduleComponent: React.FC = () => {
         dragOffset: { x: 0, y: 0 }
     });
 
+    const [resizeState, setResizeState] = useState<ResizeState>({
+        isResizing: false,
+        resizedAppointment: null,
+        originalDuration: 0,
+        direction: null
+    });
+
     const scheduleRef = useRef<HTMLDivElement>(null);
-    const formattedDate = format(currentDate, 'yyyy-MM-dd');
+
+    const [newEmployee, setNewEmployee] = useState<NewEmployeeForm>({
+        name: '',
+        role: '',
+        startTime: '09:00',
+        endTime: '20:00'
+    });
+
+    const [newAppointment, setNewAppointment] = useState<NewAppointmentForm>({
+        clientName: '',
+        service: '',
+        startTime: '',
+        duration: 45,
+        notes: ''
+    });
 
     // Update current time line
     useEffect(() => {
         const interval = setInterval(() => {
-            queryClient.invalidateQueries({ queryKey: ['calendar-masters'] });
-            queryClient.invalidateQueries({ queryKey: ['calendar-tasks'] });
             setCurrentTimePosition(getCurrentTimePosition());
-        }, 10000);
+        }, 60000);
         return () => clearInterval(interval);
-    }, [queryClient]);
+    }, []);
 
+    // Memoized values
     const timeSlots = useMemo(() => generateTimeSlots(), []);
-    const dateString = useMemo(() => currentDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }), [currentDate]);
 
     const dateString = useMemo(() => {
-        return selectedDate.toLocaleDateString('ru-RU', {
+        return currentDate.toLocaleDateString('ru-RU', {
             day: 'numeric',
             month: 'long'
         });
-    }, [selectedDate]);
+    }, [currentDate]);
 
+    // Get column width for employees
     const getEmployeeColumnWidth = useCallback(() => {
         if (!scheduleRef.current) return 200;
-        return Math.max(200, scheduleRef.current.clientWidth / activeMasters.length);
-    }, [activeMasters.length]);
+        const scheduleWidth = scheduleRef.current.clientWidth;
+        return Math.max(200, scheduleWidth / employees.length);
+    }, [employees.length]);
 
-    // Appointment management - now using API mutations instead of local state
-    const updateAppointment = useCallback((appointmentId: string, updates: Partial<AppointmentDisplay>) => {
-        // This will be replaced with actual API mutation
-        console.log('Update appointment:', appointmentId, updates);
-        // TODO: Implement API call to update task
+    // Appointment management
+    const updateAppointment = useCallback((appointmentId: string, updates: Partial<Appointment>) => {
+        setAppointments(prev => prev.map(apt =>
+            apt.id === appointmentId ? { ...apt, ...updates } : apt
+        ));
     }, []);
 
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    scheduleTime: newTime,
-                    masterId: newMasterId,
-                    masterName: newMaster.name
-                }),
-                credentials: 'include'
-            });
+    // Validation functions
+    const isWithinWorkingHours = useCallback((employeeId: string, timeSlot: string): boolean => {
+        const employee = employees.find(emp => emp.id === employeeId);
+        if (!employee) return false;
 
-            if (!res.ok) throw new Error('Ошибка перемещения');
-            return res.json();
-        },
-        onSuccess: () => {
-            toast({ title: "Запись перемещена" });
-            queryClient.invalidateQueries({ queryKey: ['calendar-tasks'] });
-        },
-        onError: (error: Error) => {
-            toast({ title: "Ошибка", description: error.message, variant: "destructive" });
-        }
-    });
+        const slotMinutes = timeToMinutes(timeSlot);
+        const startMinutes = timeToMinutes(employee.workHours.start);
+        const endMinutes = timeToMinutes(employee.workHours.end);
 
+        return slotMinutes >= startMinutes && slotMinutes < endMinutes;
+    }, [employees]);
+
+    const doesAppointmentFitWorkingHours = useCallback((employeeId: string, startTime: string, duration: number): boolean => {
+        const employee = employees.find(emp => emp.id === employeeId);
+        if (!employee) return false;
+
+        const startMinutes = timeToMinutes(startTime);
+        const endMinutes = startMinutes + duration;
+        const workStartMinutes = timeToMinutes(employee.workHours.start);
+        const workEndMinutes = timeToMinutes(employee.workHours.end);
+
+        return startMinutes >= workStartMinutes && endMinutes <= workEndMinutes;
+    }, [employees]);
+
+
+    // Get position info from mouse coordinates
     const getPositionFromMouse = useCallback((x: number, y: number) => {
         const employeeColumnWidth = getEmployeeColumnWidth();
         const employeeIndex = Math.floor(x / employeeColumnWidth);
         const timeSlotIndex = Math.floor((y - HEADER_HEIGHT) / TIME_SLOT_HEIGHT);
 
-        if (employeeIndex >= 0 && employeeIndex < activeMasters.length &&
+        if (employeeIndex >= 0 && employeeIndex < employees.length &&
             timeSlotIndex >= 0 && timeSlotIndex < timeSlots.length) {
             return {
-                employeeId: activeMasters[employeeIndex].id,
+                employeeId: employees[employeeIndex].id,
                 timeSlot: timeSlots[timeSlotIndex],
+                employeeIndex,
+                timeSlotIndex
             };
         }
         return null;
-    }, [activeMasters, timeSlots, getEmployeeColumnWidth]);
+    }, [employees, timeSlots, getEmployeeColumnWidth]);
 
     // Drag and drop handlers
-    const handleMouseDown = useCallback((e: React.MouseEvent, appointment: AppointmentDisplay, action: 'drag' | 'resize-top' | 'resize-bottom') => {
+    const handleMouseDown = useCallback((e: React.MouseEvent, appointment: Appointment, action: 'drag' | 'resize-top' | 'resize-bottom') => {
         e.preventDefault();
         e.stopPropagation();
 
-        setDragState({
-            isDragging: true,
-            draggedAppointment: appointment,
-            dragStartPosition: { x: e.clientX, y: e.clientY },
-            currentPosition: { x: e.clientX, y: e.clientY },
-            targetSlot: null,
-            dragOffset: { x: 0, y: 0 }
-        });
+        if (action === 'drag') {
+            setDragState({
+                isDragging: true,
+                draggedAppointment: appointment,
+                dragStartPosition: { x: e.clientX, y: e.clientY },
+                currentPosition: { x: e.clientX, y: e.clientY },
+                targetSlot: null,
+                dragOffset: { x: 0, y: 0 }
+            });
+        } else {
+            setResizeState({
+                isResizing: true,
+                resizedAppointment: appointment,
+                originalDuration: appointment.duration,
+                direction: action === 'resize-top' ? 'top' : 'bottom'
+            });
+        }
     }, []);
 
     const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -1216,22 +321,78 @@ const AdvancedScheduleComponent: React.FC = () => {
             const position = getPositionFromMouse(mouseX, mouseY);
 
             if (position) {
+                const { employeeId, timeSlot } = position;
+
+                if (dragState.targetSlot?.employeeId !== employeeId || dragState.targetSlot?.timeSlot !== timeSlot) {
+                    setDragState(prev => ({
+                        ...prev,
+                        currentPosition: { x: e.clientX, y: e.clientY },
+                        targetSlot: { employeeId, timeSlot }
+                    }));
+                } else {
+                    setDragState(prev => ({
+                        ...prev,
+                        currentPosition: { x: e.clientX, y: e.clientY }
+                    }));
+                }
+            } else {
                 setDragState(prev => ({
                     ...prev,
                     currentPosition: { x: e.clientX, y: e.clientY },
-                    targetSlot: { employeeId: position.employeeId, timeSlot: position.timeSlot }
+                    targetSlot: null
                 }));
             }
         }
-    }, [dragState, getPositionFromMouse]);
+
+        if (resizeState.isResizing && resizeState.resizedAppointment) {
+            const appointment = resizeState.resizedAppointment;
+            const startIndex = timeSlots.findIndex(slot => slot === appointment.startTime);
+            const startY = startIndex * TIME_SLOT_HEIGHT + HEADER_HEIGHT;
+
+            let newDuration = resizeState.originalDuration;
+
+            if (resizeState.direction === 'bottom') {
+                const deltaY = mouseY - startY;
+                newDuration = Math.max(15, Math.round(deltaY / TIME_SLOT_HEIGHT) * 15);
+            } else if (resizeState.direction === 'top') {
+                const originalEndY = startY + (resizeState.originalDuration / 15) * TIME_SLOT_HEIGHT;
+                const deltaY = originalEndY - mouseY;
+                newDuration = Math.max(15, Math.round(deltaY / TIME_SLOT_HEIGHT) * 15);
+
+                const newStartMinutes = timeToMinutes(appointment.startTime) - (newDuration - resizeState.originalDuration);
+                const newStartTime = minutesToTime(Math.max(0, newStartMinutes));
+
+                updateAppointment(appointment.id, {
+                    startTime: newStartTime,
+                    duration: newDuration,
+                    endTime: minutesToTime(timeToMinutes(newStartTime) + newDuration)
+                });
+                return;
+            }
+
+            if (newDuration !== appointment.duration) {
+                const newEndMinutes = timeToMinutes(appointment.startTime) + newDuration;
+                updateAppointment(appointment.id, {
+                    duration: newDuration,
+                    endTime: minutesToTime(newEndMinutes)
+                });
+            }
+        }
+    }, [dragState, resizeState, getPositionFromMouse, timeSlots, updateAppointment]);
 
     const handleMouseUp = useCallback(() => {
         if (dragState.isDragging && dragState.draggedAppointment && dragState.targetSlot) {
-            moveTaskMutation.mutate({
-                taskId: dragState.draggedAppointment.id,
-                newTime: dragState.targetSlot.timeSlot,
-                newMasterId: dragState.targetSlot.employeeId
-            });
+            const { employeeId, timeSlot } = dragState.targetSlot;
+            const appointment = dragState.draggedAppointment;
+
+            if (doesAppointmentFitWorkingHours(employeeId, timeSlot, appointment.duration)) {
+                const newEndMinutes = timeToMinutes(timeSlot) + appointment.duration;
+                updateAppointment(appointment.id, {
+                    employeeId,
+                    startTime: timeSlot,
+                    endTime: minutesToTime(newEndMinutes)
+                });
+            }
         }
 
         setDragState({
@@ -1242,45 +403,86 @@ const AdvancedScheduleComponent: React.FC = () => {
             targetSlot: null,
             dragOffset: { x: 0, y: 0 }
         });
-    }, [dragState, moveTaskMutation]);
 
+        setResizeState({
+            isResizing: false,
+            resizedAppointment: null,
+            originalDuration: 0,
+            direction: null
+        });
+    }, [dragState, updateAppointment, doesAppointmentFitWorkingHours]);
+
+    // Global mouse event listeners
     useEffect(() => {
-        if (dragState.isDragging) {
+        if (dragState.isDragging || resizeState.isResizing) {
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
-            document.body.style.cursor = 'grabbing';
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = dragState.isDragging ? 'grabbing' : 'ns-resize';
 
             return () => {
                 document.removeEventListener('mousemove', handleMouseMove);
                 document.removeEventListener('mouseup', handleMouseUp);
+                document.body.style.userSelect = '';
                 document.body.style.cursor = '';
             };
         }
-    }, [dragState.isDragging, handleMouseMove, handleMouseUp]);
+    }, [dragState.isDragging, resizeState.isResizing, handleMouseMove, handleMouseUp]);
 
-    // Click handlers for creating appointments
-    const handleTimeSlotClick = useCallback((timeSlot: string, employeeId: string) => {
-        setSelectedEmployeeId(employeeId);
-        setSelectedTimeSlot(timeSlot);
-        setIsAddAppointmentOpen(true);
+    // Employee management
+    const handleAddEmployee = useCallback(() => {
+        if (newEmployee.name.trim() && newEmployee.role) {
+            const employee: Employee = {
+                id: Date.now().toString(),
+                name: newEmployee.name.trim(),
+                role: newEmployee.role,
+                workHours: {
+                    start: newEmployee.startTime,
+                    end: newEmployee.endTime
+                },
+                color: EMPLOYEE_COLORS[employees.length % EMPLOYEE_COLORS.length]
+            };
+
+            setEmployees(prev => [...prev, employee]);
+            setNewEmployee({ name: '', role: '', startTime: '09:00', endTime: '20:00' });
+            setIsAddEmployeeOpen(false);
+        }
+    }, [newEmployee, employees.length]);
+
+    const handleRemoveEmployee = useCallback((employeeId: string) => {
+        setEmployees(prev => prev.filter(emp => emp.id !== employeeId));
+        setAppointments(prev => prev.filter(apt => apt.employeeId !== employeeId));
     }, []);
 
-    // Status helper functions from DailyCalendar
-    const getStatusColors = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'scheduled':
-            case 'new':
-                return { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200' };
-            case 'in_progress':
-                return { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-200' };
-            case 'completed':
-                return { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-200' };
-            case 'cancelled':
-                return { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-200' };
-            default:
-                return { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-200' };
-        }
-    };
+    // Appointment management
+    const handleAddAppointment = useCallback(() => {
+        if (newAppointment.clientName.trim() && newAppointment.service && selectedEmployeeId && selectedTimeSlot) {
+            const service = SERVICES.find(s => s.name === newAppointment.service);
+            const duration = service?.duration || newAppointment.duration;
+
+            if (!doesAppointmentFitWorkingHours(selectedEmployeeId, selectedTimeSlot, duration)) {
+                alert('Запись не помещается в рабочее время сотрудника');
+                return;
+            }
+
+            const startMinutes = timeToMinutes(selectedTimeSlot);
+            const endMinutes = startMinutes + duration;
+
+            const appointment: Appointment = {
+                id: Date.now().toString(),
+                employeeId: selectedEmployeeId,
+                clientName: newAppointment.clientName.trim(),
+                service: newAppointment.service,
+                startTime: selectedTimeSlot,
+                endTime: minutesToTime(endMinutes),
+                duration,
+                status: 'scheduled',
+                notes: newAppointment.notes
+            };
+
+            setAppointments(prev => [...prev, appointment]);
+            setNewAppointment({ clientName: '', service: '', startTime: '', duration: 45, notes: '' });
+            setSelectedEmployeeId('');
             setSelectedTimeSlot('');
             setIsAddAppointmentOpen(false);
         }
@@ -1309,14 +511,14 @@ const AdvancedScheduleComponent: React.FC = () => {
         const employeeAppointments = appointments.filter(apt => apt.employeeId === employeeId);
 
         const sortedAppointments = employeeAppointments.sort((a, b) => {
-            const aStart = timeToMinutes(a.scheduleTime || '');
-            const bStart = timeToMinutes(b.scheduleTime || '');
+            const aStart = timeToMinutes(a.startTime);
+            const bStart = timeToMinutes(b.startTime);
             if (aStart !== bStart) return aStart - bStart;
-            return (b.serviceDuration || b.duration || 0) - (a.serviceDuration || a.duration || 0);
+            return b.duration - a.duration;
         });
 
         const layoutData: Array<{
-            appointment: AppointmentDisplay;
+            appointment: Appointment;
             column: number;
             width: number;
             totalColumns: number;
@@ -1325,19 +527,20 @@ const AdvancedScheduleComponent: React.FC = () => {
 
         for (let i = 0; i < sortedAppointments.length; i++) {
             const currentApt = sortedAppointments[i];
-            const currentStart = timeToMinutes(currentApt.scheduleTime || '');
-            const currentEnd = timeToMinutes(currentApt.endTime || '');
+            const currentStart = timeToMinutes(currentApt.startTime);
+            const currentEnd = timeToMinutes(currentApt.endTime);
 
             const overlapping = sortedAppointments.filter(apt => {
-                const start = timeToMinutes(apt.scheduleTime || '');
-                const end = timeToMinutes(apt.endTime || '');
+                const start = timeToMinutes(apt.startTime);
+                const end = timeToMinutes(apt.endTime);
                 return start < currentEnd && end > currentStart;
             });
 
-            overlapping.sort((a, b) => (b.serviceDuration || b.duration || 0) - (a.serviceDuration || a.duration || 0));
+            overlapping.sort((a, b) => b.duration - a.duration);
 
             const totalColumns = overlapping.length;
             const columnIndex = overlapping.findIndex(apt => apt.id === currentApt.id);
+
             const zIndex = 10 + (overlapping.length - columnIndex - 1);
 
             layoutData.push({
@@ -1350,10 +553,10 @@ const AdvancedScheduleComponent: React.FC = () => {
         }
 
         return layoutData;
-    }, [tasks, formattedDate]);
+    }, [appointments]);
 
     // Generate unique colors for overlapping appointments
-    const getOverlapColor = useCallback((appointment: AppointmentDisplay, column: number, totalColumns: number) => {
+    const getOverlapColor = useCallback((appointment: Appointment, column: number, totalColumns: number) => {
         if (totalColumns === 1) {
             const employee = employees.find(emp => emp.id === appointment.employeeId);
             return employee?.color || '#3B82F6';
@@ -1375,122 +578,160 @@ const AdvancedScheduleComponent: React.FC = () => {
 
     // Render appointment block with smart positioning
     const renderAppointmentBlock = (layoutInfo: {
-        appointment: AppointmentDisplay;
+        appointment: Appointment;
         column: number;
         width: number;
         totalColumns: number;
         zIndex: number;
     }) => {
-        const { appointment, column, width, zIndex } = layoutInfo;
-        const startIndex = timeSlots.findIndex(slot => slot === appointment.scheduleTime);
-        const duration = appointment.serviceDuration || appointment.duration || 60;
-        const durationSlots = Math.ceil(duration / 15);
+        const { appointment, column, width, totalColumns, zIndex } = layoutInfo;
+        const startIndex = timeSlots.findIndex(slot => slot === appointment.startTime);
+        const durationSlots = Math.ceil(appointment.duration / 15);
         const height = durationSlots * TIME_SLOT_HEIGHT - 2;
 
-        const statusColors = getStatusColors(appointment.status);
+        const statusColors = {
+            'scheduled': 'bg-blue-50 text-blue-900',
+            'in-progress': 'bg-green-50 text-green-900',
+            'completed': 'bg-gray-50 text-gray-900',
+            'cancelled': 'bg-red-50 text-red-900'
+        };
+
+        const statusLabels = {
+            'scheduled': 'Запланировано',
+            'in-progress': 'В процессе',
+            'completed': 'Завершено',
+            'cancelled': 'Отменено'
+        };
+
+        const statusColorsTooltip = {
+            'scheduled': 'text-blue-700 bg-blue-100',
+            'in-progress': 'text-green-700 bg-green-100',
+            'completed': 'text-gray-700 bg-gray-100',
+            'cancelled': 'text-red-700 bg-red-100'
+        };
 
         const isDragging = dragState.isDragging && dragState.draggedAppointment?.id === appointment.id;
+        const isResizing = resizeState.isResizing && resizeState.resizedAppointment?.id === appointment.id;
+
+        const borderColor = getOverlapColor(appointment, column, totalColumns);
 
         const isSmall = height <= 32;
         const isMedium = height > 32 && height <= 64;
 
         const employee = employees.find(emp => emp.id === appointment.employeeId);
-
-        // Child tasks count for mother tasks
-        const childTasksCount = appointment.mother ? 0 : appointments.filter(apt => apt.mother === parseInt(appointment.id)).length;
+        const service = SERVICES.find(s => s.name === appointment.service);
 
         return (
             <Tooltip key={appointment.id}>
-                <TooltipTrigger asChild>
-                    <div
-                        className={`absolute border-l-4 rounded-r-md text-xs group transition-all duration-100 ${statusColors.bg} ${relatedStyles.borderStyle || (statusColors.border + ' border-l-4')
-                            } ${isDragging ? 'opacity-70 scale-105 shadow-xl ring-2 ring-blue-400/50' : 'shadow-sm hover:shadow-md'} hover:opacity-90`}
-                        style={{
-                            top: startIndex * TIME_SLOT_HEIGHT + 1,
-                            height: Math.max(height, 32),
-                            left: `${(column * width)}%`,
-                            width: `${width}%`,
-                            paddingLeft: column > 0 ? '2px' : '4px',
-                            paddingRight: '4px',
-                            zIndex: zIndex,
-                            cursor: 'grab'
-                        }}
-                    >
+                <TaskDialogBtn>
+                    <TooltipTrigger asChild>
                         <div
-                            className={`${isSmall ? 'px-1 py-1' : 'px-2 py-1'} h-full flex ${isSmall ? 'items-center' : 'flex-col justify-between'} cursor-grab active:cursor-grabbing`}
-                            onMouseDown={(e) => handleMouseDown(e, appointment)}
+                            className={`absolute border-l-4 rounded-r-md text-xs group transition-all duration-100 ${statusColors[appointment.status]
+                                } ${isDragging ? 'opacity-70 scale-105 shadow-xl ring-2 ring-blue-400/50' : 'shadow-sm hover:shadow-md'} ${isResizing ? 'ring-2 ring-blue-400' : ''
+                                } hover:opacity-90`}
+                            style={{
+                                top: startIndex * TIME_SLOT_HEIGHT + 1,
+                                height: Math.max(height, 32),
+                                left: `${(column * width)}%`,
+                                width: `${width}%`,
+                                paddingLeft: column > 0 ? '2px' : '4px',
+                                paddingRight: '4px',
+                                borderLeftColor: borderColor,
+                                zIndex: zIndex,
+                                cursor: 'grab'
+                            }}
                         >
-                            {isSmall ? (
-                                <div className="flex-1 min-w-0 pointer-events-none pr-6">
-                                    <div className="font-semibold truncate text-xs leading-tight flex items-center gap-1">
-                                        {relatedStyles.indicator && <span>{relatedStyles.indicator}</span>}
-                                        {appointment.client?.customName || appointment.client?.firstName || 'Клиент'}
+                            {/* Resize handles */}
+                            <div
+                                className="absolute top-0 left-0 right-0 h-3 cursor-ns-resize opacity-0"
+                                onMouseDown={(e) => handleMouseDown(e, appointment, 'resize-top')}
+                            />
+
+                            {/* Content */}
+                            <div
+                                className={`${isSmall ? 'px-1 py-1' : 'px-2 py-1'} h-full flex ${isSmall ? 'items-center' : 'flex-col justify-between'} cursor-grab active:cursor-grabbing`}
+                                onMouseDown={(e) => handleMouseDown(e, appointment, 'drag')}
+                            >
+                                {isSmall ? (
+                                    <div className="flex-1 min-w-0 pointer-events-none pr-6">
+                                        <div className="font-semibold truncate text-xs leading-tight">{appointment.clientName}</div>
                                     </div>
-                                    <div className="truncate text-xs opacity-70 leading-tight">{appointment.serviceType}</div>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="flex items-start justify-between pr-6">
-                                        <div className="flex-1 min-w-0 pointer-events-none">
-                                            <div className="font-semibold truncate text-sm leading-tight flex items-center gap-1">
-                                                {relatedStyles.indicator && <span>{relatedStyles.indicator}</span>}
-                                                {appointment.client?.customName || appointment.client?.firstName || 'Клиент'}
+                                ) : isMedium ? (
+                                    <div className="flex-1 min-w-0 pointer-events-none pr-6">
+                                        <div className="font-semibold truncate text-xs leading-tight">{appointment.clientName}</div>
+                                        <div className="truncate text-xs opacity-70 leading-tight">{appointment.service}</div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex items-start justify-between pr-6">
+                                            <div className="flex-1 min-w-0 pointer-events-none">
+                                                <div className="font-semibold truncate text-sm leading-tight">{appointment.clientName}</div>
+                                                <div className="truncate text-xs opacity-70 leading-tight">{appointment.service}</div>
                                             </div>
-                                            <div className="truncate text-xs opacity-70 leading-tight">{appointment.serviceType}</div>
-                                            {appointment.client?.phoneNumber && (
-                                                <div className="truncate text-xs opacity-60 leading-tight">{appointment.client.phoneNumber}</div>
+                                            {width > 50 && (
+                                                <div className="ml-1 pointer-events-none">
+                                                </div>
                                             )}
                                         </div>
-                                    </div>
 
-                                    {width > 50 && (
-                                        <div className="text-xs opacity-60 mt-auto pointer-events-none leading-tight">
-                                            {appointment.scheduleTime} - {appointment.endTime}
-                                        </div>
-                                    )}
-                                </>
-                            )}
+                                        {width > 50 && (
+                                            <div className="text-xs opacity-60 mt-auto pointer-events-none leading-tight">
+                                                {appointment.startTime} - {appointment.endTime}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
 
-                            {appointment.paid !== 'paid' && (
-                                <Coins className="absolute top-1 right-1 h-3 w-3 text-amber-500" />
-                            )}
+                            <div
+                                className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize opacity-0"
+                                onMouseDown={(e) => handleMouseDown(e, appointment, 'resize-bottom')}
+                            />
                         </div>
-                    </div>
-                </TooltipTrigger>
+                    </TooltipTrigger>
+                </TaskDialogBtn>
                 <TooltipContent className="bg-white border border-gray-300 rounded-lg shadow-xl p-4 min-w-64 max-w-80">
                     <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: statusColors.badge }} />
-                            <h3 className="font-semibold text-gray-900">{appointment.client?.customName || appointment.client?.firstName}</h3>
+                            <div
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: employee?.color || '#3B82F6' }}
+                            />
+                            <h3 className="font-semibold text-gray-900">{appointment.clientName}</h3>
                         </div>
-                        <span className={`px-2 py-1 text-xs rounded-full ${statusColors.badge} text-white`}>
-                            {getStatusLabel(appointment.status || 'scheduled')}
+                        <span className={`px-2 py-1 text-xs rounded-full ${statusColorsTooltip[appointment.status]}`}>
+                            {statusLabels[appointment.status]}
                         </span>
                     </div>
 
                     <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                             <span className="text-gray-600">Мастер:</span>
-                            <span className="font-medium">{appointment.masterName}</span>
+                            <span className="font-medium">{employee?.name}</span>
                         </div>
+
                         <div className="flex justify-between">
                             <span className="text-gray-600">Услуга:</span>
-                            <span className="font-medium">{appointment.serviceType}</span>
+                            <span className="font-medium">{appointment.service}</span>
                         </div>
+
                         <div className="flex justify-between">
                             <span className="text-gray-600">Время:</span>
-                            <span className="font-medium">{appointment.scheduleTime} - {appointment.endTime}</span>
+                            <span className="font-medium">{appointment.startTime} - {appointment.endTime}</span>
                         </div>
+
                         <div className="flex justify-between">
                             <span className="text-gray-600">Длительность:</span>
-                            <span className="font-medium">{duration} мин</span>
+                            <span className="font-medium">{appointment.duration} мин</span>
                         </div>
-                        {appointment.finalPrice && (
+
+                        {service && (
                             <div className="flex justify-between">
                                 <span className="text-gray-600">Стоимость:</span>
-                                <span className="font-medium">{appointment.finalPrice} сом</span>
+                                <span className="font-medium">{service.price}₽</span>
                             </div>
                         )}
+
                         {appointment.notes && (
                             <div className="pt-2 border-t border-gray-200">
                                 <span className="text-gray-600 text-xs">Примечания:</span>
@@ -1503,111 +744,420 @@ const AdvancedScheduleComponent: React.FC = () => {
         );
     };
 
-    if (mastersLoading || tasksLoading) {
-        return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-    }
-
     return (
         <TooltipProvider>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                {/* Header */}
                 <div className="p-6 border-b border-gray-200 bg-gray-50">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <Calendar className="text-gray-600" size={20} />
-                            <h2 className="text-xl font-semibold text-gray-900">Расписание на {dateString}</h2>
+                            <h2 className="text-xl font-semibold text-gray-900">
+                                Расписание на {dateString}
+                            </h2>
                         </div>
+
+                        <Dialog open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>
+                            <DialogTrigger asChild>
+                                <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                                    <Plus size={18} />
+                                    Добавить сотрудника
+                                </button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[500px]">
+                                <DialogHeader>
+                                    <DialogTitle className="flex items-center gap-2">
+                                        <User size={20} />
+                                        Новый сотрудник
+                                    </DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-6 py-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Имя сотрудника *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={newEmployee.name}
+                                            onChange={(e) => setNewEmployee(prev => ({ ...prev, name: e.target.value }))}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="Введите имя сотрудника"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Специализация *
+                                        </label>
+                                        <select
+                                            value={newEmployee.role}
+                                            onChange={(e) => setNewEmployee(prev => ({ ...prev, role: e.target.value }))}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                            <option value="">Выберите специализацию</option>
+                                            {ROLES.map(role => (
+                                                <option key={role} value={role}>{role}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Начало смены
+                                            </label>
+                                            <select
+                                                value={newEmployee.startTime}
+                                                onChange={(e) => setNewEmployee(prev => ({ ...prev, startTime: e.target.value }))}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            >
+                                                {timeSlots.filter((_, index) => index % 4 === 0).map(time => (
+                                                    <option key={time} value={time}>{time}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Конец смены
+                                            </label>
+                                            <select
+                                                value={newEmployee.endTime}
+                                                onChange={(e) => setNewEmployee(prev => ({ ...prev, endTime: e.target.value }))}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            >
+                                                {timeSlots.filter((_, index) => index % 4 === 0).map(time => (
+                                                    <option key={time} value={time}>{time}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                                        <button
+                                            onClick={() => setIsAddEmployeeOpen(false)}
+                                            className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                        >
+                                            Отмена
+                                        </button>
+                                        <button
+                                            onClick={handleAddEmployee}
+                                            disabled={!newEmployee.name.trim() || !newEmployee.role}
+                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            Добавить сотрудника
+                                        </button>
+                                    </div>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
                     </div>
                 </div>
 
+                {/* Schedule Grid */}
                 <div className="flex overflow-x-auto">
-                    {dragState.isDragging && dragState.targetSlot && (
+                    {/* Status indicator */}
+                    {(dragState.isDragging || resizeState.isResizing) && (
                         <div className="fixed top-4 right-4 bg-blue-600 text-white px-3 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2">
-                            <GripVertical size={16} />
-                            Перемещение к {activeMasters.find(emp => emp.id === dragState.targetSlot!.employeeId)?.name} на {dragState.targetSlot.timeSlot}
+                            {dragState.isDragging && (
+                                <>
+                                    <GripVertical size={16} />
+                                    {dragState.targetSlot ? (
+                                        <span>
+                                            Перемещение к {employees.find(emp => emp.id === dragState.targetSlot!.employeeId)?.name}
+                                            на {dragState.targetSlot.timeSlot}
+                                        </span>
+                                    ) : (
+                                        'Перетащите в нужную позицию'
+                                    )}
+                                </>
+                            )}
+                            {resizeState.isResizing && (
+                                <>
+                                    <Clock size={16} />
+                                    Изменение длительности: {resizeState.resizedAppointment?.duration || 0} мин
+                                </>
+                            )}
                         </div>
                     )}
 
+                    {/* Time Column */}
                     <div className="w-20 flex-shrink-0 border-r border-gray-200 bg-gray-50">
                         <div className="h-16 border-b border-gray-200 flex items-center justify-center">
                             <Clock size={16} className="text-gray-500" />
                         </div>
                         {timeSlots.map((slot, index) => (
-                            <div key={slot} className={`h-8 flex items-center justify-center text-sm border-b border-gray-100 ${index % 4 === 0 ? 'font-medium text-gray-700' : 'text-gray-500'
-                                }`}>
+                            <div
+                                key={slot}
+                                className={`h-8 flex items-center justify-center text-sm border-b border-gray-100 ${index % 4 === 0 ? 'font-medium text-gray-700' : 'text-gray-500'
+                                    }`}
+                            >
                                 {index % 4 === 0 ? slot : ''}
                             </div>
                         ))}
                     </div>
 
+                    {/* Employee Columns */}
                     <div className="flex-1 relative" ref={scheduleRef}>
-                        <div className="absolute left-0 right-0 h-0.5 bg-red-500 z-30 shadow-sm flex items-center" style={{ top: currentTimePosition + HEADER_HEIGHT - 1 }}>
+                        {/* Current Time Line */}
+                        <div
+                            className="absolute left-0 right-0 h-0.5 bg-red-500 z-30 shadow-sm flex items-center"
+                            style={{
+                                top: currentTimePosition + HEADER_HEIGHT - 1,
+                            }}
+                        >
                             <div className="w-2 h-2 bg-red-500 rounded-full -ml-1"></div>
                             <div className="flex-1 h-0.5 bg-red-500"></div>
                         </div>
 
+                        {/* Drag Preview */}
+                        {dragState.isDragging && dragState.targetSlot && (
+                            <div
+                                className={`fixed border-l-4 rounded-r-xl z-50 pointer-events-none ${doesAppointmentFitWorkingHours(
+                                    dragState.targetSlot.employeeId,
+                                    dragState.targetSlot.timeSlot,
+                                    dragState.draggedAppointment?.duration || 45
+                                )
+                                    ? 'bg-gradient-to-r from-blue-100 via-blue-50 to-transparent border-blue-400 shadow-xl'
+                                    : 'bg-gradient-to-r from-red-100 via-red-50 to-transparent border-red-400 shadow-xl'
+                                    } backdrop-blur-sm`}
+                                style={{
+                                    top: dragState.currentPosition.y - 20,
+                                    left: dragState.currentPosition.x - 100,
+                                    width: '200px',
+                                    height: Math.ceil((dragState.draggedAppointment?.duration || 45) / 15) * TIME_SLOT_HEIGHT - 2
+                                }}
+                            >
+                                <div className={`p-3 text-xs font-medium h-full flex flex-col justify-between relative overflow-hidden ${doesAppointmentFitWorkingHours(
+                                    dragState.targetSlot.employeeId,
+                                    dragState.targetSlot.timeSlot,
+                                    dragState.draggedAppointment?.duration || 45
+                                )
+                                    ? 'text-blue-800'
+                                    : 'text-red-800'
+                                    }`}>
+                                    <div className="relative z-10">
+                                        <div className="font-bold truncate text-sm tracking-tight">{dragState.draggedAppointment?.clientName}</div>
+                                        <div className="truncate opacity-80 font-medium">{dragState.draggedAppointment?.service}</div>
+                                    </div>
+
+                                    <div className="opacity-70 mt-auto relative z-10">
+                                        <div className="font-semibold">
+                                            {dragState.targetSlot.timeSlot} - {minutesToTime(
+                                                timeToMinutes(dragState.targetSlot.timeSlot) + (dragState.draggedAppointment?.duration || 45)
+                                            )}
+                                        </div>
+                                        <div className="text-xs opacity-60">
+                                            ({dragState.draggedAppointment?.duration} мин)
+                                            <br />
+                                            → {employees.find(emp => emp.id === dragState.targetSlot!.employeeId)?.name}
+                                        </div>
+                                        {!doesAppointmentFitWorkingHours(
+                                            dragState.targetSlot.employeeId,
+                                            dragState.targetSlot.timeSlot,
+                                            dragState.draggedAppointment?.duration || 45
+                                        ) && (
+                                                <div className="text-red-700 font-bold text-xs mt-1">⚠ Вне рабочих часов</div>
+                                            )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Drop zone indicator */}
+                        {dragState.isDragging && dragState.targetSlot && (
+                            <div
+                                className={`absolute rounded-md z-20 pointer-events-none ${doesAppointmentFitWorkingHours(
+                                    dragState.targetSlot.employeeId,
+                                    dragState.targetSlot.timeSlot,
+                                    dragState.draggedAppointment?.duration || 45
+                                )
+                                    ? 'bg-blue-200/30 border-2 border-dashed border-blue-400'
+                                    : 'bg-red-200/30 border-2 border-dashed border-red-400'
+                                    }`}
+                                style={{
+                                    top: timeSlots.findIndex(slot => slot === dragState.targetSlot!.timeSlot) * TIME_SLOT_HEIGHT + HEADER_HEIGHT + 1,
+                                    height: Math.ceil((dragState.draggedAppointment?.duration || 45) / 15) * TIME_SLOT_HEIGHT - 2,
+                                    left: employees.findIndex(emp => emp.id === dragState.targetSlot!.employeeId) * getEmployeeColumnWidth() + 4,
+                                    width: getEmployeeColumnWidth() - 8
+                                }}
+                            />
+                        )}
+
                         <div className="flex">
-                            {activeMasters.map((employee) => (
-                                <div key={employee.id} className="flex-1 min-w-48 border-r border-gray-200 last:border-r-0" style={{ minWidth: '200px' }}>
+                            {employees.map((employee, employeeIndex) => (
+                                <div
+                                    key={employee.id}
+                                    className="flex-1 min-w-48 border-r border-gray-200 last:border-r-0"
+                                    style={{ minWidth: '200px' }}
+                                >
+                                    {/* Employee Header */}
                                     <div className="h-16 p-3 border-b border-gray-200 bg-white relative group">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm flex-shrink-0" style={{ backgroundColor: employee.color }}>
-                                                {employee.photoUrl ? (
-                                                    <img src={employee.photoUrl} alt={employee.name} className="w-full h-full rounded-full object-cover" />
-                                                ) : (
-                                                    employee.name[0]
-                                                )}
+                                            <div
+                                                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm flex-shrink-0"
+                                                style={{ backgroundColor: employee.color }}
+                                            >
+                                                {employee.name[0]}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <div className="font-semibold text-sm text-gray-900 truncate">{employee.name}</div>
-                                                <div className="text-xs text-gray-500 truncate">{employee.specialization}</div>
+                                                <div className="font-semibold text-sm text-gray-900 truncate">
+                                                    {employee.name}
+                                                </div>
+                                                <div className="text-xs text-gray-500 truncate">
+                                                    {employee.role}
+                                                </div>
                                                 <div className="text-xs font-medium" style={{ color: employee.color }}>
-                                                    {employee.startWorkHour} - {employee.endWorkHour}
+                                                    {employee.workHours.start} - {employee.workHours.end}
                                                 </div>
                                             </div>
+                                            <button
+                                                onClick={() => handleRemoveEmployee(employee.id)}
+                                                className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all rounded flex-shrink-0"
+                                                title="Удалить сотрудника"
+                                            >
+                                                <X size={16} />
+                                            </button>
                                         </div>
                                     </div>
 
+                                    {/* Time Slots */}
                                     <div className="relative">
-                                        {timeSlots.map((slot) => (
-                                            <button
-                                                key={`${employee.id}-${slot}`}
-                                                onClick={() => handleTimeSlotClick(employee.id, slot)}
-                                                className="w-full h-8 border-b border-gray-200 hover:bg-blue-50 group transition-colors flex items-center justify-center relative"
-                                            >
-                                                <Plus size={14} className="text-gray-300 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all" />
-                                            </button>
-                                        ))}
+                                        {timeSlots.map((slot, slotIndex) => {
+                                            const isWorkingHours = isWithinWorkingHours(employee.id, slot);
 
-                                        {getAppointmentLayout(employee.id).map((layoutInfo) => renderAppointmentBlock(layoutInfo))}
+                                            if (!isWorkingHours) {
+                                                return (
+                                                    <div
+                                                        key={`${employee.id}-${slot}`}
+                                                        className="h-8 bg-gray-100 border-b border-gray-200"
+                                                    />
+                                                );
+                                            }
+
+                                            return (
+                                                <button
+                                                    key={`${employee.id}-${slot}`}
+                                                    onClick={() => handleTimeSlotClick(employee.id, slot)}
+                                                    className="w-full h-8 border-b border-gray-200 hover:bg-blue-50 group transition-colors flex items-center justify-center relative"
+                                                >
+                                                    <Plus
+                                                        size={14}
+                                                        className="text-gray-300 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                    />
+                                                </button>
+                                            );
+                                        })}
+
+                                        {/* Render appointment blocks for this employee with smart layout */}
+                                        {getAppointmentLayout(employee.id).map((layoutInfo) =>
+                                            renderAppointmentBlock(layoutInfo)
+                                        )}
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
+
+                {/* Add Appointment Modal */}
+                <Dialog open={isAddAppointmentOpen} onOpenChange={setIsAddAppointmentOpen}>
+                    <DialogContent className="sm:max-w-[500px]">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <Calendar size={20} />
+                                Новая запись на {selectedTimeSlot}
+                            </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-6 py-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Имя клиента *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newAppointment.clientName}
+                                    onChange={(e) => setNewAppointment(prev => ({ ...prev, clientName: e.target.value }))}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Введите имя клиента"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Услуга *
+                                </label>
+                                <select
+                                    value={newAppointment.service}
+                                    onChange={(e) => handleServiceChange(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    <option value="">Выберите услугу</option>
+                                    {SERVICES.map(service => (
+                                        <option key={service.name} value={service.name}>
+                                            {service.name} ({service.duration} мин, {service.price}₽)
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Продолжительность (минуты)
+                                </label>
+                                <input
+                                    type="number"
+                                    value={newAppointment.duration}
+                                    onChange={(e) => setNewAppointment(prev => ({ ...prev, duration: parseInt(e.target.value) || 45 }))}
+                                    min="15"
+                                    max="300"
+                                    step="15"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Примечания
+                                </label>
+                                <textarea
+                                    value={newAppointment.notes}
+                                    onChange={(e) => setNewAppointment(prev => ({ ...prev, notes: e.target.value }))}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                                    rows={3}
+                                    placeholder="Дополнительная информация..."
+                                />
+                            </div>
+
+                            {selectedEmployeeId && (
+                                <div className="p-3 bg-gray-50 rounded-lg">
+                                    <div className="text-sm font-medium text-gray-700">
+                                        Сотрудник: {employees.find(emp => emp.id === selectedEmployeeId)?.name}
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                        Время: {selectedTimeSlot} - {minutesToTime(timeToMinutes(selectedTimeSlot) + newAppointment.duration)}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                                <button
+                                    onClick={() => setIsAddAppointmentOpen(false)}
+                                    className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                >
+                                    Отмена
+                                </button>
+                                <button
+                                    onClick={handleAddAppointment}
+                                    disabled={!newAppointment.clientName.trim() || !newAppointment.service}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    Создать запись
+                                </button>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
-
-            <CreateAppointmentDialog
-                isOpen={showCreateDialog}
-                onClose={() => setShowCreateDialog(false)}
-                selectedDate={currentDate}
-                selectedTime={selectedTimeSlot?.time}
-                masterId={selectedTimeSlot?.masterId}
-                onTaskCreated={() => {
-                    queryClient.invalidateQueries({ queryKey: ['calendar-tasks'] });
-                    setSelectedTimeSlot(null);
-                }}
-            />
-
-            <EditAppointmentDialog
-                task={selectedTask}
-                isOpen={showEditDialog}
-                onClose={() => setShowEditDialog(false)}
-                onTaskUpdated={() => {
-                    queryClient.invalidateQueries({ queryKey: ['calendar-tasks'] });
-                    setSelectedTask(null);
-                }}
-            />
         </TooltipProvider>
     );
 };
