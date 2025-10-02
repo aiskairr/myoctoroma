@@ -1,55 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { useIsMobile, useScreenSize } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import { Loader2, Phone, User, MapPin, Scissors, Calendar as CalendarIcon, Clock, Check, CheckCircle, AlertTriangle } from "lucide-react";
-import { format, parse, addDays } from 'date-fns';
+import { Separator } from "@/components/ui/separator";
+import {
+  Loader2, Phone, User, MapPin, Scissors, Calendar as CalendarIcon,
+  Clock, CheckCircle2, ChevronLeft, ChevronRight, Sparkles
+} from "lucide-react";
+import { format, addDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
-
-// Интерфейсы
-interface Branch {
-  id: string;
-  name: string;
-  address: string;
-}
-
-interface DurationOption {
-  duration: number;
-  price: number;
-}
-
-interface Service {
-  id: string;
-  name: string;
-  description?: string;
-  defaultDuration: number;
-  availableDurations: DurationOption[];
-}
-
-interface Master {
-  id: number;
-  name: string;
-  specialty?: string;
-  isActive: boolean;
-  branchId: string; // API возвращает branchId, а не branch_id
-  photoUrl?: string;
-}
-
-interface TimeSlot {
-  time: string;
-  available: boolean;
-}
+import axios from 'axios';
+import Cookies from 'js-cookie';
+import { useQuery } from '@tanstack/react-query';
 
 interface BookingData {
   branch?: string;
   serviceId?: string;
-  serviceDuration?: number; // Добавляем выбранную длительность
-  servicePrice?: number;    // Добавляем стоимость для выбранной длительности
+  serviceDuration?: number;
+  servicePrice?: number;
   masterId?: number;
   date?: Date;
   time?: string;
@@ -57,252 +30,26 @@ interface BookingData {
   phone: string;
 }
 
-// Константы
-const BRANCHES: Branch[] = [
-  { id: 'wa1', name: 'ЭлитАрома', address: 'ул. Токтогула, 93' }
-];
-
-// Используем предопределенные услуги (можно расширить до динамической загрузки позже)
-
-// Предопределенные услуги для обратной совместимости (будут заменены загруженными)
-const PREDEFINED_SERVICES: Service[] = [
-  { 
-    id: '1', 
-    name: 'Классический массаж', 
-    description: 'Расслабляющий массаж с кокосовым маслом. Снимает напряжение, улучшает кровообращение.',
-    defaultDuration: 60,
-    availableDurations: [
-      { duration: 60, price: 2200 },
-      { duration: 90, price: 2700 }
-    ]
-  },
-  { 
-    id: '2', 
-    name: 'Лечебно-оздоровительный массаж', 
-    description: 'Глубокая проработка мышц и триггерных точек. Банки в подарок.',
-    defaultDuration: 60,
-    availableDurations: [
-      { duration: 60, price: 2800 },
-      { duration: 90, price: 3200 }
-    ]
-  },
-  { 
-    id: '3', 
-    name: 'Триггерный массаж', 
-    description: 'Интенсивное воздействие на болевые точки. Банки в подарок.',
-    defaultDuration: 60, 
-    availableDurations: [
-      { duration: 30, price: 1800 },
-      { duration: 60, price: 3400 },
-      { duration: 90, price: 5200 }
-    ]
-  },
-  { 
-    id: '4', 
-    name: 'Арома релакс', 
-    description: 'Легкий расслабляющий массаж с аромамаслами.',
-    defaultDuration: 60,
-    availableDurations: [
-      { duration: 60, price: 2500 },
-      { duration: 90, price: 2800 }
-    ]
-  },
-  { 
-    id: '5', 
-    name: 'Спортивный массаж', 
-    description: 'Интенсивная проработка мышц. Кедровая бочка в подарок.',
-    defaultDuration: 60,
-    availableDurations: [
-      { duration: 60, price: 3000 },
-      { duration: 90, price: 3500 }
-    ]
-  },
-  { 
-    id: '6', 
-    name: 'Микс массаж', 
-    description: 'Комбо: классика + точечный массаж + горячие камни. Подарок: горячие камни.',
-    defaultDuration: 110,
-    availableDurations: [
-      { duration: 110, price: 4200 }
-    ]
-  },
-  { 
-    id: '7', 
-    name: 'Тайский массаж', 
-    description: 'Растяжка и точечное воздействие. Проводится в одежде на мате.',
-    defaultDuration: 80,
-    availableDurations: [
-      { duration: 80, price: 3500 }
-    ]
-  },
-  { 
-    id: '8', 
-    name: 'Перезагрузка (4 стихии)', 
-    description: 'Комплекс: лечебный + прогрев + триггерный массаж + кедровая бочка.',
-    defaultDuration: 150,
-    availableDurations: [
-      { duration: 150, price: 7000 },
-      { duration: 220, price: 10000 }
-    ]
-  },
-  { 
-    id: '9', 
-    name: 'Стоун-терапия', 
-    description: 'Массаж горячими камнями.',
-    defaultDuration: 90,
-    availableDurations: [
-      { duration: 90, price: 3400 }
-    ]
-  },
-  { 
-    id: '10', 
-    name: 'Медовый массаж', 
-    description: 'Массаж с использованием натурального мёда.',
-    defaultDuration: 90,
-    availableDurations: [
-      { duration: 90, price: 3200 }
-    ]
-  },
-  { 
-    id: '11', 
-    name: 'Огненный массаж', 
-    description: 'Интенсивный массаж с элементами огненной терапии.',
-    defaultDuration: 90,
-    availableDurations: [
-      { duration: 90, price: 3500 }
-    ]
-  },
-  { 
-    id: '12', 
-    name: 'Королевский массаж (4 руки)', 
-    description: 'Два мастера одновременно. Максимальное расслабление.',
-    defaultDuration: 90,
-    availableDurations: [
-      { duration: 90, price: 5200 }
-    ]
-  },
-  { 
-    id: '13', 
-    name: 'Массаж для беременных', 
-    description: 'Безопасный массаж, адаптированный под беременных женщин.',
-    defaultDuration: 50,
-    availableDurations: [
-      { duration: 50, price: 2000 }
-    ]
-  },
-  { 
-    id: '14', 
-    name: 'Детский массаж', 
-    description: 'Мягкий массаж для малышей и детей.',
-    defaultDuration: 30,
-    availableDurations: [
-      { duration: 30, price: 800 },
-      { duration: 50, price: 1400 }
-    ]
-  },
-  { 
-    id: '15', 
-    name: 'Мама + дочка', 
-    description: 'Мама: лечебный (60 мин) + арома релакс (60 мин) + кедровая бочка. Дочка: массаж лица.',
-    defaultDuration: 90,
-    availableDurations: [
-      { duration: 90, price: 7000 }
-    ]
-  },
-  { 
-    id: '16', 
-    name: 'Райское спа-свидание', 
-    description: 'Арома релакс по 80 мин каждому + горячие камни + чай/шампанское.',
-    defaultDuration: 120,
-    availableDurations: [
-      { duration: 120, price: 8000 }
-    ]
-  },
-  { 
-    id: '17', 
-    name: 'Массаж шейно-воротниковой зоны и спины', 
-    description: 'Массаж шейно-воротниковой зоны (ШВЗ) и спины',
-    defaultDuration: 40,
-    availableDurations: [
-      { duration: 40, price: 1200 }
-    ]
-  },
-  { 
-    id: '22', 
-    name: 'Массаж шейно-воротниковой зоны и головы', 
-    description: 'Массаж шейно-воротниковой зоны (ШВЗ) и головы',
-    defaultDuration: 30,
-    availableDurations: [
-      { duration: 30, price: 900 }
-    ]
-  },
-  { 
-    id: '23', 
-    name: 'Массаж рук', 
-    description: 'Массаж рук',
-    defaultDuration: 30,
-    availableDurations: [
-      { duration: 30, price: 900 }
-    ]
-  },
-  { 
-    id: '24', 
-    name: 'Массаж ног и стоп', 
-    description: 'Массаж ног и стоп',
-    defaultDuration: 50,
-    availableDurations: [
-      { duration: 50, price: 1900 }
-    ]
-  },
-  { 
-    id: '25', 
-    name: 'Массаж лица', 
-    description: 'Массаж лица',
-    defaultDuration: 80,
-    availableDurations: [
-      { duration: 80, price: 2400 }
-    ]
-  }
-];
-
-// Цвета для элементов бронирования - нежные и плавные тона для EliteAroma
-const BOOKING_COLORS = {
-  primary: '#143A65', // Нежный золотисто-коричневый цвет EliteAroma
-  lightBackground: '#F5EEE7', // Очень светлый кремовый фон
-  border: '#CBB499', // Мягкая граница
-  activeBackground: '#ECB84A', // Цвет активного элемента
+const getOrganisationBranches = async (organisationId: string): Promise<any> => {
+  const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/organisation-branches?organisationId=${organisationId}`);
+  return response.data;
 };
 
-// Компонент для отображения информации о выбранных элементах
-const InfoLabel = ({ 
-  icon, 
-  text 
-}: { 
-  icon: React.ReactNode; 
-  text: React.ReactNode; 
-}) => {
-  return (
-    <div className="p-2 rounded-md inline-flex items-center" 
-         style={{ backgroundColor: `${BOOKING_COLORS.primary}15`, border: `1px solid ${BOOKING_COLORS.border}` }}>
-      <span className="mr-2" style={{ color: BOOKING_COLORS.primary }}>{icon}</span>
-      <span className="text-sm">{text}</span>
-    </div>
-  );
+const getServices = async (branchId: string): Promise<any> => {
+  const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchId}`);
+  return response.data;
 };
 
-// Примечание о массажах
-const serviceNote: React.FC = () => {
-  return (
-    <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mt-3 flex items-start">
-      <AlertTriangle className="text-yellow-500 h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
-      <p className="text-sm text-muted-foreground">
-        Все услуги предоставляются опытными и квалифицированными мастерами.
-      </p>
-    </div>
-  );
+const getMasters = async (branchId: string): Promise<any> => {
+  const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/public/masters?branchId=${branchId}`);
+  return response.data;
 };
 
-// Шаги для UX-потока
+const getMasterDetails = async (masterId: number): Promise<any> => {
+  const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${masterId}`);
+  return response.data;
+};
+
 enum BookingStep {
   Branch = 0,
   Service = 1,
@@ -315,1304 +62,698 @@ enum BookingStep {
 const BookingPage: React.FC = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const screenSize = useScreenSize();
-  
-  // CSS стили для нежной и элегантной темы бронирования EliteAroma
-  const bookingStyles = {
-    container: "min-h-screen flex flex-col bg-gradient-to-b from-amber-50/30 to-orange-50/20",
-    header: "px-4 py-4 sm:py-6 text-center border-b border-amber-100/50",
-    logo: "text-xl sm:text-2xl font-light text-amber-700 my-2 tracking-wide",
-    tagline: "text-sm text-amber-600/70 font-light",
-    content: isMobile 
-      ? "flex-grow p-3 w-full" 
-      : "flex-grow p-4 sm:p-6 md:p-8 w-full max-w-5xl mx-auto",
-    card: `bg-white/90 border border-amber-100/50 rounded-xl shadow-sm transition-all duration-300 hover:shadow-lg hover:border-amber-200/60 ${isMobile ? 'p-3' : 'p-4'}`,
-    cardHighlight: `border-2 border-amber-200/80`,
-    branchCard: `cursor-pointer hover:border-amber-300/60 transition-all duration-300 hover:shadow-md`,
-    button: "bg-amber-600/90 hover:bg-amber-700/90 text-white font-light transition-all duration-300 rounded-lg",
-    stepIndicator: "flex items-center text-sm space-x-2 mb-4 text-amber-600/70 font-light",
-    // Сетка для мастеров и услуг - адаптивная
-    grid: isMobile 
-      ? "grid grid-cols-1 gap-3" 
-      : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4",
-    // Слоты времени
-    timeSlotContainer: isMobile
-      ? "flex flex-wrap gap-2" 
-      : "grid grid-cols-4 sm:grid-cols-6 gap-2",
-    timeSlot: `px-2 py-1 rounded-lg border border-amber-200/50 text-sm cursor-pointer hover:bg-amber-50/50 hover:border-amber-300/60 text-center transition-all duration-200 font-light ${isMobile ? 'min-w-[60px]' : 'min-w-[70px]'}`,
-    timeSlotSelected: "bg-amber-600/90 text-white hover:bg-amber-700/90 border-amber-600/90 hover:border-amber-700/90 transition-all duration-200"
-  };
-  
-  // Состояния
-  const [currentStep, setCurrentStep] = useState<BookingStep>(BookingStep.Branch);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [services, setServices] = useState<Service[]>([]);
-  const [masters, setMasters] = useState<Master[]>([]);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [unavailableDates, setUnavailableDates] = useState<Date[]>([]);
+
+  // Получаем organisationId из URL query параметров
+  const searchParams = new URLSearchParams(window.location.search);
+  const organisationId = searchParams.get('organisationId') || '';
+
   const [bookingData, setBookingData] = useState<BookingData>({
     name: '',
-    phone: ''
+    phone: '',
+    branch: '',
   });
+
+  const { data: organisationBranches, isLoading: organisationBranchesLoading } = useQuery({
+    queryKey: ['organisationBranches'],
+    queryFn: () => getOrganisationBranches(organisationId)
+  });
+
+  const { data: servicesList, isLoading: servicesLoading } = useQuery({
+    queryKey: ['servicesList', bookingData?.branch],
+    queryFn: () => getServices(bookingData?.branch || ''),
+    enabled: !!bookingData?.branch
+  });
+
+  const { data: mastersList, isLoading: mastersLoading } = useQuery({
+    queryKey: ['mastersList', bookingData?.branch],
+    queryFn: () => getMasters(bookingData?.branch || ''),
+    enabled: !!bookingData?.branch
+  });
+
+  const { data: masterDetails, isLoading: masterDetailsLoading } = useQuery({
+    queryKey: ['masterDetails', bookingData?.masterId],
+    queryFn: () => getMasterDetails(bookingData?.masterId || 0),
+    enabled: !!bookingData?.masterId
+  });
+
+  const [currentStep, setCurrentStep] = useState<BookingStep>(BookingStep.Branch);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  
-  // Добавляем состояние для управления шагами выбора услуги и длительности
-  const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
-  const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
-  
-  // Добавляем состояние для отслеживания выбранного временного слота и состояние загрузки для кнопки
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
-  const [isTimeSlotSelecting, setIsTimeSlotSelecting] = useState<boolean>(false);
-  
-  // Состояние для рабочих дат мастера
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
+  const generateTimeSlots = (startHour: string, endHour: string): string[] => {
+    const slots: string[] = [];
+    const [startH, startM] = startHour.split(':').map(Number);
+    const [endH, endM] = endHour.split(':').map(Number);
 
-  // Загрузка услуг из API
-  const fetchServices = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/public/service-services');
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Loaded services from API:", data);
-        
-        // Преобразуем данные API в формат Service[]
-        const mappedServices: Service[] = data.map((service: any) => ({
-          id: service.id.toString(),
-          name: service.name,
-          description: service.description || '',
-          defaultDuration: service.defaultDuration,
-          availableDurations: service.availableDurations || []
-        }));
-        
-        setServices(mappedServices);
-      } else {
-        console.error('Failed to fetch services, using predefined services');
-        setServices(PREDEFINED_SERVICES);
-        toast({
-          title: "Предупреждение",
-          description: "Не удалось загрузить актуальный список услуг",
-          variant: "destructive"
-        });
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    let currentSlotHour = startH;
+    let currentSlotMinute = startM;
+
+    while (currentSlotHour < endH || (currentSlotHour === endH && currentSlotMinute < endM)) {
+      // Показывать только будущие временные слоты
+      if (currentSlotHour > currentHour || (currentSlotHour === currentHour && currentSlotMinute > currentMinute)) {
+        slots.push(`${String(currentSlotHour).padStart(2, '0')}:${String(currentSlotMinute).padStart(2, '0')}`);
       }
-    } catch (error) {
-      console.error('Error fetching services:', error);
-      setServices(PREDEFINED_SERVICES);
-      // Удаляем уведомление об ошибке сети
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Обработка query-параметров и восстановление данных при первой загрузке
-  useEffect(() => {
-    // Загружаем услуги из API при инициализации
-    fetchServices();
-    
-    // Пробуем восстановить данные бронирования из localStorage в случае перезагрузки страницы
-    try {
-      const savedData = localStorage.getItem('lastBookingData');
-      if (savedData) {
-        const parsedData = JSON.parse(savedData);
-        console.log('Restored booking data from localStorage:', parsedData);
-        
-        // Конвертируем строковую дату обратно в объект Date если она есть
-        if (parsedData.date) {
-          parsedData.date = new Date(parsedData.date);
-        }
-        
-        // Восстанавливаем данные и шаг
-        setBookingData(prev => ({ ...prev, ...parsedData }));
-        
-        // Определяем шаг для восстановления
-        if (parsedData.time && parsedData.date && parsedData.masterId) {
-          setSelectedTimeSlot(parsedData.time);
-          setSelectedDate(parsedData.date);
-          
-          // Если был выбран временной слот, восстанавливаем шаг ClientInfo
-          if (parsedData.time) {
-            setCurrentStep(BookingStep.ClientInfo);
-          } else if (parsedData.masterId) {
-            setCurrentStep(BookingStep.DateTime);
-            fetchTimeSlots(parsedData.masterId, parsedData.date);
-          }
-        }
-        
-        toast({
-          title: "Данные восстановлены",
-          description: "Ваша сессия бронирования была восстановлена",
-          duration: 3000
-        });
-        
-        // Очищаем сохраненные данные
-        localStorage.removeItem('lastBookingData');
-        return;
-      }
-    } catch (e) {
-      console.error('Failed to restore booking data from localStorage:', e);
-    }
-    
-    // Обрабатываем параметры URL если нет сохраненных данных
-    const searchParams = new URLSearchParams(window.location.search);
-    const branchParam = searchParams.get('branch');
-    const serviceParam = searchParams.get('service');
-    
-    if (branchParam) {
-      const validBranch = BRANCHES.find(b => b.id === branchParam);
-      if (validBranch) {
-        setBookingData(prev => ({ ...prev, branch: branchParam }));
-        setCurrentStep(BookingStep.Service);
+
+      currentSlotMinute += 30;
+      if (currentSlotMinute >= 60) {
+        currentSlotMinute = 0;
+        currentSlotHour += 1;
       }
     }
-    
-    if (serviceParam && branchParam) {
-      setBookingData(prev => ({ ...prev, serviceId: serviceParam }));
-      fetchMasters(branchParam, serviceParam);
-      setCurrentStep(BookingStep.Master);
-    }
-  }, []);
-  
-  // Загрузка мастеров для выбранного филиала и услуги
-  const fetchMasters = async (branchId: string, serviceId: string) => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/masters?branchId=${branchId}`);
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Loaded masters:", data);
-        setMasters(data);
-      } else {
-        console.error("Failed to load masters:", await response.text());
-        toast({
-          title: "Ошибка загрузки",
-          description: "Не удалось загрузить список мастеров",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching masters:', error);
-      // Удаляем уведомление об ошибке сети
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Проверка доступности мастера на 60 дней вперед
-  const fetchMasterAvailability = async (masterId: number) => {
-    try {
-      // Получаем все рабочие даты мастера (без параметров месяца/года)
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/masters/${masterId}/working-dates`);
-      
-      let workingDates: any[] = [];
-      
-      if (response.ok) {
-        workingDates = await response.json();
-        console.log(`Master ${masterId} working dates from API:`, workingDates);
-      } else {
-        console.error('Failed to fetch working dates:', await response.text());
-      }
-      
-      // Создаем список всех дат от сегодня до 60 дней вперед
-      const unavailable: Date[] = [];
-      const today = new Date();
-      
-      for (let i = 0; i < 60; i++) {
-        const checkDate = new Date(today);
-        checkDate.setDate(today.getDate() + i);
-        
-        const dateStr = format(checkDate, 'yyyy-MM-dd');
-        // Ищем соответствующую рабочую дату и проверяем активность
-        const workingDate = workingDates.find(wd => {
-          // Преобразуем дату из базы данных в локальный формат и сравниваем
-          const dbDate = new Date(wd.work_date);
-          // Используем UTC методы для правильного сравнения
-          const dbYear = dbDate.getUTCFullYear();
-          const dbMonth = dbDate.getUTCMonth();
-          const dbDay = dbDate.getUTCDate();
-          
-          const checkYear = checkDate.getFullYear();
-          const checkMonth = checkDate.getMonth();
-          const checkDay = checkDate.getDate();
-          
-          return dbYear === checkYear && dbMonth === checkMonth && dbDay === checkDay;
-        });
-        
-        const isWorking = workingDate && workingDate.is_active;
-        
-        // Добавляем отладочную информацию
-        if (i < 10) { // Логируем только первые 10 дней для экономии места
-          console.log(`Date ${dateStr}: working=${isWorking}, found date:`, workingDate);
-        }
-        
-        if (!isWorking) {
-          unavailable.push(new Date(checkDate));
-        }
-      }
-      
-      setUnavailableDates(unavailable);
-      console.log(`Master ${masterId} unavailable dates:`, unavailable.length, 'out of 60 days');
-      console.log(`Available dates count:`, 60 - unavailable.length);
-      
-    } catch (error) {
-      console.error('Error fetching master availability:', error);
-      // В случае ошибки делаем все даты недоступными
-      const unavailable: Date[] = [];
-      const today = new Date();
-      
-      for (let i = 0; i < 60; i++) {
-        const checkDate = new Date(today);
-        checkDate.setDate(today.getDate() + i);
-        unavailable.push(new Date(checkDate));
-      }
-      
-      setUnavailableDates(unavailable);
-      console.log('Error occurred, marked all dates as unavailable');
-    }
+
+    return slots;
   };
 
-  // Загрузка временных слотов на выбранную дату
-  const fetchTimeSlots = async (masterId: number, date: Date) => {
-    setIsLoading(true);
-    try {
-      const dateStr = format(date, 'yyyy-MM-dd');
-      console.log(`Fetching time slots for masterId: ${masterId}, date: ${dateStr}`);
-      
-      const serviceDuration = bookingData.serviceDuration || 60;
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/available-slots?masterId=${masterId}&date=${dateStr}&serviceDuration=${serviceDuration}`);
-      if (response.ok) {
-        const data = await response.json() as TimeSlot[];
-        console.log("Loaded time slots:", data);
-        
-        // Если нет доступных слотов, значит мастер не работает в этот день
-        if (data.length === 0) {
-          toast({
-            title: "Мастер не работает",
-            description: "Выберите другую дату",
-            variant: "destructive"
-          });
-          setTimeSlots([]);
-          return;
-        }
-        
-        // Проверяем, является ли выбранная дата сегодняшней
-        const today = new Date();
-        const isToday = 
-          today.getFullYear() === date.getFullYear() && 
-          today.getMonth() === date.getMonth() && 
-          today.getDate() === date.getDate();
-        
-        if (isToday) {
-          // Получаем текущее время по GMT+6
-          const now = new Date();
-          // Бишкек находится в часовом поясе GMT+6
-          const currentHour = (now.getUTCHours() + 6) % 24; // GMT+6, учитываем переход через полночь
-          const currentMinute = now.getUTCMinutes();
-          
-          console.log(`Filtering time slots for today. Current time in GMT+6: ${currentHour}:${currentMinute < 10 ? '0' + currentMinute : currentMinute}`);
-          
-          // Фильтруем слоты, оставляя только те, что позже текущего времени
-          const filteredSlots = data.filter((slot) => {
-            const [slotHour, slotMinute] = slot.time.split(':').map(Number);
-            return slotHour > currentHour || (slotHour === currentHour && slotMinute > currentMinute);
-          });
-          
-          console.log(`Filtered from ${data.length} to ${filteredSlots.length} time slots for today`);
-          setTimeSlots(filteredSlots);
-        } else {
-          // Для других дней показываем все слоты
-          setTimeSlots(data);
-        }
-      } else {
-        console.error("Failed to load time slots:", await response.text());
-        toast({
-          title: "Ошибка загрузки",
-          description: "Не удалось загрузить доступное время",
-          variant: "destructive"
-        });
-        setTimeSlots([]);
-      }
-    } catch (error) {
-      console.error('Error fetching time slots:', error);
-      // Удаляем уведомление об ошибке сети
-      setTimeSlots([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Отправка формы бронирования
-  const submitBooking = async () => {
-    if (!bookingData.branch || !bookingData.serviceId || !bookingData.masterId || !bookingData.date || !bookingData.time) {
-      toast({
-        title: "Ошибка бронирования",
-        description: "Пожалуйста, заполните все поля",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const datetime = `${format(bookingData.date, 'yyyy-MM-dd')}T${bookingData.time}`;
-      
-      const requestData = {
-        branch: bookingData.branch,
-        serviceId: bookingData.serviceId,
-        serviceDuration: bookingData.serviceDuration,
-        servicePrice: bookingData.servicePrice, 
-        masterId: bookingData.masterId,
-        datetime: datetime,
-        name: bookingData.name,
-        phone: bookingData.phone
-      };
-      
-      const response = await fetch('${import.meta.env.VITE_BACKEND_URL}/api/booking', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestData)
-      });
-      
-      if (response.ok) {
-        setCurrentStep(BookingStep.Confirmation);
-      } else {
-        const error = await response.json();
-        toast({
-          title: "Ошибка бронирования",
-          description: error.message || "Не удалось создать запись",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error('Error submitting booking:', error);
-      toast({
-        title: "Ошибка отправки",
-        description: "Не удалось отправить заявку",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const goToStep = (step: BookingStep) => {
+    setCurrentStep(step);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-
-  
-  // Обработчики выбора на каждом шаге
   const handleBranchSelect = (branchId: string) => {
     setBookingData(prev => ({ ...prev, branch: branchId }));
-    setCurrentStep(BookingStep.Service);
+    goToStep(BookingStep.Service);
   };
-  
-  const handleServiceSelect = (serviceId: string) => {
-    const service = services.find((s: Service) => s.id === serviceId);
-    
-    // Устанавливаем сервис и сбрасываем длительность
-    setBookingData(prev => ({ 
-      ...prev, 
+
+  const handleServiceSelect = (serviceId: string, duration: number, price: number) => {
+    setBookingData(prev => ({
+      ...prev,
       serviceId,
-      serviceDuration: service?.defaultDuration || undefined,
-      servicePrice: undefined
-    }));
-    
-    setSelectedDuration(null);
-    setSelectedPrice(null);
-    
-    // Если у сервиса есть несколько доступных длительностей, показываем шаг выбора длительности
-    if (service && service.availableDurations.length > 1) {
-      // Оставляем на шаге выбора услуги, но покажем опции длительности
-      setSelectedDuration(service.defaultDuration);
-    } else if (service && service.availableDurations.length === 1) {
-      // Если только одна длительность, устанавливаем её автоматически
-      const duration = service.availableDurations[0];
-      setBookingData(prev => ({ 
-        ...prev, 
-        serviceDuration: duration.duration,
-        servicePrice: duration.price
-      }));
-      
-      if (bookingData.branch) {
-        fetchMasters(bookingData.branch, serviceId);
-        setCurrentStep(BookingStep.Master);
-      }
-    } else if (bookingData.branch) {
-      // Если нет длительностей (странный кейс), просто идём дальше
-      fetchMasters(bookingData.branch, serviceId);
-      setCurrentStep(BookingStep.Master);
-    }
-  };
-  
-  const handleDurationSelect = (duration: number, price: number) => {
-    setSelectedDuration(duration);
-    setSelectedPrice(price);
-    
-    setBookingData(prev => ({ 
-      ...prev, 
       serviceDuration: duration,
       servicePrice: price
     }));
-    
-    if (bookingData.branch && bookingData.serviceId) {
-      fetchMasters(bookingData.branch, bookingData.serviceId);
-      setCurrentStep(BookingStep.Master);
-    }
+    goToStep(BookingStep.Master);
   };
-  
+
   const handleMasterSelect = (masterId: number) => {
     setBookingData(prev => ({ ...prev, masterId }));
-    fetchMasterAvailability(masterId); // Загружаем доступность мастера
-    fetchTimeSlots(masterId, selectedDate);
-    setCurrentStep(BookingStep.DateTime);
+    goToStep(BookingStep.DateTime);
   };
-  
+
   const handleDateSelect = (date: Date | undefined) => {
-    if (date && bookingData.masterId) {
-      // Сбрасываем предыдущий выбор временного слота при смене даты
-      setSelectedTimeSlot(null);
-      setIsTimeSlotSelecting(false); // Сбрасываем флаг выбора времени
-      setBookingData(prev => ({ ...prev, date, time: undefined }));
-      
-      setSelectedDate(date);
-      fetchTimeSlots(bookingData.masterId, date);
-      
-      // Отображаем уведомление пользователю
-      toast({
-        title: "Дата выбрана",
-        description: `Выбрана дата: ${format(date, 'dd.MM.yyyy')}`,
-        duration: 1500
-      });
-      
-      console.log(`Date selected: ${date.toISOString().split('T')[0]}, resetting time selection`);
-    }
-  };
-  
-  const handleTimeSelect = (time: string) => {
-    // Проверяем, не выбран ли уже слот (защита от двойного нажатия)
-    if (isTimeSlotSelecting) {
-      console.log(`Time slot selection already in progress, ignoring click on ${time}`);
-      return;
-    }
-    
-    // Проверяем необходимые данные и, если дата не выбрана, но есть мастер, используем текущую дату
-    if (!bookingData.masterId || !bookingData.branch || !bookingData.serviceId) {
-      console.error('Missing required booking data (master/branch/service) before selecting time slot:', bookingData);
-      toast({
-        title: "Ошибка выбора времени",
-        description: "Пожалуйста, убедитесь, что вы выбрали филиал, услугу и мастера",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Если дата не выбрана, используем текущую дату
-    if (!bookingData.date) {
+    if (date) {
       const today = new Date();
-      console.log(`Date not selected, using today's date: ${today.toISOString().split('T')[0]}`);
-      
+      today.setHours(0, 0, 0, 0);
+
+      const selectedDate = new Date(date);
+      selectedDate.setHours(0, 0, 0, 0);
+
       // Устанавливаем сегодняшнюю дату
       setSelectedDate(today);
       setBookingData(prev => ({ ...prev, date: today }));
-      
-      toast({
-        title: "Выбрана текущая дата",
-        description: `Автоматически выбрана сегодняшняя дата: ${format(today, 'dd.MM.yyyy')}`,
-        duration: 3000
-      });
+      setSelectedTimeSlot(null);
     }
-    
-    // Показываем состояние загрузки и устанавливаем выбранный слот
-    setIsTimeSlotSelecting(true);
-    setSelectedTimeSlot(time);
-    
-    console.log(`Selecting time slot: ${time}`);
-    
-    // Сразу отображаем явное уведомление пользователю
-    toast({
-      title: "Время выбрано",
-      description: `Выбрано время: ${time}`,
-      duration: 2000
-    });
-    
-    // Обновляем данные бронирования
-    setBookingData(prevData => {
-      const updatedData = { ...prevData, time };
-      
-      // Сохраняем обновленные данные в локальное хранилище для надежности
-      try {
-        localStorage.setItem('lastBookingData', JSON.stringify({
-          ...updatedData,
-          date: updatedData.date ? format(updatedData.date, 'yyyy-MM-dd') : null
-        }));
-      } catch (e) {
-        console.error('Failed to save booking data to localStorage:', e);
-      }
-      
-      // Используем асинхронный setTimeout с задержкой 500мс для гарантии обновления
-      setTimeout(() => {
-        // Логируем данные для отладки
-        console.log(`Time slot '${time}' selected, data updated:`, updatedData);
-        
-        // Выводим дополнительный лог для отладки
-        console.log(`Final booking data before moving to client info:`, {
-          ...updatedData,
-          time: time,
-          date: updatedData.date ? format(updatedData.date, 'yyyy-MM-dd') : 'not set'
-        });
-        
-        // Переходим к следующему шагу и сбрасываем состояние загрузки
-        setCurrentStep(BookingStep.ClientInfo);
-        setIsTimeSlotSelecting(false);
-      }, 500); // Используем задержку 500мс для большей надежности
-      
-      return updatedData;
-    });
-  };
-  
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setBookingData(prev => ({ ...prev, [name]: value }));
-  };
-  
-  // Валидация телефона
-  const isPhoneValid = (phone: string) => {
-    // Простая валидация для киргизских номеров
-    const phoneRegex = /^\+996\d{9}$/;
-    return phoneRegex.test(phone);
   };
 
-  // Форматирование телефона
+  const handleTimeSelect = (time: string) => {
+    setSelectedTimeSlot(time);
+    setBookingData(prev => ({ ...prev, time }));
+
+    setTimeout(() => {
+      goToStep(BookingStep.ClientInfo);
+    }, 300);
+  };
+
   const formatPhone = (input: string) => {
-    // Форматирование для киргизского номера: +996 XXX XXX XXX
     let cleaned = input.replace(/\D/g, '');
-    
-    // Добавляем код страны если его нет
-    if (!cleaned.startsWith('996') && cleaned.length > 0) {
+    if (!cleaned.startsWith('996')) {
       cleaned = '996' + cleaned;
     }
-    
-    // Ограничиваем длину до 12 цифр (код страны + 9 цифр)
     cleaned = cleaned.substring(0, 12);
-    
-    // Добавляем + в начало
-    let formatted = '+' + cleaned;
-    
-    return formatted;
+    return '+' + cleaned;
   };
-  
+
+  const isPhoneValid = (phone: string) => {
+    return /^\+996\d{9}$/.test(phone);
+  };
+
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhone(e.target.value);
     setBookingData(prev => ({ ...prev, phone: formatted }));
   };
-  
-  // Получение данных для текущего шага
-  const getSelectedBranch = () => {
-    return BRANCHES.find(b => b.id === bookingData.branch);
-  };
-  
-  const getSelectedService = () => {
-    return services.find((s: Service) => s.id === bookingData.serviceId);
-  };
-  
-  const getSelectedMaster = () => {
-    return masters.find(m => m.id === bookingData.masterId);
-  };
-  
-  // Форматированная дата для отображения
-  const formattedDate = bookingData.date ? format(bookingData.date, 'dd MMMM yyyy', { locale: ru }) : '';
-  
-  // Отображение шагов бронирования
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case BookingStep.Branch:
-        return renderBranchStep();
-      case BookingStep.Service:
-        return renderServiceStep();
-      case BookingStep.Master:
-        return renderMasterStep();
-      case BookingStep.DateTime:
-        return renderDateTimeStep();
-      case BookingStep.ClientInfo:
-        return renderClientInfoStep();
-      case BookingStep.Confirmation:
-        return renderConfirmationStep();
-      default:
-        return renderBranchStep();
+
+  const submitBooking = async () => {
+    try {
+      setIsSubmitting(true);
+
+      // Формируем datetime в формате YYYY-MM-DDTHH:mm
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const datetime = `${year}-${month}-${day}T${bookingData.time}`;
+
+      const bookingPayload = {
+        branch: String(bookingData.branch),
+        datetime: datetime,
+        masterId: Number(bookingData.masterId),
+        name: bookingData.name,
+        phone: bookingData.phone,
+        serviceDuration: Number(bookingData.serviceDuration),
+        serviceId: String(bookingData.serviceId),
+        servicePrice: Number(bookingData.servicePrice)
+      };
+
+      console.log('Booking payload:', bookingPayload);
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/booking`,
+        bookingPayload
+      );
+
+      console.log('Booking response:', response.data);
+
+      toast({
+        title: "Запись создана",
+        description: "Ваша запись успешно создана!",
+      });
+
+      goToStep(BookingStep.Confirmation);
+    } catch (error: any) {
+      console.error('Booking error:', error);
+      console.error('Error response:', error.response?.data);
+
+      const errorMessage = error.response?.data?.message || "Не удалось создать запись. Попробуйте еще раз.";
+
+      toast({
+        title: "Ошибка",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
-  
-  // Рендер шага выбора филиала
+
+  const ProgressBar = () => {
+    const steps = ['Филиал', 'Услуга', 'Мастер', 'Дата', 'Контакты'];
+    const progress = (currentStep / 4) * 100;
+
+    return (
+      <div className="w-full space-y-3 mb-8">
+        <div className="flex justify-between text-xs">
+          {steps.map((step, index) => (
+            <div
+              key={step}
+              className={`flex-1 text-center transition-colors duration-300 ${index <= currentStep
+                ? 'text-primary font-medium'
+                : 'text-muted-foreground'
+                }`}
+            >
+              {!isMobile && step}
+            </div>
+          ))}
+        </div>
+        <div className="h-2 bg-secondary rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-500 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  const InfoCard = () => {
+    const branch = organisationBranches?.branches?.find((b: any) => b.id === bookingData.branch);
+    const service = servicesList?.find((s: any) => s.id === bookingData.serviceId);
+    const master = mastersList?.find((m: any) => m.id === bookingData.masterId);
+
+    if (!branch && !service && !master && !bookingData.date) return null;
+
+    return (
+      <Card className="mb-6 border-primary/20 bg-gradient-to-br from-amber-50/50 to-orange-50/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-amber-600" />
+            Ваша запись
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          {branch && (
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span>{branch.branches}</span>
+            </div>
+          )}
+          {service && (
+            <div className="flex items-center gap-2">
+              <Scissors className="h-4 w-4 text-muted-foreground" />
+              <span>
+                {service.name}
+                {bookingData.serviceDuration && (
+                  <Badge variant="secondary" className="ml-2">
+                    {bookingData.serviceDuration} мин
+                  </Badge>
+                )}
+              </span>
+            </div>
+          )}
+          {master && (
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span>{master.name}</span>
+            </div>
+          )}
+          {bookingData.date && bookingData.time && (
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span>
+                {format(bookingData.date, 'dd MMMM', { locale: ru })} в {bookingData.time}
+              </span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   const renderBranchStep = () => (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-light text-amber-700">Выберите филиал</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {BRANCHES.map(branch => (
-          <Card 
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="text-center space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">Выберите филиал</h2>
+        <p className="text-muted-foreground">Где вам удобнее?</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {organisationBranches?.branches?.map((branch: any) => (
+          <Card
             key={branch.id}
-            className={`${bookingStyles.card} ${bookingStyles.branchCard}`}
+            className="cursor-pointer transition-all hover:shadow-lg hover:scale-105 hover:border-primary/50 group"
             onClick={() => handleBranchSelect(branch.id)}
-            style={{ borderColor: BOOKING_COLORS.border }}
           >
-            <CardContent className="p-4 flex flex-col items-center text-center space-y-2">
-              <MapPin className="h-8 w-8 mb-2" style={{ color: BOOKING_COLORS.primary }} />
-              <h3 className="font-light text-lg text-amber-700">{branch.name}</h3>
-              <p className="text-muted-foreground text-sm">{branch.address}</p>
-            </CardContent>
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="group-hover:text-primary transition-colors">
+                    {branch.branches}
+                  </CardTitle>
+                  <CardDescription className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {branch.address}
+                  </CardDescription>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+              </div>
+            </CardHeader>
           </Card>
         ))}
       </div>
     </div>
   );
-  
-  // Рендер шага выбора услуги
+
   const renderServiceStep = () => {
-    const selectedBranch = getSelectedBranch();
-    
     return (
-      <div className="space-y-4">
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCurrentStep(BookingStep.Branch)}
-            className="mr-2"
-          >
-            &larr; Назад
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h2 className="text-3xl font-bold tracking-tight">Выберите услугу</h2>
+            <p className="text-muted-foreground">Что вам нужно?</p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => goToStep(BookingStep.Branch)}>
+            <ChevronLeft className="h-5 w-5" />
           </Button>
-          <h2 className="text-2xl font-light text-amber-700">Выберите услугу</h2>
         </div>
-        
-        {selectedBranch && (
-          <InfoLabel
-            icon={<MapPin className="h-4 w-4" />}
-            text={`${selectedBranch.name} (${selectedBranch.address})`}
-          />
-        )}
-        
-        {/* Выбор конкретной услуги (первый этап) */}
-        {!bookingData.serviceId ? (
-          <div className="mt-4">
-            <serviceNote />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              {services.length > 0 ? (
-                services.map((service: Service) => (
-                  <Card
-                    key={service.id}
-                    className="cursor-pointer hover:border-primary transition-all"
-                    onClick={() => handleServiceSelect(service.id)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex flex-col h-full">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-light text-lg text-amber-700">{service.name}</h3>
-                          </div>
-                          <div className="text-right">
-                            {service.availableDurations.length > 0 && (
-                              <>
-                                <div className="font-light text-amber-600">
-                                  от {service.availableDurations[0].price} сом
-                                </div>
-                                <div className="text-muted-foreground text-sm">
-                                  {service.defaultDuration} мин
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        {service.description && (
-                          <p className="text-muted-foreground text-sm mt-2">{service.description}</p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <p className="text-muted-foreground col-span-2 text-center py-4">
-                  Нет доступных услуг
-                </p>
-              )}
-            </div>
-          </div>
-        ) : (
-          /* Выбор длительности для выбранной услуги (второй этап) */
-          <div className="mt-4">
-            <div className="mb-4 flex items-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setBookingData(prev => ({ ...prev, serviceId: undefined }));
-                  setSelectedDuration(null);
-                  setSelectedPrice(null);
-                }}
-                className="mr-2"
+
+        <InfoCard />
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {servicesList?.map((service: any) => {
+            const durationFields = [
+              { key: 'duration10_price', duration: 10 },
+              { key: 'duration15_price', duration: 15 },
+              { key: 'duration20_price', duration: 20 },
+              { key: 'duration30_price', duration: 30 },
+              { key: 'duration40_price', duration: 40 },
+              { key: 'duration50_price', duration: 50 },
+              { key: 'duration60_price', duration: 60 },
+              { key: 'duration75_price', duration: 75 },
+              { key: 'duration80_price', duration: 80 },
+              { key: 'duration90_price', duration: 90 },
+              { key: 'duration110_price', duration: 110 },
+              { key: 'duration120_price', duration: 120 },
+              { key: 'duration150_price', duration: 150 },
+              { key: 'duration220_price', duration: 220 },
+            ];
+
+            const firstAvailableDuration = durationFields.find(
+              (field) => service[field.key] !== null
+            );
+
+            return (
+              <Card
+                key={service.id}
+                className="cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 group"
+                onClick={() => handleServiceSelect(
+                  service.id,
+                  firstAvailableDuration?.duration || service.defaultDuration || 60,
+                  firstAvailableDuration ? service[firstAvailableDuration.key] : 0
+                )}
               >
-                &larr; К выбору услуги
-              </Button>
-              <h3 className="text-lg font-light text-amber-700">Выберите длительность</h3>
-            </div>
-            
-            {/* Показываем выбранную услугу */}
-            {getSelectedService() && (
-              <InfoLabel
-                icon={<Scissors className="h-4 w-4" />}
-                text={getSelectedService()?.name}
-              />
-            )}
-            
-            {/* Варианты длительности */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
-              {getSelectedService()?.availableDurations.map((duration: DurationOption) => (
-                <Card
-                  key={duration.duration}
-                  className={`cursor-pointer hover:border-primary transition-all ${
-                    selectedDuration === duration.duration ? 'border-primary border-2' : ''
-                  }`}
-                  onClick={() => handleDurationSelect(duration.duration, duration.price)}
-                >
-                  <CardContent className="p-4 text-center">
-                    <div className="font-light mb-1 text-amber-700">{duration.duration} мин</div>
-                    <div className="text-sm">{duration.price} сом</div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+                <CardHeader>
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="space-y-1 flex-1">
+                      <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                        {service.name}
+                      </CardTitle>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {firstAvailableDuration ? (
+                        <div className="font-semibold text-primary">
+                          {service[firstAvailableDuration.key]} сом
+                        </div>
+                      ) : (
+                        <div className="font-semibold text-primary">Цена не указана</div>
+                      )}
+                      <div className="text-xs text-muted-foreground">
+                        {firstAvailableDuration?.duration || service.defaultDuration} мин
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            );
+          })}
+        </div>
       </div>
     );
   };
-  
-  // Рендер шага выбора мастера
-  const renderMasterStep = () => {
-    const selectedBranch = getSelectedBranch();
-    const selectedService = getSelectedService();
-    
-    // Отладка
-    console.log("Рендер мастеров:", {
-      masters: masters,
-      bookingData: bookingData,
-      selectedMasterId: bookingData.masterId
-    });
-    
+
+  const renderMasterStep = () => (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h2 className="text-3xl font-bold tracking-tight">Выберите мастера</h2>
+          <p className="text-muted-foreground">Кто вас обслужит?</p>
+        </div>
+        <Button variant="ghost" size="icon" onClick={() => goToStep(BookingStep.Service)}>
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+      </div>
+
+      <InfoCard />
+
+      {mastersLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : mastersList && mastersList.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {mastersList.map((master: any) => (
+            <Card
+              key={master.id}
+              className={`cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 group ${bookingData.masterId === master.id ? 'border-primary bg-primary/5' : ''
+                }`}
+              onClick={() => handleMasterSelect(master.id)}
+            >
+              <CardContent className="p-6 text-center space-y-4">
+                <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center text-2xl font-semibold text-amber-700">
+                  {master.name.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="font-semibold group-hover:text-primary transition-colors">
+                    {master.name}
+                  </h3>
+                  {master.specialty && (
+                    <p className="text-sm text-muted-foreground">{master.specialty}</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <p className="text-muted-foreground">Нет доступных мастеров</p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+
+  const renderDateTimeStep = () => {
+    const timeSlots = masterDetails
+      ? generateTimeSlots(masterDetails.startWorkHour, masterDetails.endWorkHour)
+      : [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     return (
-      <div className="space-y-4">
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCurrentStep(BookingStep.Service)}
-            className="mr-2"
-          >
-            &larr; Назад
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h2 className="text-3xl font-bold tracking-tight">Выберите время</h2>
+            <p className="text-muted-foreground">Когда вам удобно?</p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => goToStep(BookingStep.Master)}>
+            <ChevronLeft className="h-5 w-5" />
           </Button>
-          <h2 className="text-2xl font-light text-amber-700">Выберите мастера</h2>
         </div>
-        
-        <div className="flex flex-col space-y-2">
-          {selectedBranch && (
-            <InfoLabel 
-              icon={<MapPin className="h-4 w-4" />} 
-              text={selectedBranch.name} 
-            />
-          )}
-          
-          {selectedService && (
-            <InfoLabel 
-              icon={<Scissors className="h-4 w-4" />} 
-              text={<>
-                {selectedService.name} 
-                {bookingData.serviceDuration && bookingData.servicePrice ? (
-                  <> - {bookingData.serviceDuration} мин, {bookingData.servicePrice} сом</>
-                ) : (
-                  <> - {selectedService.defaultDuration} мин</>
-                )}
-              </>} 
-            />
-          )}
-        </div>
-        
-        {isLoading ? (
-          <div className="flex justify-center py-8">
+
+        <InfoCard />
+
+        {masterDetailsLoading ? (
+          <div className="flex justify-center items-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            {masters.length > 0 ? (
-              masters.map(master => (
-                <Card
-                  key={master.id}
-                  className={`cursor-pointer hover:border-primary transition-all ${bookingData.masterId === master.id ? 'border-primary bg-primary/5' : ''}`}
-                  onClick={() => handleMasterSelect(master.id)}
-                >
-                  <CardContent className="p-4 flex flex-col items-center text-center">
-                    <div className="h-24 w-24 mb-2 rounded-full overflow-hidden">
-                      {master.photoUrl ? (
-                        <img 
-                          src={master.photoUrl} 
-                          alt={`Мастер ${master.name}`} 
-                          className="w-full h-full object-cover"
-                          onLoad={() => console.log(`Фото ${master.name} загружено:`, master.photoUrl)}
-                          onError={(e) => {
-                            console.error(`Ошибка загрузки фото для ${master.name}:`, master.photoUrl);
-                            // Когда произошла ошибка загрузки, устанавливаем photoUrl в undefined
-                            // Это вызовет повторный рендер компонента и покажет fallback
-                            const updatedMasters = masters.map(m => 
-                              m.id === master.id ? {...m, photoUrl: undefined} : m
-                            );
-                            setMasters(updatedMasters);
+          <div className="space-y-6">
+            <Card className="overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <CalendarIcon className="h-5 w-5 text-primary" />
+                      Дата записи
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {format(selectedDate, 'EEEE, d MMMM yyyy', { locale: ru })}
+                    </CardDescription>
+                  </div>
+                  <Badge variant="secondary" className="text-sm">
+                    Сегодня
+                  </Badge>
+                </div>
+              </CardHeader>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-primary" />
+                  Доступное время
+                </CardTitle>
+                <CardDescription>
+                  Рабочие часы: {masterDetails?.startWorkHour} - {masterDetails?.endWorkHour}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="relative">
+                  <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent hover:scrollbar-thumb-primary/40">
+                    <div className="flex gap-3 min-w-max px-2">
+                      {timeSlots.map((time, index) => (
+                        <button
+                          key={time}
+                          onClick={() => handleTimeSelect(time)}
+                          className={`group relative flex-shrink-0 w-24 h-28 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg ${selectedTimeSlot === time
+                              ? 'border-primary bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-xl scale-105'
+                              : 'border-gray-200 bg-white hover:border-primary/50 hover:bg-amber-50/50'
+                            }`}
+                          style={{
+                            animationDelay: `${index * 30}ms`
                           }}
-                        />
-                      ) : (
-                        <div className="h-24 w-24 flex items-center justify-center bg-muted rounded-full">
-                          <span className="text-4xl">{master.name.charAt(0)}</span>
-                        </div>
-                      )}
+                        >
+                          <div className="flex flex-col items-center justify-center h-full gap-2">
+                            <Clock className={`h-5 w-5 transition-colors ${selectedTimeSlot === time ? 'text-white' : 'text-primary'
+                              }`} />
+                            <span className={`text-xl font-bold transition-colors ${selectedTimeSlot === time ? 'text-white' : 'text-gray-900'
+                              }`}>
+                              {time}
+                            </span>
+                            {selectedTimeSlot === time && (
+                              <CheckCircle2 className="h-4 w-4 text-white animate-in zoom-in duration-200" />
+                            )}
+                          </div>
+                          {selectedTimeSlot === time && (
+                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-amber-400/20 to-orange-400/20 animate-pulse" />
+                          )}
+                        </button>
+                      ))}
                     </div>
-                    <h3 className="font-light text-lg text-amber-700">{master.name}</h3>
-                    {master.specialty && (
-                      <p className="text-muted-foreground text-sm">{master.specialty}</p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <div className="col-span-full text-center py-4 text-muted-foreground">
-                Нет доступных мастеров для выбранного филиала
-              </div>
-            )}
+                  </div>
+                  <div className="absolute right-0 top-0 bottom-4 w-16 bg-gradient-to-l from-white to-transparent pointer-events-none" />
+                  <div className="absolute left-0 top-0 bottom-4 w-16 bg-gradient-to-r from-white to-transparent pointer-events-none" />
+                </div>
+
+                {timeSlots.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Нет доступных временных слотов
+                  </div>
+                )}
+
+                {timeSlots.length > 0 && (
+                  <div className="mt-4 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <div className="w-6 h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+                      <span>Листайте для просмотра всех слотов</span>
+                      <div className="w-6 h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>
     );
   };
-  
-  // Рендер шага выбора даты и времени
-  const renderDateTimeStep = () => {
-    const selectedBranch = getSelectedBranch();
-    const selectedService = getSelectedService();
-    const selectedMaster = getSelectedMaster();
-    
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCurrentStep(BookingStep.Master)}
-            className="mr-2"
-          >
-            &larr; Назад
-          </Button>
-          <div>
-            <h2 className="text-2xl font-light text-amber-700">Выберите дату и время</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Для текущего дня доступны только слоты после {new Date().getUTCHours() + 6}:00. Выберите дату или нажмите сразу на время.
-            </p>
-          </div>
+
+  const renderClientInfoStep = () => (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h2 className="text-3xl font-bold tracking-tight">Ваши контакты</h2>
+          <p className="text-muted-foreground">Почти готово!</p>
         </div>
-        
-        <div className="flex flex-col space-y-2">
-          {selectedBranch && (
-            <InfoLabel 
-              icon={<MapPin className="h-4 w-4" />} 
-              text={selectedBranch.name} 
-            />
-          )}
-          
-          {selectedService && (
-            <InfoLabel 
-              icon={<Scissors className="h-4 w-4" />} 
-              text={<>
-                {selectedService.name} 
-                {bookingData.serviceDuration && bookingData.servicePrice ? (
-                  <> - {bookingData.serviceDuration} мин, {bookingData.servicePrice} сом</>
-                ) : (
-                  <> - {selectedService.defaultDuration} мин</>
-                )}
-              </>} 
-            />
-          )}
-          
-          {selectedMaster && (
-            <InfoLabel
-              icon={<User className="h-4 w-4" />}
-              text={selectedMaster.name}
-            />
-          )}
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-          <div>
-            <h3 className="font-light mb-2 text-amber-700">Выберите дату:</h3>
-            <Card className="overflow-hidden">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={handleDateSelect}
-                locale={ru}
-                className="rounded-md"
-                disabled={(date) => {
-                  // Отключаем только полностью прошедшие даты (сравниваем только дату, не время)
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0); // Сбрасываем время к началу дня
-                  const checkDate = new Date(date);
-                  checkDate.setHours(0, 0, 0, 0); // Сбрасываем время к началу дня
-                  
-                  if (checkDate < today) return true;
-                  
-                  // Отключаем даты далее чем через 60 дней
-                  if (date > addDays(new Date(), 60)) return true;
-                  
-                  // Отключаем недоступные даты мастера
-                  if (bookingData.masterId && unavailableDates.some(unavailableDate => 
-                    unavailableDate.getFullYear() === date.getFullYear() &&
-                    unavailableDate.getMonth() === date.getMonth() &&
-                    unavailableDate.getDate() === date.getDate()
-                  )) {
-                    return true;
-                  }
-                  
-                  return false;
-                }}
-                fromDate={new Date()}
-                toDate={addDays(new Date(), 60)}
-                modifiers={{
-                  unavailable: unavailableDates
-                }}
-                modifiersStyles={{
-                  selected: {
-                    backgroundColor: BOOKING_COLORS.primary,
-                  },
-                  today: {
-                    borderColor: BOOKING_COLORS.primary,
-                  },
-                  unavailable: { 
-                    backgroundColor: '#f3f4f6', 
-                    color: '#9ca3af',
-                    textDecoration: 'line-through'
-                  }
-                }}
-              />
-            </Card>
-          </div>
-          
-          <div>
-            <h3 className="font-light mb-2 text-amber-700">Выберите время:</h3>
-            <div className="space-y-2">
-              {isLoading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : timeSlots.length > 0 ? (
-                <div className="grid grid-cols-3 gap-2">
-                  {timeSlots
-                    .sort((a, b) => {
-                      // Сортировка слотов по времени
-                      const timeA = a.time.split(':').map(Number);
-                      const timeB = b.time.split(':').map(Number);
-                      
-                      // Сравниваем часы
-                      if (timeA[0] !== timeB[0]) {
-                        return timeA[0] - timeB[0];
-                      }
-                      
-                      // Если часы одинаковые, сравниваем минуты
-                      return timeA[1] - timeB[1];
-                    })
-                    .map((slot, index) => (
-                      <Button
-                        key={index}
-                        variant={
-                          selectedTimeSlot === slot.time 
-                            ? "default" 
-                            : slot.available 
-                              ? "outline" 
-                              : "ghost"
-                        }
-                        disabled={Boolean(!slot.available || isTimeSlotSelecting)}
-                        onClick={() => selectedTimeSlot !== slot.time ? handleTimeSelect(slot.time) : null}
-                        className={`
-                          ${selectedTimeSlot === slot.time ? "bg-amber-600/90 text-white border-amber-600/90 hover:border-amber-600/90 font-light" : ""}
-                          ${!slot.available ? "opacity-40 cursor-not-allowed" : ""}
-                          ${isTimeSlotSelecting ? "cursor-wait" : ""}
-                          ${isTimeSlotSelecting && selectedTimeSlot !== slot.time ? "opacity-50" : ""}
-                          ${slot.available && !isTimeSlotSelecting && selectedTimeSlot !== slot.time ? "hover:border-orange-500 hover:text-orange-500" : ""}
-                          p-2 h-auto transition-all duration-300 relative shadow-sm
-                        `}
-                      >
-                        <div className="flex items-center justify-center w-full">
-                          {isTimeSlotSelecting && selectedTimeSlot === slot.time ? (
-                            <>
-                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                              <span>Выбрано</span>
-                            </>
-                          ) : selectedTimeSlot === slot.time ? (
-                            <>
-                              <Check className="h-3 w-3 mr-1 text-white" />
-                              <span>{slot.time}</span>
-                            </>
-                          ) : (
-                            <>
-                              <Clock className="h-3 w-3 mr-1" />
-                              <span>{slot.time}</span>
-                            </>
-                          )}
-                        </div>
-                      </Button>
-                    ))}
-                </div>
-              ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  <p>Выберите дату или нажмите на любое доступное время</p>
-                  <p className="mt-2 text-sm">Если дата не выбрана, будет использована текущая дата</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <Button variant="ghost" size="icon" onClick={() => goToStep(BookingStep.DateTime)}>
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
       </div>
-    );
-  };
-  
-  // Рендер шага ввода данных клиента
-  const renderClientInfoStep = () => {
-    const selectedBranch = getSelectedBranch();
-    const selectedService = getSelectedService();
-    const selectedMaster = getSelectedMaster();
-    
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCurrentStep(BookingStep.DateTime)}
-            className="mr-2"
-          >
-            &larr; Назад
-          </Button>
-          <h2 className="text-2xl font-light text-amber-700">Ваши данные</h2>
-        </div>
-        
-        <Card className="bg-muted/50">
-          <CardContent className="p-4 space-y-2">
-            <h3 className="font-light text-amber-700">Информация о записи:</h3>
-            {selectedBranch && (
-              <div className="flex items-center">
-                <MapPin className="h-4 w-4 mr-2" style={{ color: BOOKING_COLORS.primary }} />
-                <span>{selectedBranch.name} ({selectedBranch.address})</span>
-              </div>
-            )}
-            {selectedService && (
-              <div className="flex items-center">
-                <Scissors className="h-4 w-4 mr-2" style={{ color: BOOKING_COLORS.primary }} />
-                <span>{selectedService.name} - 
-                  {bookingData.serviceDuration && bookingData.servicePrice ? (
-                    <>{bookingData.serviceDuration} мин, {bookingData.servicePrice} сом</>
-                  ) : (
-                    <>{selectedService.defaultDuration} мин</>
-                  )}
-                </span>
-              </div>
-            )}
-            {selectedMaster && (
-              <div className="flex items-center">
-                <User className="h-4 w-4 mr-2" style={{ color: BOOKING_COLORS.primary }} />
-                <span>{selectedMaster.name}</span>
-              </div>
-            )}
-            {formattedDate && bookingData.time && (
-              <div className="flex items-center">
-                <CalendarIcon className="h-4 w-4 mr-2" style={{ color: BOOKING_COLORS.primary }} />
-                <span>{formattedDate}, {bookingData.time}</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        
-        <form className="space-y-4" onSubmit={(e) => {
-          e.preventDefault();
-          submitBooking();
-        }}>
-          <div className="space-y-3">
-            <div className="grid w-full items-center gap-1.5">
-              <Label htmlFor="name">Ваше имя</Label>
-              <Input
-                id="name"
-                name="name"
-                value={bookingData.name}
-                onChange={handleInputChange}
-                placeholder="Введите ваше имя"
-                required
-              />
-            </div>
-            
-            <div className="grid w-full items-center gap-1.5">
-              <Label htmlFor="phone">Номер телефона</Label>
-              <div className="relative">
-                <Phone className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="phone"
-                  name="phone"
-                  value={bookingData.phone}
-                  onChange={handlePhoneChange}
-                  placeholder="+996 XXX XXX XXX"
-                  className="pl-8"
-                  required
-                />
-              </div>
-              {bookingData.phone && !isPhoneValid(bookingData.phone) && (
-                <p className="text-sm text-destructive">
-                  Введите корректный номер телефона в формате +996 XXX XXX XXX
-                </p>
-              )}
-            </div>
+
+      <InfoCard />
+
+      <Card>
+        <CardContent className="pt-6 space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="name">Ваше имя</Label>
+            <Input
+              id="name"
+              placeholder="Иван Иванов"
+              value={bookingData.name}
+              onChange={(e) => setBookingData(prev => ({ ...prev, name: e.target.value }))}
+            />
           </div>
-          
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Номер телефона</Label>
+            <Input
+              id="phone"
+              placeholder="+996 XXX XXX XXX"
+              value={bookingData.phone}
+              onChange={handlePhoneChange}
+            />
+            {bookingData.phone && !isPhoneValid(bookingData.phone) && (
+              <p className="text-sm text-destructive">
+                Введите корректный номер
+              </p>
+            )}
+          </div>
+
           <Button
-            type="submit"
-            className={bookingStyles.button}
-            disabled={
-              isLoading || 
-              !bookingData.name || 
-              !bookingData.phone || 
-              !isPhoneValid(bookingData.phone)
-            }
+            className="w-full h-12 text-base"
+            size="lg"
+            onClick={submitBooking}
+            disabled={!bookingData.name || !isPhoneValid(bookingData.phone) || isSubmitting}
           >
-            {isLoading ? (
+            {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Отправка...
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Создание записи...
               </>
             ) : (
-              "Записаться на услугу"
+              <>
+                Подтвердить запись
+                <ChevronRight className="ml-2 h-5 w-5" />
+              </>
             )}
           </Button>
-        </form>
-      </div>
-    );
-  };
-  
-  // Рендер шага подтверждения
-  const renderConfirmationStep = () => {
-    const selectedService = getSelectedService();
-    const selectedMaster = getSelectedMaster();
-    const formattedDate = bookingData.date ? format(bookingData.date, 'dd MMMM yyyy', { locale: ru }) : '';
-    
-    return (
-      <div className="space-y-6 text-center">
-        <div className="flex flex-col items-center justify-center">
-          <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center mb-4">
-            <Check className="h-10 w-10 text-green-600" />
-          </div>
-          <h2 className="text-2xl font-light text-amber-700 mb-2">Ваша запись подтверждена!</h2>
-          <p className="text-muted-foreground">
-            Мы ждем вас в указанное время
-          </p>
-        </div>
-        
-        <Card className="max-w-md mx-auto">
-          <CardContent className="p-6 space-y-3">
-            <h3 className="font-light text-lg text-amber-700">Детали записи:</h3>
-            {selectedService && (
-              <div className="flex items-center">
-                <Scissors className="h-4 w-4 mr-2" style={{ color: BOOKING_COLORS.primary }} />
-                <span>{selectedService.name}</span>
-              </div>
-            )}
-            {selectedMaster && (
-              <div className="flex items-center">
-                <User className="h-4 w-4 mr-2" style={{ color: BOOKING_COLORS.primary }} />
-                <span>Мастер: {selectedMaster.name}</span>
-              </div>
-            )}
-            {formattedDate && bookingData.time && (
-              <div className="flex items-center">
-                <CalendarIcon className="h-4 w-4 mr-2" style={{ color: BOOKING_COLORS.primary }} />
-                <span>Дата и время: {formattedDate}, {bookingData.time}</span>
-              </div>
-            )}
-            <div className="flex items-center">
-              <Phone className="h-4 w-4 mr-2" style={{ color: BOOKING_COLORS.primary }} />
-              <span>Контактный телефон: {bookingData.phone}</span>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <div className="pt-4">
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              setBookingData({
-                name: '',
-                phone: ''
-              });
-              setCurrentStep(BookingStep.Branch);
-            }}
-          >
-            Создать новую запись
-          </Button>
-        </div>
-      </div>
-    );
-  };
-  
-  // Индикатор текущего шага (линия прогресса)
-  const renderStepIndicator = () => (
-    <div className="mb-6">
-      {!isMobile ? (
-        // Десктопная версия индикатора
-        <div className="flex justify-between items-center mb-2">
-          <span className={currentStep >= BookingStep.Branch ? "text-amber-600 font-light" : "text-gray-400"}>
-            Филиал
-          </span>
-          <span className={currentStep >= BookingStep.Service ? "text-amber-600 font-light" : "text-gray-400"}>
-            Услуга
-          </span>
-          <span className={currentStep >= BookingStep.Master ? "text-amber-600 font-light" : "text-gray-400"}>
-            Мастер
-          </span>
-          <span className={currentStep >= BookingStep.DateTime ? "text-amber-600 font-light" : "text-gray-400"}>
-            Дата/Время
-          </span>
-          <span className={currentStep >= BookingStep.ClientInfo ? "text-amber-600 font-light" : "text-gray-400"}>
-            Данные
-          </span>
-        </div>
-      ) : (
-        // Мобильная версия индикатора - только текущий шаг
-        <div className="text-center mb-2">
-          <span className="text-amber-600 font-light text-lg">
-            {currentStep === BookingStep.Branch ? "Выберите филиал" : 
-             currentStep === BookingStep.Service ? "Выберите услугу" : 
-             currentStep === BookingStep.Master ? "Выберите мастера" : 
-             currentStep === BookingStep.DateTime ? "Выберите дату и время" : 
-             "Введите ваши данные"}
-          </span>
-        </div>
-      )}
-      <div className="relative h-2 bg-amber-100/50 rounded-full overflow-hidden">
-        <div 
-          className="absolute left-0 top-0 h-full bg-amber-600/90 transition-all duration-500 rounded-full"
-          style={{ width: `${(currentStep / (Object.keys(BookingStep).length / 2 - 1)) * 100}%` }}
-        ></div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
-  
+
+  const renderConfirmationStep = () => (
+    <div className="space-y-6 text-center max-w-2xl mx-auto animate-in fade-in zoom-in duration-700">
+      <div className="flex flex-col items-center">
+        <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-4">
+          <CheckCircle2 className="h-10 w-10 text-green-600" />
+        </div>
+        <h2 className="text-3xl font-bold tracking-tight mb-2">Готово!</h2>
+        <p className="text-muted-foreground text-lg">
+          Ваша запись успешно создана
+        </p>
+      </div>
+
+      <Card className="border-green-200 bg-green-50/50">
+        <CardContent className="pt-6 space-y-4 text-left">
+          <div className="flex items-center gap-3">
+            <User className="h-5 w-5 text-muted-foreground" />
+            <span>{bookingData.name}</span>
+          </div>
+          <Separator />
+          <div className="flex items-center gap-3">
+            <Phone className="h-5 w-5 text-muted-foreground" />
+            <span>{bookingData.phone}</span>
+          </div>
+          <Separator />
+          <div className="flex items-center gap-3">
+            <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+            <span>
+              {bookingData.date && format(bookingData.date, 'dd MMMM yyyy', { locale: ru })}
+              {' в '}
+              {bookingData.time}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button
+        variant="outline"
+        onClick={() => {
+          setBookingData({ name: '', phone: '' });
+          goToStep(BookingStep.Branch);
+        }}
+      >
+        Создать новую запись
+      </Button>
+    </div>
+  );
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case BookingStep.Branch: return renderBranchStep();
+      case BookingStep.Service: return renderServiceStep();
+      case BookingStep.Master: return renderMasterStep();
+      case BookingStep.DateTime: return renderDateTimeStep();
+      case BookingStep.ClientInfo: return renderClientInfoStep();
+      case BookingStep.Confirmation: return renderConfirmationStep();
+      default: return renderBranchStep();
+    }
+  };
+
   return (
-    <div className={bookingStyles.container}>
-      <header className={bookingStyles.header}>
-        <h1 className={bookingStyles.logo}>Octo CRM</h1>
-        <p className={bookingStyles.tagline}>Онлайн-запись</p>
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50">
+      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                Elitaroma
+              </h1>
+              <p className="text-sm text-muted-foreground">Онлайн-запись</p>
+            </div>
+          </div>
+        </div>
       </header>
-      
-      <main className={bookingStyles.content}>
-        {/* Индикатор прогресса */}
-        {renderStepIndicator()}
-        
-        {/* Содержимое текущего шага */}
+
+      <main className="container mx-auto px-4 py-8 max-w-6xl">
+        {currentStep !== BookingStep.Confirmation && <ProgressBar />}
         {renderStepContent()}
       </main>
     </div>
