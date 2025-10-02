@@ -107,13 +107,13 @@ function App() {
 
           <Route path="/crm/calendar">
             <ProtectedLayout>
-              <DailyCalendar />
+              <CalendarScreen />
             </ProtectedLayout>
           </Route>
 
           <Route path={'/crm/calendarscreen'}>
             <ProtectedLayout>
-              <CalendarScreen />
+              <DailyCalendar />
             </ProtectedLayout>
           </Route>
 
