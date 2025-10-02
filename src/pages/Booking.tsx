@@ -208,7 +208,7 @@ const BookingPage: React.FC = () => {
       const datetime = `${year}-${month}-${day}T${bookingData.time}`;
 
       const bookingPayload = {
-        branch: String(bookingData.branch),
+        branchId: String(bookingData.branch),
         datetime: datetime,
         masterId: Number(bookingData.masterId),
         name: bookingData.name,
@@ -562,8 +562,8 @@ const BookingPage: React.FC = () => {
                           key={time}
                           onClick={() => handleTimeSelect(time)}
                           className={`group relative flex-shrink-0 w-24 h-28 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg ${selectedTimeSlot === time
-                              ? 'border-primary bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-xl scale-105'
-                              : 'border-gray-200 bg-white hover:border-primary/50 hover:bg-amber-50/50'
+                            ? 'border-primary bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-xl scale-105'
+                            : 'border-gray-200 bg-white hover:border-primary/50 hover:bg-amber-50/50'
                             }`}
                           style={{
                             animationDelay: `${index * 30}ms`
