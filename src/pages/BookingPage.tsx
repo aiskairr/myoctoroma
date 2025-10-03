@@ -125,7 +125,7 @@ const BookingPage = () => {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
                 {serviceGroups.map((group) => (
-                  <Card 
+                  <Card
                     key={group.name}
                     className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-all duration-300 cursor-pointer hover:scale-105 hover:shadow-xl hover:shadow-amber-500/20"
                     onClick={() => setSelectedGroup(group.name)}
@@ -164,8 +164,8 @@ const BookingPage = () => {
                   {serviceGroups.find(g => g.name === selectedGroup)?.description}
                 </p>
               </div>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setSelectedGroup(null)}
                 className="bg-slate-800/50 border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
               >
@@ -175,8 +175,8 @@ const BookingPage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {getServicesByGroup(selectedGroup).map((service) => (
-                <Card 
-                  key={service.id} 
+                <Card
+                  key={service.id}
                   className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/10"
                 >
                   <CardHeader className="pb-3">
@@ -184,8 +184,8 @@ const BookingPage = () => {
                       <CardTitle className="text-xl font-light text-white leading-tight">
                         {service.name}
                       </CardTitle>
-                      <Badge 
-                        variant="outline" 
+                      <Badge
+                        variant="outline"
                         className="bg-amber-500/10 border-amber-500/30 text-amber-400 font-light"
                       >
                         Премиум
@@ -211,7 +211,7 @@ const BookingPage = () => {
                           {getServicePriceRange(service)}
                         </span>
                       </div>
-                      
+
                       {/* Available Durations */}
                       {service.availableDurations.length > 0 && (
                         <div className="pt-2">
@@ -220,9 +220,9 @@ const BookingPage = () => {
                           </div>
                           <div className="flex flex-wrap gap-1">
                             {service.availableDurations.map(({ duration, price }) => (
-                              <Badge 
-                                key={duration} 
-                                variant="outline" 
+                              <Badge
+                                key={duration}
+                                variant="outline"
                                 className="text-xs bg-slate-700/50 border-slate-600 text-slate-300 font-light"
                               >
                                 {duration}мин - {price}сом
@@ -233,7 +233,7 @@ const BookingPage = () => {
                       )}
 
                       <div className="pt-4 border-t border-slate-700">
-                        <Button 
+                        <Button
                           className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-slate-900 font-medium transition-all duration-300"
                         >
                           Записаться на процедуру

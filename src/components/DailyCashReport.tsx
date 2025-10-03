@@ -62,15 +62,15 @@ interface DailyCashReportProps {
   expenses: ExpenseRecord[];
 }
 
-const DailyCashReport: React.FC<DailyCashReportProps> = ({ 
-  selectedDate, 
-  branchId, 
-  records, 
-  expenses 
+const DailyCashReport: React.FC<DailyCashReportProps> = ({
+  selectedDate,
+  branchId,
+  records,
+  expenses
 }) => {
   const { toast } = useToast();
   const { user } = useAuth();
-  
+
   const [reportData, setReportData] = useState<DailyCashReportData>({
     startBalance: 0,
     totalRevenue: 0,
@@ -89,7 +89,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
     bakaiPayments: 0,
     obankPayments: 0,
   });
-  
+
   const [cashCollection, setCashCollection] = useState<number>(0);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
@@ -99,7 +99,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
       const yesterday = new Date(selectedDate);
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = new Date(yesterday.getTime() - (yesterday.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-      
+
       try {
         const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/daily-cash-reports?startDate=${yesterdayStr}&endDate=${yesterdayStr}&branchId=${branchId}`);
         if (response.ok) {
@@ -123,20 +123,20 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
   useEffect(() => {
     const calculateReportData = async () => {
       const selectedDateStr = new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-      
+
       // Используем записи с числовыми значениями daily_report для выбранного филиала
-      const dayRecords = records.filter(record => 
-        record.date.startsWith(selectedDateStr) && 
+      const dayRecords = records.filter(record =>
+        record.date.startsWith(selectedDateStr) &&
         record.branchId === branchId &&
-        record.dailyReport && 
+        record.dailyReport &&
         !isNaN(Number(record.dailyReport)) &&
         record.paymentMethod !== 'Расход'
       );
-      
 
-      
+
+
       // Фильтруем расходы за выбранный день
-      const dayExpenses = expenses.filter(expense => 
+      const dayExpenses = expenses.filter(expense =>
         expense.date.startsWith(selectedDateStr)
       );
 
@@ -159,8 +159,8 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
         if (giftCertResponse.ok) {
           const giftCerts = await giftCertResponse.json();
           const todayGiftCerts = giftCerts; // Сервер уже отфильтровал по дате и филиалу
-          
-          giftCertificatesRevenue = todayGiftCerts.reduce((sum: number, cert: any) => 
+
+          giftCertificatesRevenue = todayGiftCerts.reduce((sum: number, cert: any) =>
             sum + Number(cert.amount), 0
           );
 
@@ -230,7 +230,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
       // Общая выручка = сумма всех daily_report - сертификаты + созданные сертификаты
       const totalFromDailyReport = dayRecords.reduce((sum, record) => sum + Number(record.dailyReport), 0);
       const totalRevenue = totalFromDailyReport - giftCertificateUsage + giftCertificatesRevenue;
-      
+
       console.log('Revenue Calculation Debug:', {
         totalFromDailyReport,
         giftCertificateUsage,
@@ -241,19 +241,19 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
 
       // Мелкие расходы = сумма (amount) за выбранный день
       const pettyExpenses = dayExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-      
+
       // Наличные = сумма (daily_report) где payment_method = "Наличные" + созданные сертификаты за наличные
       const cashFromAccounting = dayRecords
         .filter(record => record.paymentMethod === 'Наличные')
         .reduce((sum, record) => sum + Number(record.dailyReport), 0);
       const cashPayments = cashFromAccounting + giftCertificatesByPaymentMethod.cash;
-        
+
       // Карта = сумма (daily_report) где payment_method содержит "POS" + созданные сертификаты картой
       const cardFromAccounting = dayRecords
         .filter(record => record.paymentMethod?.includes('POS'))
         .reduce((sum, record) => sum + Number(record.dailyReport), 0);
       const cardPayments = cardFromAccounting + giftCertificatesByPaymentMethod.card;
-        
+
       // Переводы = сумма (daily_report) где payment_method содержит "Перевод" + созданные сертификаты переводом
       const transferFromAccounting = dayRecords
         .filter(record => record.paymentMethod?.includes('Перевод'))
@@ -264,30 +264,30 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
       const optimaPayments = dayRecords
         .filter(record => record.paymentMethod?.includes('Оптима') && !record.paymentMethod?.includes('Подарочный Сертификат'))
         .reduce((sum, record) => sum + Number(record.dailyReport), 0) + giftCertificatesByPaymentMethod.optima;
-        
+
       const mbankPayments = dayRecords
         .filter(record => record.paymentMethod?.includes('МБанк') && !record.paymentMethod?.includes('МБизнес') && !record.paymentMethod?.includes('Подарочный Сертификат'))
         .reduce((sum, record) => sum + Number(record.dailyReport), 0) + giftCertificatesByPaymentMethod.mbank;
-        
+
       const mbusinessPayments = dayRecords
         .filter(record => record.paymentMethod?.includes('МБизнес') && !record.paymentMethod?.includes('Подарочный Сертификат'))
         .reduce((sum, record) => sum + Number(record.dailyReport), 0) + giftCertificatesByPaymentMethod.mbusiness;
-        
+
       const demirPayments = dayRecords
         .filter(record => record.paymentMethod?.includes('Демир') && !record.paymentMethod?.includes('Подарочный Сертификат'))
         .reduce((sum, record) => sum + Number(record.dailyReport), 0) + giftCertificatesByPaymentMethod.demir;
-        
+
       const bakaiPayments = dayRecords
         .filter(record => record.paymentMethod?.includes('Bakai') && !record.paymentMethod?.includes('Подарочный Сертификат'))
         .reduce((sum, record) => sum + Number(record.dailyReport), 0) + giftCertificatesByPaymentMethod.bakai;
-        
+
       const obankPayments = dayRecords
         .filter(record => record.paymentMethod?.includes('О!Банк') && !record.paymentMethod?.includes('Подарочный Сертификат'))
         .reduce((sum, record) => sum + Number(record.dailyReport), 0) + giftCertificatesByPaymentMethod.obank;
 
       // Общий доход = выручка - расходы
       const totalIncome = totalRevenue - pettyExpenses;
-      
+
       // Остаток на конец смены = остаток на начало смены + наличные - расходы - инкассация
       const endBalance = Math.round((Number(reportData.startBalance) + Number(cashPayments) - Number(pettyExpenses) - Number(cashCollection)) * 100) / 100;
 
@@ -428,9 +428,8 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
                 </td>
                 <td className="border border-gray-300 p-3">
                   <Input
-                    type="number"
                     value={cashCollection}
-                    onChange={(e) => setCashCollection(Number(e.target.value))}
+                    onChange={(e: any) => setCashCollection(e.target.value)}
                     className="w-full"
                     placeholder="Введите сумму инкассации"
                   />
