@@ -58,9 +58,9 @@ export default function SalaryPage() {
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  const [editedPayments, setEditedPayments] = useState<{[key: number]: number}>({});
-  const [editingRows, setEditingRows] = useState<{[key: number]: boolean}>({});
-  const [editedData, setEditedData] = useState<{[key: number]: Partial<SalaryRecord>}>({});
+  const [editedPayments, setEditedPayments] = useState<{ [key: number]: number }>({});
+  const [editingRows, setEditingRows] = useState<{ [key: number]: boolean }>({});
+  const [editedData, setEditedData] = useState<{ [key: number]: Partial<SalaryRecord> }>({});
   const { toast } = useToast();
 
   // Загрузка данных зарплат
@@ -71,7 +71,7 @@ export default function SalaryPage() {
       if (currentBranch?.id) {
         url.searchParams.append('branchId', currentBranch.id.toString());
       }
-      
+
       const response = await fetch(url.toString());
       if (response.ok) {
         const data = await response.json();
@@ -110,7 +110,7 @@ export default function SalaryPage() {
       if (currentBranch?.id) {
         url.searchParams.append('branchId', currentBranch.id.toString());
       }
-      
+
       const response = await fetch(url.toString());
       if (response.ok) {
         const data = await response.json();
@@ -129,7 +129,7 @@ export default function SalaryPage() {
         setSalaryPayments([]);
         return;
       }
-      
+
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments?startDate=${startDate}&endDate=${endDate}&branchId=${currentBranch.id}`);
       if (response.ok) {
         const data = await response.json();
@@ -152,21 +152,21 @@ export default function SalaryPage() {
   // Расчет зарплаты для администраторов
   const calculateAdminSalary = (employee: string, baseSalary: number, commissionRate: number) => {
     // Получаем записи, где администратор указан
-    const adminRecords = accountingData.filter(record => 
+    const adminRecords = accountingData.filter(record =>
       record.admin_name && record.admin_name.toLowerCase().trim() === employee.toLowerCase().trim()
     );
-    
+
     // Сумма чисел по столбцу daily_report с любым payment_method
     const totalDailyReport = adminRecords
       .reduce((sum, record) => sum + parseFloat(record.daily_report?.toString() || '0'), 0);
-    
+
     // Получаем уникальные даты, когда администратор работал
     const dateSet = new Set(adminRecords.map(record => record.date));
     const workDays = dateSet.size;
-    
+
     // ЗП = (сумма daily_report * commission_rate) + (количество рабочих дней * base_salary)
     const salary = (totalDailyReport * commissionRate) + (workDays * baseSalary);
-    
+
     return Math.round(salary);
   };
 
@@ -174,11 +174,11 @@ export default function SalaryPage() {
   const calculateMasseurSalary = (employee: string, commissionRate: number) => {
     // Сумма чисел по столбцу daily_report, где master == employee
     const totalDailyReport = accountingData
-      .filter(record => 
+      .filter(record =>
         record.master && record.master.toLowerCase().trim() === employee.toLowerCase().trim()
       )
       .reduce((sum, record) => sum + parseFloat(record.daily_report?.toString() || '0'), 0);
-    
+
     // ЗП = сумма daily_report * commission_rate
     return Math.round(commissionRate * totalDailyReport);
   };
@@ -200,7 +200,7 @@ export default function SalaryPage() {
       console.warn('salaryPayments is not an array:', salaryPayments);
       return 0;
     }
-    
+
     return salaryPayments
       .filter(payment => payment.employee_name === employeeName)
       .reduce((sum, payment) => sum + payment.amount, 0);
@@ -321,8 +321,8 @@ export default function SalaryPage() {
   const startEditing = (record: SalaryRecord) => {
     if (!record.id) return;
     setEditingRows(prev => ({ ...prev, [record.id!]: true }));
-    setEditedData(prev => ({ 
-      ...prev, 
+    setEditedData(prev => ({
+      ...prev,
       [record.id!]: {
         employee: record.employee,
         base_salary: record.base_salary,
@@ -351,7 +351,7 @@ export default function SalaryPage() {
     console.log('saveEditing вызвана с ID:', id);
     const data = editedData[id];
     console.log('Данные для сохранения:', data);
-    
+
     if (!data) {
       console.log('Нет данных для сохранения');
       toast({
@@ -368,7 +368,7 @@ export default function SalaryPage() {
       commission_rate: data.commission_rate,
       employee_role: data.employee_role
     };
-    
+
     console.log('Отправляю запрос PUT:', requestData);
 
     try {
@@ -498,10 +498,10 @@ export default function SalaryPage() {
                   const totalPaid = getTotalPaidAmount(record.employee);
                   const remaining = calculatedSalary - totalPaid;
                   const currentPayment = editedPayments[record.id!] || 0;
-                  
+
                   const isEditing = editingRows[record.id!];
                   const editData = editedData[record.id!] || record;
-                  
+
                   return (
                     <tr key={`${record.id}-${index}`} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                       <td className="border border-gray-200 p-3">
@@ -571,18 +571,18 @@ export default function SalaryPage() {
                       <td className="border border-gray-200 p-3 font-semibold text-green-600">
                         {Math.round(calculatedSalary).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} сом
                       </td>
+
                       <td className="border border-gray-200 p-3">
                         <div className="flex items-center gap-2">
                           <input
                             type="number"
-                            value={currentPayment}
+                            value={currentPayment || ''}
                             onChange={(e) => setEditedPayments(prev => ({
                               ...prev,
-                              [record.id!]: Math.round(parseFloat(e.target.value) || 0)
+                              [record.id!]: e.target.value ? Math.round(parseFloat(e.target.value)) : 0
                             }))}
                             className="flex-1 px-2 py-1 border rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
                             placeholder="Сумма выплаты"
-                            step="1"
                             min="0"
                           />
                           {currentPayment > 0 && (
@@ -650,7 +650,7 @@ export default function SalaryPage() {
               </tbody>
             </table>
           </div>
-          
+
           {salaryRecords.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               Нет данных о сотрудниках
@@ -685,18 +685,18 @@ export default function SalaryPage() {
                     const isMasseur = accountingData.some(data => data.master === record.employee);
                     return isAdmin || isMasseur;
                   });
-                  
+
                   const totalPaid = relevantEmployees.reduce((sum, record) => {
                     const paidAmount = getTotalPaidAmount(record.employee);
                     console.log(`Выплачено ${record.employee}:`, paidAmount);
                     return sum + paidAmount;
                   }, 0);
-                  
+
                   // Проверяем, есть ли данные accounting для выбранного периода
                   if (accountingData.length === 0 && relevantEmployees.length === 0) {
                     console.warn('Нет данных accounting для выбранного периода');
                   }
-                  
+
                   console.log('Общая сумма выплачено:', totalPaid);
                   return Math.round(totalPaid).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 })()} сом
@@ -711,13 +711,13 @@ export default function SalaryPage() {
                     const isMasseur = accountingData.some(data => data.master === record.employee);
                     return isAdmin || isMasseur;
                   });
-                  
+
                   const totalToPay = relevantEmployees.reduce((sum, record) => {
                     const calculatedSalary = calculateSalary(record);
                     const paidAmount = getTotalPaidAmount(record.employee);
                     return sum + (calculatedSalary - paidAmount);
                   }, 0);
-                  
+
                   console.log('К доплате:', totalToPay);
                   return Math.round(totalToPay).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 })()} сом
