@@ -6,8 +6,9 @@ import TaskDialogBtn from './task-dialog-btn';
 import { useMasters } from '@/hooks/use-masters';
 import { useCalendarTasks } from '@/hooks/use-calendar-tasks';
 import { useServices, convertServicesToLegacyFormat } from '@/hooks/use-services';
-import { useCreateTask } from '@/hooks/use-task';
+import { useCreateTask, generateTaskId } from '@/hooks/use-task';
 import { useBranch } from '@/contexts/BranchContext';
+import { useAuth } from '@/contexts/SimpleAuthContext';
 
 // Types
 interface DragState {
@@ -109,6 +110,7 @@ const AdvancedScheduleComponent: React.FC = () => {
     
     // Context
     const { currentBranch } = useBranch();
+    const { user } = useAuth();
     
     // Fetch real data from API
     const { data: mastersData = [], isLoading: mastersLoading, error: mastersError } = useMasters();
@@ -478,8 +480,14 @@ const AdvancedScheduleComponent: React.FC = () => {
             // Get service price
             const servicePrice = service?.price || 0;
 
+            // Generate unique task ID
+            const organisationId = user?.organisationId || user?.organization_id || user?.orgId || '1';
+            const branchId = currentBranch?.id?.toString() || '1';
+            const taskId = generateTaskId(organisationId, branchId);
+
             // Prepare data for API
             const taskData = {
+                id: taskId,
                 clientName: newAppointment.clientName.trim(),
                 clientPhone: newAppointment.phone.trim() || undefined,
                 scheduleDate: scheduleDate,
@@ -488,7 +496,7 @@ const AdvancedScheduleComponent: React.FC = () => {
                 masterId: parseInt(selectedEmployeeId),
                 serviceDuration: duration,
                 servicePrice: servicePrice,
-                branchId: currentBranch?.id?.toString() || '1',
+                branchId: branchId,
                 notes: newAppointment.notes || undefined,
                 status: 'scheduled'
             };

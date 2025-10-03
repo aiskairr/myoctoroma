@@ -143,6 +143,7 @@ export const formatTaskForForm = (task: Task | undefined) => {
 
 // Interface for creating a new task
 export interface CreateTaskRequest {
+  id: string; // Уникальный ID в формате {OrganisationID}{BranchID}{UniqueNumber}
   clientName: string;
   clientPhone?: string;
   notes?: string;
@@ -157,6 +158,14 @@ export interface CreateTaskRequest {
   finalPrice?: number;
   status?: string;
 }
+
+// Функция генерации уникального ID для задачи
+export const generateTaskId = (organisationId?: string | number, branchId?: string | number): string => {
+  const orgId = organisationId?.toString() || '1';
+  const brId = branchId?.toString() || '1';
+  const uniqueNumber = Date.now().toString() + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return `${orgId}${brId}${uniqueNumber}`;
+};
 
 // Hook to create a new task
 export const useCreateTask = () => {
@@ -210,8 +219,8 @@ export const useCreateTask = () => {
 };
 
 // Interface for updating an existing task
-export interface UpdateTaskRequest extends Partial<CreateTaskRequest> {
-  id: number;
+export interface UpdateTaskRequest extends Partial<Omit<CreateTaskRequest, 'id'>> {
+  id: number; // ID для обновления остается числовым
 }
 
 // Hook to update an existing task

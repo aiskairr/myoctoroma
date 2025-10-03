@@ -12,10 +12,11 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import type React from "react";
 import { useState, useEffect, useCallback } from "react";
-import { useTask, formatTaskForForm, useCreateTask } from "@/hooks/use-task";
+import { useTask, formatTaskForForm, useCreateTask, generateTaskId } from "@/hooks/use-task";
 import { useMasters } from "@/hooks/use-masters";
 import { useServices, convertServicesToLegacyFormat, getServiceDurations } from "@/hooks/use-services";
 import { useBranch } from "@/contexts/BranchContext";
+import { useAuth } from "@/contexts/SimpleAuthContext";
 
 interface FormData {
     clientName: string;
@@ -50,6 +51,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     const { data: mastersData = [] } = useMasters();
     const { data: servicesData = [] } = useServices();
     const { branches } = useBranch();
+    const { user } = useAuth();
     
     // Convert services to legacy format
     const services = convertServicesToLegacyFormat(servicesData);
@@ -194,8 +196,14 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         // Для новой задачи - отправляем POST запрос
         console.log('🆕 Creating new task');
         
+        // Generate unique task ID
+        const organisationId = user?.organisationId || user?.organization_id || user?.orgId || '1';
+        const branchId = data.branch || '1';
+        const generatedTaskId = generateTaskId(organisationId, branchId);
+        
         // Парсим данные формы для API
         const parsedData = {
+            id: generatedTaskId,
             clientName: data.clientName,
             clientPhone: data.phone || undefined,
             notes: data.notes || undefined,
@@ -205,7 +213,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             masterId: parseInt(data.master),
             serviceDuration: parseInt(data.duration.split(' ')[0]), // Извлекаем числовое значение
             servicePrice: parseFloat(data.cost) || 0,
-            branchId: data.branch,
+            branchId: branchId,
             status: 'scheduled'
         };
         
