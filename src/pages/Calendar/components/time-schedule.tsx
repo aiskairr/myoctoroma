@@ -107,33 +107,33 @@ const getCurrentTimePosition = (): number => {
 const AdvancedScheduleComponent: React.FC = () => {
     // State
     const [currentDate] = useState(() => new Date());
-    
+
     // Context
     const { currentBranch } = useBranch();
     const { user } = useAuth();
-    
+
     // Fetch real data from API
     const { data: mastersData = [], isLoading: mastersLoading, error: mastersError } = useMasters();
     const { data: tasksData = [], isLoading: tasksLoading, error: tasksError } = useCalendarTasks(currentDate);
     const { data: servicesData = [], isLoading: servicesLoading, error: servicesError } = useServices();
-    
+
     // API mutations
     const createTaskMutation = useCreateTask();
-    
+
     // Convert services data to legacy format for compatibility
     const services = useMemo(() => {
         return convertServicesToLegacyFormat(servicesData);
     }, [servicesData]);
-    
+
     // Convert masters data to employees format
     const employees = useMemo(() => {
         return mastersData.map((master, index) => ({
             id: master.id.toString(),
             name: master.name,
             role: master.specialization || 'Мастер',
-            workHours: { 
-                start: master.startWorkHour || '09:00', 
-                end: master.endWorkHour || '20:00' 
+            workHours: {
+                start: master.startWorkHour || '09:00',
+                end: master.endWorkHour || '20:00'
             },
             color: EMPLOYEE_COLORS[index % EMPLOYEE_COLORS.length]
         }));
@@ -141,7 +141,7 @@ const AdvancedScheduleComponent: React.FC = () => {
 
     // Convert tasks data to appointments format
     const [appointments, setAppointments] = useState<Appointment[]>([]);
-    
+
     useEffect(() => {
         if (tasksData.length > 0) {
             const convertedAppointments = tasksData
@@ -444,22 +444,22 @@ const AdvancedScheduleComponent: React.FC = () => {
             alert('Пожалуйста, введите имя клиента');
             return;
         }
-        
+
         if (!newAppointment.phone.trim()) {
             alert('Пожалуйста, введите номер телефона');
             return;
         }
-        
+
         if (!newAppointment.service) {
             alert('Пожалуйста, выберите услугу');
             return;
         }
-        
+
         if (!selectedEmployeeId) {
             alert('Пожалуйста, выберите мастера');
             return;
         }
-        
+
         if (!selectedTimeSlot) {
             alert('Пожалуйста, выберите время');
             return;
@@ -476,7 +476,7 @@ const AdvancedScheduleComponent: React.FC = () => {
 
             // Format date for API (YYYY-MM-DD)
             const scheduleDate = currentDate.toISOString().split('T')[0];
-            
+
             // Get service price
             const servicePrice = service?.price || 0;
 
@@ -507,7 +507,7 @@ const AdvancedScheduleComponent: React.FC = () => {
             createTaskMutation.mutate(taskData, {
                 onSuccess: (newTask) => {
                     console.log('✅ Task created successfully:', newTask);
-                    
+
                     // Optionally update local state for immediate UI feedback
                     const startMinutes = timeToMinutes(selectedTimeSlot);
                     const endMinutes = startMinutes + duration;
@@ -525,7 +525,7 @@ const AdvancedScheduleComponent: React.FC = () => {
                     };
 
                     setAppointments(prev => [...prev, appointment]);
-                    
+
                     // Reset form and close dialog
                     setNewAppointment({ clientName: '', phone: '', service: '', startTime: '', duration: 45, notes: '' });
                     setSelectedEmployeeId('');
@@ -851,421 +851,421 @@ const AdvancedScheduleComponent: React.FC = () => {
                                             Добавить сотрудника
                                         </button>
                                     </DialogTrigger>
+                                    <DialogContent className="sm:max-w-[500px]">
+                                        <DialogHeader>
+                                            <DialogTitle className="flex items-center gap-2">
+                                                <User size={20} />
+                                                Новый сотрудник
+                                            </DialogTitle>
+                                        </DialogHeader>
+                                        <div className="space-y-6 py-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Имя сотрудника *
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={newEmployee.name}
+                                                    onChange={(e) => setNewEmployee(prev => ({ ...prev, name: e.target.value }))}
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    placeholder="Введите имя сотрудника"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Специализация *
+                                                </label>
+                                                <select
+                                                    value={newEmployee.role}
+                                                    onChange={(e) => setNewEmployee(prev => ({ ...prev, role: e.target.value }))}
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                >
+                                                    <option value="">Выберите специализацию</option>
+                                                    {ROLES.map(role => (
+                                                        <option key={role} value={role}>{role}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Начало смены
+                                                    </label>
+                                                    <select
+                                                        value={newEmployee.startTime}
+                                                        onChange={(e) => setNewEmployee(prev => ({ ...prev, startTime: e.target.value }))}
+                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    >
+                                                        {timeSlots.filter((_, index) => index % 4 === 0).map(time => (
+                                                            <option key={time} value={time}>{time}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Конец смены
+                                                    </label>
+                                                    <select
+                                                        value={newEmployee.endTime}
+                                                        onChange={(e) => setNewEmployee(prev => ({ ...prev, endTime: e.target.value }))}
+                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    >
+                                                        {timeSlots.filter((_, index) => index % 4 === 0).map(time => (
+                                                            <option key={time} value={time}>{time}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                                                <button
+                                                    onClick={() => setIsAddEmployeeOpen(false)}
+                                                    className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                                >
+                                                    Отмена
+                                                </button>
+                                                <button
+                                                    onClick={handleAddEmployee}
+                                                    disabled={!newEmployee.name.trim() || !newEmployee.role}
+                                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                                >
+                                                    Добавить сотрудника
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
+                        </div>
+
+                        {/* Schedule Grid */}
+                        <div className="flex overflow-x-auto">
+                            {/* Status indicator */}
+                            {(dragState.isDragging || resizeState.isResizing) && (
+                                <div className="fixed top-4 right-4 bg-blue-600 text-white px-3 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2">
+                                    {dragState.isDragging && (
+                                        <>
+                                            <GripVertical size={16} />
+                                            {dragState.targetSlot ? (
+                                                <span>
+                                                    Перемещение к {employees.find(emp => emp.id === dragState.targetSlot!.employeeId)?.name}
+                                                    на {dragState.targetSlot.timeSlot}
+                                                </span>
+                                            ) : (
+                                                'Перетащите в нужную позицию'
+                                            )}
+                                        </>
+                                    )}
+                                    {resizeState.isResizing && (
+                                        <>
+                                            <Clock size={16} />
+                                            Изменение длительности: {resizeState.resizedAppointment?.duration || 0} мин
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Time Column */}
+                            <div className="w-20 flex-shrink-0 border-r border-gray-200 bg-gray-50">
+                                <div className="h-16 border-b border-gray-200 flex items-center justify-center">
+                                    <Clock size={16} className="text-gray-500" />
+                                </div>
+                                {timeSlots.map((slot, index) => (
+                                    <div
+                                        key={slot}
+                                        className={`h-6 flex items-center justify-center text-sm border-b border-gray-100 ${index % 4 === 0 ? 'font-medium text-gray-700' : 'text-gray-500'
+                                            }`}
+                                    >
+                                        {index % 4 === 0 ? slot : ''}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Employee Columns */}
+                            <div className="flex-1 relative" ref={scheduleRef}>
+                                {/* Current Time Line */}
+                                <div
+                                    className="absolute left-0 right-0 h-0.5 bg-red-500 z-30 shadow-sm flex items-center"
+                                    style={{
+                                        top: currentTimePosition + HEADER_HEIGHT - 1,
+                                    }}
+                                >
+                                    <div className="w-2 h-2 bg-red-500 rounded-full -ml-1"></div>
+                                    <div className="flex-1 h-0.5 bg-red-500"></div>
+                                </div>
+
+                                {/* Drag Preview */}
+                                {dragState.isDragging && dragState.targetSlot && (
+                                    <div
+                                        className={`fixed border-l-4 rounded-r-xl z-50 pointer-events-none ${doesAppointmentFitWorkingHours(
+                                            dragState.targetSlot.employeeId,
+                                            dragState.targetSlot.timeSlot,
+                                            dragState.draggedAppointment?.duration || 45
+                                        )
+                                            ? 'bg-gradient-to-r from-blue-100 via-blue-50 to-transparent border-blue-400 shadow-xl'
+                                            : 'bg-gradient-to-r from-red-100 via-red-50 to-transparent border-red-400 shadow-xl'
+                                            } backdrop-blur-sm`}
+                                        style={{
+                                            top: dragState.currentPosition.y - 20,
+                                            left: dragState.currentPosition.x - 100,
+                                            width: '200px',
+                                            height: Math.ceil((dragState.draggedAppointment?.duration || 45) / 15) * TIME_SLOT_HEIGHT - 2
+                                        }}
+                                    >
+                                        <div className={`p-3 text-xs font-medium h-full flex flex-col justify-between relative overflow-hidden ${doesAppointmentFitWorkingHours(
+                                            dragState.targetSlot.employeeId,
+                                            dragState.targetSlot.timeSlot,
+                                            dragState.draggedAppointment?.duration || 45
+                                        )
+                                            ? 'text-blue-800'
+                                            : 'text-red-800'
+                                            }`}>
+                                            <div className="relative z-10">
+                                                <div className="font-bold truncate text-sm tracking-tight">{dragState.draggedAppointment?.clientName}</div>
+                                                <div className="truncate opacity-80 font-medium">{dragState.draggedAppointment?.service}</div>
+                                            </div>
+
+                                            <div className="opacity-70 mt-auto relative z-10">
+                                                <div className="font-semibold">
+                                                    {dragState.targetSlot.timeSlot} - {minutesToTime(
+                                                        timeToMinutes(dragState.targetSlot.timeSlot) + (dragState.draggedAppointment?.duration || 45)
+                                                    )}
+                                                </div>
+                                                <div className="text-xs opacity-60">
+                                                    ({dragState.draggedAppointment?.duration} мин)
+                                                    <br />
+                                                    → {employees.find(emp => emp.id === dragState.targetSlot!.employeeId)?.name}
+                                                </div>
+                                                {!doesAppointmentFitWorkingHours(
+                                                    dragState.targetSlot.employeeId,
+                                                    dragState.targetSlot.timeSlot,
+                                                    dragState.draggedAppointment?.duration || 45
+                                                ) && (
+                                                        <div className="text-red-700 font-bold text-xs mt-1">⚠ Вне рабочих часов</div>
+                                                    )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Drop zone indicator */}
+                                {dragState.isDragging && dragState.targetSlot && (
+                                    <div
+                                        className={`absolute rounded-md z-20 pointer-events-none ${doesAppointmentFitWorkingHours(
+                                            dragState.targetSlot.employeeId,
+                                            dragState.targetSlot.timeSlot,
+                                            dragState.draggedAppointment?.duration || 45
+                                        )
+                                            ? 'bg-blue-200/30 border-2 border-dashed border-blue-400'
+                                            : 'bg-red-200/30 border-2 border-dashed border-red-400'
+                                            }`}
+                                        style={{
+                                            top: timeSlots.findIndex(slot => slot === dragState.targetSlot!.timeSlot) * TIME_SLOT_HEIGHT + HEADER_HEIGHT + 1,
+                                            height: Math.ceil((dragState.draggedAppointment?.duration || 45) / 15) * TIME_SLOT_HEIGHT - 2,
+                                            left: employees.findIndex(emp => emp.id === dragState.targetSlot!.employeeId) * getEmployeeColumnWidth() + 4,
+                                            width: getEmployeeColumnWidth() - 8
+                                        }}
+                                    />
+                                )}
+
+                                <div className="flex">
+                                    {employees.map((employee) => (
+                                        <div
+                                            key={employee.id}
+                                            className="flex-1 min-w-48 border-r border-gray-200 last:border-r-0"
+                                            style={{ minWidth: '200px' }}
+                                        >
+                                            {/* Employee Header */}
+                                            <div className="h-16 p-3 border-b border-gray-200 bg-white relative group">
+                                                <div className="flex items-center gap-3">
+                                                    <div
+                                                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm flex-shrink-0"
+                                                        style={{ backgroundColor: employee.color }}
+                                                    >
+                                                        {employee.name[0]}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="font-semibold text-sm text-gray-900 truncate">
+                                                            {employee.name}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 truncate">
+                                                            {employee.role}
+                                                        </div>
+                                                        <div className="text-xs font-medium" style={{ color: employee.color }}>
+                                                            {employee.workHours.start} - {employee.workHours.end}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleRemoveEmployee(employee.id)}
+                                                        className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all rounded flex-shrink-0"
+                                                        title="Удалить сотрудника"
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Time Slots */}
+                                            <div className="relative">
+                                                {timeSlots.map((slot) => {
+                                                    const isWorkingHours = isWithinWorkingHours(employee.id, slot);
+
+                                                    if (!isWorkingHours) {
+                                                        return (
+                                                            <div
+                                                                key={`${employee.id}-${slot}`}
+                                                                className="h-6 bg-gray-100 border-b border-gray-200"
+                                                            />
+                                                        );
+                                                    }
+
+                                                    return (
+                                                        <button
+                                                            key={`${employee.id}-${slot}`}
+                                                            onClick={() => handleTimeSlotClick(employee.id, slot)}
+                                                            className="w-full h-6 border-b border-gray-200 hover:bg-blue-50 group transition-colors flex items-center justify-center relative"
+                                                        >
+                                                            <Plus
+                                                                size={14}
+                                                                className="text-gray-300 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                            />
+                                                        </button>
+                                                    );
+                                                })}
+
+                                                {/* Render appointment blocks for this employee with smart layout */}
+                                                {getAppointmentLayout(employee.id).map((layoutInfo) =>
+                                                    renderAppointmentBlock(layoutInfo)
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Add Appointment Modal */}
+                        <Dialog open={isAddAppointmentOpen} onOpenChange={setIsAddAppointmentOpen}>
                             <DialogContent className="sm:max-w-[500px]">
                                 <DialogHeader>
                                     <DialogTitle className="flex items-center gap-2">
-                                        <User size={20} />
-                                        Новый сотрудник
+                                        <Calendar size={20} />
+                                        Новая запись на {selectedTimeSlot}
                                     </DialogTitle>
                                 </DialogHeader>
                                 <div className="space-y-6 py-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Имя сотрудника *
+                                            Имя клиента *
                                         </label>
                                         <input
                                             type="text"
-                                            value={newEmployee.name}
-                                            onChange={(e) => setNewEmployee(prev => ({ ...prev, name: e.target.value }))}
+                                            value={newAppointment.clientName}
+                                            onChange={(e) => setNewAppointment(prev => ({ ...prev, clientName: e.target.value }))}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Введите имя сотрудника"
+                                            placeholder="Введите имя клиента"
                                         />
                                     </div>
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Специализация *
+                                            Телефон *
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            value={newAppointment.phone}
+                                            onChange={(e) => setNewAppointment(prev => ({ ...prev, phone: e.target.value }))}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="+996 500 123 456"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Услуга *
                                         </label>
                                         <select
-                                            value={newEmployee.role}
-                                            onChange={(e) => setNewEmployee(prev => ({ ...prev, role: e.target.value }))}
+                                            value={newAppointment.service}
+                                            onChange={(e) => handleServiceChange(e.target.value)}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
-                                            <option value="">Выберите специализацию</option>
-                                            {ROLES.map(role => (
-                                                <option key={role} value={role}>{role}</option>
+                                            <option value="">Выберите услугу</option>
+                                            {services.map(service => (
+                                                <option key={service.name} value={service.name}>
+                                                    {service.name} ({service.duration} мин, {service.price} сом)
+                                                </option>
                                             ))}
                                         </select>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Начало смены
-                                            </label>
-                                            <select
-                                                value={newEmployee.startTime}
-                                                onChange={(e) => setNewEmployee(prev => ({ ...prev, startTime: e.target.value }))}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            >
-                                                {timeSlots.filter((_, index) => index % 4 === 0).map(time => (
-                                                    <option key={time} value={time}>{time}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Конец смены
-                                            </label>
-                                            <select
-                                                value={newEmployee.endTime}
-                                                onChange={(e) => setNewEmployee(prev => ({ ...prev, endTime: e.target.value }))}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            >
-                                                {timeSlots.filter((_, index) => index % 4 === 0).map(time => (
-                                                    <option key={time} value={time}>{time}</option>
-                                                ))}
-                                            </select>
-                                        </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Продолжительность (минуты)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={newAppointment.duration}
+                                            onChange={(e) => setNewAppointment(prev => ({ ...prev, duration: parseInt(e.target.value) || 45 }))}
+                                            min="15"
+                                            max="300"
+                                            step="15"
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
                                     </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Примечания
+                                        </label>
+                                        <textarea
+                                            value={newAppointment.notes}
+                                            onChange={(e) => setNewAppointment(prev => ({ ...prev, notes: e.target.value }))}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                                            rows={3}
+                                            placeholder="Дополнительная информация..."
+                                        />
+                                    </div>
+
+                                    {selectedEmployeeId && (
+                                        <div className="p-3 bg-gray-50 rounded-lg">
+                                            <div className="text-sm font-medium text-gray-700">
+                                                Сотрудник: {employees.find(emp => emp.id === selectedEmployeeId)?.name}
+                                            </div>
+                                            <div className="text-sm text-gray-600">
+                                                Время: {selectedTimeSlot} - {minutesToTime(timeToMinutes(selectedTimeSlot) + newAppointment.duration)}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                                         <button
-                                            onClick={() => setIsAddEmployeeOpen(false)}
+                                            onClick={() => setIsAddAppointmentOpen(false)}
                                             className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                                         >
                                             Отмена
                                         </button>
                                         <button
-                                            onClick={handleAddEmployee}
-                                            disabled={!newEmployee.name.trim() || !newEmployee.role}
-                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                            onClick={handleAddAppointment}
+                                            disabled={!newAppointment.clientName.trim() || !newAppointment.phone.trim() || !newAppointment.service || createTaskMutation.isPending}
+                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                                         >
-                                            Добавить сотрудника
+                                            {createTaskMutation.isPending && (
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                            )}
+                                            {createTaskMutation.isPending ? 'Создание...' : 'Создать запись'}
                                         </button>
                                     </div>
                                 </div>
                             </DialogContent>
                         </Dialog>
-                    </div>
-                </div>
-
-                {/* Schedule Grid */}
-                <div className="flex overflow-x-auto">
-                    {/* Status indicator */}
-                    {(dragState.isDragging || resizeState.isResizing) && (
-                        <div className="fixed top-4 right-4 bg-blue-600 text-white px-3 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2">
-                            {dragState.isDragging && (
-                                <>
-                                    <GripVertical size={16} />
-                                    {dragState.targetSlot ? (
-                                        <span>
-                                            Перемещение к {employees.find(emp => emp.id === dragState.targetSlot!.employeeId)?.name}
-                                             на {dragState.targetSlot.timeSlot}
-                                        </span>
-                                    ) : (
-                                        'Перетащите в нужную позицию'
-                                    )}
-                                </>
-                            )}
-                            {resizeState.isResizing && (
-                                <>
-                                    <Clock size={16} />
-                                    Изменение длительности: {resizeState.resizedAppointment?.duration || 0} мин
-                                </>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Time Column */}
-                    <div className="w-20 flex-shrink-0 border-r border-gray-200 bg-gray-50">
-                        <div className="h-16 border-b border-gray-200 flex items-center justify-center">
-                            <Clock size={16} className="text-gray-500" />
-                        </div>
-                        {timeSlots.map((slot, index) => (
-                            <div
-                                key={slot}
-                                className={`h-8 flex items-center justify-center text-sm border-b border-gray-100 ${index % 4 === 0 ? 'font-medium text-gray-700' : 'text-gray-500'
-                                    }`}
-                            >
-                                {index % 4 === 0 ? slot : ''}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Employee Columns */}
-                    <div className="flex-1 relative" ref={scheduleRef}>
-                        {/* Current Time Line */}
-                        <div
-                            className="absolute left-0 right-0 h-0.5 bg-red-500 z-30 shadow-sm flex items-center"
-                            style={{
-                                top: currentTimePosition + HEADER_HEIGHT - 1,
-                            }}
-                        >
-                            <div className="w-2 h-2 bg-red-500 rounded-full -ml-1"></div>
-                            <div className="flex-1 h-0.5 bg-red-500"></div>
-                        </div>
-
-                        {/* Drag Preview */}
-                        {dragState.isDragging && dragState.targetSlot && (
-                            <div
-                                className={`fixed border-l-4 rounded-r-xl z-50 pointer-events-none ${doesAppointmentFitWorkingHours(
-                                    dragState.targetSlot.employeeId,
-                                    dragState.targetSlot.timeSlot,
-                                    dragState.draggedAppointment?.duration || 45
-                                )
-                                    ? 'bg-gradient-to-r from-blue-100 via-blue-50 to-transparent border-blue-400 shadow-xl'
-                                    : 'bg-gradient-to-r from-red-100 via-red-50 to-transparent border-red-400 shadow-xl'
-                                    } backdrop-blur-sm`}
-                                style={{
-                                    top: dragState.currentPosition.y - 20,
-                                    left: dragState.currentPosition.x - 100,
-                                    width: '200px',
-                                    height: Math.ceil((dragState.draggedAppointment?.duration || 45) / 15) * TIME_SLOT_HEIGHT - 2
-                                }}
-                            >
-                                <div className={`p-3 text-xs font-medium h-full flex flex-col justify-between relative overflow-hidden ${doesAppointmentFitWorkingHours(
-                                    dragState.targetSlot.employeeId,
-                                    dragState.targetSlot.timeSlot,
-                                    dragState.draggedAppointment?.duration || 45
-                                )
-                                    ? 'text-blue-800'
-                                    : 'text-red-800'
-                                    }`}>
-                                    <div className="relative z-10">
-                                        <div className="font-bold truncate text-sm tracking-tight">{dragState.draggedAppointment?.clientName}</div>
-                                        <div className="truncate opacity-80 font-medium">{dragState.draggedAppointment?.service}</div>
-                                    </div>
-
-                                    <div className="opacity-70 mt-auto relative z-10">
-                                        <div className="font-semibold">
-                                            {dragState.targetSlot.timeSlot} - {minutesToTime(
-                                                timeToMinutes(dragState.targetSlot.timeSlot) + (dragState.draggedAppointment?.duration || 45)
-                                            )}
-                                        </div>
-                                        <div className="text-xs opacity-60">
-                                            ({dragState.draggedAppointment?.duration} мин)
-                                            <br />
-                                            → {employees.find(emp => emp.id === dragState.targetSlot!.employeeId)?.name}
-                                        </div>
-                                        {!doesAppointmentFitWorkingHours(
-                                            dragState.targetSlot.employeeId,
-                                            dragState.targetSlot.timeSlot,
-                                            dragState.draggedAppointment?.duration || 45
-                                        ) && (
-                                                <div className="text-red-700 font-bold text-xs mt-1">⚠ Вне рабочих часов</div>
-                                            )}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Drop zone indicator */}
-                        {dragState.isDragging && dragState.targetSlot && (
-                            <div
-                                className={`absolute rounded-md z-20 pointer-events-none ${doesAppointmentFitWorkingHours(
-                                    dragState.targetSlot.employeeId,
-                                    dragState.targetSlot.timeSlot,
-                                    dragState.draggedAppointment?.duration || 45
-                                )
-                                    ? 'bg-blue-200/30 border-2 border-dashed border-blue-400'
-                                    : 'bg-red-200/30 border-2 border-dashed border-red-400'
-                                    }`}
-                                style={{
-                                    top: timeSlots.findIndex(slot => slot === dragState.targetSlot!.timeSlot) * TIME_SLOT_HEIGHT + HEADER_HEIGHT + 1,
-                                    height: Math.ceil((dragState.draggedAppointment?.duration || 45) / 15) * TIME_SLOT_HEIGHT - 2,
-                                    left: employees.findIndex(emp => emp.id === dragState.targetSlot!.employeeId) * getEmployeeColumnWidth() + 4,
-                                    width: getEmployeeColumnWidth() - 8
-                                }}
-                            />
-                        )}
-
-                        <div className="flex">
-                            {employees.map((employee) => (
-                                <div
-                                    key={employee.id}
-                                    className="flex-1 min-w-48 border-r border-gray-200 last:border-r-0"
-                                    style={{ minWidth: '200px' }}
-                                >
-                                    {/* Employee Header */}
-                                    <div className="h-16 p-3 border-b border-gray-200 bg-white relative group">
-                                        <div className="flex items-center gap-3">
-                                            <div
-                                                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm flex-shrink-0"
-                                                style={{ backgroundColor: employee.color }}
-                                            >
-                                                {employee.name[0]}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="font-semibold text-sm text-gray-900 truncate">
-                                                    {employee.name}
-                                                </div>
-                                                <div className="text-xs text-gray-500 truncate">
-                                                    {employee.role}
-                                                </div>
-                                                <div className="text-xs font-medium" style={{ color: employee.color }}>
-                                                    {employee.workHours.start} - {employee.workHours.end}
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => handleRemoveEmployee(employee.id)}
-                                                className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all rounded flex-shrink-0"
-                                                title="Удалить сотрудника"
-                                            >
-                                                <X size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Time Slots */}
-                                    <div className="relative">
-                                        {timeSlots.map((slot) => {
-                                            const isWorkingHours = isWithinWorkingHours(employee.id, slot);
-
-                                            if (!isWorkingHours) {
-                                                return (
-                                                    <div
-                                                        key={`${employee.id}-${slot}`}
-                                                        className="h-8 bg-gray-100 border-b border-gray-200"
-                                                    />
-                                                );
-                                            }
-
-                                            return (
-                                                <button
-                                                    key={`${employee.id}-${slot}`}
-                                                    onClick={() => handleTimeSlotClick(employee.id, slot)}
-                                                    className="w-full h-8 border-b border-gray-200 hover:bg-blue-50 group transition-colors flex items-center justify-center relative"
-                                                >
-                                                    <Plus
-                                                        size={14}
-                                                        className="text-gray-300 group-hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-all"
-                                                    />
-                                                </button>
-                                            );
-                                        })}
-
-                                        {/* Render appointment blocks for this employee with smart layout */}
-                                        {getAppointmentLayout(employee.id).map((layoutInfo) =>
-                                            renderAppointmentBlock(layoutInfo)
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Add Appointment Modal */}
-                <Dialog open={isAddAppointmentOpen} onOpenChange={setIsAddAppointmentOpen}>
-                    <DialogContent className="sm:max-w-[500px]">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                                <Calendar size={20} />
-                                Новая запись на {selectedTimeSlot}
-                            </DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-6 py-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Имя клиента *
-                                </label>
-                                <input
-                                    type="text"
-                                    value={newAppointment.clientName}
-                                    onChange={(e) => setNewAppointment(prev => ({ ...prev, clientName: e.target.value }))}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="Введите имя клиента"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Телефон *
-                                </label>
-                                <input
-                                    type="tel"
-                                    value={newAppointment.phone}
-                                    onChange={(e) => setNewAppointment(prev => ({ ...prev, phone: e.target.value }))}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="+996 500 123 456"
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Услуга *
-                                </label>
-                                <select
-                                    value={newAppointment.service}
-                                    onChange={(e) => handleServiceChange(e.target.value)}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                    <option value="">Выберите услугу</option>
-                                    {services.map(service => (
-                                        <option key={service.name} value={service.name}>
-                                            {service.name} ({service.duration} мин, {service.price} сом)
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Продолжительность (минуты)
-                                </label>
-                                <input
-                                    type="number"
-                                    value={newAppointment.duration}
-                                    onChange={(e) => setNewAppointment(prev => ({ ...prev, duration: parseInt(e.target.value) || 45 }))}
-                                    min="15"
-                                    max="300"
-                                    step="15"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Примечания
-                                </label>
-                                <textarea
-                                    value={newAppointment.notes}
-                                    onChange={(e) => setNewAppointment(prev => ({ ...prev, notes: e.target.value }))}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                                    rows={3}
-                                    placeholder="Дополнительная информация..."
-                                />
-                            </div>
-
-                            {selectedEmployeeId && (
-                                <div className="p-3 bg-gray-50 rounded-lg">
-                                    <div className="text-sm font-medium text-gray-700">
-                                        Сотрудник: {employees.find(emp => emp.id === selectedEmployeeId)?.name}
-                                    </div>
-                                    <div className="text-sm text-gray-600">
-                                        Время: {selectedTimeSlot} - {minutesToTime(timeToMinutes(selectedTimeSlot) + newAppointment.duration)}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                                <button
-                                    onClick={() => setIsAddAppointmentOpen(false)}
-                                    className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                                >
-                                    Отмена
-                                </button>
-                                <button
-                                    onClick={handleAddAppointment}
-                                    disabled={!newAppointment.clientName.trim() || !newAppointment.phone.trim() || !newAppointment.service || createTaskMutation.isPending}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                                >
-                                    {createTaskMutation.isPending && (
-                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    )}
-                                    {createTaskMutation.isPending ? 'Создание...' : 'Создать запись'}
-                                </button>
-                            </div>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-                        </>
-                    )}
-                </div>
-            </TooltipProvider>
-        );
-    };
+                    </>
+                )}
+            </div>
+        </TooltipProvider>
+    );
+};
 
 export default AdvancedScheduleComponent;
