@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useBranch } from '@/contexts/BranchContext';
+import { getBranchIdWithFallback } from '@/utils/branch-utils';
 import { accountingService } from '@/services/accounting-service';
 import { expenseService, type ExpenseRecord } from '@/services/expense-service';
 import { apiGetJson } from '@/lib/api';
@@ -79,13 +80,13 @@ interface Administrator {
 }
 
 const AccountingPage = () => {
-  const { currentBranch } = useBranch();
+  const { currentBranch, branches } = useBranch();
   const [records, setRecords] = useState<AccountingRecord[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
   const [masters, setMasters] = useState<Master[]>([]);
   const [administrators, setAdministrators] = useState<Administrator[]>([]);
   const [services, setServices] = useState<any[]>([]);
-  const [branches, setBranches] = useState<any[]>([]);
+  const [branchesData, setBranchesData] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [dailyStats, setDailyStats] = useState({
@@ -131,11 +132,8 @@ const AccountingPage = () => {
 
   const fetchMasters = async () => {
     try {
-      if (!currentBranch?.id) {
-        console.warn('No branch ID available for masters fetch');
-        return [];
-      }
-      const url = `/api/masters?branchID=${currentBranch.id}`;
+      const branchId = getBranchIdWithFallback(currentBranch, branches);
+      const url = `/api/masters?branchID=${branchId}`;
       console.log('Fetching masters with URL:', url);
       const response = await apiGetJson(url);
       console.log('Masters response:', response);
@@ -148,11 +146,8 @@ const AccountingPage = () => {
 
   const fetchAdministrators = async () => {
     try {
-      if (!currentBranch?.id) {
-        console.warn('No branch ID available for administrators fetch');
-        return [];
-      }
-      const url = `/api/administrators?branchID=${currentBranch.id}`;
+      const branchId = getBranchIdWithFallback(currentBranch, branches);
+      const url = `/api/administrators?branchID=${branchId}`;
       console.log('Fetching administrators with URL:', url);
       const response = await apiGetJson(url);
       console.log('Administrators response:', response);
@@ -165,7 +160,8 @@ const AccountingPage = () => {
 
   const fetchServices = async () => {
     try {
-      const response = await apiGetJson(`/api/crm/services/${currentBranch?.id}`);
+      const branchId = getBranchIdWithFallback(currentBranch, branches);
+      const response = await apiGetJson(`/api/crm/services/${branchId}`);
       console.log('Services response:', response);
       return response;
     } catch (error) {
@@ -194,12 +190,8 @@ const AccountingPage = () => {
       const targetDate = date || selectedDate;
       const dateString = new Date(targetDate.getTime() - (targetDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
       
-      if (!currentBranch?.id) {
-        console.warn('No branch ID available for statistics fetch');
-        return;
-      }
-
-      const url = `${import.meta.env.VITE_BACKEND_URL}/api/statistics/accounting/${dateString}/${dateString}?branchId=${currentBranch.id}`;
+      const branchId = getBranchIdWithFallback(currentBranch, branches);
+      const url = `${import.meta.env.VITE_BACKEND_URL}/api/statistics/accounting/${dateString}/${dateString}?branchId=${branchId}`;
       console.log('Fetching accounting statistics with URL:', url);
       
       const response = await fetch(url);
@@ -240,14 +232,15 @@ const AccountingPage = () => {
     const dateString = new Date(targetDate.getTime() - (targetDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
     try {
+      const branchId = getBranchIdWithFallback(currentBranch, branches);
       // Загружаем данные параллельно
       await Promise.all([
         (async () => {
-          const accountingRecords = await accountingService.getRecordsForDate(dateString, currentBranch?.id?.toString() || '');
+          const accountingRecords = await accountingService.getRecordsForDate(dateString, branchId);
           setRecords(accountingRecords as AccountingRecord[]);
         })(),
         (async () => {
-          const expenseRecords = await expenseService.getExpensesForDate(dateString, currentBranch?.id?.toString() || '');
+          const expenseRecords = await expenseService.getExpensesForDate(dateString, branchId);
           setExpenses(expenseRecords as ExpenseRecord[]);
         })(),
         fetchAccountingStatistics(targetDate)
@@ -263,7 +256,7 @@ const AccountingPage = () => {
     fetchData();
     loadMastersAndAdministrators();
     loadServicesAndBranches();
-  }, [currentBranch, selectedDate]);
+  }, [currentBranch, branches, selectedDate]);
 
   const loadMastersAndAdministrators = async () => {
     try {
@@ -286,7 +279,7 @@ const AccountingPage = () => {
       ]);
       setServices(servicesData);
       // Если ответ содержит поле branches, используем его, иначе используем весь ответ
-      setBranches(branchesData.branches || branchesData);
+      setBranchesData(branchesData.branches || branchesData);
     } catch (error) {
       console.error('Error loading services and branches:', error);
     }
@@ -402,7 +395,7 @@ const AccountingPage = () => {
 
     const expenseToAdd = {
       ...newExpense,
-      branchId: currentBranch?.id?.toString() || '',
+      branchId: getBranchIdWithFallback(currentBranch, branches),
       date: new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
     };
 
@@ -821,7 +814,7 @@ const AccountingPage = () => {
                               <SelectValue placeholder="Выберите филиал" />
                             </SelectTrigger>
                             <SelectContent>
-                              {branches.map((branch) => (
+                              {branchesData.map((branch) => (
                                 <SelectItem key={branch.id} value={branch.id.toString()}>
                                   {branch.branches} - {branch.address}
                                 </SelectItem>
@@ -1175,7 +1168,7 @@ const AccountingPage = () => {
         <TabsContent value="report" className="space-y-6">
           <DailyCashReport
             selectedDate={selectedDate}
-            branchId={currentBranch?.id?.toString() || ''}
+            branchId={getBranchIdWithFallback(currentBranch, branches)}
             records={records}
             expenses={expenses}
           />

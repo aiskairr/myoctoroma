@@ -11,8 +11,7 @@ import { Check, Trash2, Eye, Pen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiGet, apiPut, apiDelete } from '@/lib/api';
 import { useBranch } from '@/contexts/BranchContext';
-import { useAuth } from '@/contexts/AuthContext';
-import Cookies from 'js-cookie';
+import { getBranchIdWithFallback } from '@/utils/branch-utils';
 
 const TIME_COLUMNS = [10, 15, 20, 30, 40, 50, 60, 75, 80, 90, 110, 120, 150, 220] as const;
 type TimeColumn = (typeof TIME_COLUMNS)[number];
@@ -36,21 +35,24 @@ const ServicesTable: React.FC = () => {
 
     console.log(currentBranch , " curent branch")
 
-   const user = Cookies.get('user') || '';
-
-   const BRNACHID = JSON.parse(user).branchId;
-
-   console.log(BRNACHID , " user")
+    // Получаем правильный branchId через BranchContext, а НЕ через cookies!
+    const correctBranchId = getBranchIdWithFallback(currentBranch, branches);
+    console.log('🏢 Using branch ID from BranchContext:', correctBranchId);
 
     const { data: services = [], isLoading, error } = useQuery<any[]>({
         queryKey: ['crm-services'],
         queryFn: async () => {
-            const response = await apiGet(`/api/crm/services/${BRNACHID}`);
+            // Проверяем, что есть корректный branchId перед запросом
+            if (!correctBranchId) {
+                throw new Error('No branch selected');
+            }
+            const response = await apiGet(`/api/crm/services/${correctBranchId}`);
             if (!response.ok) {
                 throw new Error('Failed to fetch services');
             }
             return response.json();
-        }
+        },
+        enabled: !!correctBranchId // Запрос выполняется только при наличии branchId
     });
 
     React.useEffect(() => {

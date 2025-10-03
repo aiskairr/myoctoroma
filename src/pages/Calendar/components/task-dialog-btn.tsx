@@ -7,11 +7,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Settings2, Clock, CalendarIcon } from "lucide-react";
+import { Clock, CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import type React from "react";
 import { useState, useEffect, useCallback } from "react";
+import { useTask, formatTaskForForm, useCreateTask } from "@/hooks/use-task";
+import { useMasters } from "@/hooks/use-masters";
+import { useServices, convertServicesToLegacyFormat, getServiceDurations } from "@/hooks/use-services";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface FormData {
     clientName: string;
@@ -30,34 +34,56 @@ interface FormData {
 
 interface Props {
     children: React.ReactNode;
+    taskId?: number | null; // ID задачи для загрузки данных
 }
 
-const TaskDialogBtn: React.FC<Props> = ({ children }) => {
+const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     const [isOpen, setIsOpen] = useState(false);
+
+    // Fetch task data from API
+    const { data: taskData, isLoading: taskLoading, error: taskError } = useTask(taskId);
+    
+    // API mutations
+    const createTaskMutation = useCreateTask();
+    
+    // Fetch masters, services, and branches data
+    const { data: mastersData = [] } = useMasters();
+    const { data: servicesData = [] } = useServices();
+    const { branches } = useBranch();
+    
+    // Convert services to legacy format
+    const services = convertServicesToLegacyFormat(servicesData);
 
     const {
         control,
         handleSubmit,
         formState: { errors, isValid },
-        watch,
-        setValue
+        reset
     } = useForm<FormData>({
         mode: 'onChange',
         defaultValues: {
-            clientName: 'hgfhgfhgfhg',
+            clientName: '',
             phone: '',
-            notes: 'Дополнительные заметки',
-            time: '15:15',
-            duration: '60 мин - 500 сом',
-            serviceType: 'Бритьё головы под машинку',
-            master: 'Алидин',
-            status: 'Записан',
-            branch: 'Медерова 163/1',
-            date: '24.09.2025',
+            notes: '',
+            time: '',
+            duration: '',
+            serviceType: '',
+            master: '',
+            status: '',
+            branch: '',
+            date: '',
             discount: '0',
-            cost: '1800'
+            cost: '0'
         }
     });
+
+    // Update form when task data is loaded
+    useEffect(() => {
+        if (taskData && !taskLoading) {
+            const formData = formatTaskForForm(taskData);
+            reset(formData);
+        }
+    }, [taskData, taskLoading, reset]);
 
     const handleOpenChange = useCallback((open: boolean) => {
         setIsOpen(open);
@@ -125,9 +151,79 @@ const TaskDialogBtn: React.FC<Props> = ({ children }) => {
     const timeSlots = generateTimeSlots();
 
     const onSubmit = (data: FormData) => {
-        console.log('Form data:', data);
-        // Здесь можно добавить логику отправки данных
-        handleOpenChange(false);
+        console.log('📤 Form data:', data);
+        
+        // Если это редактирование существующей задачи, просто закрываем диалог
+        if (taskId) {
+            console.log('📝 Editing existing task, closing dialog');
+            handleOpenChange(false);
+            return;
+        }
+        
+        // Валидация обязательных полей для новой задачи
+        if (!data.clientName.trim()) {
+            alert('Пожалуйста, введите имя клиента');
+            return;
+        }
+        
+        if (!data.phone.trim()) {
+            alert('Пожалуйста, введите номер телефона');
+            return;
+        }
+        
+        if (!data.serviceType) {
+            alert('Пожалуйста, выберите тип услуги');
+            return;
+        }
+        
+        if (!data.master) {
+            alert('Пожалуйста, выберите мастера');
+            return;
+        }
+        
+        if (!data.date) {
+            alert('Пожалуйста, выберите дату');
+            return;
+        }
+        
+        if (!data.time) {
+            alert('Пожалуйста, выберите время');
+            return;
+        }
+        
+        // Для новой задачи - отправляем POST запрос
+        console.log('🆕 Creating new task');
+        
+        // Парсим данные формы для API
+        const parsedData = {
+            clientName: data.clientName,
+            clientPhone: data.phone || undefined,
+            notes: data.notes || undefined,
+            scheduleDate: data.date,
+            scheduleTime: data.time,
+            serviceType: data.serviceType,
+            masterId: parseInt(data.master),
+            serviceDuration: parseInt(data.duration.split(' ')[0]), // Извлекаем числовое значение
+            servicePrice: parseFloat(data.cost) || 0,
+            branchId: data.branch,
+            status: 'scheduled'
+        };
+        
+        console.log('📦 Parsed data for API:', parsedData);
+        
+        // Отправляем POST запрос
+        createTaskMutation.mutate(parsedData, {
+            onSuccess: (newTask) => {
+                console.log('✅ Task created successfully:', newTask);
+                handleOpenChange(false);
+                // Форма автоматически сбросится при закрытии диалога
+            },
+            onError: (error) => {
+                console.error('❌ Failed to create task:', error);
+                // Можно добавить toast уведомление об ошибке
+                alert(`Ошибка при создании задачи: ${error.message}`);
+            }
+        });
     };
 
     return (
@@ -149,14 +245,38 @@ const TaskDialogBtn: React.FC<Props> = ({ children }) => {
                     </div>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit(onSubmit)}>
+                {/* Loading State */}
+                {taskId && taskLoading && (
+                    <div className="p-8 text-center">
+                        <div className="flex items-center justify-center gap-3">
+                            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                            <span className="text-gray-600">Загрузка данных задачи...</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Error State */}
+                {taskId && taskError && !taskLoading && (
+                    <div className="p-8 text-center">
+                        <div className="text-red-600 mb-2">
+                            Ошибка загрузки задачи
+                        </div>
+                        <p className="text-gray-600 text-sm">
+                            {taskError?.message || 'Не удалось загрузить данные задачи'}
+                        </p>
+                    </div>
+                )}
+
+                {/* Form Content */}
+                {(!taskId || (!taskLoading && !taskError)) && (
+                    <form onSubmit={handleSubmit(onSubmit)}>
                     <div className="grid grid-cols-2 gap-4">
                         {/* Левая колонка - Клиент */}
                         <div className="space-y-4">
                             <h3 className="text-blue-600 font-medium">Клиент</h3>
 
                             <div>
-                                <Label className="text-sm text-gray-600">Имя клиента</Label>
+                                <Label className="text-sm text-gray-600">Имя клиента *</Label>
                                 <Controller
                                     name="clientName"
                                     control={control}
@@ -180,7 +300,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children }) => {
                             </div>
 
                             <div>
-                                <Label className="text-sm text-gray-600">Телефон</Label>
+                                <Label className="text-sm text-gray-600">Телефон *</Label>
                                 <Controller
                                     name="phone"
                                     control={control}
@@ -279,10 +399,23 @@ const TaskDialogBtn: React.FC<Props> = ({ children }) => {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="30 мин - 300 сом">30 мин - 300 сом</SelectItem>
-                                                <SelectItem value="60 мин - 500 сом">60 мин - 500 сом</SelectItem>
-                                                <SelectItem value="90 мин - 700 сом">90 мин - 700 сом</SelectItem>
-                                                <SelectItem value="120 мин - 900 сом">120 мин - 900 сом</SelectItem>
+                                                {services.map(service => {
+                                                    const durations = getServiceDurations(servicesData.find(s => s.name === service.name) || servicesData[0]);
+                                                    return durations.map(({ duration, price }) => (
+                                                        <SelectItem key={`${service.name}-${duration}`} value={`${duration} мин - ${price} сом`}>
+                                                            {duration} мин - {price} сом
+                                                        </SelectItem>
+                                                    ));
+                                                }).flat()}
+                                                {/* Fallback options if no services loaded */}
+                                                {services.length === 0 && (
+                                                    <>
+                                                        <SelectItem value="30 мин - 300 сом">30 мин - 300 сом</SelectItem>
+                                                        <SelectItem value="60 мин - 500 сом">60 мин - 500 сом</SelectItem>
+                                                        <SelectItem value="90 мин - 700 сом">90 мин - 700 сом</SelectItem>
+                                                        <SelectItem value="120 мин - 900 сом">120 мин - 900 сом</SelectItem>
+                                                    </>
+                                                )}
                                             </SelectContent>
                                         </Select>
                                     )}
@@ -307,10 +440,11 @@ const TaskDialogBtn: React.FC<Props> = ({ children }) => {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Бритьё головы под машинку">Бритьё головы под машинку</SelectItem>
-                                                <SelectItem value="Стрижка">Стрижка</SelectItem>
-                                                <SelectItem value="Бритьё бороды">Бритьё бороды</SelectItem>
-                                                <SelectItem value="Комплекс">Комплекс</SelectItem>
+                                                {services.map(service => (
+                                                    <SelectItem key={service.id} value={service.name}>
+                                                        {service.name}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                     )}
@@ -335,9 +469,11 @@ const TaskDialogBtn: React.FC<Props> = ({ children }) => {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Алидин">Алидин</SelectItem>
-                                                <SelectItem value="Максим">Максим</SelectItem>
-                                                <SelectItem value="Дмитрий">Дмитрий</SelectItem>
+                                                {mastersData.map(master => (
+                                                    <SelectItem key={master.id} value={master.name}>
+                                                        {master.name}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                     )}
@@ -391,9 +527,11 @@ const TaskDialogBtn: React.FC<Props> = ({ children }) => {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Медерова 163/1">Медерова 163/1</SelectItem>
-                                                <SelectItem value="Центральный филиал">Центральный филиал</SelectItem>
-                                                <SelectItem value="Восточный филиал">Восточный филиал</SelectItem>
+                                                {branches.map(branch => (
+                                                    <SelectItem key={branch.id} value={branch.branches}>
+                                                        {branch.branches}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                     )}
@@ -533,13 +671,21 @@ const TaskDialogBtn: React.FC<Props> = ({ children }) => {
                         </Button>
                         <Button
                             type="submit"
-                            disabled={!isValid}
-                            className={!isValid ? 'opacity-50 cursor-not-allowed' : ''}
+                            disabled={!isValid || (!taskId && createTaskMutation.isPending)}
+                            className={(!isValid || (!taskId && createTaskMutation.isPending)) ? 'opacity-50 cursor-not-allowed' : ''}
                         >
-                            Сохранить
+                            {!taskId && createTaskMutation.isPending ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Создание...
+                                </>
+                            ) : (
+                                taskId ? 'Сохранить' : 'Создать задачу'
+                            )}
                         </Button>
                     </div>
-                </form>
+                    </form>
+                )}
             </DialogContent>
         </Dialog>
     );

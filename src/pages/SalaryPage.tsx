@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, User, DollarSign, Calculator, Trash2, Edit, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useBranch } from '@/contexts/BranchContext';
+import { getBranchIdWithFallback } from '@/utils/branch-utils';
 
 interface SalaryRecord {
   id?: number;
@@ -43,7 +44,7 @@ interface AccountingData {
 }
 
 export default function SalaryPage() {
-  const { currentBranch } = useBranch();
+  const { currentBranch, branches } = useBranch();
   const [salaryRecords, setSalaryRecords] = useState<SalaryRecord[]>([]);
   const [salaryPayments, setSalaryPayments] = useState<SalaryPayment[]>([]);
   const [accountingData, setAccountingData] = useState<AccountingData[]>([]);
@@ -68,10 +69,9 @@ export default function SalaryPage() {
     setIsLoading(true);
     try {
       const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/salaries`);
-      if (currentBranch?.id) {
-        url.searchParams.append('branchId', currentBranch.id.toString());
-      }
-
+      const branchId = getBranchIdWithFallback(currentBranch, branches);
+      url.searchParams.append('branchId', branchId);
+      
       const response = await fetch(url.toString());
       if (response.ok) {
         const data = await response.json();
@@ -107,10 +107,9 @@ export default function SalaryPage() {
       const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/accounting/period`);
       url.searchParams.append('startDate', startDate);
       url.searchParams.append('endDate', endDate);
-      if (currentBranch?.id) {
-        url.searchParams.append('branchId', currentBranch.id.toString());
-      }
-
+      const branchId = getBranchIdWithFallback(currentBranch, branches);
+      url.searchParams.append('branchId', branchId);
+      
       const response = await fetch(url.toString());
       if (response.ok) {
         const data = await response.json();
@@ -124,13 +123,8 @@ export default function SalaryPage() {
   // Загрузка выплат за период
   const fetchSalaryPayments = async () => {
     try {
-      if (!currentBranch?.id) {
-        console.log('Филиал не выбран, пропускаем загрузку выплат');
-        setSalaryPayments([]);
-        return;
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments?startDate=${startDate}&endDate=${endDate}&branchId=${currentBranch.id}`);
+      const branchId = getBranchIdWithFallback(currentBranch, branches);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments?startDate=${startDate}&endDate=${endDate}&branchId=${branchId}`);
       if (response.ok) {
         const data = await response.json();
         console.log('Данные выплат:', data);
@@ -147,7 +141,7 @@ export default function SalaryPage() {
     fetchSalaryData();
     fetchAccountingData();
     fetchSalaryPayments();
-  }, [startDate, endDate, currentBranch?.id]);
+  }, [startDate, endDate, currentBranch, branches]);
 
   // Расчет зарплаты для администраторов
   const calculateAdminSalary = (employee: string, baseSalary: number, commissionRate: number) => {

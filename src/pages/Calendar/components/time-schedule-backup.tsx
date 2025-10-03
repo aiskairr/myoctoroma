@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useBranch } from '@/contexts/BranchContext';
 import TaskDialogBtn from './task-dialog-btn';
+import { useCreateTask } from '@/hooks/use-task';
 
 // Types
 interface DragState {
@@ -142,8 +143,9 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [appointments, setAppointments] = useState<Appointment[]>([]);
-        }
-    ]);
+
+    // API hooks
+    const createTaskMutation = useCreateTask();
 
     const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
     const [isAddAppointmentOpen, setIsAddAppointmentOpen] = useState(false);
@@ -440,28 +442,64 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 return;
             }
 
-            const startMinutes = timeToMinutes(selectedTimeSlot);
-            const endMinutes = startMinutes + duration;
+            // Format date for API (YYYY-MM-DD)
+            const scheduleDate = currentDate.toISOString().split('T')[0];
+            
+            // Get service price
+            const servicePrice = service?.price || 0;
 
-            const appointment: Appointment = {
-                id: Date.now().toString(),
-                employeeId: selectedEmployeeId,
+            // Prepare data for API
+            const taskData = {
                 clientName: newAppointment.clientName.trim(),
-                service: newAppointment.service,
-                startTime: selectedTimeSlot,
-                endTime: minutesToTime(endMinutes),
-                duration,
-                status: 'scheduled',
-                notes: newAppointment.notes
+                scheduleDate: scheduleDate,
+                scheduleTime: selectedTimeSlot,
+                serviceType: newAppointment.service,
+                masterId: parseInt(selectedEmployeeId),
+                serviceDuration: duration,
+                servicePrice: servicePrice,
+                branchId: currentBranch?.id?.toString() || '1',
+                notes: newAppointment.notes || undefined,
+                status: 'scheduled'
             };
 
-            setAppointments(prev => [...prev, appointment]);
-            setNewAppointment({ clientName: '', service: '', startTime: '', duration: 45, notes: '' });
-            setSelectedEmployeeId('');
-            setSelectedTimeSlot('');
-            setIsAddAppointmentOpen(false);
+            console.log('📤 Creating new task with data:', taskData);
+
+            // Send POST request to create task
+            createTaskMutation.mutate(taskData, {
+                onSuccess: (newTask) => {
+                    console.log('✅ Task created successfully:', newTask);
+                    
+                    // Optionally update local state for immediate UI feedback
+                    const startMinutes = timeToMinutes(selectedTimeSlot);
+                    const endMinutes = startMinutes + duration;
+
+                    const appointment: Appointment = {
+                        id: newTask.id.toString(),
+                        employeeId: selectedEmployeeId,
+                        clientName: newAppointment.clientName.trim(),
+                        service: newAppointment.service,
+                        startTime: selectedTimeSlot,
+                        endTime: minutesToTime(endMinutes),
+                        duration,
+                        status: 'scheduled',
+                        notes: newAppointment.notes
+                    };
+
+                    setAppointments(prev => [...prev, appointment]);
+                    
+                    // Reset form and close dialog
+                    setNewAppointment({ clientName: '', service: '', startTime: '', duration: 45, notes: '' });
+                    setSelectedEmployeeId('');
+                    setSelectedTimeSlot('');
+                    setIsAddAppointmentOpen(false);
+                },
+                onError: (error) => {
+                    console.error('❌ Failed to create task:', error);
+                    alert(`Ошибка при создании записи: ${error.message}`);
+                }
+            });
         }
-    }, [newAppointment, selectedEmployeeId, selectedTimeSlot, doesAppointmentFitWorkingHours]);
+    }, [newAppointment, selectedEmployeeId, selectedTimeSlot, doesAppointmentFitWorkingHours, currentDate, currentBranch, createTaskMutation]);
 
     const handleTimeSlotClick = useCallback((employeeId: string, timeSlot: string) => {
         if (!isWithinWorkingHours(employeeId, timeSlot)) return;
@@ -703,7 +741,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                         {service && (
                             <div className="flex justify-between">
                                 <span className="text-gray-600">Стоимость:</span>
-                                <span className="font-medium">{service.price}₽</span>
+                                <span className="font-medium">{service.price} сом</span>
                             </div>
                         )}
 
@@ -839,7 +877,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                     {dragState.targetSlot ? (
                                         <span>
                                             Перемещение к {employees.find(emp => emp.id === dragState.targetSlot!.employeeId)?.name}
-                                            на {dragState.targetSlot.timeSlot}
+                                             на {dragState.targetSlot.timeSlot}
                                         </span>
                                     ) : (
                                         'Перетащите в нужную позицию'
@@ -1069,7 +1107,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                     <option value="">Выберите услугу</option>
                                     {SERVICES.map(service => (
                                         <option key={service.name} value={service.name}>
-                                            {service.name} ({service.duration} мин, {service.price}₽)
+                                            {service.name} ({service.duration} мин, {service.price} сом)
                                         </option>
                                     ))}
                                 </select>
@@ -1123,10 +1161,13 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                 </button>
                                 <button
                                     onClick={handleAddAppointment}
-                                    disabled={!newAppointment.clientName.trim() || !newAppointment.service}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                    disabled={!newAppointment.clientName.trim() || !newAppointment.service || createTaskMutation.isPending}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                                 >
-                                    Создать запись
+                                    {createTaskMutation.isPending && (
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    )}
+                                    {createTaskMutation.isPending ? 'Создание...' : 'Создать запись'}
                                 </button>
                             </div>
                         </div>

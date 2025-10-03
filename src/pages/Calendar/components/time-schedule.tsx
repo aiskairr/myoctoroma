@@ -3,6 +3,11 @@ import { Plus, X, Clock, User, Calendar, GripVertical } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import TaskDialogBtn from './task-dialog-btn';
+import { useMasters } from '@/hooks/use-masters';
+import { useCalendarTasks } from '@/hooks/use-calendar-tasks';
+import { useServices, convertServicesToLegacyFormat } from '@/hooks/use-services';
+import { useCreateTask } from '@/hooks/use-task';
+import { useBranch } from '@/contexts/BranchContext';
 
 // Types
 interface DragState {
@@ -19,17 +24,6 @@ interface ResizeState {
     resizedAppointment: Appointment | null;
     originalDuration: number;
     direction: 'top' | 'bottom' | null;
-}
-
-interface Employee {
-    id: string;
-    name: string;
-    role: string;
-    workHours: {
-        start: string;
-        end: string;
-    };
-    color: string;
 }
 
 interface Appointment {
@@ -53,6 +47,7 @@ interface NewEmployeeForm {
 
 interface NewAppointmentForm {
     clientName: string;
+    phone: string;
     service: string;
     startTime: string;
     duration: number;
@@ -70,23 +65,12 @@ const ROLES = [
     'Массажист'
 ] as const;
 
-const SERVICES = [
-    { name: 'Мужская стрижка', duration: 45, price: 1500 },
-    { name: 'Женская стрижка', duration: 60, price: 2500 },
-    { name: 'Окрашивание', duration: 120, price: 4500 },
-    { name: 'Укладка', duration: 30, price: 1200 },
-    { name: 'Борода', duration: 30, price: 800 },
-    { name: 'Маникюр', duration: 60, price: 1800 },
-    { name: 'Массаж', duration: 90, price: 3000 }
-] as const;
-
 const EMPLOYEE_COLORS = [
     '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
     '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
 ];
 
 const TIME_SLOT_HEIGHT = 32;
-const TIME_COLUMN_WIDTH = 80;
 const HEADER_HEIGHT = 64;
 
 // Utility functions
@@ -122,61 +106,68 @@ const getCurrentTimePosition = (): number => {
 const AdvancedScheduleComponent: React.FC = () => {
     // State
     const [currentDate] = useState(() => new Date());
-    const [employees, setEmployees] = useState<Employee[]>([
-        {
-            id: '1',
-            name: 'Алладин',
-            role: 'Мужской стилист',
-            workHours: { start: '09:00', end: '20:00' },
-            color: EMPLOYEE_COLORS[0]
-        },
-        {
-            id: '2',
-            name: 'Антон',
-            role: 'Мужской стилист',
-            workHours: { start: '09:00', end: '20:00' },
-            color: EMPLOYEE_COLORS[1]
-        }
-    ]);
+    
+    // Context
+    const { currentBranch } = useBranch();
+    
+    // Fetch real data from API
+    const { data: mastersData = [], isLoading: mastersLoading, error: mastersError } = useMasters();
+    const { data: tasksData = [], isLoading: tasksLoading, error: tasksError } = useCalendarTasks(currentDate);
+    const { data: servicesData = [], isLoading: servicesLoading, error: servicesError } = useServices();
+    
+    // API mutations
+    const createTaskMutation = useCreateTask();
+    
+    // Convert services data to legacy format for compatibility
+    const services = useMemo(() => {
+        return convertServicesToLegacyFormat(servicesData);
+    }, [servicesData]);
+    
+    // Convert masters data to employees format
+    const employees = useMemo(() => {
+        return mastersData.map((master, index) => ({
+            id: master.id.toString(),
+            name: master.name,
+            role: master.specialization || 'Мастер',
+            workHours: { 
+                start: master.startWorkHour || '09:00', 
+                end: master.endWorkHour || '20:00' 
+            },
+            color: EMPLOYEE_COLORS[index % EMPLOYEE_COLORS.length]
+        }));
+    }, [mastersData]);
 
-    const [appointments, setAppointments] = useState<Appointment[]>([
-        {
-            id: '1',
-            employeeId: '1',
-            clientName: 'Иван Петров',
-            service: 'Мужская стрижка',
-            startTime: '11:15',
-            endTime: '12:00',
-            duration: 45,
-            status: 'in-progress'
-        },
-        {
-            id: '2',
-            employeeId: '1',
-            clientName: 'шоферов',
-            service: 'Мужская стрижка',
-            startTime: '13:30',
-            endTime: '14:30',
-            duration: 60,
-            status: 'scheduled'
-        },
-        {
-            id: '3',
-            employeeId: '1',
-            clientName: 'Петр Сидоров',
-            service: 'Борода',
-            startTime: '13:45',
-            endTime: '14:15',
-            duration: 30,
-            status: 'scheduled'
+    // Convert tasks data to appointments format
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
+    
+    useEffect(() => {
+        if (tasksData.length > 0) {
+            const convertedAppointments = tasksData
+                .filter(task => task.scheduleTime && task.endTime && task.masterId)
+                .map(task => ({
+                    id: task.id.toString(),
+                    employeeId: task.masterId!.toString(),
+                    clientName: task.client?.customName || task.client?.firstName || task.clientName || 'Клиент',
+                    service: task.serviceType || 'Услуга',
+                    startTime: task.scheduleTime!,
+                    endTime: task.endTime!,
+                    duration: task.serviceDuration || 60,
+                    status: task.status as 'scheduled' | 'in-progress' | 'completed' | 'cancelled' || 'scheduled',
+                    notes: task.notes || undefined
+                }));
+            setAppointments(convertedAppointments);
         }
-    ]);
+    }, [tasksData]);
 
     const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
     const [isAddAppointmentOpen, setIsAddAppointmentOpen] = useState(false);
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
     const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
     const [currentTimePosition, setCurrentTimePosition] = useState(getCurrentTimePosition());
+
+    // Loading and error states
+    const isLoading = mastersLoading || tasksLoading || servicesLoading;
+    const hasError = mastersError || tasksError || servicesError;
 
     const [dragState, setDragState] = useState<DragState>({
         isDragging: false,
@@ -205,6 +196,7 @@ const AdvancedScheduleComponent: React.FC = () => {
 
     const [newAppointment, setNewAppointment] = useState<NewAppointmentForm>({
         clientName: '',
+        phone: '',
         service: '',
         startTime: '',
         duration: 45,
@@ -429,35 +421,50 @@ const AdvancedScheduleComponent: React.FC = () => {
         }
     }, [dragState.isDragging, resizeState.isResizing, handleMouseMove, handleMouseUp]);
 
-    // Employee management
+    // Employee management - since employees come from API, these are simplified
     const handleAddEmployee = useCallback(() => {
-        if (newEmployee.name.trim() && newEmployee.role) {
-            const employee: Employee = {
-                id: Date.now().toString(),
-                name: newEmployee.name.trim(),
-                role: newEmployee.role,
-                workHours: {
-                    start: newEmployee.startTime,
-                    end: newEmployee.endTime
-                },
-                color: EMPLOYEE_COLORS[employees.length % EMPLOYEE_COLORS.length]
-            };
+        // This would need to call the API to create a new master
+        // For now, we'll show a message that this should be done in the Masters page
+        alert('Добавление мастеров выполняется на странице "Мастера"');
+        setIsAddEmployeeOpen(false);
+    }, []);
 
-            setEmployees(prev => [...prev, employee]);
-            setNewEmployee({ name: '', role: '', startTime: '09:00', endTime: '20:00' });
-            setIsAddEmployeeOpen(false);
-        }
-    }, [newEmployee, employees.length]);
-
-    const handleRemoveEmployee = useCallback((employeeId: string) => {
-        setEmployees(prev => prev.filter(emp => emp.id !== employeeId));
-        setAppointments(prev => prev.filter(apt => apt.employeeId !== employeeId));
+    const handleRemoveEmployee = useCallback((_employeeId: string) => {
+        // This would need to call the API to deactivate a master
+        // For now, we'll show a message that this should be done in the Masters page
+        alert('Удаление мастеров выполняется на странице "Мастера"');
     }, []);
 
     // Appointment management
     const handleAddAppointment = useCallback(() => {
-        if (newAppointment.clientName.trim() && newAppointment.service && selectedEmployeeId && selectedTimeSlot) {
-            const service = SERVICES.find(s => s.name === newAppointment.service);
+        // Валидация обязательных полей
+        if (!newAppointment.clientName.trim()) {
+            alert('Пожалуйста, введите имя клиента');
+            return;
+        }
+        
+        if (!newAppointment.phone.trim()) {
+            alert('Пожалуйста, введите номер телефона');
+            return;
+        }
+        
+        if (!newAppointment.service) {
+            alert('Пожалуйста, выберите услугу');
+            return;
+        }
+        
+        if (!selectedEmployeeId) {
+            alert('Пожалуйста, выберите мастера');
+            return;
+        }
+        
+        if (!selectedTimeSlot) {
+            alert('Пожалуйста, выберите время');
+            return;
+        }
+
+        if (newAppointment.clientName.trim() && newAppointment.phone.trim() && newAppointment.service && selectedEmployeeId && selectedTimeSlot) {
+            const service = services.find(s => s.name === newAppointment.service);
             const duration = service?.duration || newAppointment.duration;
 
             if (!doesAppointmentFitWorkingHours(selectedEmployeeId, selectedTimeSlot, duration)) {
@@ -465,28 +472,65 @@ const AdvancedScheduleComponent: React.FC = () => {
                 return;
             }
 
-            const startMinutes = timeToMinutes(selectedTimeSlot);
-            const endMinutes = startMinutes + duration;
+            // Format date for API (YYYY-MM-DD)
+            const scheduleDate = currentDate.toISOString().split('T')[0];
+            
+            // Get service price
+            const servicePrice = service?.price || 0;
 
-            const appointment: Appointment = {
-                id: Date.now().toString(),
-                employeeId: selectedEmployeeId,
+            // Prepare data for API
+            const taskData = {
                 clientName: newAppointment.clientName.trim(),
-                service: newAppointment.service,
-                startTime: selectedTimeSlot,
-                endTime: minutesToTime(endMinutes),
-                duration,
-                status: 'scheduled',
-                notes: newAppointment.notes
+                clientPhone: newAppointment.phone.trim() || undefined,
+                scheduleDate: scheduleDate,
+                scheduleTime: selectedTimeSlot,
+                serviceType: newAppointment.service,
+                masterId: parseInt(selectedEmployeeId),
+                serviceDuration: duration,
+                servicePrice: servicePrice,
+                branchId: currentBranch?.id?.toString() || '1',
+                notes: newAppointment.notes || undefined,
+                status: 'scheduled'
             };
 
-            setAppointments(prev => [...prev, appointment]);
-            setNewAppointment({ clientName: '', service: '', startTime: '', duration: 45, notes: '' });
-            setSelectedEmployeeId('');
-            setSelectedTimeSlot('');
-            setIsAddAppointmentOpen(false);
+            console.log('📤 Creating new task with data:', taskData);
+
+            // Send POST request to create task
+            createTaskMutation.mutate(taskData, {
+                onSuccess: (newTask) => {
+                    console.log('✅ Task created successfully:', newTask);
+                    
+                    // Optionally update local state for immediate UI feedback
+                    const startMinutes = timeToMinutes(selectedTimeSlot);
+                    const endMinutes = startMinutes + duration;
+
+                    const appointment: Appointment = {
+                        id: newTask.id.toString(),
+                        employeeId: selectedEmployeeId,
+                        clientName: newAppointment.clientName.trim(),
+                        service: newAppointment.service,
+                        startTime: selectedTimeSlot,
+                        endTime: minutesToTime(endMinutes),
+                        duration,
+                        status: 'scheduled',
+                        notes: newAppointment.notes
+                    };
+
+                    setAppointments(prev => [...prev, appointment]);
+                    
+                    // Reset form and close dialog
+                    setNewAppointment({ clientName: '', phone: '', service: '', startTime: '', duration: 45, notes: '' });
+                    setSelectedEmployeeId('');
+                    setSelectedTimeSlot('');
+                    setIsAddAppointmentOpen(false);
+                },
+                onError: (error) => {
+                    console.error('❌ Failed to create task:', error);
+                    alert(`Ошибка при создании записи: ${error.message}`);
+                }
+            });
         }
-    }, [newAppointment, selectedEmployeeId, selectedTimeSlot, doesAppointmentFitWorkingHours]);
+    }, [newAppointment, selectedEmployeeId, selectedTimeSlot, doesAppointmentFitWorkingHours, currentDate, currentBranch, createTaskMutation, services]);
 
     const handleTimeSlotClick = useCallback((employeeId: string, timeSlot: string) => {
         if (!isWithinWorkingHours(employeeId, timeSlot)) return;
@@ -498,13 +542,13 @@ const AdvancedScheduleComponent: React.FC = () => {
     }, [isWithinWorkingHours]);
 
     const handleServiceChange = useCallback((serviceName: string) => {
-        const service = SERVICES.find(s => s.name === serviceName);
+        const service = services.find(s => s.name === serviceName);
         setNewAppointment(prev => ({
             ...prev,
             service: serviceName,
             duration: service?.duration || 45
         }));
-    }, []);
+    }, [services]);
 
     // Get overlapping appointments and calculate positioning
     const getAppointmentLayout = useCallback((employeeId: string) => {
@@ -619,11 +663,11 @@ const AdvancedScheduleComponent: React.FC = () => {
         const isMedium = height > 32 && height <= 64;
 
         const employee = employees.find(emp => emp.id === appointment.employeeId);
-        const service = SERVICES.find(s => s.name === appointment.service);
+        const service = services.find(s => s.name === appointment.service);
 
         return (
             <Tooltip key={appointment.id}>
-                <TaskDialogBtn>
+                <TaskDialogBtn taskId={parseInt(appointment.id)}>
                     <TooltipTrigger asChild>
                         <div
                             className={`absolute border-l-4 rounded-r-md text-xs group transition-all duration-100 ${statusColors[appointment.status]
@@ -728,7 +772,7 @@ const AdvancedScheduleComponent: React.FC = () => {
                         {service && (
                             <div className="flex justify-between">
                                 <span className="text-gray-600">Стоимость:</span>
-                                <span className="font-medium">{service.price}₽</span>
+                                <span className="font-medium">{service.price} сом</span>
                             </div>
                         )}
 
@@ -747,23 +791,58 @@ const AdvancedScheduleComponent: React.FC = () => {
     return (
         <TooltipProvider>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                {/* Header */}
-                <div className="p-6 border-b border-gray-200 bg-gray-50">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Calendar className="text-gray-600" size={20} />
-                            <h2 className="text-xl font-semibold text-gray-900">
-                                Расписание на {dateString}
-                            </h2>
+                {/* Loading State */}
+                {isLoading && (
+                    <div className="p-8 text-center">
+                        <div className="flex items-center justify-center gap-3">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                            <span className="text-gray-600">Загрузка расписания...</span>
                         </div>
+                    </div>
+                )}
 
-                        <Dialog open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>
-                            <DialogTrigger asChild>
-                                <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                                    <Plus size={18} />
-                                    Добавить сотрудника
-                                </button>
-                            </DialogTrigger>
+                {/* Error State */}
+                {hasError && !isLoading && (
+                    <div className="p-8 text-center">
+                        <div className="text-red-600 mb-2">
+                            <X size={24} className="mx-auto mb-2" />
+                            Ошибка загрузки данных
+                        </div>
+                        <p className="text-gray-600 text-sm">
+                            {mastersError?.message || tasksError?.message || servicesError?.message || 'Неизвестная ошибка'}
+                        </p>
+                    </div>
+                )}
+
+                {/* Empty State */}
+                {!isLoading && !hasError && employees.length === 0 && (
+                    <div className="p-8 text-center">
+                        <User size={24} className="mx-auto mb-2 text-gray-400" />
+                        <p className="text-gray-600">Нет доступных мастеров для этого филиала</p>
+                        <p className="text-gray-400 text-sm mt-1">Добавьте мастеров на странице "Мастера"</p>
+                    </div>
+                )}
+
+                {/* Main Content */}
+                {!isLoading && !hasError && employees.length > 0 && (
+                    <>
+                        {/* Header */}
+                        <div className="p-6 border-b border-gray-200 bg-gray-50">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Calendar className="text-gray-600" size={20} />
+                                    <h2 className="text-xl font-semibold text-gray-900">
+                                        Расписание на {dateString}
+                                    </h2>
+                                </div>
+
+                                <Dialog open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>
+                                    <DialogTrigger asChild>
+                                        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                                            <Plus size={18} />
+                                            Добавить сотрудника
+                                        </button>
+                                    </DialogTrigger>
                             <DialogContent className="sm:max-w-[500px]">
                                 <DialogHeader>
                                     <DialogTitle className="flex items-center gap-2">
@@ -864,7 +943,7 @@ const AdvancedScheduleComponent: React.FC = () => {
                                     {dragState.targetSlot ? (
                                         <span>
                                             Перемещение к {employees.find(emp => emp.id === dragState.targetSlot!.employeeId)?.name}
-                                            на {dragState.targetSlot.timeSlot}
+                                             на {dragState.targetSlot.timeSlot}
                                         </span>
                                     ) : (
                                         'Перетащите в нужную позицию'
@@ -984,7 +1063,7 @@ const AdvancedScheduleComponent: React.FC = () => {
                         )}
 
                         <div className="flex">
-                            {employees.map((employee, employeeIndex) => (
+                            {employees.map((employee) => (
                                 <div
                                     key={employee.id}
                                     className="flex-1 min-w-48 border-r border-gray-200 last:border-r-0"
@@ -1022,7 +1101,7 @@ const AdvancedScheduleComponent: React.FC = () => {
 
                                     {/* Time Slots */}
                                     <div className="relative">
-                                        {timeSlots.map((slot, slotIndex) => {
+                                        {timeSlots.map((slot) => {
                                             const isWorkingHours = isWithinWorkingHours(employee.id, slot);
 
                                             if (!isWorkingHours) {
@@ -1084,6 +1163,20 @@ const AdvancedScheduleComponent: React.FC = () => {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Телефон *
+                                </label>
+                                <input
+                                    type="tel"
+                                    value={newAppointment.phone}
+                                    onChange={(e) => setNewAppointment(prev => ({ ...prev, phone: e.target.value }))}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="+996 500 123 456"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Услуга *
                                 </label>
                                 <select
@@ -1092,9 +1185,9 @@ const AdvancedScheduleComponent: React.FC = () => {
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 >
                                     <option value="">Выберите услугу</option>
-                                    {SERVICES.map(service => (
+                                    {services.map(service => (
                                         <option key={service.name} value={service.name}>
-                                            {service.name} ({service.duration} мин, {service.price}₽)
+                                            {service.name} ({service.duration} мин, {service.price} сом)
                                         </option>
                                     ))}
                                 </select>
@@ -1148,18 +1241,23 @@ const AdvancedScheduleComponent: React.FC = () => {
                                 </button>
                                 <button
                                     onClick={handleAddAppointment}
-                                    disabled={!newAppointment.clientName.trim() || !newAppointment.service}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                    disabled={!newAppointment.clientName.trim() || !newAppointment.phone.trim() || !newAppointment.service || createTaskMutation.isPending}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                                 >
-                                    Создать запись
+                                    {createTaskMutation.isPending && (
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    )}
+                                    {createTaskMutation.isPending ? 'Создание...' : 'Создать запись'}
                                 </button>
                             </div>
                         </div>
                     </DialogContent>
                 </Dialog>
-            </div>
-        </TooltipProvider>
-    );
-};
+                        </>
+                    )}
+                </div>
+            </TooltipProvider>
+        );
+    };
 
 export default AdvancedScheduleComponent;

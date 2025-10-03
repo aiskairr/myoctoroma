@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Loader2 } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { useBranch } from "@/contexts/BranchContext";
+import { getBranchIdWithFallback } from "@/utils/branch-utils";
 
 interface WorkingDate {
   date?: string; // ISO date string
@@ -34,16 +35,17 @@ const MasterWorkingDatesDisplay: React.FC<MasterWorkingDatesDisplayProps> = ({
 
   // Загружаем данные из API, если передан masterId
   const { data: apiWorkingDates, isLoading } = useQuery({
-    queryKey: ['master-working-dates', masterId, currentMonth.getMonth() + 1, currentMonth.getFullYear(), currentBranch?.id],
+    queryKey: ['master-working-dates', masterId, currentMonth.getMonth() + 1, currentMonth.getFullYear(), getBranchIdWithFallback(currentBranch, branches)],
     queryFn: async (): Promise<WorkingDate[]> => {
-      if (!masterId || !currentBranch) return [];
+      if (!masterId) return [];
+      const branchId = getBranchIdWithFallback(currentBranch, branches);
       const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates?month=${currentMonth.getMonth() + 1}&year=${currentMonth.getFullYear()}&branchId=${currentBranch.id}`
+        `${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates?month=${currentMonth.getMonth() + 1}&year=${currentMonth.getFullYear()}&branchId=${branchId}`
       );
       if (!res.ok) throw new Error('Failed to fetch working dates');
       return res.json();
     },
-    enabled: !!masterId && !!currentBranch,
+    enabled: !!masterId && !!(currentBranch || branches.length > 0),
   });
 
   // Используем данные из API или переданные пропсы

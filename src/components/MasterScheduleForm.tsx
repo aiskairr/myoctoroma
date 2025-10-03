@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
 import { useBranch } from "@/contexts/BranchContext";
+import { getBranchIdWithFallback } from "@/utils/branch-utils";
 // Интерфейс для расписания мастера
 export interface MasterSchedule {
   branch: string;  // Филиал (wa1)
@@ -70,7 +71,7 @@ const MasterScheduleForm: React.FC<MasterScheduleFormProps> = ({ schedules, onCh
   // Создаем пустую схему с текущим филиалом
   const getEmptySchedule = (): MasterSchedule => ({
     ...EMPTY_SCHEDULE,
-    branch: currentBranch?.id?.toString() || ''
+    branch: getBranchIdWithFallback(currentBranch, branches)
   });
   
   // Локальное состояние для редактирования расписаний
@@ -82,7 +83,7 @@ const MasterScheduleForm: React.FC<MasterScheduleFormProps> = ({ schedules, onCh
   useEffect(() => {
     // Обновляем только пустые филиалы в расписаниях
     const updatedSchedules = editingSchedules.map(schedule => 
-      schedule.branch === '' ? { ...schedule, branch: currentBranch?.id?.toString() || '' } : schedule
+      schedule.branch === '' ? { ...schedule, branch: getBranchIdWithFallback(currentBranch, branches) } : schedule
     );
     
     if (JSON.stringify(updatedSchedules) !== JSON.stringify(editingSchedules)) {

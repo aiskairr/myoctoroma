@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Gift, Search, Plus, CheckCircle, Calendar, User, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useBranch } from '@/contexts/BranchContext';
+import { getBranchIdWithFallback } from '@/utils/branch-utils';
 
 interface GiftCertificate {
   id: number;
@@ -28,7 +29,7 @@ interface GiftCertificate {
 }
 
 const GiftCertificatesPage = () => {
-  const { currentBranch } = useBranch();
+  const { currentBranch, branches } = useBranch();
   const { toast } = useToast();
   const [activeCertificates, setActiveCertificates] = useState<GiftCertificate[]>([]);
   const [usedCertificates, setUsedCertificates] = useState<GiftCertificate[]>([]);
@@ -55,7 +56,8 @@ const GiftCertificatesPage = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const fetchResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?branchId=${currentBranch?.id}`);
+        const branchId = getBranchIdWithFallback(currentBranch, branches);
+        const fetchResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?branchId=${branchId}`);
         if (fetchResponse.ok) {
           const allCertificates = await fetchResponse.json();
           
@@ -91,7 +93,7 @@ const GiftCertificatesPage = () => {
       }
     };
     fetchData();
-  }, [currentBranch, toast]);
+  }, [currentBranch, branches, toast]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -109,6 +111,7 @@ const GiftCertificatesPage = () => {
     }
 
     try {
+      const branchId = getBranchIdWithFallback(currentBranch, branches);
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates`, {
         method: 'POST',
         headers: {
@@ -121,7 +124,7 @@ const GiftCertificatesPage = () => {
           payment_method: newCertificate.payment_method,
           discount: newCertificate.discount || '0%',
           expiry_date: newCertificate.expiry_date,
-          branch_id: currentBranch?.id,
+          branch_id: branchId,
           is_used: false,
           is_expired: false
         }),
@@ -224,7 +227,8 @@ const GiftCertificatesPage = () => {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates/search/${searchNumber}?branchId=${currentBranch?.id}`);
+      const branchId = getBranchIdWithFallback(currentBranch, branches);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates/search/${searchNumber}?branchId=${branchId}`);
       if (response.ok) {
         const found = await response.json();
         setSelectedCertificate(found);

@@ -1,14 +1,14 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "./SimpleAuthContext";
 
 export interface Branch {
   id: number;
-  branches: string; // название филиала (как в API)
+  branches: string;
   address: string;
   phoneNumber: string;
-  organisationId: string | number; // может быть строкой или числом
-  waInstance?: string; // WhatsApp instance ID (wa1, wa2, wa3, etc.) для обратной совместимости
+  organisationId: string | number;
+  waInstance?: string;
 }
 
 interface BranchContextType {
@@ -30,73 +30,46 @@ const BranchContext = createContext<BranchContextType>({
 });
 
 export const BranchProvider = ({ children }: { children: ReactNode }) => {
-  const { user, isAuthenticated } = useAuth(); // Получаем пользователя из AuthContext
+  const { user, isAuthenticated } = useAuth();
   const [currentBranch, setCurrentBranch] = useState<Branch | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Функция для загрузки филиалов
-  const fetchBranches = async () => {
+  const fetchBranches = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       
       console.log('🏢 BranchContext: Starting branch loading...');
       
-      // Сначала получаем organisationId из API пользователя
-      console.log('� Getting organisationId from user API...');
-      // Проверяем, что пользователь авторизован и данные доступны
       if (!isAuthenticated || !user) {
-        throw new Error('Пользователь не авторизован');
+        console.log('Пользователь не авторизован или данные не доступны. Пропускаем загрузку филиалов.');
+        setIsLoading(false);
+        return;
       }
       
       console.log('👤 Using user data from AuthContext:', user);
       
-      // Ищем organisationId в данных пользователя из AuthContext
-      const organisationId = user.organisationId || user.organization_id || user.orgId;
+      const organisationId = user.organisationId || user.organization_id || user.orgId || user.organisationID || user.organizationId;
+      
+      console.log('🔍 Checking organisationId fields:', {
+        organisationId: user.organisationId,
+        organization_id: user.organization_id,
+        orgId: user.orgId,
+        organisationID: user.organisationID,
+        organizationId: user.organizationId,
+        finalOrgId: organisationId
+      });
       
       if (!organisationId) {
-        console.log('⚠️ No organisationId found in user data, trying with organisationId = 1');
-        // Fallback: пробуем с organisationId = 1
-        const fallbackOrgId = 1;
-        console.log('🆔 Using fallback organisationId:', fallbackOrgId);
-        
-        const branchesUrl = `${import.meta.env.VITE_BACKEND_URL}/api/organisations/${fallbackOrgId}/branches`;
-        console.log('🌐 Fetching branches from (fallback):', branchesUrl);
-        
-        const branchesResponse = await fetch(branchesUrl, {
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-          }
-        });
-
-        if (!branchesResponse.ok) {
-          throw new Error('Пользователь не связан с организацией');
-        }
-
-        const branchesData = await branchesResponse.json();
-        console.log('📄 Branches response data (fallback):', branchesData);
-        
-        const branchList: Branch[] = branchesData.branches || [];
-        console.log('✅ Loaded branches (fallback):', branchList.length, branchList.map(b => ({ id: b.id, name: b.branches })));
-
-        setBranches(branchList);
-        
-        // Выбираем первый филиал
-        if (branchList.length > 0) {
-          setCurrentBranch(branchList[0]);
-          localStorage.setItem("currentBranchId", branchList[0].id.toString());
-          console.log('📍 Selected first branch (fallback):', branchList[0].branches);
-        }
-        
-        return; // Выходим из функции, так как обработали fallback случай
+        console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: organisationId НЕ НАЙДЕН в данных пользователя!');
+        console.log('📝 Полные данные пользователя:', JSON.stringify(user, null, 2));
+        throw new Error('organisationId не найден в данных пользователя. Требуется корректная авторизация.');
       }
       
       console.log('🆔 Using organisationId:', organisationId);
       
-      // Теперь загружаем филиалы напрямую через organisations endpoint
       const branchesUrl = `${import.meta.env.VITE_BACKEND_URL}/api/organisations/${organisationId}/branches`;
       console.log('🌐 Fetching branches from:', branchesUrl);
       
@@ -125,9 +98,7 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
       console.log('✅ Loaded branches:', branchList.length, branchList.map(b => ({ id: b.id, name: b.branches })));
 
       setBranches(branchList);
-      console.log('🎯 Final branches set:', branchList.length);
-
-      // Пытаемся восстановить сохраненный филиал
+      
       const savedBranchId = localStorage.getItem("currentBranchId");
       if (savedBranchId && branchList.length > 0) {
         const saved = branchList.find((b: Branch) => b.id.toString() === savedBranchId);
@@ -135,13 +106,11 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
           setCurrentBranch(saved);
           console.log('📍 Restored saved branch:', saved.branches);
         } else {
-          // Если сохраненный филиал не найден, выбираем первый
           setCurrentBranch(branchList[0]);
           localStorage.setItem("currentBranchId", branchList[0].id.toString());
           console.log('📍 Selected first branch:', branchList[0].branches);
         }
       } else if (branchList.length > 0) {
-        // Если нет сохраненного филиала, выбираем первый
         setCurrentBranch(branchList[0]);
         localStorage.setItem("currentBranchId", branchList[0].id.toString());
         console.log('📍 Selected first branch:', branchList[0].branches);
@@ -153,20 +122,17 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
       console.log('🏁 BranchContext: Loading completed');
     }
-  };
+  }, [user, isAuthenticated]);
 
-  // Функция для установки филиала
   const setBranch = (branch: Branch) => {
     setCurrentBranch(branch);
     localStorage.setItem("currentBranchId", branch.id.toString());
   };
 
-  // Загружаем филиалы при монтировании компонента
   useEffect(() => {
     fetchBranches();
-  }, []);
+  }, [fetchBranches]);
 
-  // Значение контекста
   const value = {
     currentBranch,
     setBranch,
@@ -183,7 +149,6 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Хук для использования контекста филиалов
 export const useBranch = () => {
   const context = useContext(BranchContext);
   if (!context) {

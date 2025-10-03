@@ -928,7 +928,7 @@ const Masters: React.FC = () => {
         return [];
       }
       try {
-        const url = `/api/crm/masters?branchId=${currentBranch.id}`;
+        const url = `/api/crm/masters/${currentBranch.id}`;
         console.log('📡 Masters API URL:', url);
         return await apiGetJson(url);
       } catch (error) {

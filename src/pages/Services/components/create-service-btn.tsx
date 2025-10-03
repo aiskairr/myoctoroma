@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useBranch } from '@/contexts/BranchContext';
+import { getBranchIdWithFallback } from '@/utils/branch-utils';
 
 interface ServiceFormData {
     name: string;
@@ -40,7 +41,6 @@ const DURATIONS = [
 const CreateServiceBtn = () => {
     const [isOpen, setIsOpen] = useState(false);
     const { branches, currentBranch } = useBranch();
-    const branchID = currentBranch?.id;
     const { toast } = useToast();
     const queryClient = useQueryClient();
 
@@ -55,7 +55,7 @@ const CreateServiceBtn = () => {
         defaultValues: {
             name: '',
             description: '',
-            instanceId: branches.length > 0 ? branches[0].id.toString() : '',
+            instanceId: '',
             defaultDuration: '60',
             isActive: true,
         },
@@ -67,9 +67,10 @@ const CreateServiceBtn = () => {
 
     useEffect(() => {
         if (isOpen && branches.length > 0) {
-            setValue('instanceId', branches[0].id.toString());
+            const branchId = getBranchIdWithFallback(currentBranch, branches);
+            setValue('instanceId', branchId);
         }
-    }, [isOpen, branches, setValue]);
+    }, [isOpen, branches, currentBranch, setValue]);
 
     const createMutation = useMutation({
         mutationFn: async (service: Omit<any, 'id' | 'createdAt'>) => {

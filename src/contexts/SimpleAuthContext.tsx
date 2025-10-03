@@ -90,6 +90,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               role: userData.role || '',
               instanceId: userData.instanceId || null,
               master_id: userData.master_id || null,
+              organisationId: userData.organisationId || null,
+              organization_id: userData.organization_id || null,
+              orgId: userData.orgId || null,
             });
             
             // Обновляем cookie с актуальными данными
@@ -146,6 +149,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               role: userData.role || '',
               instanceId: userData.instanceId || null,
               master_id: userData.master_id || null,
+              organisationId: userData.organisationId || null,
+              organization_id: userData.organization_id || null,
+              orgId: userData.orgId || null,
             });
           } catch (parseError) {
             console.error("Error parsing user cookie:", parseError);

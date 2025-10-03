@@ -177,7 +177,7 @@ const CreateAppointmentDialog = ({
   // Загружаем мастеров для выбранной даты
   const { data: masters = [] } = useQuery<Master[]>({
     queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters`, format(selectedDate, 'yyyy-MM-dd'), currentBranch?.id],
-    queryFn: () => fetch(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters/${format(selectedDate, 'yyyy-MM-dd')}?branchId=${currentBranch?.id}`, {
+    queryFn: () => fetch(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters/${format(selectedDate, 'yyyy-MM-dd')}?branchId=${getBranchIdWithFallback(currentBranch, branches)}`, {
       credentials: 'include'
     }).then(res => res.json()),
     enabled: !!currentBranch?.id && isOpen
@@ -621,7 +621,7 @@ const EditAppointmentDialog = ({
   const { data: administrators = [] } = useQuery<{ id: number, name: string }[]>({
     queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/administrators`, currentBranch?.id],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchId=${currentBranch?.id}`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchId=${getBranchIdWithFallback(currentBranch, branches)}`);
       if (!res.ok) return [];
       const data = await res.json();
       return data.filter((admin: any) => admin.isActive).map((admin: any) => ({
@@ -2083,32 +2083,32 @@ export default function DailyCalendar() {
     const syncTimer = setInterval(() => {
       // Обновляем данные календаря
       queryClient.invalidateQueries({
-        queryKey: ['/api/crm/tasks', formattedDate, currentBranch?.waInstance]
+        queryKey: ['/api/crm/tasks', formattedDate, getBranchIdWithFallback(currentBranch, branches)]
       });
 
       // Обновляем данные мастеров
       queryClient.invalidateQueries({
-        queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters`, formattedDate, currentBranch?.waInstance]
+        queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters`, formattedDate, getBranchIdWithFallback(currentBranch, branches)]
       });
     }, 10000); // Синхронизация каждые 10 секунд
 
     return () => clearInterval(syncTimer);
-  }, [formattedDate, currentBranch?.waInstance, queryClient]);
+  }, [formattedDate, currentBranch, branches, queryClient]);
   const { data: masters = [], isLoading: mastersLoading } = useQuery<Master[]>({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters`, formattedDate, currentBranch?.waInstance],
-    queryFn: () => fetch(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters/${formattedDate}?branchId=${currentBranch?.waInstance}`, {
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters`, formattedDate, getBranchIdWithFallback(currentBranch, branches)],
+    queryFn: () => fetch(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/masters/${formattedDate}?branchId=${getBranchIdWithFallback(currentBranch, branches)}`, {
       credentials: 'include'
     }).then(res => res.json()),
-    enabled: !!currentBranch?.waInstance,
+    enabled: !!getBranchIdWithFallback(currentBranch, branches),
     staleTime: 5 * 60 * 1000, // Кэш на 5 минут для оптимизации
     refetchOnWindowFocus: false
   });
 
   // Загружаем все записи из crm_tasks для выбранной даты
   const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks`, formattedDate, currentBranch?.waInstance],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks`, formattedDate, getBranchIdWithFallback(currentBranch, branches)],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks?date=${formattedDate}&branchId=${currentBranch?.waInstance}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks?date=${formattedDate}&branchId=${getBranchIdWithFallback(currentBranch, branches)}`, {
         credentials: 'include'
       });
       if (!res.ok) {
@@ -2116,12 +2116,12 @@ export default function DailyCalendar() {
       }
       return res.json();
     },
-    enabled: !!currentBranch?.waInstance
+    enabled: !!getBranchIdWithFallback(currentBranch, branches)
   });
 
   // Загружаем дочерние задачи для всех основных задач
   const { data: childTasksMap = {} } = useQuery<{ [taskId: number]: Task[] }>({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/calendar/child-tasks`, formattedDate, currentBranch?.waInstance],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/calendar/child-tasks`, formattedDate, getBranchIdWithFallback(currentBranch, branches)],
     queryFn: async () => {
       const childrenMap: { [taskId: number]: Task[] } = {};
 
@@ -2147,7 +2147,7 @@ export default function DailyCalendar() {
 
       return childrenMap;
     },
-    enabled: !!currentBranch?.waInstance && tasks.length > 0
+    enabled: !!getBranchIdWithFallback(currentBranch, branches) && tasks.length > 0
   });
 
   // Загружаем услуги массажа для правильного расчета длительности
@@ -2420,7 +2420,7 @@ export default function DailyCalendar() {
             </p>
           </div>
           <Badge variant="outline" className="ml-2">
-            {currentBranch?.name || 'Филиал'}
+            {currentBranch?.branches || 'Филиал'}
           </Badge>
         </div>
 
