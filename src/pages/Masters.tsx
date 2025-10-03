@@ -172,27 +172,27 @@ const MasterForm: React.FC<{
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Прогресс заполнения формы */}
+    <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
+      {/* Progress bar */}
       <div className="relative">
         <Progress value={formProgress} className="h-2 bg-gray-100" />
-        <span className="absolute -top-6 right-0 text-sm text-gray-500">
+        <span className="absolute -top-5 right-0 text-xs md:text-sm text-gray-500">
           Заполнено: {formProgress}%
         </span>
       </div>
 
-      {/* Основная информация */}
-      <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-gray-900">Основная информация</h3>
-          <Badge variant="outline" className="text-indigo-600 border-indigo-200">
+      {/* Main information section */}
+      <div className="space-y-4 md:space-y-6 bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h3 className="text-lg md:text-xl font-semibold text-gray-900">Основная информация</h3>
+          <Badge variant="outline" className="text-indigo-600 border-indigo-200 w-fit">
             {master ? 'Редактирование' : 'Создание'}
           </Badge>
         </div>
         <Separator />
-        <div className="space-y-5">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="col-span-1 text-sm font-medium text-gray-700">
+        <div className="space-y-4 md:space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4">
+            <Label htmlFor="name" className="text-sm font-medium text-gray-700 md:col-span-1">
               Имя <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -200,12 +200,12 @@ const MasterForm: React.FC<{
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              className="w-full md:col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
               required
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="specialty" className="col-span-1 text-sm font-medium text-gray-700">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4">
+            <Label htmlFor="specialty" className="text-sm font-medium text-gray-700 md:col-span-1">
               Специализация
             </Label>
             <Input
@@ -213,12 +213,12 @@ const MasterForm: React.FC<{
               name="specialty"
               value={formData.specialty}
               onChange={handleChange}
-              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              className="w-full md:col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
               placeholder="Массажист, тренер и т.д."
             />
           </div>
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label htmlFor="description" className="col-span-1 pt-2 text-sm font-medium text-gray-700">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4">
+            <Label htmlFor="description" className="text-sm font-medium text-gray-700 md:col-span-1 pt-2">
               Описание
             </Label>
             <Textarea
@@ -226,44 +226,44 @@ const MasterForm: React.FC<{
               name="description"
               value={formData.description}
               onChange={handleChange}
-              className="col-span-3 min-h-[120px] rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              className="w-full md:col-span-3 min-h-[100px] md:min-h-[120px] rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
               placeholder="Дополнительная информация о мастере"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="isActive" className="col-span-1 text-sm font-medium text-gray-700">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4">
+            <Label htmlFor="isActive" className="text-sm font-medium text-gray-700 md:col-span-1">
               Активный
             </Label>
             <Switch
               id="isActive"
               checked={formData.isActive}
               onCheckedChange={handleSwitchChange}
-              className="col-span-3"
+              className="md:col-span-3"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="workHours" className="col-span-1 text-sm font-medium text-gray-700">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4">
+            <Label htmlFor="workHours" className="text-sm font-medium text-gray-700 md:col-span-1">
               Время работы
             </Label>
-            <div className="col-span-3 flex items-center space-x-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3 md:col-span-3 gap-2">
               <Input
                 id="startWorkHour"
                 name="startWorkHour"
                 type="time"
                 value={formData.startWorkHour}
                 onChange={handleChange}
-                className="w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                className="w-full sm:w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
               />
-              <span className="text-gray-500">до</span>
+              <span className="text-gray-500 hidden sm:inline">до</span>
               <Input
                 id="endWorkHour"
                 name="endWorkHour"
                 type="time"
                 value={formData.endWorkHour}
                 onChange={handleChange}
-                className="w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                className="w-full sm:w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
               />
-              <span className="text-xs text-gray-500 ml-2">
+              <span className="text-xs text-gray-500 ml-0 sm:ml-2">
                 (по умолчанию)
               </span>
             </div>
@@ -271,10 +271,10 @@ const MasterForm: React.FC<{
         </div>
       </div>
 
-      {/* Область создания аккаунта */}
-      <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-gray-900">
+      {/* Account creation section */}
+      <div className="space-y-4 md:space-y-6 bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h3 className="text-lg md:text-xl font-semibold text-gray-900">
             {master && userAccountData ? 'Редактировать аккаунт' : 'Создать аккаунт'}
           </h3>
           <Switch
@@ -284,9 +284,8 @@ const MasterForm: React.FC<{
           />
         </div>
         <Separator />
-        
         {master && userAccountData && !accountData.createAccount && (
-          <div className="p-4 bg-green-50 rounded-lg border border-green-200 transition-all duration-200">
+          <div className="p-3 md:p-4 bg-green-50 rounded-lg border border-green-200 transition-all duration-200">
             <p className="text-sm font-medium text-green-800 mb-2">Аккаунт существует (новый эндпоинт):</p>
             <div className="space-y-1 text-sm text-gray-600">
               <p><strong>Логин:</strong> {userAccountData.username}</p>
@@ -298,9 +297,9 @@ const MasterForm: React.FC<{
           </div>
         )}
         {accountData.createAccount && (
-          <div className="space-y-5 p-4 bg-blue-50 rounded-lg border border-blue-200 transition-all duration-200">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="accountEmail" className="col-span-1 text-sm font-medium text-gray-700">
+          <div className="space-y-4 md:space-y-5 p-3 md:p-4 bg-blue-50 rounded-lg border border-blue-200 transition-all duration-200">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4">
+              <Label htmlFor="accountEmail" className="text-sm font-medium text-gray-700 md:col-span-1">
                 Email
               </Label>
               <Input
@@ -309,13 +308,13 @@ const MasterForm: React.FC<{
                 type="email"
                 value={accountData.email}
                 onChange={handleAccountDataChange}
-                className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                className="w-full md:col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
                 placeholder="email@example.com"
                 required={accountData.createAccount}
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="accountPassword" className="col-span-1 text-sm font-medium text-gray-700">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4">
+              <Label htmlFor="accountPassword" className="text-sm font-medium text-gray-700 md:col-span-1">
                 Пароль
               </Label>
               <Input
@@ -324,7 +323,7 @@ const MasterForm: React.FC<{
                 type="password"
                 value={accountData.password}
                 onChange={handleAccountDataChange}
-                className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                className="w-full md:col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
                 placeholder={userAccountData ? "Введите новый пароль" : "Введите пароль"}
                 required={accountData.createAccount}
               />
@@ -343,9 +342,9 @@ const MasterForm: React.FC<{
         )}
       </div>
 
-      {/* Рабочие даты */}
-      <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-        <h3 className="text-xl font-semibold text-gray-900">Рабочие дни и часы</h3>
+      {/* Working dates section */}
+      <div className="space-y-4 md:space-y-6 bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-100">
+        <h3 className="text-lg md:text-xl font-semibold text-gray-900">Рабочие дни и часы</h3>
         <Separator />
         <MasterWorkingDatesManager
           workingDates={workingDates}
@@ -353,18 +352,18 @@ const MasterForm: React.FC<{
         />
       </div>
 
-      <DialogFooter className="mt-8 flex justify-between">
+      <DialogFooter className="mt-6 md:mt-8 flex flex-col sm:flex-row sm:justify-between gap-3">
         <Button
           variant="outline"
           onClick={() => window.dispatchEvent(new Event('close-dialog'))}
-          className="border-gray-300 text-gray-700 hover:bg-gray-50"
+          className="w-full sm:w-auto border-gray-300 text-gray-700 hover:bg-gray-50 py-2 text-sm md:text-base"
         >
           Отмена
         </Button>
         <Button
           type="submit"
           disabled={isPending || !formData.name.trim()}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200"
+          className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200 py-2 text-sm md:text-base"
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
           {master ? 'Сохранить изменения' : 'Добавить мастера'}
@@ -372,6 +371,7 @@ const MasterForm: React.FC<{
       </DialogFooter>
     </form>
   );
+
 };
 
 // Компонент карточки мастера
@@ -384,7 +384,7 @@ const MasterCard: React.FC<{
   isUploading: boolean;
 }> = ({ master, onEditClick, onDeleteClick, onScheduleClick, onImageUpload, isUploading }) => {
   return (
-    <Card className={`relative overflow-hidden transition-all duration-300 ${!master.isActive ? 'opacity-80 bg-gray-50' : 'bg-white'} hover:shadow-lg border-none shadow-sm`}>
+    <Card className={`w-full relative overflow-hidden transition-all duration-300 ${!master.isActive ? 'opacity-80 bg-gray-50' : 'bg-white'} hover:shadow-lg border-none shadow-sm`}>
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
           <div className="flex items-center space-x-4">
@@ -441,7 +441,7 @@ const MasterCard: React.FC<{
               {master.startWorkHour} - {master.endWorkHour}
             </span>
           </div>
-          <MasterWorkingDatesDisplay 
+          <MasterWorkingDatesDisplay
             masterId={master.id}
             masterName={master.name}
           />
@@ -452,17 +452,17 @@ const MasterCard: React.FC<{
           )}
         </div>
       </CardContent>
-      <CardFooter className="pt-4 border-t border-gray-100 flex justify-between">
+      <CardFooter className="pt-4 border-t border-gray-100 flex justify-between flex-wrap">
         <Button
           variant="outline"
           size="sm"
           onClick={onScheduleClick}
-          className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+          className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 lg:mb-0 mb-2"
         >
           <CalendarDays className="h-4 w-4 mr-2" />
           Рабочие дни
         </Button>
-        <div className="space-x-2">
+        <div className="space-x-2 flex-wrap">
           <Button
             variant="outline"
             size="sm"
@@ -693,7 +693,7 @@ const AdministratorForm: React.FC<{
           />
         </div>
         <Separator />
-        
+
         {administrator && userAccountData && !accountData.createAccount && (
           <div className="p-4 bg-green-50 rounded-lg border border-green-200 transition-all duration-200">
             <p className="text-sm font-medium text-green-800 mb-2">Аккаунт существует (новый эндпоинт):</p>
@@ -780,7 +780,7 @@ const AdministratorCard: React.FC<{
   onDeleteClick: () => void;
 }> = ({ administrator, onEditClick, onDeleteClick }) => {
   return (
-    <Card className="w-full max-w-sm mx-auto bg-white border-none shadow-sm hover:shadow-lg transition-all duration-300">
+    <Card className={`w-full relative overflow-hidden transition-all duration-300 hover:shadow-lg border-none shadow-sm`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -860,7 +860,7 @@ const findUserByName = (users: BranchUser[] | undefined, name: string): BranchUs
 const Masters: React.FC = () => {
   const { toast } = useToast();
   const { currentBranch } = useBranch();
-  
+
   // Отладка состояния BranchContext
   console.log('🏢 Masters page - BranchContext state:', {
     currentBranch,
@@ -868,7 +868,7 @@ const Masters: React.FC = () => {
     id: currentBranch?.id,
     name: currentBranch?.branches
   });
-  
+
   const [editMaster, setEditMaster] = useState<Master | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -948,7 +948,7 @@ const Masters: React.FC = () => {
   const createMasterMutation = useMutation({
     mutationFn: async (data: Partial<Master>) => {
       const { workingDates, createAccount, accountEmail, accountPassword, ...masterData } = data;
-      
+
       // Создаем мастера
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters`, {
         method: 'POST',
@@ -1019,7 +1019,7 @@ const Masters: React.FC = () => {
   const updateMasterMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: Partial<Master> }) => {
       const { workingDates, createAccount, accountEmail, accountPassword, ...masterData } = data;
-      
+
       // Обновляем мастера
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${id}`, {
         method: 'PUT',
@@ -1134,7 +1134,7 @@ const Masters: React.FC = () => {
   const createAdministratorMutation = useMutation({
     mutationFn: async (data: Partial<Administrator>) => {
       const { createAccount, accountEmail, accountPassword, ...adminData } = data;
-      
+
       // Создаем администратора
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators`, {
         method: 'POST',
@@ -1190,7 +1190,7 @@ const Masters: React.FC = () => {
   const updateAdministratorMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: Partial<Administrator> }) => {
       const { createAccount, accountEmail, accountPassword, ...adminData } = data;
-      
+
       // Обновляем администратора
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators/${id}`, {
         method: 'PUT',
@@ -1394,10 +1394,10 @@ const Masters: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Мастера</h1>
-        <div className="flex gap-3">
+    <div className="container mx-auto sm:px-6 lg:px-8">
+      <div className="flex justify-between items-center mb-8 flex-wrap">
+        <h1 className="text-3xl font-bold text-gray-900 mb-5 lg:mb-0">Мастера</h1>
+        <div className="flex gap-3 flex-wrap">
           <Dialog open={isAddAdministratorDialogOpen} onOpenChange={setIsAddAdministratorDialogOpen}>
             <DialogTrigger asChild>
               <Button
@@ -1518,7 +1518,7 @@ const Masters: React.FC = () => {
       </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-2xl">
+        <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-gray-900">Редактировать мастера</DialogTitle>
             <DialogDescription className="text-gray-500">
