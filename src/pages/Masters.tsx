@@ -106,6 +106,22 @@ const MasterForm: React.FC<{
     return findUserByName(branchUsers, master.name);
   }, [master?.name, branchUsers]);
 
+  // Загрузка рабочих дат при редактировании, если они не предоставлены
+  const { data: fetchedWorkingDates, isLoading: isLoadingDates } = useQuery({
+    queryKey: ['working-dates', master?.id],
+    queryFn: async () => {
+      if (!master) return [];
+      return await apiGetJson(`/api/masters/${master.id}/working-dates`);
+    },
+    enabled: !!master && (!master.workingDates || master.workingDates.length === 0),
+  });
+
+  useEffect(() => {
+    if (fetchedWorkingDates) {
+      setWorkingDates(fetchedWorkingDates);
+    }
+  }, [fetchedWorkingDates]);
+
   // Обновление прогресса заполнения формы
   useEffect(() => {
     const fields = [
@@ -171,14 +187,15 @@ const MasterForm: React.FC<{
     setWorkingDates(newWorkingDates);
   };
 
+  if (isLoadingDates) {
+    return <div className="flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Прогресс заполнения формы */}
       <div className="relative">
         <Progress value={formProgress} className="h-2 bg-gray-100" />
-        {/* <span className="absolute -top-6 right-0 text-sm text-gray-500">
-          Заполнено: {formProgress}%
-        </span> */}
       </div>
 
       {/* Основная информация */}
@@ -588,9 +605,6 @@ const AdministratorForm: React.FC<{
       {/* Прогресс заполнения формы */}
       <div className="relative">
         <Progress value={formProgress} className="h-2 bg-gray-100" />
-        <span className="absolute -top-6 right-0 text-sm text-gray-500">
-          Заполнено: {formProgress}%
-        </span>
       </div>
 
       {/* Основная информация */}
@@ -744,7 +758,7 @@ const AdministratorForm: React.FC<{
             <div className="p-3 bg-white rounded-lg border border-blue-200">
               <div className="space-y-1 text-sm text-gray-600">
                 <p><strong>Логин:</strong> {userAccountData ? userAccountData.username : formData.name}</p>
-                <p><strong>Роль:</strong> admin</p>
+                <p><strong>Роль:</strong> reception</p>
                 <p><strong>Филиал:</strong> {administrator?.id ? `ID: ${administrator.id}` : 'Будет установлен после создания'}</p>
                 {userAccountData && (
                   <p className="text-green-600 mt-2">✓ Аккаунт уже существует, редактируете данные</p>
@@ -864,14 +878,6 @@ const Masters: React.FC = () => {
   const { toast } = useToast();
   const { currentBranch } = useBranch();
 
-  // Отладка состояния BranchContext
-  console.log('🏢 Masters page - BranchContext state:', {
-    currentBranch,
-    hasId: !!currentBranch?.id,
-    id: currentBranch?.id,
-    name: currentBranch?.branches
-  });
-
   const [editMaster, setEditMaster] = useState<Master | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -886,67 +892,39 @@ const Masters: React.FC = () => {
   const { data: branchUsers } = useQuery({
     queryKey: ['/api/crm/reception-master/user', currentBranch?.id],
     queryFn: async () => {
-      console.log('🔍 Branch Users Query - Branch ID:', currentBranch?.id);
-      if (!currentBranch?.id || currentBranch.id === undefined || currentBranch.id === null) {
-        console.warn('❌ No valid branch ID available, skipping branch users fetch');
+      if (!currentBranch?.id) {
         return [];
       }
       const url = `/api/crm/reception-master/user/${currentBranch.id}`;
-      console.log('📡 Branch Users API URL:', url);
-      try {
-        const result = await apiGetJson(url);
-        console.log('✅ Branch Users API Response:', result);
-        console.log('📊 Branch Users Type:', typeof result, 'Is Array:', Array.isArray(result));
-        return Array.isArray(result) ? result : [];
-      } catch (error) {
-        console.error('❌ Branch Users API Error:', error);
-        return [];
-      }
+      const result = await apiGetJson(url);
+      return Array.isArray(result) ? result : [];
     },
-    enabled: !!currentBranch?.id && currentBranch.id !== undefined && currentBranch.id !== null
+    enabled: !!currentBranch?.id,
   });
 
   const { data: administrators, refetch: refetchAdministrators } = useQuery({
     queryKey: ['/api/administrators', currentBranch?.id],
     queryFn: async () => {
-      console.log('🔍 Administrators Query - Branch ID:', currentBranch?.id);
-      console.log('🔍 Administrators Query - Full Branch:', currentBranch);
-      if (!currentBranch?.id || currentBranch.id === undefined || currentBranch.id === null) {
-        console.warn('❌ No valid branch ID available, skipping administrators fetch');
+      if (!currentBranch?.id) {
         return [];
       }
       const url = `/api/administrators?branchID=${currentBranch.id}`;
-      console.log('📡 Administrators API URL:', url);
       return await apiGetJson(url);
     },
-    enabled: !!currentBranch?.id && currentBranch.id !== undefined && currentBranch.id !== null
+    enabled: !!currentBranch?.id,
   });
 
-  const { data: masters, isLoading, isError, error, refetch } = useQuery({
+  const { data: masters, isLoading, isError, refetch } = useQuery({
     queryKey: ['/api/crm/masters', currentBranch?.id],
     queryFn: async () => {
-      console.log('🔍 Masters Query - Branch ID:', currentBranch?.id);
-      if (!currentBranch?.id || currentBranch.id === undefined || currentBranch.id === null) {
-        console.warn('❌ No valid branch ID available, skipping masters fetch');
+      if (!currentBranch?.id) {
         return [];
       }
-      try {
-        const url = `/api/crm/masters/${currentBranch.id}`;
-        console.log('📡 Masters API URL:', url);
-        return await apiGetJson(url);
-      } catch (error) {
-        console.error('❌ Failed to fetch masters:', error);
-        throw error;
-      }
+      const url = `/api/crm/masters/${currentBranch.id}`;
+      return await apiGetJson(url);
     },
-    enabled: !!currentBranch?.id && currentBranch.id !== undefined && currentBranch.id !== null
+    enabled: !!currentBranch?.id,
   });
-
-  React.useEffect(() => {
-    if (isError) {
-      console.error('Masters query error:', error);
-    }
-  }, [isError, error]);
 
   const createMasterMutation = useMutation({
     mutationFn: async (data: Partial<Master>) => {
@@ -1052,22 +1030,20 @@ const Masters: React.FC = () => {
         });
         if (!userRes.ok) {
           const errorData = await userRes.json();
-          // Если пользователь уже существует, это не критическая ошибка
           if (!errorData.message?.includes('already exists')) {
             throw new Error(errorData.message || 'Failed to create/update user account');
           }
         }
       }
 
-      // Обновляем рабочие даты
+      // Обновляем рабочие даты: удаляем все существующие и добавляем новые
       if (workingDates) {
-        const currentDate = new Date();
-        const currentWorkingDatesRes = await fetch(
-          `/api/masters/${id}/working-dates?month=${currentDate.getMonth() + 1}&year=${currentDate.getFullYear()}`
+        const allWorkingDatesRes = await fetch(
+          `${import.meta.env.VITE_BACKEND_URL}/api/masters/${id}/working-dates`
         );
-        if (currentWorkingDatesRes.ok) {
-          const currentWorkingDates = await currentWorkingDatesRes.json();
-          await Promise.all(currentWorkingDates.map(async (cwd: any) => {
+        if (allWorkingDatesRes.ok) {
+          const allWorkingDates = await allWorkingDatesRes.json();
+          await Promise.all(allWorkingDates.map(async (cwd: any) => {
             await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${id}/working-dates/${cwd.work_date}?branchId=${cwd.branch_id}`, {
               method: 'DELETE'
             });
@@ -1223,7 +1199,6 @@ const Masters: React.FC = () => {
         });
         if (!userRes.ok) {
           const errorData = await userRes.json();
-          // Если пользователь уже существует, это не критическая ошибка
           if (!errorData.message?.includes('already exists')) {
             throw new Error(errorData.message || 'Failed to create/update user account');
           }
@@ -1293,7 +1268,6 @@ const Masters: React.FC = () => {
         ...data,
         branchId: currentBranch?.id?.toString(),
       };
-      console.log('Updating administrator with data:', adminData);
       updateAdministratorMutation.mutate({ id: editAdministrator.id, data: adminData });
     }
   };
@@ -1358,7 +1332,6 @@ const Masters: React.FC = () => {
       ...data,
       branchId: currentBranch?.id?.toString(),
     };
-    console.log('Creating master with data:', masterData);
     createMasterMutation.mutate(masterData);
   };
 
@@ -1391,7 +1364,6 @@ const Masters: React.FC = () => {
         ...data,
         branchId: currentBranch?.id?.toString(),
       };
-      console.log('Updating master with data:', masterData);
       updateMasterMutation.mutate({ id: editMaster.id, data: masterData });
     }
   };
@@ -1505,7 +1477,7 @@ const Masters: React.FC = () => {
       </div>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
+        <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-gray-900">Добавить нового мастера</DialogTitle>
             <DialogDescription className="text-gray-500">
