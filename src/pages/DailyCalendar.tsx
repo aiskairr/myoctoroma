@@ -19,6 +19,7 @@ import { format, addMinutes, isSameDay, addDays, subDays, isToday } from "date-f
 import { ru } from "date-fns/locale";
 import { Loader2, Plus, UserPlus, Edit, X, User, Clock, MapPin, CalendarIcon, ChevronLeft, ChevronRight, CreditCard, Banknote, QrCode, Coins } from "lucide-react";
 import { PaymentMethodIcon } from "@/components/BankIcons";
+import { TaskParserControlPanel } from "@/components/TaskParserControlPanel";
 
 // Интерфейсы для массажных услуг (из CRMTasks)
 interface serviceService {
@@ -2423,6 +2424,19 @@ export default function DailyCalendar() {
             {currentBranch?.branches || 'Филиал'}
           </Badge>
         </div>
+
+        {/* Task Parser Control Panel */}
+        <TaskParserControlPanel 
+          selectedDate={selectedDate}
+          onDataReceived={(data) => {
+            console.log('[DailyCalendar] Received parser data:', data);
+            toast({
+              title: "Данные обновлены",
+              description: `Получено записей: ${data.count}`,
+              variant: data.success ? "default" : "destructive"
+            });
+          }}
+        />
 
         {/* Горизонтальный слайдер дней */}
         <div className="bg-white rounded-lg shadow">
