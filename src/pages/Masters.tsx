@@ -176,9 +176,9 @@ const MasterForm: React.FC<{
       {/* Прогресс заполнения формы */}
       <div className="relative">
         <Progress value={formProgress} className="h-2 bg-gray-100" />
-        <span className="absolute -top-6 right-0 text-sm text-gray-500">
+        {/* <span className="absolute -top-6 right-0 text-sm text-gray-500">
           Заполнено: {formProgress}%
-        </span>
+        </span> */}
       </div>
 
       {/* Основная информация */}
@@ -284,7 +284,7 @@ const MasterForm: React.FC<{
           />
         </div>
         <Separator />
-        
+
         {master && userAccountData && !accountData.createAccount && (
           <div className="p-4 bg-green-50 rounded-lg border border-green-200 transition-all duration-200">
             <p className="text-sm font-medium text-green-800 mb-2">Аккаунт существует (новый эндпоинт):</p>
@@ -384,7 +384,10 @@ const MasterCard: React.FC<{
   isUploading: boolean;
 }> = ({ master, onEditClick, onDeleteClick, onScheduleClick, onImageUpload, isUploading }) => {
   return (
-    <Card className={`relative overflow-hidden transition-all duration-300 ${!master.isActive ? 'opacity-80 bg-gray-50' : 'bg-white'} hover:shadow-lg border-none shadow-sm`}>
+    <Card
+      className={`relative overflow-hidden transition-all duration-300 ${!master.isActive ? 'opacity-80 bg-gray-50' : 'bg-white'
+        } hover:shadow-lg border-none shadow-sm min-w-[300px] max-w-full`}
+    >
       <CardHeader className="pb-4">
         <div className="flex justify-between items-start">
           <div className="flex items-center space-x-4">
@@ -419,7 +422,10 @@ const MasterCard: React.FC<{
               <CardTitle className="text-lg font-semibold text-gray-900 flex items-center">
                 {master.name}
                 {!master.isActive && (
-                  <Badge variant="secondary" className="ml-2 bg-gray-200 text-gray-700">
+                  <Badge
+                    variant="secondary"
+                    className="ml-2 bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  >
                     Неактивен
                   </Badge>
                 )}
@@ -441,10 +447,7 @@ const MasterCard: React.FC<{
               {master.startWorkHour} - {master.endWorkHour}
             </span>
           </div>
-          <MasterWorkingDatesDisplay 
-            masterId={master.id}
-            masterName={master.name}
-          />
+          <MasterWorkingDatesDisplay masterId={master.id} masterName={master.name} />
           {master.description && (
             <p className="text-sm text-gray-500 line-clamp-3">
               {master.description}
@@ -452,22 +455,22 @@ const MasterCard: React.FC<{
           )}
         </div>
       </CardContent>
-      <CardFooter className="pt-4 border-t border-gray-100 flex justify-between">
+      <CardFooter className="pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
         <Button
           variant="outline"
           size="sm"
           onClick={onScheduleClick}
-          className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+          className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 min-w-[120px] text-sm"
         >
           <CalendarDays className="h-4 w-4 mr-2" />
           Рабочие дни
         </Button>
-        <div className="space-x-2">
+        <div className="flex gap-3">
           <Button
             variant="outline"
             size="sm"
             onClick={onEditClick}
-            className="text-gray-600 border-gray-200 hover:bg-gray-50"
+            className="text-gray-600 border-gray-200 hover:bg-gray-50 min-w-[100px] text-sm"
           >
             <EditIcon className="h-4 w-4 mr-2" />
             Изменить
@@ -476,7 +479,7 @@ const MasterCard: React.FC<{
             variant="destructive"
             size="sm"
             onClick={onDeleteClick}
-            className="bg-red-600 hover:bg-red-700"
+            className="bg-red-600 hover:bg-red-700 min-w-[100px] text-sm"
           >
             <X className="h-4 w-4 mr-2" />
             Удалить
@@ -693,7 +696,7 @@ const AdministratorForm: React.FC<{
           />
         </div>
         <Separator />
-        
+
         {administrator && userAccountData && !accountData.createAccount && (
           <div className="p-4 bg-green-50 rounded-lg border border-green-200 transition-all duration-200">
             <p className="text-sm font-medium text-green-800 mb-2">Аккаунт существует (новый эндпоинт):</p>
@@ -780,7 +783,7 @@ const AdministratorCard: React.FC<{
   onDeleteClick: () => void;
 }> = ({ administrator, onEditClick, onDeleteClick }) => {
   return (
-    <Card className="w-full max-w-sm mx-auto bg-white border-none shadow-sm hover:shadow-lg transition-all duration-300">
+    <Card className={`w-full relative overflow-hidden transition-all duration-300  hover:shadow-lg border-none shadow-sm`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -798,7 +801,7 @@ const AdministratorCard: React.FC<{
               </CardDescription>
             </div>
           </div>
-          <Badge variant={administrator.isActive ? "default" : "destructive"} className={administrator.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+          <Badge variant={administrator.isActive ? "default" : "destructive"} className={administrator.isActive ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-red-100 text-red-800"}>
             {administrator.isActive ? 'Активен' : 'Неактивен'}
           </Badge>
         </div>
@@ -860,7 +863,7 @@ const findUserByName = (users: BranchUser[] | undefined, name: string): BranchUs
 const Masters: React.FC = () => {
   const { toast } = useToast();
   const { currentBranch } = useBranch();
-  
+
   // Отладка состояния BranchContext
   console.log('🏢 Masters page - BranchContext state:', {
     currentBranch,
@@ -868,7 +871,7 @@ const Masters: React.FC = () => {
     id: currentBranch?.id,
     name: currentBranch?.branches
   });
-  
+
   const [editMaster, setEditMaster] = useState<Master | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -948,7 +951,7 @@ const Masters: React.FC = () => {
   const createMasterMutation = useMutation({
     mutationFn: async (data: Partial<Master>) => {
       const { workingDates, createAccount, accountEmail, accountPassword, ...masterData } = data;
-      
+
       // Создаем мастера
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters`, {
         method: 'POST',
@@ -1019,7 +1022,7 @@ const Masters: React.FC = () => {
   const updateMasterMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: Partial<Master> }) => {
       const { workingDates, createAccount, accountEmail, accountPassword, ...masterData } = data;
-      
+
       // Обновляем мастера
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${id}`, {
         method: 'PUT',
@@ -1134,7 +1137,7 @@ const Masters: React.FC = () => {
   const createAdministratorMutation = useMutation({
     mutationFn: async (data: Partial<Administrator>) => {
       const { createAccount, accountEmail, accountPassword, ...adminData } = data;
-      
+
       // Создаем администратора
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators`, {
         method: 'POST',
@@ -1190,7 +1193,7 @@ const Masters: React.FC = () => {
   const updateAdministratorMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: Partial<Administrator> }) => {
       const { createAccount, accountEmail, accountPassword, ...adminData } = data;
-      
+
       // Обновляем администратора
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators/${id}`, {
         method: 'PUT',
@@ -1518,7 +1521,7 @@ const Masters: React.FC = () => {
       </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-2xl">
+        <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-gray-900">Редактировать мастера</DialogTitle>
             <DialogDescription className="text-gray-500">
