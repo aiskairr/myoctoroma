@@ -39,7 +39,7 @@ interface NavItem {
 
 // Интерфейс для типов useAuth
 interface AuthContext {
-  user: { role: 'master' | 'admin' | 'superadmin' } | null;
+  user: { role: 'master' | 'admin' | 'reception' | 'superadmin' } | null;
   logout: () => Promise<void>;
 }
 
@@ -247,8 +247,13 @@ export default function Sidebar() {
   }
 
   // Show limited sidebar for admin users
-  if (user?.role === 'admin') {
+  if (user?.role === 'reception') {
     return <AdminOnlySidebar />;
+  }
+
+  // Show limited sidebar for admin users
+  if (user?.role === 'admin') {
+    return <AdminSidebar />;
   }
 
   // Show full sidebar for superadmin users

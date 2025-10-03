@@ -39,6 +39,10 @@ interface Appointment {
     notes?: string;
 }
 
+interface AdvancedScheduleComponentProps {
+    initialDate?: Date;
+}
+
 interface NewEmployeeForm {
     name: string;
     role: string;
@@ -71,7 +75,7 @@ const EMPLOYEE_COLORS = [
     '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
 ];
 
-const TIME_SLOT_HEIGHT = 32;
+const TIME_SLOT_HEIGHT = 24; // Соответствует h-6 в Tailwind CSS (24px)
 const HEADER_HEIGHT = 64;
 
 // Utility functions
@@ -104,9 +108,9 @@ const getCurrentTimePosition = (): number => {
 };
 
 // Main Component
-const AdvancedScheduleComponent: React.FC = () => {
+const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ initialDate }) => {
     // State
-    const [currentDate] = useState(() => new Date());
+    const [currentDate] = useState(() => initialDate || new Date());
 
     // Context
     const { currentBranch } = useBranch();
@@ -144,20 +148,54 @@ const AdvancedScheduleComponent: React.FC = () => {
 
     useEffect(() => {
         if (tasksData.length > 0) {
+            console.log("🔄 Converting tasks to appointments...");
+            console.log("  - Tasks data sample:", tasksData[0]);
+            console.log("  - Tasks with masterName:", tasksData.filter(t => t.masterName).length);
+            console.log("  - Tasks without masterName:", tasksData.filter(t => !t.masterName && t.masterId).length);
+            
             const convertedAppointments = tasksData
-                .filter(task => task.scheduleTime && task.endTime && task.masterId)
-                .map(task => ({
-                    id: task.id.toString(),
-                    employeeId: task.masterId!.toString(),
-                    clientName: task.client?.customName || task.client?.firstName || task.clientName || 'Клиент',
-                    service: task.serviceType || 'Услуга',
-                    startTime: task.scheduleTime!,
-                    endTime: task.endTime!,
-                    duration: task.serviceDuration || 60,
-                    status: task.status as 'scheduled' | 'in-progress' | 'completed' | 'cancelled' || 'scheduled',
-                    notes: task.notes || undefined
-                }));
+                .filter(task => task.scheduleTime && task.masterId)
+                .map(task => {
+                    // Вычисляем endTime если его нет
+                    let endTime = task.endTime;
+                    if (!endTime && task.scheduleTime && task.serviceDuration) {
+                        const [hours, minutes] = task.scheduleTime.split(':').map(Number);
+                        const startMinutes = hours * 60 + minutes;
+                        const endMinutes = startMinutes + task.serviceDuration;
+                        const endHours = Math.floor(endMinutes / 60);
+                        const endMins = endMinutes % 60;
+                        endTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+                    }
+                    
+                    const appointment = {
+                        id: task.id.toString(),
+                        employeeId: task.masterId!.toString(),
+                        clientName: task.clientName || 'Клиент',
+                        service: task.serviceType || 'Услуга',
+                        startTime: task.scheduleTime!,
+                        endTime: endTime || task.scheduleTime!,
+                        duration: task.serviceDuration || 60,
+                        status: task.status as 'scheduled' | 'in-progress' | 'completed' | 'cancelled' || 'scheduled',
+                        notes: task.notes || undefined
+                    };
+                    
+                    console.log(`📋 Converted appointment:`, {
+                        id: appointment.id,
+                        clientName: appointment.clientName,
+                        startTime: appointment.startTime,
+                        endTime: appointment.endTime,
+                        duration: appointment.duration,
+                        employeeId: appointment.employeeId
+                    });
+                    
+                    return appointment;
+                });
+                
+            console.log("✅ Converted appointments:", convertedAppointments.length);
             setAppointments(convertedAppointments);
+        } else {
+            console.log("📭 No tasks data available, clearing appointments");
+            setAppointments([]);
         }
     }, [tasksData]);
 
@@ -641,6 +679,19 @@ const AdvancedScheduleComponent: React.FC = () => {
         const durationSlots = Math.ceil(appointment.duration / 15);
         const height = durationSlots * TIME_SLOT_HEIGHT - 2;
 
+        // Логирование для отладки высоты
+        console.log(`📏 Appointment height calculation:`, {
+            appointmentId: appointment.id,
+            clientName: appointment.clientName,
+            duration: appointment.duration,
+            durationSlots: durationSlots,
+            TIME_SLOT_HEIGHT: TIME_SLOT_HEIGHT,
+            calculatedHeight: height,
+            startIndex: startIndex,
+            startTime: appointment.startTime,
+            endTime: appointment.endTime
+        });
+
         const statusColors = {
             'scheduled': 'bg-blue-50 text-blue-900',
             'in-progress': 'bg-green-50 text-green-900',
@@ -667,8 +718,11 @@ const AdvancedScheduleComponent: React.FC = () => {
 
         const borderColor = getOverlapColor(appointment, column, totalColumns);
 
-        const isSmall = height <= 32;
-        const isMedium = height > 32 && height <= 64;
+        // Обновленная логика размеров с учетом новой высоты
+        const isVerySmall = height <= 20; // Очень маленькие записи (меньше одного слота)
+        const isSmall = height > 20 && height <= 30; // Маленькие записи
+        const isMedium = height > 30 && height <= 48; // Средние записи (2 слота)
+        // isLarge используется в else condition
 
         const employee = employees.find(emp => emp.id === appointment.employeeId);
         const service = services.find(s => s.name === appointment.service);
@@ -683,7 +737,7 @@ const AdvancedScheduleComponent: React.FC = () => {
                                 } hover:opacity-90`}
                             style={{
                                 top: startIndex * TIME_SLOT_HEIGHT + 1,
-                                height: Math.max(height, 32),
+                                height: Math.max(height, 20), // Минимальная высота уменьшена до 20px
                                 left: `${(column * width)}%`,
                                 width: `${width}%`,
                                 paddingLeft: column > 0 ? '2px' : '4px',
@@ -701,29 +755,35 @@ const AdvancedScheduleComponent: React.FC = () => {
 
                             {/* Content */}
                             <div
-                                className={`${isSmall ? 'px-1 py-1' : 'px-2 py-1'} h-full flex ${isSmall ? 'items-center' : 'flex-col justify-between'} cursor-grab active:cursor-grabbing`}
+                                className={`${isVerySmall || isSmall ? 'px-1 py-0.5' : 'px-2 py-1'} h-full flex ${isVerySmall || isSmall ? 'items-center' : 'flex-col justify-between'} cursor-grab active:cursor-grabbing`}
                                 onMouseDown={(e) => handleMouseDown(e, appointment, 'drag')}
                             >
-                                {isSmall ? (
-                                    <div className="flex-1 min-w-0 pointer-events-none pr-6">
+                                {isVerySmall ? (
+                                    // Очень маленькие записи - только инициалы клиента
+                                    <div className="flex-1 min-w-0 pointer-events-none">
+                                        <div className="font-semibold truncate text-xs leading-none">
+                                            {appointment.clientName.split(' ').map(name => name[0]).join('.')}
+                                        </div>
+                                    </div>
+                                ) : isSmall ? (
+                                    // Маленькие записи - только имя клиента
+                                    <div className="flex-1 min-w-0 pointer-events-none pr-4">
                                         <div className="font-semibold truncate text-xs leading-tight">{appointment.clientName}</div>
                                     </div>
                                 ) : isMedium ? (
-                                    <div className="flex-1 min-w-0 pointer-events-none pr-6">
+                                    // Средние записи - имя клиента и услуга
+                                    <div className="flex-1 min-w-0 pointer-events-none pr-4">
                                         <div className="font-semibold truncate text-xs leading-tight">{appointment.clientName}</div>
-                                        <div className="truncate text-xs opacity-70 leading-tight">{appointment.service}</div>
+                                        <div className="truncate text-xs opacity-70 leading-tight mt-0.5">{appointment.service}</div>
                                     </div>
                                 ) : (
+                                    // Большие записи - полная информация
                                     <>
-                                        <div className="flex items-start justify-between pr-6">
+                                        <div className="flex items-start justify-between pr-4">
                                             <div className="flex-1 min-w-0 pointer-events-none">
                                                 <div className="font-semibold truncate text-sm leading-tight">{appointment.clientName}</div>
-                                                <div className="truncate text-xs opacity-70 leading-tight">{appointment.service}</div>
+                                                <div className="truncate text-xs opacity-70 leading-tight mt-0.5">{appointment.service}</div>
                                             </div>
-                                            {width > 50 && (
-                                                <div className="ml-1 pointer-events-none">
-                                                </div>
-                                            )}
                                         </div>
 
                                         {width > 50 && (
@@ -975,8 +1035,9 @@ const AdvancedScheduleComponent: React.FC = () => {
                                 {timeSlots.map((slot, index) => (
                                     <div
                                         key={slot}
-                                        className={`h-6 flex items-center justify-center text-sm border-b border-gray-100 ${index % 4 === 0 ? 'font-medium text-gray-700' : 'text-gray-500'
+                                        className={`flex items-center justify-center text-sm border-b border-gray-100 ${index % 4 === 0 ? 'font-medium text-gray-700' : 'text-gray-500'
                                             }`}
+                                        style={{ height: `${TIME_SLOT_HEIGHT}px` }} // Используем точную высоту из константы
                                     >
                                         {index % 4 === 0 ? slot : ''}
                                     </div>
@@ -1116,7 +1177,8 @@ const AdvancedScheduleComponent: React.FC = () => {
                                                         return (
                                                             <div
                                                                 key={`${employee.id}-${slot}`}
-                                                                className="h-6 bg-gray-100 border-b border-gray-200"
+                                                                className="bg-gray-100 border-b border-gray-200"
+                                                                style={{ height: `${TIME_SLOT_HEIGHT}px` }}
                                                             />
                                                         );
                                                     }
@@ -1125,7 +1187,8 @@ const AdvancedScheduleComponent: React.FC = () => {
                                                         <button
                                                             key={`${employee.id}-${slot}`}
                                                             onClick={() => handleTimeSlotClick(employee.id, slot)}
-                                                            className="w-full h-6 border-b border-gray-200 hover:bg-blue-50 group transition-colors flex items-center justify-center relative"
+                                                            className="w-full border-b border-gray-200 hover:bg-blue-50 group transition-colors flex items-center justify-center relative"
+                                                            style={{ height: `${TIME_SLOT_HEIGHT}px` }}
                                                         >
                                                             <Plus
                                                                 size={14}
