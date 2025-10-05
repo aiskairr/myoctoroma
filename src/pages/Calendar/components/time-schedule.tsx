@@ -269,11 +269,85 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     }, [employees.length]);
 
     // Appointment management
-    const updateAppointment = useCallback((appointmentId: string, updates: Partial<Appointment>) => {
+    const updateAppointment = useCallback(async (appointmentId: string, updates: Partial<Appointment>) => {
+        console.log('🔄 updateAppointment called:', { appointmentId, updates });
+        
+        // Отладочная информация о всех мастерах
+        console.log('👥 All mastersData:', mastersData.map(m => ({ id: m.id, name: m.name, branchId: m.branchId })));
+        console.log('👥 All employees:', employees.map(e => ({ id: e.id, name: e.name })));
+        
+        // Обновляем локальное состояние
         setAppointments(prev => prev.map(apt =>
             apt.id === appointmentId ? { ...apt, ...updates } : apt
         ));
-    }, []);
+
+        // Отправляем запрос на сервер
+        try {
+            const payload: any = {};
+            
+            if (updates.startTime) payload.scheduleTime = updates.startTime;
+            if (updates.endTime) payload.endTime = updates.endTime;
+            if (updates.employeeId) {
+                console.log('🔍 Looking for employeeId:', updates.employeeId);
+                
+                // Найдем мастера по employeeId в employees (где id - строка)
+                const employee = employees.find(emp => emp.id === updates.employeeId);
+                console.log('👤 Found employee:', employee);
+                
+                if (employee) {
+                    // Найдем соответствующий объект в mastersData для получения реального ID
+                    const masterData = mastersData.find(master => master.id.toString() === updates.employeeId);
+                    console.log('🎯 Found masterData:', masterData);
+                    
+                    if (masterData) {
+                        payload.masterId = masterData.id; // Используем оригинальный числовой ID
+                        payload.masterName = masterData.name;
+                        console.log('✅ Master mapping successful:', { 
+                            employeeId: updates.employeeId, 
+                            masterId: masterData.id, 
+                            masterName: masterData.name 
+                        });
+                    } else {
+                        console.warn('⚠️ Master not found in mastersData for employeeId:', updates.employeeId);
+                        console.log('Available masters IDs:', mastersData.map(m => m.id.toString()));
+                    }
+                } else {
+                    console.warn('⚠️ Employee not found for employeeId:', updates.employeeId);
+                    console.log('Available employee IDs:', employees.map(e => e.id));
+                }
+            }
+
+            console.log('🚀 Sending PUT request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${appointmentId}`);
+            console.log('📦 Payload:', payload);
+
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${appointmentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+                credentials: 'include'
+            });
+
+            console.log('📡 Response status:', response.status);
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('❌ Error response:', errorData);
+                throw new Error(errorData.message || 'Failed to update appointment');
+            }
+
+            const result = await response.json();
+            console.log('✅ Success response:', result);
+
+        } catch (error) {
+            console.error('❌ Error updating appointment:', error);
+            // В случае ошибки, откатываем локальное состояние
+            setAppointments(prev => prev.map(apt =>
+                apt.id === appointmentId ? apt : apt
+            ));
+        }
+    }, [employees, mastersData]);
 
     // Validation functions
     const isWithinWorkingHours = useCallback((employeeId: string, timeSlot: string): boolean => {

@@ -2323,6 +2323,7 @@ export default function DailyCalendar() {
 
   // Drag and Drop handlers
   const handleDragStart = (e: React.DragEvent, task: Task) => {
+    console.log('handleDragStart called with task:', task);
     setDraggedTask(task);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', ''); // Required for Firefox
@@ -2346,26 +2347,39 @@ export default function DailyCalendar() {
   // Мутация для обновления времени и мастера записи
   const moveTaskMutation = useMutation({
     mutationFn: async ({ taskId, newTime, newMasterId }: { taskId: number; newTime: string; newMasterId: number }) => {
+      console.log('moveTaskMutation called with:', { taskId, newTime, newMasterId });
+      
       const newMaster = activeMasters.find(m => m.id === newMasterId);
       if (!newMaster) throw new Error('Мастер не найден');
 
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks/${taskId}`, {
+      const payload = {
+        scheduleTime: newTime,
+        masterId: newMasterId,
+        masterName: newMaster.name
+      };
+
+      console.log('Sending PUT request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`);
+      console.log('Payload:', payload);
+
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          scheduleTime: newTime,
-          masterId: newMasterId,
-          masterName: newMaster.name
-        }),
+        body: JSON.stringify(payload),
         credentials: 'include'
       });
 
+      console.log('Response status:', res.status);
+      console.log('Response ok:', res.ok);
+
       if (!res.ok) {
         const errorData = await res.json();
+        console.log('Error response:', errorData);
         throw new Error(errorData.message || 'Ошибка перемещения записи');
       }
 
-      return res.json();
+      const result = await res.json();
+      console.log('Success response:', result);
+      return result;
     },
     onSuccess: () => {
       toast({
@@ -2387,12 +2401,23 @@ export default function DailyCalendar() {
     e.preventDefault();
     setDraggedOver(null);
 
-    if (!draggedTask) return;
+    console.log('handleDrop called:', { time, masterId, draggedTask });
+
+    if (!draggedTask) {
+      console.log('No dragged task, returning');
+      return;
+    }
 
     // Проверяем, изменились ли время или мастер
     if (draggedTask.scheduleTime === time && draggedTask.masterId === masterId) {
+      console.log('Task not moved - same position');
       return; // Ничего не изменилось
     }
+
+    console.log('Moving task from:', { 
+      oldTime: draggedTask.scheduleTime, 
+      oldMasterId: draggedTask.masterId 
+    }, 'to:', { time, masterId });
 
     moveTaskMutation.mutate({
       taskId: draggedTask.id,
@@ -2413,6 +2438,46 @@ export default function DailyCalendar() {
   return (
     <TooltipProvider>
       <div className="p-6 space-y-6">
+        {/* 🧪 ТЕСТ: Простая проверка событий */}
+        <div style={{ 
+          backgroundColor: 'yellow', 
+          padding: '20px', 
+          margin: '10px 0',
+          border: '2px solid red'
+        }}>
+          <h3>🧪 ТЕСТ СОБЫТИЙ</h3>
+          <button 
+            onClick={() => console.log('✅ CLICK работает!')}
+            onMouseDown={() => console.log('✅ MOUSE DOWN работает!')}
+            style={{ 
+              padding: '10px', 
+              margin: '5px', 
+              backgroundColor: 'red', 
+              color: 'white',
+              cursor: 'pointer'
+            }}
+          >
+            Кликни меня
+          </button>
+          
+          <div
+            draggable={true}
+            onDragStart={() => console.log('✅ DRAG START работает!')}
+            onMouseDown={() => console.log('✅ DRAG MOUSE DOWN работает!')}
+            style={{
+              padding: '15px',
+              backgroundColor: 'blue',
+              color: 'white',
+              cursor: 'move',
+              userSelect: 'none',
+              display: 'inline-block',
+              margin: '5px'
+            }}
+          >
+            Перетащи меня
+          </div>
+        </div>
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Календарь записей</h1>

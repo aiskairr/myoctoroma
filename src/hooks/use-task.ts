@@ -161,10 +161,12 @@ export interface CreateTaskRequest {
 
 // Функция генерации уникального ID для задачи
 export const generateTaskId = (organisationId?: string | number, branchId?: string | number): string => {
-  const orgId = organisationId?.toString() || '1';
-  const brId = branchId?.toString() || '1';
-  const uniqueNumber = Date.now().toString() + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-  return `${orgId}${brId}${uniqueNumber}`;
+  // Генерируем 8-значный ID
+  // Диапазон: 10000000 - 99999999
+  const min = 10000000;
+  const max = 99999999;
+  const randomId = Math.floor(Math.random() * (max - min + 1)) + min;
+  return randomId.toString();
 };
 
 // Hook to create a new task

@@ -30,7 +30,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -548,9 +548,12 @@ const AccountingPage = () => {
                 Выбрать дату
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[400px]">
+            <DialogContent className="sm:max-w-[400px]" aria-describedby="date-picker-description">
               <DialogHeader>
                 <DialogTitle>Выберите дату</DialogTitle>
+                <DialogDescription id="date-picker-description">
+                  Выберите дату для просмотра отчетов
+                </DialogDescription>
               </DialogHeader>
               <div className="flex justify-center p-4">
                 <DatePicker
@@ -665,9 +668,12 @@ const AccountingPage = () => {
                         Добавить запись
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+                    <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto" aria-describedby="add-record-description">
                       <DialogHeader>
                         <DialogTitle>Добавить новую запись</DialogTitle>
+                        <DialogDescription id="add-record-description">
+                          Заполните данные для новой записи о доходах
+                        </DialogDescription>
                       </DialogHeader>
                       <div className="grid grid-cols-2 gap-4 py-4">
                         <div className="space-y-2">
@@ -1055,9 +1061,12 @@ const AccountingPage = () => {
                       Добавить расход
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[400px]">
+                  <DialogContent className="sm:max-w-[400px]" aria-describedby="add-expense-description">
                     <DialogHeader>
                       <DialogTitle>Добавить расход</DialogTitle>
+                      <DialogDescription id="add-expense-description">
+                        Заполните данные для новой записи о расходах
+                      </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">

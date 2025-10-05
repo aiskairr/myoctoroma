@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag and Drop Test</title>
+    <style>
+        .draggable {
+            padding: 20px;
+            margin: 10px;
+            background-color: red;
+            color: white;
+            cursor: move;
+            user-select: none;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        .drop-zone {
+            width: 300px;
+            height: 200px;
+            border: 2px dashed #ccc;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .drop-zone.dragover {
+            border-color: #007bff;
+            background-color: #e7f3ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тест Drag and Drop</h1>
+    
+    <div class="draggable" draggable="true" id="item1">
+        Перетащите меня #1
+    </div>
+    
+    <div class="draggable" draggable="true" id="item2">
+        Перетащите меня #2
+    </div>
+    
+    <div class="drop-zone" id="dropzone">
+        Зона для перетаскивания
+    </div>
+
+    <script>
+        const draggables = document.querySelectorAll('.draggable');
+        const dropzone = document.getElementById('dropzone');
+
+        draggables.forEach(draggable => {
+            draggable.addEventListener('dragstart', (e) => {
+                console.log('✅ DRAG START:', e.target.id);
+                e.dataTransfer.setData('text/plain', e.target.id);
+            });
+
+            draggable.addEventListener('mousedown', (e) => {
+                console.log('✅ MOUSE DOWN:', e.target.id);
+            });
+        });
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('dragover');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const id = e.dataTransfer.getData('text/plain');
+            console.log('✅ DROP:', id);
+            dropzone.classList.remove('dragover');
+            dropzone.innerHTML += `<p>Получен элемент: ${id}</p>`;
+        });
+    </script>
+</body>
+</html>

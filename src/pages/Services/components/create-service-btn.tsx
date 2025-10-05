@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -145,9 +145,12 @@ const CreateServiceBtn = () => {
                     Создать новую услугу
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] p-6">
+            <DialogContent className="sm:max-w-[500px] p-6" aria-describedby="create-service-description">
                 <DialogHeader>
                     <DialogTitle>Создать новую услугу</DialogTitle>
+                    <DialogDescription id="create-service-description">
+                        Заполните форму для создания новой услуги
+                    </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     <div className="space-y-2">

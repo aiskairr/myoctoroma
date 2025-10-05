@@ -6,7 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Check, Trash2, Eye, Pen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiGet, apiPut, apiDelete } from '@/lib/api';
@@ -349,9 +349,12 @@ const ServicesTable: React.FC = () => {
             </AlertDialog>
 
             <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-                <DialogContent className="sm:max-w-[600px]">
+                <DialogContent className="sm:max-w-[600px]" aria-describedby="service-view-description">
                     <DialogHeader>
                         <DialogTitle>Информация об услуге</DialogTitle>
+                        <DialogDescription id="service-view-description">
+                            Просмотр подробной информации об услуге
+                        </DialogDescription>
                     </DialogHeader>
                     {serviceToView && (
                         <div className="space-y-4">
