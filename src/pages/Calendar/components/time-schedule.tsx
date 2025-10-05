@@ -51,6 +51,20 @@ interface Appointment {
     duration: number;
     status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
     notes?: string;
+    price?: number;
+    motherId?: string; // ID родительской записи для дополнительных услуг
+    childIds?: string[]; // ID дочерних дополнительных услуг
+    isAdditionalService?: boolean; // Флаг дополнительной услуги
+    serviceId?: number; // ID услуги из справочника
+}
+
+// Интерфейс для дополнительной услуги
+interface AdditionalService {
+    id: number;
+    serviceId: number;
+    serviceName: string;
+    duration: number;
+    price: number;
 }
 
 interface AdvancedScheduleComponentProps {
@@ -277,6 +291,10 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         direction: null
     });
 
+    // States for additional services
+    const [additionalServices, setAdditionalServices] = useState<AdditionalService[]>([]);
+    const [selectedAdditionalService, setSelectedAdditionalService] = useState<string>('');
+
     const scheduleRef = useRef<HTMLDivElement>(null);
 
     const [newEmployee, setNewEmployee] = useState<NewEmployeeForm>({
@@ -454,6 +472,47 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         return startMinutes >= workStartMinutes && endMinutes <= workEndMinutes;
     }, [employees]);
 
+    // Additional services functions
+    const calculateTotalDuration = useCallback((baseAppointment?: Partial<Appointment> | null) => {
+        const mainDuration = baseAppointment?.duration || 0;
+        const additionalDuration = additionalServices.reduce((sum, service) => sum + service.duration, 0);
+        return mainDuration + additionalDuration;
+    }, [additionalServices]);
+
+    const calculateTotalPrice = useCallback((baseAppointment?: Partial<Appointment> | null) => {
+        const mainPrice = baseAppointment?.price || 0;
+        const additionalPrice = additionalServices.reduce((sum, service) => sum + service.price, 0);
+        return mainPrice + additionalPrice;
+    }, [additionalServices]);
+
+    const addAdditionalService = useCallback((serviceName: string) => {
+        const service = services.find(s => s.name === serviceName);
+        if (service) {
+            const newService: AdditionalService = {
+                id: Date.now(), // Temporary ID
+                serviceId: service.id || 0,
+                serviceName: service.name,
+                duration: service.duration,
+                price: service.price
+            };
+            setAdditionalServices(prev => [...prev, newService]);
+            setSelectedAdditionalService('');
+        }
+    }, [services]);
+
+    const removeAdditionalService = useCallback((serviceId: number) => {
+        setAdditionalServices(prev => prev.filter(service => service.id !== serviceId));
+    }, []);
+
+    const updateAdditionalServiceDuration = useCallback((serviceId: number, duration: number) => {
+        setAdditionalServices(prev => 
+            prev.map(service => 
+                service.id === serviceId 
+                    ? { ...service, duration, price: Math.round((duration / 60) * service.price) }
+                    : service
+            )
+        );
+    }, []);
 
     // Get position info from mouse coordinates
     const getPositionFromMouse = useCallback((x: number, y: number) => {
@@ -698,12 +757,58 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
             // Send POST request to create task
             createTaskMutation.mutate(taskData, {
-                onSuccess: (newTask) => {
+                onSuccess: async (newTask) => {
                     console.log('✅ Task created successfully:', newTask);
+
+                    // Create additional services if any
+                    if (additionalServices.length > 0) {
+                        for (const [index, service] of additionalServices.entries()) {
+                            try {
+                                // Calculate start time for additional service
+                                let additionalStartTime = selectedTimeSlot;
+                                
+                                // Add main service duration
+                                let totalPreviousDuration = duration;
+                                
+                                // Add duration of previous additional services
+                                for (let i = 0; i < index; i++) {
+                                    totalPreviousDuration += additionalServices[i].duration;
+                                }
+                                
+                                additionalStartTime = minutesToTime(timeToMinutes(selectedTimeSlot) + totalPreviousDuration);
+
+                                const additionalTaskData = {
+                                    id: generateTaskId(organisationId, branchId),
+                                    clientName: newAppointment.clientName.trim(),
+                                    clientPhone: newAppointment.phone.trim() || undefined,
+                                    scheduleDate: scheduleDate,
+                                    scheduleTime: additionalStartTime,
+                                    serviceType: service.serviceName,
+                                    masterId: parseInt(selectedEmployeeId),
+                                    serviceDuration: service.duration,
+                                    servicePrice: service.price,
+                                    branchId: branchId,
+                                    notes: `Дополнительная услуга к основной записи #${newTask.id}`,
+                                    status: 'scheduled',
+                                    motherId: newTask.id // Link to main appointment
+                                };
+
+                                console.log(`📤 Creating additional service ${index + 1}:`, additionalTaskData);
+                                
+                                // Create additional service
+                                await createTaskMutation.mutateAsync(additionalTaskData);
+                                
+                            } catch (error) {
+                                console.error(`❌ Failed to create additional service ${index + 1}:`, error);
+                                // Continue with other services even if one fails
+                            }
+                        }
+                    }
 
                     // Optionally update local state for immediate UI feedback
                     const startMinutes = timeToMinutes(selectedTimeSlot);
-                    const endMinutes = startMinutes + duration;
+                    const totalDurationWithServices = calculateTotalDuration({ duration });
+                    const endMinutes = startMinutes + totalDurationWithServices;
 
                     const appointment: Appointment = {
                         id: newTask.id.toString(),
@@ -712,15 +817,19 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                         service: newAppointment.service,
                         startTime: selectedTimeSlot,
                         endTime: minutesToTime(endMinutes),
-                        duration,
+                        duration: totalDurationWithServices,
                         status: 'scheduled',
-                        notes: newAppointment.notes
+                        notes: newAppointment.notes,
+                        price: calculateTotalPrice({ price: servicePrice }),
+                        childIds: additionalServices.map(s => s.id.toString())
                     };
 
                     setAppointments(prev => [...prev, appointment]);
 
                     // Reset form and close dialog
                     setNewAppointment({ clientName: '', phone: '', service: '', startTime: '', duration: 45, notes: '' });
+                    setAdditionalServices([]);
+                    setSelectedAdditionalService('');
                     setSelectedEmployeeId('');
                     setSelectedTimeSlot('');
                     setIsAddAppointmentOpen(false);
@@ -1463,6 +1572,92 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                             rows={3}
                                             placeholder="Дополнительная информация..."
                                         />
+                                    </div>
+
+                                    {/* Additional Services Section */}
+                                    <div className="border-t pt-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <label className="block text-sm font-medium text-gray-700">
+                                                Дополнительные услуги
+                                            </label>
+                                            <div className="text-sm text-gray-600">
+                                                Общее время: {calculateTotalDuration({ duration: newAppointment.duration })} мин
+                                            </div>
+                                        </div>
+
+                                        {/* Additional Services List */}
+                                        {additionalServices.length > 0 && (
+                                            <div className="space-y-2 mb-4">
+                                                {additionalServices.map((service) => (
+                                                    <div key={service.id} className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-amber-600 font-medium">📎</span>
+                                                            <span className="text-sm font-medium">{service.serviceName}</span>
+                                                            <div className="flex items-center gap-1">
+                                                                <input
+                                                                    type="number"
+                                                                    value={service.duration}
+                                                                    onChange={(e) => updateAdditionalServiceDuration(service.id, parseInt(e.target.value) || 0)}
+                                                                    className="w-16 h-6 text-xs text-center border border-amber-300 rounded"
+                                                                    min="0"
+                                                                />
+                                                                <span className="text-xs text-gray-500">мин</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm font-medium">{service.price} сом</span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeAdditionalService(service.id)}
+                                                                className="w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 flex items-center justify-center"
+                                                            >
+                                                                <X size={12} className="text-red-600" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Add Additional Service */}
+                                        <div className="flex gap-2">
+                                            <select
+                                                value={selectedAdditionalService}
+                                                onChange={(e) => setSelectedAdditionalService(e.target.value)}
+                                                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="">Добавить дополнительную услугу</option>
+                                                {services.filter(s => !additionalServices.some(as => as.serviceName === s.name)).map(service => (
+                                                    <option key={service.name} value={service.name}>
+                                                        {service.name} ({service.duration} мин, {service.price} сом)
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (selectedAdditionalService) {
+                                                        addAdditionalService(selectedAdditionalService);
+                                                    }
+                                                }}
+                                                disabled={!selectedAdditionalService}
+                                                className="px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
+
+                                        {/* Total Price */}
+                                        {additionalServices.length > 0 && (
+                                            <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-sm font-medium text-blue-800">Общая стоимость:</span>
+                                                    <span className="text-lg font-bold text-blue-800">
+                                                        {calculateTotalPrice({ price: services.find(s => s.name === newAppointment.service)?.price || 0 })} сом
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {selectedEmployeeId && (

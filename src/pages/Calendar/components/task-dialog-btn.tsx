@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Clock, CalendarIcon, Loader2, CreditCard } from "lucide-react";
+import { Clock, CalendarIcon, Loader2, CreditCard, Trash2, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import type React from "react";
@@ -28,6 +28,15 @@ interface PaymentMethod {
   label: string;
   icon: string;
   description: string;
+}
+
+// Интерфейс для дополнительной услуги
+interface AdditionalService {
+    id: number;
+    serviceId: number;
+    serviceName: string;
+    duration: number;
+    price: number;
 }
 
 interface FormData {
@@ -55,6 +64,15 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     const [showPaymentDialog, setShowPaymentDialog] = useState(false);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("");
     const [selectedAdministrator, setSelectedAdministrator] = useState<string>("");
+
+    // States for additional services
+    const [additionalServices, setAdditionalServices] = useState<AdditionalService[]>([]);
+    const [newAdditionalService, setNewAdditionalService] = useState({
+        serviceId: '',
+        serviceName: '',
+        duration: 0,
+        price: 0
+    });
 
     // Hooks
     const { toast } = useToast();
@@ -175,11 +193,6 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         }
     ];
 
-    // Функция для расчета общей стоимости
-    const calculateTotalPrice = (): number => {
-        return taskData?.finalPrice || taskData?.servicePrice || 0;
-    };
-    
     // Convert services to legacy format
     const services = convertServicesToLegacyFormat(servicesData);
 
@@ -187,6 +200,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         control,
         handleSubmit,
         formState: { errors, isValid },
+        watch,
         reset
     } = useForm<FormData>({
         mode: 'onChange',
@@ -210,26 +224,67 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     useEffect(() => {
         if (taskData && !taskLoading) {
             console.log('🔄 Loading task data into form:', taskData);
+            console.log('🔄 Available masters:', mastersData);
+            console.log('🔄 Available branches:', branches);
+            console.log('🔍 taskData.branchId:', taskData.branchId);
+            
             const formData = formatTaskForForm(taskData);
             console.log('📝 Formatted form data:', formData);
+            console.log('🔍 formData.branch after formatTaskForForm:', formData.branch);
             
             // Дополнительная проверка для критических полей
-            if (!formData.branch && branches?.length > 0) {
-                formData.branch = branches[0].id.toString();
+            if (!formData.branch) {
+                if (taskData.branchId) {
+                    formData.branch = taskData.branchId.toString();
+                    console.log('🔧 Set branch from taskData.branchId:', formData.branch);
+                } else if (branches?.length > 0) {
+                    formData.branch = branches[0].id.toString();
+                    console.log('🔧 Set default branch:', formData.branch);
+                }
+            } else {
+                console.log('🔧 Branch already set:', formData.branch);
             }
             
             if (!formData.time && taskData.scheduleTime) {
                 formData.time = taskData.scheduleTime;
+                console.log('🔧 Set time from taskData:', formData.time);
             }
             
-            if (!formData.master && taskData.masterName) {
-                formData.master = taskData.masterName;
+            if (!formData.master) {
+                console.log('🔍 Looking for master...');
+                // Попробуем найти мастера по ID из данных
+                if (taskData.masterId && mastersData?.length > 0) {
+                    const masterById = mastersData.find(m => m.id === taskData.masterId);
+                    if (masterById) {
+                        formData.master = masterById.name;
+                        console.log('🔧 Found master by ID:', masterById);
+                    }
+                }
+                // Если не нашли по ID, попробуем по имени
+                else if (taskData.master?.name) {
+                    formData.master = taskData.master.name;
+                    console.log('🔧 Set master from taskData.master:', formData.master);
+                }
+                // Последняя попытка - по masterName
+                else if (taskData.masterName) {
+                    formData.master = taskData.masterName;
+                    console.log('🔧 Set master from masterName:', formData.master);
+                }
+                
+                if (!formData.master) {
+                    console.log('❌ Could not find master!');
+                }
             }
             
             console.log('✅ Final form data with corrections:', formData);
             reset(formData);
+            
+            // Загружаем дополнительные услуги для задачи
+            if (taskId) {
+                loadAdditionalServices(taskId.toString());
+            }
         }
-    }, [taskData, taskLoading, reset, branches]);
+    }, [taskData, taskLoading, reset, branches, taskId, mastersData]);
 
     const handleOpenChange = useCallback((open: boolean) => {
         setIsOpen(open);
@@ -296,8 +351,81 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
     const timeSlots = generateTimeSlots();
 
+    // Additional services functions
+    const calculateTotalDuration = useCallback((baseDuration: number = 0) => {
+        const additionalDuration = additionalServices.reduce((sum, service) => sum + service.duration, 0);
+        return baseDuration + additionalDuration;
+    }, [additionalServices]);
+
+    const calculateTotalPrice = useCallback((basePrice: number = 0) => {
+        const additionalPrice = additionalServices.reduce((sum, service) => sum + service.price, 0);
+        return basePrice + additionalPrice;
+    }, [additionalServices]);
+
+    const addAdditionalService = useCallback(() => {
+        if (!newAdditionalService.serviceId) return;
+        
+        const service = services?.find(s => s.id === parseInt(newAdditionalService.serviceId));
+        if (service) {
+            const newService: AdditionalService = {
+                id: Date.now(),
+                serviceId: service.id,
+                serviceName: service.name,
+                duration: newAdditionalService.duration || service.duration,
+                price: service.price
+            };
+            setAdditionalServices(prev => [...prev, newService]);
+            setNewAdditionalService({
+                serviceId: '',
+                serviceName: '',
+                duration: 0,
+                price: 0
+            });
+        }
+    }, [services, newAdditionalService]);
+
+    const removeAdditionalService = useCallback((serviceId: number) => {
+        setAdditionalServices(prev => prev.filter(service => service.id !== serviceId));
+    }, []);
+
+    // Функция для загрузки дополнительных услуг
+    const loadAdditionalServices = useCallback(async (taskId: string) => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}/additional-services`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                const additionalServicesData = await response.json();
+                console.log('✅ Additional services loaded:', additionalServicesData);
+                
+                const formattedServices: AdditionalService[] = additionalServicesData.map((service: any) => ({
+                    id: service.id,
+                    serviceId: service.serviceId,
+                    serviceName: service.serviceName,
+                    duration: service.duration,
+                    price: service.price
+                }));
+                
+                setAdditionalServices(formattedServices);
+            } else {
+                console.log('ℹ️ No additional services found for task:', taskId);
+                setAdditionalServices([]);
+            }
+        } catch (error) {
+            console.error('❌ Error loading additional services:', error);
+            setAdditionalServices([]);
+        }
+    }, []);
+
     const onSubmit = async (data: FormData) => {
-        console.log('📤 Form data:', data);
+        console.log('📤 Form submitted! Data:', data);
+        console.log('🔍 Task ID:', taskId);
+        console.log('📋 Is editing:', !!taskId);
         
         // Если это редактирование существующей задачи, отправляем PUT запрос
         if (taskId) {
@@ -320,7 +448,13 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     finalPrice: parseFloat(data.cost) || 0,
                     discount: parseFloat(data.discount) || 0,
                     branchId: data.branch,
-                    status: data.status
+                    status: data.status,
+                    additionalServices: additionalServices.map(service => ({
+                        serviceId: service.serviceId,
+                        serviceName: service.serviceName,
+                        duration: service.duration,
+                        price: service.price
+                    }))
                 };
 
                 console.log('🚀 Sending PUT request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`);
@@ -345,6 +479,40 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
                 const result = await response.json();
                 console.log('✅ Task updated successfully:', result);
+                
+                // Создаем дополнительные услуги если они есть
+                if (additionalServices.length > 0) {
+                    for (const additionalService of additionalServices) {
+                        try {
+                            const additionalServicePayload = {
+                                taskId: taskId,
+                                serviceId: additionalService.serviceId,
+                                serviceName: additionalService.serviceName,
+                                duration: additionalService.duration,
+                                price: additionalService.price,
+                                branchId: data.branch
+                            };
+
+                            const additionalResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/additional-services`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify(additionalServicePayload),
+                                credentials: 'include'
+                            });
+
+                            if (!additionalResponse.ok) {
+                                const errorData = await additionalResponse.json();
+                                console.error('❌ Error creating additional service:', errorData);
+                            } else {
+                                console.log('✅ Additional service created:', additionalServicePayload);
+                            }
+                        } catch (error) {
+                            console.error('❌ Error creating additional service:', error);
+                        }
+                    }
+                }
                 
                 // Показываем уведомление об успехе
                 toast({
@@ -852,7 +1020,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {branches.map(branch => (
-                                                    <SelectItem key={branch.id} value={branch.branches}>
+                                                    <SelectItem key={branch.id} value={branch.id.toString()}>
                                                         {branch.branches}
                                                     </SelectItem>
                                                 ))}
@@ -985,6 +1153,115 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                         </div>
                     </div>
 
+                    {/* Секция дополнительных услуг */}
+                    <div className="border-t pt-4 mt-4">
+                        <h3 className="text-sm font-medium text-gray-700 mb-3">Дополнительные услуги</h3>
+                        
+                        {/* Список дополнительных услуг */}
+                        {additionalServices.length > 0 && (
+                            <div className="space-y-2 mb-4">
+                                {additionalServices.map((additionalService) => (
+                                    <div key={additionalService.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                                        <div className="flex-1">
+                                            <span className="text-sm font-medium">{additionalService.serviceName}</span>
+                                            <div className="text-xs text-gray-500">
+                                                {additionalService.duration} мин • {additionalService.price} сом
+                                            </div>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => removeAdditionalService(additionalService.id)}
+                                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Форма добавления дополнительной услуги */}
+                        <div className="grid grid-cols-4 gap-2">
+                            <div className="col-span-2">
+                                <Select
+                                    value={newAdditionalService.serviceId}
+                                    onValueChange={(value) =>
+                                        setNewAdditionalService({
+                                            ...newAdditionalService,
+                                            serviceId: value,
+                                            serviceName: services?.find(s => s.id === parseInt(value))?.name || '',
+                                            duration: services?.find(s => s.id === parseInt(value))?.duration || 0,
+                                            price: services?.find(s => s.id === parseInt(value))?.price || 0
+                                        })
+                                    }
+                                >
+                                    <SelectTrigger className="text-xs">
+                                        <SelectValue placeholder="Выберите услугу" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {services?.map((service) => (
+                                            <SelectItem key={service.id} value={service.id.toString()}>
+                                                {service.name} ({service.duration} мин, {service.price} сом)
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div>
+                                <Input
+                                    type="number"
+                                    placeholder="Мин"
+                                    value={newAdditionalService.duration}
+                                    onChange={(e) =>
+                                        setNewAdditionalService({
+                                            ...newAdditionalService,
+                                            duration: parseInt(e.target.value) || 0
+                                        })
+                                    }
+                                    className="text-xs"
+                                />
+                            </div>
+                            <div>
+                                <Button
+                                    type="button"
+                                    onClick={addAdditionalService}
+                                    disabled={!newAdditionalService.serviceId}
+                                    size="sm"
+                                    className="w-full text-xs"
+                                >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Добавить
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Итоговая информация */}
+                        {additionalServices.length > 0 && (
+                            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                                <div className="text-sm text-gray-600 space-y-1">
+                                    <div className="flex justify-between">
+                                        <span>Основная услуга:</span>
+                                        <span>{watch('cost')} сом</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Дополнительные услуги:</span>
+                                        <span>{calculateTotalPrice(0)} сом</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Общее время:</span>
+                                        <span>{(parseInt(watch('duration')) || 0) + calculateTotalDuration()} мин</span>
+                                    </div>
+                                    <div className="flex justify-between font-medium border-t pt-1">
+                                        <span>Итого:</span>
+                                        <span>{(parseInt(watch('cost')) || 0) + calculateTotalPrice(0)} сом</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
                         <Button
                             type="button"
@@ -1008,8 +1285,8 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                         
                         <Button
                             type="submit"
-                            disabled={!isValid || (!taskId && createTaskMutation.isPending)}
-                            className={(!isValid || (!taskId && createTaskMutation.isPending)) ? 'opacity-50 cursor-not-allowed' : ''}
+                            disabled={!taskId ? (!isValid || createTaskMutation.isPending) : false}
+                            className={(!taskId ? (!isValid || createTaskMutation.isPending) : false) ? 'opacity-50 cursor-not-allowed' : ''}
                         >
                             {!taskId && createTaskMutation.isPending ? (
                                 <>

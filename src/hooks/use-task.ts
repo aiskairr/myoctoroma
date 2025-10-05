@@ -26,6 +26,15 @@ export interface Task {
     customName?: string;
     phoneNumber?: string;
   };
+  master?: {
+    id: number;
+    name: string;
+    specialization?: string;
+    description?: string;
+    isActive?: boolean;
+    photoUrl?: string;
+    gender?: string;
+  };
 }
 
 // Hook to fetch task by ID
@@ -132,7 +141,7 @@ export const formatTaskForForm = (task: Task | undefined) => {
     time: task.scheduleTime || '',
     duration: formatDuration(task.serviceDuration, task.servicePrice),
     serviceType: task.serviceType || '',
-    master: task.masterName || '',
+    master: task.master?.name || task.masterName || '',
     status: mapStatus(task.status),
     branch: task.branchId || '1', // Устанавливаем филиал по умолчанию если нет
     date: formatDate(task.scheduleDate),
