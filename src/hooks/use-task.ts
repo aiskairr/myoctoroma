@@ -134,7 +134,7 @@ export const formatTaskForForm = (task: Task | undefined) => {
     serviceType: task.serviceType || '',
     master: task.masterName || '',
     status: mapStatus(task.status),
-    branch: task.branchId || '',
+    branch: task.branchId || '1', // Устанавливаем филиал по умолчанию если нет
     date: formatDate(task.scheduleDate),
     discount: (task.discount || 0).toString(),
     cost: (task.finalPrice || task.servicePrice || 0).toString()

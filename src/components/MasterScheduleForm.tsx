@@ -56,8 +56,8 @@ export const formatSchedule = (schedule: MasterSchedule, branches: import("@/con
 const EMPTY_SCHEDULE: MasterSchedule = {
   branch: '',
   days: [],
-  from: '10:00',
-  to: '18:00',
+  from: '07:00',
+  to: '23:59',
 };
 
 interface MasterScheduleFormProps {

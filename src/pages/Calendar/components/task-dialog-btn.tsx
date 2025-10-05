@@ -1,13 +1,13 @@
 import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Clock, CalendarIcon, Loader2 } from "lucide-react";
+import { Clock, CalendarIcon, Loader2, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import type React from "react";
@@ -17,6 +17,18 @@ import { useMasters } from "@/hooks/use-masters";
 import { useServices, convertServicesToLegacyFormat, getServiceDurations } from "@/hooks/use-services";
 import { useBranch } from "@/contexts/BranchContext";
 import { useAuth } from "@/contexts/SimpleAuthContext";
+import { PaymentMethodIcon } from "@/components/BankIcons";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+
+// Интерфейс для способов оплаты
+interface PaymentMethod {
+  value: string;
+  label: string;
+  icon: string;
+  description: string;
+}
 
 interface FormData {
     clientName: string;
@@ -40,6 +52,13 @@ interface Props {
 
 const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("");
+    const [selectedAdministrator, setSelectedAdministrator] = useState<string>("");
+
+    // Hooks
+    const { toast } = useToast();
+    const queryClient = useQueryClient();
 
     // Fetch task data from API
     const { data: taskData, isLoading: taskLoading, error: taskError } = useTask(taskId);
@@ -52,6 +71,114 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     const { data: servicesData = [] } = useServices();
     const { branches } = useBranch();
     const { user } = useAuth();
+
+    // Fetch administrators
+    const getBranchIdWithFallback = (currentBranch: any, branches: any[]) => {
+        if (currentBranch?.id) return currentBranch.id;
+        if (branches?.length > 0) return branches[0].id;
+        return 1; // Fallback ID
+    };
+
+    const { data: administrators = [] } = useQuery<{ id: number, name: string }[]>({
+        queryKey: ['administrators', getBranchIdWithFallback(null, branches)],
+        queryFn: async () => {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchID=${getBranchIdWithFallback(null, branches)}`);
+            return res.json();
+        },
+    });
+
+    // Доступные способы оплаты
+    const paymentMethods: PaymentMethod[] = [
+        {
+            value: "Наличные",
+            label: "Наличные",
+            icon: "💰",
+            description: "Оплата наличными деньгами"
+        },
+        {
+            value: "МБанк - Перевод",
+            label: "МБанк - Перевод",
+            icon: "🏦",
+            description: "Банковский перевод через МБанк"
+        },
+        {
+            value: "МБанк - POS",
+            label: "МБанк - POS",
+            icon: "💳",
+            description: "POS терминал МБанк"
+        },
+        {
+            value: "МБизнес - Перевод",
+            label: "МБизнес - Перевод",
+            icon: "🏢",
+            description: "Банковский перевод через МБизнес"
+        },
+        {
+            value: "МБизнес - POS",
+            label: "МБизнес - POS",
+            icon: "💳",
+            description: "POS терминал МБизнес"
+        },
+        {
+            value: "О!Банк - Перевод",
+            label: "О!Банк - Перевод",
+            icon: "🔴",
+            description: "Банковский перевод через О!Банк"
+        },
+        {
+            value: "О!Банк - POS",
+            label: "О!Банк - POS",
+            icon: "💳",
+            description: "POS терминал О!Банк"
+        },
+        {
+            value: "Демир - Перевод",
+            label: "Демир - Перевод",
+            icon: "🏗️",
+            description: "Банковский перевод через Демир Банк"
+        },
+        {
+            value: "Демир - POS",
+            label: "Демир - POS",
+            icon: "💳",
+            description: "POS терминал Демир Банк"
+        },
+        {
+            value: "Bakai - Перевод",
+            label: "Bakai - Перевод",
+            icon: "🌊",
+            description: "Банковский перевод через Bakai Банк"
+        },
+        {
+            value: "Bakai - POS",
+            label: "Bakai - POS",
+            icon: "💳",
+            description: "POS терминал Bakai Банк"
+        },
+        {
+            value: "Оптима - Перевод",
+            label: "Оптима - Перевод",
+            icon: "⚡",
+            description: "Банковский перевод через Оптима Банк"
+        },
+        {
+            value: "Оптима - POS",
+            label: "Оптима - POS",
+            icon: "💳",
+            description: "POS терминал Оптима Банк"
+        },
+        {
+            value: "Подарочный Сертификат",
+            label: "Подарочный Сертификат",
+            icon: "🎁",
+            description: "Оплата подарочным сертификатом"
+        }
+    ];
+
+    // Функция для расчета общей стоимости
+    const calculateTotalPrice = (): number => {
+        return taskData?.finalPrice || taskData?.servicePrice || 0;
+    };
     
     // Convert services to legacy format
     const services = convertServicesToLegacyFormat(servicesData);
@@ -82,10 +209,27 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     // Update form when task data is loaded
     useEffect(() => {
         if (taskData && !taskLoading) {
+            console.log('🔄 Loading task data into form:', taskData);
             const formData = formatTaskForForm(taskData);
+            console.log('📝 Formatted form data:', formData);
+            
+            // Дополнительная проверка для критических полей
+            if (!formData.branch && branches?.length > 0) {
+                formData.branch = branches[0].id.toString();
+            }
+            
+            if (!formData.time && taskData.scheduleTime) {
+                formData.time = taskData.scheduleTime;
+            }
+            
+            if (!formData.master && taskData.masterName) {
+                formData.master = taskData.masterName;
+            }
+            
+            console.log('✅ Final form data with corrections:', formData);
             reset(formData);
         }
-    }, [taskData, taskLoading, reset]);
+    }, [taskData, taskLoading, reset, branches]);
 
     const handleOpenChange = useCallback((open: boolean) => {
         setIsOpen(open);
@@ -152,13 +296,79 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
     const timeSlots = generateTimeSlots();
 
-    const onSubmit = (data: FormData) => {
+    const onSubmit = async (data: FormData) => {
         console.log('📤 Form data:', data);
         
-        // Если это редактирование существующей задачи, просто закрываем диалог
+        // Если это редактирование существующей задачи, отправляем PUT запрос
         if (taskId) {
-            console.log('📝 Editing existing task, closing dialog');
-            handleOpenChange(false);
+            console.log('📝 Updating existing task with ID:', taskId);
+            
+            try {
+                // Находим мастера по имени для получения masterId
+                const selectedMaster = mastersData.find(m => m.name === data.master);
+                
+                const updatePayload = {
+                    clientName: data.clientName,
+                    phoneNumber: data.phone,
+                    serviceType: data.serviceType,
+                    masterName: data.master,
+                    masterId: selectedMaster?.id || null,
+                    notes: data.notes,
+                    scheduleDate: data.date,
+                    scheduleTime: data.time,
+                    serviceDuration: parseInt(data.duration.split(' ')[0]) || 60, // Извлекаем число из "60 мин - 1000 сом"
+                    finalPrice: parseFloat(data.cost) || 0,
+                    discount: parseFloat(data.discount) || 0,
+                    branchId: data.branch,
+                    status: data.status
+                };
+
+                console.log('🚀 Sending PUT request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`);
+                console.log('📦 Update payload:', updatePayload);
+
+                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updatePayload),
+                    credentials: 'include'
+                });
+
+                console.log('📡 Response status:', response.status);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('❌ Error response:', errorData);
+                    throw new Error(errorData.message || 'Failed to update task');
+                }
+
+                const result = await response.json();
+                console.log('✅ Task updated successfully:', result);
+                
+                // Показываем уведомление об успехе
+                toast({
+                    title: "Задача обновлена",
+                    description: "Данные задачи успешно сохранены",
+                    variant: "default",
+                });
+                
+                // Обновляем данные в кэше
+                queryClient.invalidateQueries({ queryKey: ['calendar-tasks'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/tasks', taskId] });
+                
+                // Закрываем диалог после успешного обновления
+                handleOpenChange(false);
+                
+            } catch (error) {
+                console.error('❌ Error updating task:', error);
+                toast({
+                    title: "Ошибка при обновлении",
+                    description: `Не удалось обновить задачу: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
+                    variant: "destructive",
+                });
+            }
+            
             return;
         }
         
@@ -234,7 +444,113 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         });
     };
 
+    // Мутация для создания записи об оплате
+    const createPaymentMutation = useMutation({
+        mutationFn: async () => {
+            if (!selectedPaymentMethod || !taskId) {
+                throw new Error('Не выбран способ оплаты или задача');
+            }
+
+            if (!selectedAdministrator) {
+                throw new Error('Не выбран администратор');
+            }
+
+            // Создаем основную запись об оплате
+            const clientName = taskData?.client?.customName || taskData?.client?.firstName || taskData?.clientName || 'Неизвестный клиент';
+            
+            console.log('📊 Payment data debug:');
+            console.log('  taskData.clientName:', taskData?.clientName);
+            console.log('  taskData.client?.customName:', taskData?.client?.customName);
+            console.log('  taskData.client?.firstName:', taskData?.client?.firstName);
+            console.log('  Final clientName:', clientName);
+            
+            const paymentData = {
+                master: taskData?.masterName || 'Неизвестный мастер',
+                client: clientName,
+                serviceType: taskData?.serviceType || 'Услуга',
+                phoneNumber: taskData?.client?.phoneNumber || '',
+                amount: calculateTotalPrice() - Math.round(calculateTotalPrice() * ((taskData?.discount || 0) / 100)),
+                discount: taskData?.discount || 0,
+                duration: taskData?.serviceDuration || 60,
+                comment: `Оплата через ${selectedPaymentMethod}`,
+                paymentMethod: selectedPaymentMethod,
+                dailyReport: calculateTotalPrice() - Math.round(calculateTotalPrice() * ((taskData?.discount || 0) / 100)),
+                adminName: selectedAdministrator,
+                isGiftCertificateUsed: selectedPaymentMethod === 'Подарочный Сертификат',
+                branchId: getBranchIdWithFallback(null, branches),
+                date: taskData?.scheduleDate || new Date().toISOString().split('T')[0]
+            };
+            
+            console.log('💰 Sending payment data:', paymentData);
+            
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(paymentData),
+            });
+
+            if (!res.ok) {
+                throw new Error('Failed to create payment record');
+            }
+
+            // Обновляем способ оплаты, администратора и статус оплаты для задачи
+            await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    paymentMethod: selectedPaymentMethod,
+                    adminName: selectedAdministrator,
+                    paid: 'paid'
+                }),
+            });
+
+            return res.json();
+        },
+        onSuccess: () => {
+            toast({
+                title: "Оплата зафиксирована",
+                description: `Платеж через ${selectedPaymentMethod} успешно записан`,
+                variant: "default",
+            });
+
+            setShowPaymentDialog(false);
+            setSelectedPaymentMethod("");
+            setSelectedAdministrator("");
+            handleOpenChange(false); // Закрываем диалог редактирования после успешной оплаты
+        },
+        onError: (error: Error) => {
+            toast({
+                title: "Ошибка при записи оплаты",
+                description: `${error}`,
+                variant: "destructive",
+            });
+        }
+    });
+
+    const handlePayment = () => {
+        if (!selectedPaymentMethod) {
+            toast({
+                title: "Выберите способ оплаты",
+                description: "Необходимо выбрать способ оплаты",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!selectedAdministrator) {
+            toast({
+                title: "Выберите администратора",
+                description: "Необходимо выбрать администратора",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        createPaymentMutation.mutate();
+    };
+
     return (
+        <>
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
                 {children}
@@ -677,6 +993,19 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                         >
                             Отмена
                         </Button>
+                        
+                        {/* Кнопка оплаты - показываем только при редактировании существующей задачи */}
+                        {taskId && taskData && (
+                            <Button
+                                type="button"
+                                onClick={() => setShowPaymentDialog(true)}
+                                className="bg-amber-500 hover:bg-amber-600 text-white"
+                            >
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Оплатить
+                            </Button>
+                        )}
+                        
                         <Button
                             type="submit"
                             disabled={!isValid || (!taskId && createTaskMutation.isPending)}
@@ -696,6 +1025,131 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 )}
             </DialogContent>
         </Dialog>
+
+        {/* Диалог оплаты */}
+        {taskId && taskData && (
+            <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <CreditCard className="h-5 w-5 text-amber-600" />
+                            Оплата услуг
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="flex gap-6">
+                        {/* Левая колонка - способы оплаты */}
+                        <div className="flex-1">
+                            <h3 className="text-lg font-semibold mb-4">Выберите способ оплаты</h3>
+                            <div className="space-y-2">
+                                {paymentMethods.map((method) => (
+                                    <div
+                                        key={method.value}
+                                        onClick={() => setSelectedPaymentMethod(method.value)}
+                                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${selectedPaymentMethod === method.value
+                                            ? 'border-amber-400 bg-amber-50'
+                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-2xl">
+                                                <PaymentMethodIcon paymentMethod={method.value} className="w-8 h-8" />
+                                            </div>
+                                            <div>
+                                                <div className="font-medium">{method.label}</div>
+                                                <div className="text-sm text-gray-600">{method.description}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Правая колонка - детали оплаты */}
+                        <div className="w-64 bg-gray-50 rounded-lg p-4">
+                            <h3 className="font-semibold text-lg mb-4">Детали оплаты</h3>
+
+                            <div className="space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-sm">Услуга:</span>
+                                    <span className="text-sm font-medium">{taskData.serviceType}</span>
+                                </div>
+
+                                <div className="flex justify-between">
+                                    <span className="text-sm">Мастер:</span>
+                                    <span className="text-sm font-medium">{taskData.masterName}</span>
+                                </div>
+
+                                <div className="flex justify-between">
+                                    <span className="text-sm">Клиент:</span>
+                                    <span className="text-sm font-medium">{taskData.clientName}</span>
+                                </div>
+
+                                <hr className="my-3" />
+
+                                <div className="flex justify-between">
+                                    <span className="text-sm">Сумма услуг:</span>
+                                    <span className="text-sm">{calculateTotalPrice()} сом</span>
+                                </div>
+
+                                {taskData.discount && taskData.discount > 0 && (
+                                    <div className="flex justify-between text-green-600">
+                                        <span className="text-sm">Скидка {taskData.discount}%:</span>
+                                        <span className="text-sm">-{Math.round(calculateTotalPrice() * taskData.discount / 100)} сом</span>
+                                    </div>
+                                )}
+
+                                <hr className="my-3" />
+
+                                <div className="flex justify-between font-bold text-lg">
+                                    <span>К оплате:</span>
+                                    <span className="text-amber-600">
+                                        {calculateTotalPrice() - Math.round(calculateTotalPrice() * (taskData.discount || 0) / 100)} сом
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Выбор администратора */}
+                    <div className="mt-4 border-t pt-4">
+                        <Label className="text-sm font-semibold mb-2 block">Администратор</Label>
+                        <Select value={selectedAdministrator} onValueChange={setSelectedAdministrator}>
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Выберите администратора" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {administrators.map((admin: { id: number; name: string }) => (
+                                    <SelectItem key={admin.id} value={admin.name}>
+                                        {admin.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <DialogFooter className="flex justify-between mt-4">
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowPaymentDialog(false)}
+                        >
+                            Отмена
+                        </Button>
+                        <Button
+                            onClick={handlePayment}
+                            disabled={!selectedPaymentMethod || !selectedAdministrator || createPaymentMutation.isPending}
+                            className="bg-amber-500 hover:bg-amber-600 text-white"
+                        >
+                            {createPaymentMutation.isPending && (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            Зафиксировать оплату
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        )}
+        </>
     );
 };
 

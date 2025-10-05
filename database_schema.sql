@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS client_tasks (
     -- FOREIGN KEY (masterId) REFERENCES masters(id) ON DELETE SET NULL,
     
     -- Ограничения
-    CONSTRAINT chk_schedule_time CHECK (scheduleTime >= '06:00:00' AND scheduleTime <= '23:00:00'),
+    CONSTRAINT chk_schedule_time CHECK (scheduleTime >= '07:00:00' AND scheduleTime <= '23:59:59'),
     CONSTRAINT chk_service_duration CHECK (serviceDuration > 0 AND serviceDuration <= 480), -- макс 8 часов
     CONSTRAINT chk_price CHECK (servicePrice >= 0),
     CONSTRAINT chk_final_price CHECK (finalPrice IS NULL OR finalPrice >= 0),

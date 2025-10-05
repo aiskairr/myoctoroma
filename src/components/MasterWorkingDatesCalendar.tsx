@@ -35,8 +35,8 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDate, setEditingDate] = useState<WorkingDate | null>(null);
   const [formData, setFormData] = useState({
-    startTime: '09:00',
-    endTime: '18:00'
+    startTime: '07:00',
+    endTime: '23:59'
   });
 
   // Получаем рабочие даты мастера для текущего месяца
@@ -117,8 +117,8 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
     } else {
       setEditingDate(null);
       setFormData({
-        startTime: '09:00',
-        endTime: '18:00'
+        startTime: '07:00',
+        endTime: '23:59'
       });
     }
     

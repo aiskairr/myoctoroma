@@ -367,6 +367,7 @@ const MasterForm: React.FC<{
         <MasterWorkingDatesManager
           workingDates={workingDates}
           onWorkingDatesChange={handleWorkingDatesChange}
+          masterId={master?.id}
         />
       </div>
 
@@ -931,7 +932,7 @@ const Masters: React.FC = () => {
       const { workingDates, createAccount, accountEmail, accountPassword, ...masterData } = data;
 
       // Создаем мастера
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${currentBranch.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(masterData)

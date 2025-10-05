@@ -9,8 +9,22 @@ import { useServices, convertServicesToLegacyFormat } from '@/hooks/use-services
 import { useCreateTask, generateTaskId } from '@/hooks/use-task';
 import { useBranch } from '@/contexts/BranchContext';
 import { useAuth } from '@/contexts/SimpleAuthContext';
+import { useMasterWorkingDates } from '@/hooks/use-master-working-dates';
 
 // Types
+interface Employee {
+    id: string;
+    name: string;
+    role: string;
+    workHours: {
+        start: string;
+        end: string;
+    };
+    color: string;
+    isWorking: boolean;
+    workingDate: any | null;
+}
+
 interface DragState {
     isDragging: boolean;
     draggedAppointment: Appointment | null;
@@ -90,7 +104,7 @@ const minutesToTime = (minutes: number): string => {
     return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 };
 
-const generateTimeSlots = (startHour: number = 8, endHour: number = 22): string[] => {
+const generateTimeSlots = (startHour: number = 7, endHour: number = 24): string[] => {
     const slots: string[] = [];
     for (let hour = startHour; hour < endHour; hour++) {
         for (let minute = 0; minute < 60; minute += 15) {
@@ -103,7 +117,7 @@ const generateTimeSlots = (startHour: number = 8, endHour: number = 22): string[
 const getCurrentTimePosition = (): number => {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const startMinutes = 8 * 60;
+    const startMinutes = 7 * 60;
     return Math.max(0, (currentMinutes - startMinutes) / 15) * TIME_SLOT_HEIGHT;
 };
 
@@ -120,6 +134,17 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     const { data: mastersData = [], isLoading: mastersLoading, error: mastersError } = useMasters();
     const { data: tasksData = [], isLoading: tasksLoading, error: tasksError } = useCalendarTasks(currentDate);
     const { data: servicesData = [], isLoading: servicesLoading, error: servicesError } = useServices();
+    
+    // Fetch master working dates for the current date
+    const currentDateStr = currentDate.toISOString().split('T')[0];
+    const { 
+        data: masterWorkingDates = [], 
+        isLoading: workingDatesLoading, 
+        error: workingDatesError 
+    } = useMasterWorkingDates(
+        currentDateStr, 
+        currentBranch?.id?.toString()
+    );
 
     // API mutations
     const createTaskMutation = useCreateTask();
@@ -129,19 +154,46 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         return convertServicesToLegacyFormat(servicesData);
     }, [servicesData]);
 
-    // Convert masters data to employees format
-    const employees = useMemo(() => {
-        return mastersData.map((master, index) => ({
-            id: master.id.toString(),
-            name: master.name,
-            role: master.specialization || 'Мастер',
-            workHours: {
-                start: master.startWorkHour || '09:00',
-                end: master.endWorkHour || '20:00'
-            },
-            color: EMPLOYEE_COLORS[index % EMPLOYEE_COLORS.length]
-        }));
-    }, [mastersData]);
+    // Convert masters data to employees format using working dates - only show working masters
+    const employees: Employee[] = useMemo(() => {
+        console.log('🔄 Building employees list with working dates...');
+        console.log('  - Masters data:', mastersData);
+        console.log('  - Working dates:', masterWorkingDates);
+        
+        const workingEmployees = mastersData
+            .map((master, index) => {
+                // Найти рабочий день для этого мастера
+                const workingDate = masterWorkingDates.find(
+                    wd => wd.master_id === master.id && wd.is_active
+                );
+                
+                const workHours = workingDate ? {
+                    start: workingDate.start_time,
+                    end: workingDate.end_time
+                } : {
+                    start: master.startWorkHour || '07:00',
+                    end: master.endWorkHour || '23:59'
+                };
+                
+                const isWorking = !!workingDate;
+                
+                console.log(`  - Master ${master.name}: working hours ${workHours.start} - ${workHours.end} (${workingDate ? 'from API' : 'fallback'}) - ${isWorking ? 'WORKING' : 'NOT WORKING'}`);
+                
+                return {
+                    id: master.id.toString(),
+                    name: master.name,
+                    role: master.specialization || 'Мастер',
+                    workHours,
+                    color: EMPLOYEE_COLORS[index % EMPLOYEE_COLORS.length],
+                    isWorking,
+                    workingDate: workingDate || null
+                };
+            })
+            .filter(employee => employee.isWorking); // Показываем только работающих мастеров
+        
+        console.log(`  - Total working employees: ${workingEmployees.length} out of ${mastersData.length}`);
+        return workingEmployees;
+    }, [mastersData, masterWorkingDates]);
 
     // Convert tasks data to appointments format
     const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -206,8 +258,8 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     const [currentTimePosition, setCurrentTimePosition] = useState(getCurrentTimePosition());
 
     // Loading and error states
-    const isLoading = mastersLoading || tasksLoading || servicesLoading;
-    const hasError = mastersError || tasksError || servicesError;
+    const isLoading = mastersLoading || tasksLoading || servicesLoading || workingDatesLoading;
+    const hasError = mastersError || tasksError || servicesError || workingDatesError;
 
     const [dragState, setDragState] = useState<DragState>({
         isDragging: false,
@@ -230,8 +282,8 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     const [newEmployee, setNewEmployee] = useState<NewEmployeeForm>({
         name: '',
         role: '',
-        startTime: '09:00',
-        endTime: '20:00'
+        startTime: '07:00',
+        endTime: '23:59'
     });
 
     const [newAppointment, setNewAppointment] = useState<NewAppointmentForm>({
@@ -251,6 +303,17 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         return () => clearInterval(interval);
     }, []);
 
+    // Handle window resize for responsive column width
+    useEffect(() => {
+        const handleResize = () => {
+            // Force recalculation of column width
+            console.log('📱 Window resized, recalculating column widths...');
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     // Memoized values
     const timeSlots = useMemo(() => generateTimeSlots(), []);
 
@@ -261,11 +324,29 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         });
     }, [currentDate]);
 
-    // Get column width for employees
-    const getEmployeeColumnWidth = useCallback(() => {
-        if (!scheduleRef.current) return 200;
-        const scheduleWidth = scheduleRef.current.clientWidth;
-        return Math.max(200, scheduleWidth / employees.length);
+    // Calculate column width based on number of working employees (20% narrower)
+    const getEmployeeColumnWidth = useMemo(() => {
+        const workingEmployeeCount = employees.length;
+        const maxEmployeesPerScreen = 6; // Увеличиваем до 6 из-за более узких колонок
+        
+        console.log(`📊 Column width calculation: ${workingEmployeeCount} working employees`);
+        
+        if (workingEmployeeCount === 0) {
+            return 240; // Default width when no employees (was 300, now 20% smaller)
+        }
+        
+        if (workingEmployeeCount <= maxEmployeesPerScreen) {
+            // Stretch to full width when 6 or fewer employees
+            const availableWidth = window.innerWidth - 80 - 40; // Minus time column and padding
+            const columnWidth = Math.max(200, Math.floor(availableWidth / workingEmployeeCount)); // Min width 200px (was 250px)
+            console.log(`  - Stretching: ${columnWidth}px per column (full width)`);
+            return columnWidth;
+        } else {
+            // Fixed width when more than 6 employees (enables horizontal scroll)
+            const fixedWidth = 200; // Fixed width 200px (was 250px, now 20% smaller)
+            console.log(`  - Fixed width: ${fixedWidth}px per column (horizontal scroll enabled)`);
+            return fixedWidth;
+        }
     }, [employees.length]);
 
     // Appointment management
@@ -352,7 +433,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     // Validation functions
     const isWithinWorkingHours = useCallback((employeeId: string, timeSlot: string): boolean => {
         const employee = employees.find(emp => emp.id === employeeId);
-        if (!employee) return false;
+        if (!employee || !employee.isWorking) return false;
 
         const slotMinutes = timeToMinutes(timeSlot);
         const startMinutes = timeToMinutes(employee.workHours.start);
@@ -363,7 +444,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
     const doesAppointmentFitWorkingHours = useCallback((employeeId: string, startTime: string, duration: number): boolean => {
         const employee = employees.find(emp => emp.id === employeeId);
-        if (!employee) return false;
+        if (!employee || !employee.isWorking) return false;
 
         const startMinutes = timeToMinutes(startTime);
         const endMinutes = startMinutes + duration;
@@ -376,7 +457,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
     // Get position info from mouse coordinates
     const getPositionFromMouse = useCallback((x: number, y: number) => {
-        const employeeColumnWidth = getEmployeeColumnWidth();
+        const employeeColumnWidth = getEmployeeColumnWidth;
         const employeeIndex = Math.floor(x / employeeColumnWidth);
         const timeSlotIndex = Math.floor((y - HEADER_HEIGHT) / TIME_SLOT_HEIGHT);
 
@@ -951,17 +1032,22 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                             Ошибка загрузки данных
                         </div>
                         <p className="text-gray-600 text-sm">
-                            {mastersError?.message || tasksError?.message || servicesError?.message || 'Неизвестная ошибка'}
+                            {mastersError?.message || tasksError?.message || servicesError?.message || workingDatesError?.message || 'Неизвестная ошибка'}
                         </p>
                     </div>
                 )}
 
-                {/* Empty State */}
+                {/* Empty State - No working masters */}
                 {!isLoading && !hasError && employees.length === 0 && (
                     <div className="p-8 text-center">
-                        <User size={24} className="mx-auto mb-2 text-gray-400" />
-                        <p className="text-gray-600">Нет доступных мастеров для этого филиала</p>
-                        <p className="text-gray-400 text-sm mt-1">Добавьте мастеров на странице "Мастера"</p>
+                        <Calendar size={24} className="mx-auto mb-2 text-gray-400" />
+                        <p className="text-gray-600">Нет мастеров, работающих в выбранную дату</p>
+                        <p className="text-gray-400 text-sm mt-1">
+                            {mastersData.length > 0 
+                                ? `Найдено ${mastersData.length} мастеров, но они не работают ${dateString}`
+                                : 'Добавьте мастеров на странице "Мастера"'
+                            }
+                        </p>
                     </div>
                 )}
 
@@ -973,9 +1059,19 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <Calendar className="text-gray-600" size={20} />
-                                    <h2 className="text-xl font-semibold text-gray-900">
-                                        Расписание на {dateString}
-                                    </h2>
+                                    <div>
+                                        <h2 className="text-xl font-semibold text-gray-900">
+                                            Расписание на {dateString}
+                                        </h2>
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            {employees.length > 0 
+                                                ? `Работает ${employees.length} из ${mastersData.length} мастеров`
+                                                : mastersData.length > 0
+                                                    ? `Ни один из ${mastersData.length} мастеров не работает`
+                                                    : 'Нет мастеров'
+                                            }
+                                        </p>
+                                    </div>
                                 </div>
 
                                 <Dialog open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>
@@ -1075,7 +1171,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                         </div>
 
                         {/* Schedule Grid */}
-                        <div className="flex overflow-x-auto">
+                        <div className="flex overflow-x-auto max-h-screen overflow-y-auto">
                             {/* Status indicator */}
                             {(dragState.isDragging || resizeState.isResizing) && (
                                 <div className="fixed top-4 right-4 bg-blue-600 text-white px-3 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2">
@@ -1101,9 +1197,9 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                 </div>
                             )}
 
-                            {/* Time Column */}
+                            {/* Time Column - Sticky */}
                             <div className="w-20 flex-shrink-0 border-r border-gray-200 bg-gray-50">
-                                <div className="h-16 border-b border-gray-200 flex items-center justify-center">
+                                <div className="h-16 border-b border-gray-200 flex items-center justify-center sticky top-0 z-20 bg-gray-50 shadow-sm">
                                     <Clock size={16} className="text-gray-500" />
                                 </div>
                                 {timeSlots.map((slot, index) => (
@@ -1199,8 +1295,8 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                         style={{
                                             top: timeSlots.findIndex(slot => slot === dragState.targetSlot!.timeSlot) * TIME_SLOT_HEIGHT + HEADER_HEIGHT + 1,
                                             height: Math.ceil((dragState.draggedAppointment?.duration || 45) / 15) * TIME_SLOT_HEIGHT - 2,
-                                            left: employees.findIndex(emp => emp.id === dragState.targetSlot!.employeeId) * getEmployeeColumnWidth() + 4,
-                                            width: getEmployeeColumnWidth() - 8
+                                            left: employees.findIndex(emp => emp.id === dragState.targetSlot!.employeeId) * getEmployeeColumnWidth + 4,
+                                            width: getEmployeeColumnWidth - 8
                                         }}
                                     />
                                 )}
@@ -1209,11 +1305,14 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                     {employees.map((employee) => (
                                         <div
                                             key={employee.id}
-                                            className="flex-1 min-w-48 border-r border-gray-200 last:border-r-0"
-                                            style={{ minWidth: '200px' }}
+                                            className="border-r border-gray-200 last:border-r-0 flex-shrink-0"
+                                            style={{ 
+                                                width: `${getEmployeeColumnWidth}px`,
+                                                minWidth: `${getEmployeeColumnWidth}px`
+                                            }}
                                         >
-                                            {/* Employee Header */}
-                                            <div className="h-16 p-3 border-b border-gray-200 bg-white relative group">
+                                            {/* Employee Header - Sticky */}
+                                            <div className="h-16 p-3 border-b border-gray-200 bg-white relative group sticky top-0 z-10 shadow-sm">
                                                 <div className="flex items-center gap-3">
                                                     <div
                                                         className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm flex-shrink-0"

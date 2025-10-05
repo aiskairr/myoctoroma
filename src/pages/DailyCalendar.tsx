@@ -622,7 +622,7 @@ const EditAppointmentDialog = ({
   const { data: administrators = [] } = useQuery<{ id: number, name: string }[]>({
     queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/administrators`, currentBranch?.id],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchId=${getBranchIdWithFallback(currentBranch, branches)}`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchID=${getBranchIdWithFallback(currentBranch, branches)}`);
       if (!res.ok) return [];
       const data = await res.json();
       return data.filter((admin: any) => admin.isActive).map((admin: any) => ({
@@ -2156,11 +2156,11 @@ export default function DailyCalendar() {
     queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/public/service-services`],
   });
 
-  // Генерируем временные слоты с 9:00 до 22:00 с шагом 30 минут
+  // Генерируем временные слоты с 7:00 до 23:59 с шагом 15 минут
   const timeSlots = useMemo(() => {
     const slots = [];
-    const startHour = 9;
-    const endHour = 22;
+    const startHour = 7;
+    const endHour = 24; // до 23:59
 
     for (let hour = startHour; hour < endHour; hour++) {
       slots.push(`${hour.toString().padStart(2, '0')}:00`);
@@ -2180,9 +2180,9 @@ export default function DailyCalendar() {
     const currentMinute = currentTime.getMinutes();
     const currentTimeInMinutes = currentHour * 60 + currentMinute;
 
-    // Время начала календаря (9:00) в минутах
-    const startTimeInMinutes = 9 * 60;
-    const endTimeInMinutes = 22 * 60;
+    // Время начала календаря (7:00) в минутах
+    const startTimeInMinutes = 7 * 60;
+    const endTimeInMinutes = 24 * 60;
 
     // Если текущее время вне рабочих часов, не показываем линию
     if (currentTimeInMinutes < startTimeInMinutes || currentTimeInMinutes >= endTimeInMinutes) {

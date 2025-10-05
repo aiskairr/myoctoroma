@@ -134,7 +134,7 @@ export const EditAppointmentDialog = ({
   const { data: administrators = [] } = useQuery<{ id: number, name: string }[]>({
     queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/administrators`, currentBranch?.id],
     queryFn: async () => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchId=${getBranchIdWithFallback(currentBranch, branches)}`);
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchID=${getBranchIdWithFallback(currentBranch, branches)}`);
       if (!res.ok) return [];
       const data = await res.json();
       return data.filter((admin: any) => admin.isActive).map((admin: any) => ({
