@@ -39,7 +39,7 @@ interface Task {
   };
   status: string;
   serviceType?: string;
-  scheduleDate: string;
+  scheduleDate: string; // Формат: YYYY-MM-DD
   scheduleTime: string;
   endTime?: string;
   masterName?: string;
@@ -52,8 +52,8 @@ interface Task {
   finalPrice?: number;
   paymentMethod?: string;
   paid?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string; // Формат: YYYY-MM-DD HH:mm:ss
+  updatedAt: string; // Формат: YYYY-MM-DD HH:mm:ss
   serviceServiceId?: number;
   additionalServices?: Array<{
     id: number;

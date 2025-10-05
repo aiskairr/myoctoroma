@@ -991,7 +991,6 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="Записан">Записан</SelectItem>
-                                                <SelectItem value="Подтвержден">Подтвержден</SelectItem>
                                                 <SelectItem value="В процессе">В процессе</SelectItem>
                                                 <SelectItem value="Завершен">Завершен</SelectItem>
                                                 <SelectItem value="Отменен">Отменен</SelectItem>

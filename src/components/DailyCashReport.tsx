@@ -31,7 +31,7 @@ interface ExpenseRecord {
   amount: number;
   branchId: string;
   date: string;
-  createdAt: string;
+  createdAt: string; // Формат: YYYY-MM-DD HH:mm:ss
 }
 
 interface DailyCashReportData {
@@ -98,6 +98,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
     const getYesterdayEndBalance = async () => {
       const yesterday = new Date(selectedDate);
       yesterday.setDate(yesterday.getDate() - 1);
+      // Конвертируем в формат YYYY-MM-DD для API (scheduleDate format)
       const yesterdayStr = new Date(yesterday.getTime() - (yesterday.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
       try {
@@ -122,6 +123,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
   // Функция для расчета данных на основе записей и расходов
   useEffect(() => {
     const calculateReportData = async () => {
+      // Конвертируем выбранную дату в формат YYYY-MM-DD для фильтрации (scheduleDate format)
       const selectedDateStr = new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
       // Используем записи с числовыми значениями daily_report для выбранного филиала
@@ -326,6 +328,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
   const handleSubmitReport = async () => {
     try {
       const reportPayload = {
+        // Конвертируем дату в формат YYYY-MM-DD для API
         date: new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
         branchId,
         adminName: user?.username || user?.email || 'Неизвестно',

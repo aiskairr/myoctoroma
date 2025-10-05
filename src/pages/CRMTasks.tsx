@@ -150,8 +150,8 @@ interface Task {
   notes?: string;
   manual?: boolean;          // Флаг для ручного создания клиента
   mother?: number;           // ID материнской записи для дополнительных услуг
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string; // Формат: YYYY-MM-DD HH:mm:ss
+  updatedAt: string; // Формат: YYYY-MM-DD HH:mm:ss
 }
 
 // Интерфейс для дополнительной услуги

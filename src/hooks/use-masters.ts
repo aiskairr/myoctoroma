@@ -11,7 +11,7 @@ export interface Master {
   startWorkHour: string;
   endWorkHour: string;
   description?: string;
-  createdAt: string;
+  createdAt: string; // Формат: YYYY-MM-DD HH:mm:ss
   photoUrl?: string;
   branchId: string;
 }

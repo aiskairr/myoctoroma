@@ -17,7 +17,7 @@ export interface ParsedTask {
   duration?: number;
   servicePrice?: number;
   finalPrice?: number;
-  scheduleDate?: string;
+  scheduleDate?: string; // Формат: YYYY-MM-DD
   scheduleTime?: string;
   endTime?: string;
   masterName?: string;
@@ -26,7 +26,7 @@ export interface ParsedTask {
   notes?: string;
   mother?: number;
   paid?: string;
-  createdAt: string;
+  createdAt: string; // Формат: YYYY-MM-DD HH:mm:ss
 }
 
 export interface TaskParserResponse {

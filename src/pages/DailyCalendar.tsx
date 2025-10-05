@@ -88,7 +88,7 @@ interface Task {
   duration?: number; // Добавляем поле duration для совместимости
   servicePrice?: number;
   finalPrice?: number;
-  scheduleDate?: string;
+  scheduleDate?: string; // Формат: YYYY-MM-DDTHH:MM:SS.sssZ (только дата, время всегда 00:00:00.000Z)
   scheduleTime?: string;
   endTime?: string;
   masterName?: string;
@@ -97,7 +97,7 @@ interface Task {
   notes?: string;
   mother?: number; // ID материнской записи для дополнительных услуг
   paid?: string; // Статус оплаты: 'paid' или 'unpaid'
-  createdAt: string;
+  createdAt: string; // Формат: YYYY-MM-DDTHH:MM:SS.sssZ (полная timestamp с временем)
 }
 
 // Интерфейс для дополнительной услуги
@@ -151,7 +151,7 @@ interface ClientFormData {
   notes: string;
   discount: number;
   finalPrice: number;
-  scheduleDate: string;
+  scheduleDate: string; // Формат для отправки на API: YYYY-MM-DD
   scheduleTime: string;
   status?: string;
 }
@@ -210,6 +210,7 @@ const CreateAppointmentDialog = ({
     notes: "",
     discount: 0,
     finalPrice: 0,
+    // Форматируем дату для API в формат YYYY-MM-DD (scheduleDate format)
     scheduleDate: format(selectedDate, 'yyyy-MM-dd'),
     scheduleTime: selectedTime || ""
   });
@@ -644,6 +645,7 @@ const EditAppointmentDialog = ({
     notes: task?.notes || "",
     discount: 0,
     finalPrice: task?.finalPrice || 0,
+    // Извлекаем дату из формата API: YYYY-MM-DDTHH:MM:SS.sssZ -> YYYY-MM-DD
     scheduleDate: task?.scheduleDate?.split('T')[0] || "",
     scheduleTime: task?.scheduleTime || "",
     status: task?.status || 'new'

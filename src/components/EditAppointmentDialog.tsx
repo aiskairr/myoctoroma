@@ -39,7 +39,7 @@ interface Task {
   notes?: string;
   mother?: number;
   paid?: string;
-  createdAt: string;
+  createdAt: string; // Формат: YYYY-MM-DD HH:mm:ss
 }
 
 interface Master {
@@ -89,7 +89,7 @@ interface ClientFormData {
   notes: string;
   discount: number;
   finalPrice: number;
-  scheduleDate: string;
+  scheduleDate: string; // Формат: YYYY-MM-DD
   scheduleTime: string;
   status?: string;
 }

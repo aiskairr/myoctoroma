@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Plus, X, Clock, User, Calendar, GripVertical } from 'lucide-react';
+import { Plus, X, Clock, User, Calendar, GripVertical, Coins } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import TaskDialogBtn from './task-dialog-btn';
@@ -56,6 +56,7 @@ interface Appointment {
     childIds?: string[]; // ID дочерних дополнительных услуг
     isAdditionalService?: boolean; // Флаг дополнительной услуги
     serviceId?: number; // ID услуги из справочника
+    paid?: string; // Статус оплаты: 'paid' или 'unpaid'
 }
 
 // Интерфейс для дополнительной услуги
@@ -150,6 +151,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     const { data: servicesData = [], isLoading: servicesLoading, error: servicesError } = useServices();
     
     // Fetch master working dates for the current date
+    // Конвертируем текущую дату в формат YYYY-MM-DD для API запроса (scheduleDate format)
     const currentDateStr = currentDate.toISOString().split('T')[0];
     const { 
         data: masterWorkingDates = [], 
@@ -242,7 +244,8 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                         endTime: endTime || task.scheduleTime!,
                         duration: task.serviceDuration || 60,
                         status: task.status as 'scheduled' | 'in-progress' | 'completed' | 'cancelled' || 'scheduled',
-                        notes: task.notes || undefined
+                        notes: task.notes || undefined,
+                        paid: task.paid || 'unpaid' // Добавляем статус оплаты
                     };
                     
                     console.log(`📋 Converted appointment:`, {
@@ -726,7 +729,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 return;
             }
 
-            // Format date for API (YYYY-MM-DD)
+            // Форматируем дату для API в формат YYYY-MM-DD (scheduleDate format)
             const scheduleDate = currentDate.toISOString().split('T')[0];
 
             // Get service price
@@ -909,26 +912,18 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         return layoutData;
     }, [appointments]);
 
-    // Generate unique colors for overlapping appointments
-    const getOverlapColor = useCallback((appointment: Appointment, column: number, totalColumns: number) => {
-        if (totalColumns === 1) {
-            const employee = employees.find(emp => emp.id === appointment.employeeId);
-            return employee?.color || '#3B82F6';
-        }
+    // Generate colors based on status instead of employee
+    const getOverlapColor = useCallback((appointment: Appointment) => {
+        // Define colors for each status
+        const statusColors = {
+            'scheduled': '#3B82F6',    // blue
+            'in-progress': '#10B981',  // green  
+            'completed': '#6B7280',    // gray
+            'cancelled': '#EF4444'     // red
+        };
 
-        const colors = [
-            '#3B82F6',
-            '#10B981',
-            '#F59E0B',
-            '#EF4444',
-            '#8B5CF6',
-            '#06B6D4',
-            '#84CC16',
-            '#F97316',
-        ];
-
-        return colors[column % colors.length];
-    }, [employees]);
+        return statusColors[appointment.status] || '#3B82F6';
+    }, []);
 
     // Render appointment block with smart positioning
     const renderAppointmentBlock = (layoutInfo: {
@@ -938,7 +933,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         totalColumns: number;
         zIndex: number;
     }) => {
-        const { appointment, column, width, totalColumns, zIndex } = layoutInfo;
+        const { appointment, column, width, zIndex } = layoutInfo;
         const startIndex = timeSlots.findIndex(slot => slot === appointment.startTime);
         const durationSlots = Math.ceil(appointment.duration / 15);
         const height = durationSlots * TIME_SLOT_HEIGHT - 2;
@@ -980,7 +975,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         const isDragging = dragState.isDragging && dragState.draggedAppointment?.id === appointment.id;
         const isResizing = resizeState.isResizing && resizeState.resizedAppointment?.id === appointment.id;
 
-        const borderColor = getOverlapColor(appointment, column, totalColumns);
+        const borderColor = getOverlapColor(appointment);
 
         // Обновленная логика размеров с учетом новой высоты
         const isVerySmall = height <= 20; // Очень маленькие записи (меньше одного слота)
@@ -1019,9 +1014,16 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
                             {/* Content */}
                             <div
-                                className={`${isVerySmall || isSmall ? 'px-1 py-0.5' : 'px-2 py-1'} h-full flex ${isVerySmall || isSmall ? 'items-center' : 'flex-col justify-between'} cursor-grab active:cursor-grabbing`}
+                                className={`${isVerySmall || isSmall ? 'px-1 py-0.5' : 'px-2 py-1'} h-full flex ${isVerySmall || isSmall ? 'items-center' : 'flex-col justify-between'} cursor-grab active:cursor-grabbing relative`}
                                 onMouseDown={(e) => handleMouseDown(e, appointment, 'drag')}
                             >
+                                {/* Иконка монетки для неоплаченных записей */}
+                                {appointment.paid !== 'paid' && (
+                                    <div className="absolute top-0 right-0 z-10">
+                                        <Coins className="h-6 w-6 text-amber-500" />
+                                    </div>
+                                )}
+                                
                                 {isVerySmall ? (
                                     // Очень маленькие записи - только инициалы клиента
                                     <div className="flex-1 min-w-0 pointer-events-none">
@@ -1107,6 +1109,14 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                 <span className="font-medium">{service.price} сом</span>
                             </div>
                         )}
+
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Оплата:</span>
+                            <span className={`font-medium ${appointment.paid === 'paid' ? 'text-green-600' : 'text-red-600'}`}>
+                                {appointment.paid === 'paid' ? 'Оплачено' : 'Не оплачено'}
+                                {appointment.paid !== 'paid' && <Coins className="inline h-6 w-6 ml-1 text-amber-500" />}
+                            </span>
+                        </div>
 
                         {appointment.notes && (
                             <div className="pt-2 border-t border-gray-200">

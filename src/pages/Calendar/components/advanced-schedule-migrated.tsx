@@ -45,7 +45,7 @@ interface Task {
     notes?: string;
     mother?: number; // ID материнской записи для дополнительных услуг
     paid?: string; // Статус оплаты: 'paid' или 'unpaid'
-    createdAt: string;
+    createdAt: string; // Формат: YYYY-MM-DD HH:mm:ss
 }
 
 // UI Display interface

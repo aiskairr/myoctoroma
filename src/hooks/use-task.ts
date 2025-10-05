@@ -7,7 +7,7 @@ export interface Task {
   clientName: string;
   status: string;
   serviceType: string | null;
-  scheduleDate: string | null;
+  scheduleDate: string | null; // Формат: YYYY-MM-DD
   scheduleTime: string | null;
   endTime: string | null;
   masterName: string | null;
@@ -101,7 +101,8 @@ export const formatTaskForForm = (task: Task | undefined) => {
     };
   }
 
-  // Format date from ISO to DD.MM.YYYY
+  // Format scheduleDate from API format (YYYY-MM-DDTHH:MM:SS.sssZ) to DD.MM.YYYY for display
+  // scheduleDate comes as: "2025-06-10T00:00:00.000Z" - contains date only in UTC
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
     try {
@@ -126,7 +127,6 @@ export const formatTaskForForm = (task: Task | undefined) => {
   const mapStatus = (status: string) => {
     const statusMap: Record<string, string> = {
       'scheduled': 'Записан',
-      'confirmed': 'Подтвержден',
       'in-progress': 'В процессе',
       'completed': 'Завершен',
       'cancelled': 'Отменен'

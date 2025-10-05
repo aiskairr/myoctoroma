@@ -19,7 +19,7 @@ interface serviceService {
   description?: string;
   isActive: boolean;
   instanceId?: string;
-  createdAt: string;
+  createdAt: string; // Формат: YYYY-MM-DD HH:mm:ss
   serviceGroup?: string;
   availableDurations: Array<{
     duration: number;

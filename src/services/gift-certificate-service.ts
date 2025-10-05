@@ -15,8 +15,8 @@ interface GiftCertificate {
   isUsed: boolean;
   isExpired: boolean;
   branchId: string;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: string; // Формат: YYYY-MM-DD HH:mm:ss
+  updatedAt?: string; // Формат: YYYY-MM-DD HH:mm:ss
 }
 
 class GiftCertificateService {

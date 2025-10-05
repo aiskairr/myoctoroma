@@ -17,7 +17,7 @@ export interface TaskFromAPI {
   servicePrice: number | null;
   discount?: number;
   finalPrice: number | null;
-  scheduleDate: string | null; // ISO строка
+  scheduleDate: string | null; // Формат: YYYY-MM-DDTHH:MM:SS.sssZ (только дата, время всегда 00:00:00.000Z)
   scheduleTime: string | null;
   endTime: string | null;
   masterId: number | null;
@@ -30,8 +30,8 @@ export interface TaskFromAPI {
   paymentMethod?: string | null;
   adminName?: string | null;
   paid?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: string; // Формат: YYYY-MM-DDTHH:MM:SS.sssZ (полная timestamp с временем)
+  updatedAt?: string; // Формат: YYYY-MM-DDTHH:MM:SS.sssZ (полная timestamp с временем)
   client?: {
     id: number;
     telegramId: string;
@@ -42,8 +42,8 @@ export interface TaskFromAPI {
     phoneNumber?: string;
     branchId?: string;
     organisationId?: number | null;
-    firstSeenAt?: string;
-    lastActiveAt?: string;
+    firstSeenAt?: string; // Формат: YYYY-MM-DDTHH:MM:SS.sssZ (полная timestamp с временем)
+    lastActiveAt?: string; // Формат: YYYY-MM-DDTHH:MM:SS.sssZ (полная timestamp с временем)
     isActive?: boolean;
   };
 }

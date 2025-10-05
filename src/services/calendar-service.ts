@@ -22,8 +22,8 @@ export interface Appointment {
   service_type: string;    // Тип массажа
   price: number;           // Цена услуги
   notes?: string;          // Дополнительные заметки
-  created_at?: string;     // Дата создания записи
-  updated_at?: string;     // Дата обновления записи
+  created_at?: string;     // Формат: YYYY-MM-DD (дата создания записи)
+  updated_at?: string;     // Формат: YYYY-MM-DD (дата обновления записи)
   is_from_task?: boolean;  // Флаг, показывающий что запись создана из задачи
   duration?: number;       // Длительность в минутах
 }
@@ -43,7 +43,7 @@ export interface ClientTask {
   clientName: string;
   status: string;
   serviceType: string | null;
-  scheduleDate: string | null;
+  scheduleDate: string | null; // Формат: YYYY-MM-DD
   scheduleTime: string | null;
   endTime: string | null;
   masterName: string | null;

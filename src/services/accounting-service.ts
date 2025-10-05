@@ -53,7 +53,7 @@ class AccountingService {
           isGiftCertificateUsed: record.isGiftCertificateUsed,
           branchId: record.branchId,
           date: record.date,
-          schedule_date: record.date // Добавляем schedule_date для корректного сохранения
+          schedule_date: record.date // Формат: YYYY-MM-DD (поле для совместимости с API)
         }),
       });
       if (response.ok) {

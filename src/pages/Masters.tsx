@@ -35,7 +35,7 @@ interface BranchUser {
   role: 'master' | 'reception';
   branchId: string;
   organisationId: string;
-  createdAt: string;
+  createdAt: string; // Формат: YYYY-MM-DD (дата создания записи)
 }
 
 // Интерфейс для мастера
@@ -47,7 +47,7 @@ interface Master {
   isActive: boolean;
   startWorkHour: string;
   endWorkHour: string;
-  createdAt: string;
+  createdAt: string; // Формат: YYYY-MM-DD (дата создания записи)
   photoUrl?: string;
   workingDates?: WorkingDate[];
   // Поля для создания аккаунта
@@ -66,7 +66,7 @@ interface Administrator {
   email?: string;
   notes?: string;
   isActive: boolean;
-  createdAt: string;
+  createdAt: string; // Format: YYYY-MM-DD HH:mm:ss
   // Поля для создания аккаунта
   createAccount?: boolean;
   accountEmail?: string;

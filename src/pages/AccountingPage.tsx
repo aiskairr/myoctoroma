@@ -332,13 +332,14 @@ const AccountingPage = () => {
       return;
     }
 
+    // Конвертируем дату в формат YYYY-MM-DD для API
     const scheduleDate = new Date(newRecordDate.getTime() - (newRecordDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
     const recordToAdd = {
       ...newRecord,
       isGiftCertificateUsed: newRecord.paymentMethod === 'Подарочный Сертификат',
       date: scheduleDate,
-      schedule_date: scheduleDate,
+      schedule_date: scheduleDate, // Формат: YYYY-MM-DD (для совместимости с API)
       branchId: newRecordBranch,
     };
 

@@ -19,8 +19,8 @@ interface SalaryRecord {
   calculated_commission?: number;
   completed_services?: number;
   total_earnings?: number;
-  created_at?: string;
-  updated_at?: string;
+  created_at?: string; // Формат: YYYY-MM-DD (дата создания записи)
+  updated_at?: string; // Формат: YYYY-MM-DD (дата обновления записи)
   employee_type?: string; // 'master' или 'administrator'
 }
 
