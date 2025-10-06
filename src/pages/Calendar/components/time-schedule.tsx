@@ -224,15 +224,35 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             const convertedAppointments = tasksData
                 .filter(task => task.scheduleTime && task.masterId)
                 .map(task => {
+                    // Функция для вычисления длительности в минутах между двумя временами
+                    const calculateDurationFromTimes = (startTime: string, endTime: string): number => {
+                        const [startHours, startMinutes] = startTime.split(':').map(Number);
+                        const [endHours, endMinutes] = endTime.split(':').map(Number);
+                        
+                        const startTotalMinutes = startHours * 60 + startMinutes;
+                        const endTotalMinutes = endHours * 60 + endMinutes;
+                        
+                        return Math.max(0, endTotalMinutes - startTotalMinutes);
+                    };
+                    
                     // Вычисляем endTime если его нет
                     let endTime = task.endTime;
-                    if (!endTime && task.scheduleTime && task.serviceDuration) {
+                    let calculatedDuration = task.serviceDuration || 60; // fallback значение
+                    
+                    if (endTime && task.scheduleTime) {
+                        // Если у нас есть оба времени, вычисляем длительность на их основе
+                        calculatedDuration = calculateDurationFromTimes(task.scheduleTime, endTime);
+                        console.log(`⏱️ Calculated duration from times: ${task.scheduleTime} -> ${endTime} = ${calculatedDuration} minutes`);
+                    } else if (!endTime && task.scheduleTime && task.serviceDuration) {
+                        // Если endTime нет, вычисляем его на основе serviceDuration
                         const [hours, minutes] = task.scheduleTime.split(':').map(Number);
                         const startMinutes = hours * 60 + minutes;
                         const endMinutes = startMinutes + task.serviceDuration;
                         const endHours = Math.floor(endMinutes / 60);
                         const endMins = endMinutes % 60;
                         endTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+                        calculatedDuration = task.serviceDuration;
+                        console.log(`⏱️ Generated endTime from serviceDuration: ${task.scheduleTime} + ${task.serviceDuration}min = ${endTime}`);
                     }
                     
                     const appointment = {
@@ -242,7 +262,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                         service: task.serviceType || 'Услуга',
                         startTime: task.scheduleTime!,
                         endTime: endTime || task.scheduleTime!,
-                        duration: task.serviceDuration || 60,
+                        duration: calculatedDuration,
                         status: (task.status === 'in-progress' ? 'in_progress' : task.status) as 'scheduled' | 'in_progress' | 'completed' | 'cancelled' || 'scheduled',
                         notes: task.notes || undefined,
                         paid: task.paid || 'unpaid' // Добавляем статус оплаты
@@ -958,8 +978,27 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     }) => {
         const { appointment, column, width, zIndex } = layoutInfo;
         const startIndex = timeSlots.findIndex(slot => slot === appointment.startTime);
+        
+        // Вычисляем высоту на основе реального времени между startTime и endTime
+        const calculateHeightFromTimes = (startTime: string, endTime: string): number => {
+            const [startHours, startMinutes] = startTime.split(':').map(Number);
+            const [endHours, endMinutes] = endTime.split(':').map(Number);
+            
+            const startTotalMinutes = startHours * 60 + startMinutes;
+            const endTotalMinutes = endHours * 60 + endMinutes;
+            
+            const actualDurationMinutes = Math.max(0, endTotalMinutes - startTotalMinutes);
+            
+            // Каждые 15 минут = один временной слот = TIME_SLOT_HEIGHT пикселей
+            return Math.max(20, (actualDurationMinutes / 15) * TIME_SLOT_HEIGHT - 2);
+        };
+        
+        // Используем точное время для вычисления высоты
+        const height = appointment.endTime 
+            ? calculateHeightFromTimes(appointment.startTime, appointment.endTime)
+            : Math.ceil(appointment.duration / 15) * TIME_SLOT_HEIGHT - 2; // fallback к старой логике
+        
         const durationSlots = Math.ceil(appointment.duration / 15);
-        const height = durationSlots * TIME_SLOT_HEIGHT - 2;
 
         // Логирование для отладки высоты
         console.log(`📏 Appointment height calculation:`, {
