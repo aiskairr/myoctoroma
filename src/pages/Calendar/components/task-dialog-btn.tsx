@@ -222,6 +222,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
     // Watch для отслеживания изменений в форме
     const watchedServiceType = watch('serviceType');
+    const watchedDuration = watch('duration');
 
     // Функция для получения длительностей для выбранной услуги
     const getAvailableDurations = () => {
@@ -233,6 +234,20 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         return getServiceDurations(selectedService);
     };
 
+    // Автоматическое заполнение стоимости при изменении длительности
+    useEffect(() => {
+        if (watchedDuration && watchedDuration.includes('сом')) {
+            const priceMatch = watchedDuration.match(/(\d+)\s*сом$/);
+            if (priceMatch) {
+                const price = priceMatch[1];
+                reset((formValues) => ({
+                    ...formValues,
+                    cost: price
+                }));
+            }
+        }
+    }, [watchedDuration, reset]);
+
     // Сбрасываем длительность при изменении типа услуги
     useEffect(() => {
         if (watchedServiceType) {
@@ -241,11 +256,15 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             const availableDurations = getAvailableDurations();
             const isDurationValid = availableDurations.some(d => `${d.duration} мин - ${d.price} сом` === currentDuration);
             
-            if (!isDurationValid) {
-                // Сбрасываем длительность если она не подходит к новой услуге
+            if (!isDurationValid && availableDurations.length > 0) {
+                // Автоматически выбираем первую доступную длительность
+                const firstDuration = availableDurations[0];
+                const durationString = `${firstDuration.duration} мин - ${firstDuration.price} сом`;
+                
                 reset((formValues) => ({
                     ...formValues,
-                    duration: ''
+                    duration: durationString,
+                    cost: firstDuration.price.toString()
                 }));
             }
         }
@@ -253,7 +272,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
     // Update form when task data is loaded
     useEffect(() => {
-        if (taskData && !taskLoading) {
+        if (taskData && !taskLoading && servicesData.length > 0) {
             console.log('🔄 Loading task data into form:', taskData);
             console.log('🔄 Available masters:', mastersData);
             console.log('🔄 Available branches:', branches);
@@ -306,6 +325,51 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     console.log('❌ Could not find master!');
                 }
             }
+
+            // Специальная обработка для длительности и стоимости
+            if (taskData.serviceType && servicesData.length > 0) {
+                const selectedService = servicesData.find(s => s.name === taskData.serviceType);
+                if (selectedService) {
+                    console.log('🔧 Found service for task:', selectedService);
+                    const availableDurations = getServiceDurations(selectedService);
+                    
+                    // Если у нас есть длительность и цена из бэкенда
+                    if (taskData.serviceDuration && (taskData.servicePrice || taskData.finalPrice)) {
+                        const targetDuration = taskData.serviceDuration;
+                        const targetPrice = taskData.finalPrice || taskData.servicePrice;
+                        
+                        // Ищем точное совпадение в доступных длительностях
+                        const matchingDuration = availableDurations.find(d => 
+                            d.duration === targetDuration && d.price === targetPrice
+                        );
+                        
+                        if (matchingDuration) {
+                            formData.duration = `${matchingDuration.duration} мин - ${matchingDuration.price} сом`;
+                            formData.cost = matchingDuration.price.toString();
+                            console.log('🔧 Set duration and cost from exact match:', formData.duration, formData.cost);
+                        } else {
+                            // Если точного совпадения нет, используем первую доступную длительность
+                            if (availableDurations.length > 0) {
+                                const firstDuration = availableDurations[0];
+                                formData.duration = `${firstDuration.duration} мин - ${firstDuration.price} сом`;
+                                formData.cost = firstDuration.price.toString();
+                                console.log('🔧 Set duration and cost from first available:', formData.duration, formData.cost);
+                            } else {
+                                // Создаем кастомную длительность если нет доступных вариантов
+                                formData.duration = `${targetDuration} мин - ${targetPrice} сом`;
+                                formData.cost = targetPrice.toString();
+                                console.log('🔧 Set custom duration and cost:', formData.duration, formData.cost);
+                            }
+                        }
+                    } else if (availableDurations.length > 0) {
+                        // Если нет данных о длительности, используем первую доступную
+                        const firstDuration = availableDurations[0];
+                        formData.duration = `${firstDuration.duration} мин - ${firstDuration.price} сом`;
+                        formData.cost = firstDuration.price.toString();
+                        console.log('🔧 Set default duration and cost:', formData.duration, formData.cost);
+                    }
+                }
+            }
             
             console.log('✅ Final form data with corrections:', formData);
             reset(formData);
@@ -315,7 +379,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 loadAdditionalServices(taskId.toString());
             }
         }
-    }, [taskData, taskLoading, reset, branches, taskId, mastersData]);
+    }, [taskData, taskLoading, reset, branches, taskId, mastersData, servicesData]);
 
     const handleOpenChange = useCallback((open: boolean) => {
         setIsOpen(open);
@@ -924,7 +988,21 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                     render={({ field }) => (
                                         <Select
                                             value={field.value}
-                                            onValueChange={field.onChange}
+                                            onValueChange={(value) => {
+                                                field.onChange(value);
+                                                // Автоматически обновляем стоимость при выборе длительности
+                                                if (value && value.includes('сом')) {
+                                                    const priceMatch = value.match(/(\d+)\s*сом$/);
+                                                    if (priceMatch) {
+                                                        const price = priceMatch[1];
+                                                        reset((formValues) => ({
+                                                            ...formValues,
+                                                            duration: value,
+                                                            cost: price
+                                                        }));
+                                                    }
+                                                }
+                                            }}
                                             disabled={!watchedServiceType}
                                         >
                                             <SelectTrigger className={`mt-1 ${errors.duration ? 'border-red-500' : ''}`}>
