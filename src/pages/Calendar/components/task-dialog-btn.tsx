@@ -422,6 +422,12 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         }
     }, []);
 
+    // Функция конвертации даты из формата dd.MM.yyyy в YYYY-MM-DD для API
+    const convertDateFormat = (dateStr: string): string => {
+        const [day, month, year] = dateStr.split('.');
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    };
+
     const onSubmit = async (data: FormData) => {
         console.log('📤 Form submitted! Data:', data);
         console.log('🔍 Task ID:', taskId);
@@ -442,7 +448,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     masterName: data.master,
                     masterId: selectedMaster?.id || null,
                     notes: data.notes,
-                    scheduleDate: data.date,
+                    scheduleDate: convertDateFormat(data.date), // Конвертируем в формат YYYY-MM-DD
                     scheduleTime: data.time,
                     serviceDuration: parseInt(data.duration.split(' ')[0]) || 60, // Извлекаем число из "60 мин - 1000 сом"
                     finalPrice: parseFloat(data.cost) || 0,
@@ -585,7 +591,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             clientName: data.clientName,
             clientPhone: data.phone || undefined,
             notes: data.notes || undefined,
-            scheduleDate: data.date,
+            scheduleDate: convertDateFormat(data.date), // Конвертируем в формат YYYY-MM-DD
             scheduleTime: data.time,
             serviceType: data.serviceType,
             masterId: parseInt(data.master),

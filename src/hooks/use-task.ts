@@ -156,7 +156,7 @@ export interface CreateTaskRequest {
   clientName: string;
   clientPhone?: string;
   notes?: string;
-  scheduleDate: string; // ISO date format
+  scheduleDate: string; // Формат: YYYY-MM-DD
   scheduleTime: string; // HH:MM format
   serviceType: string;
   masterId: number;
