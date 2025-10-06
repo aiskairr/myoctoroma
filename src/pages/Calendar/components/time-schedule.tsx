@@ -49,7 +49,7 @@ interface Appointment {
     startTime: string;
     endTime: string;
     duration: number;
-    status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
+    status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
     notes?: string;
     price?: number;
     motherId?: string; // ID родительской записи для дополнительных услуг
@@ -243,7 +243,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                         startTime: task.scheduleTime!,
                         endTime: endTime || task.scheduleTime!,
                         duration: task.serviceDuration || 60,
-                        status: task.status as 'scheduled' | 'in-progress' | 'completed' | 'cancelled' || 'scheduled',
+                        status: (task.status === 'in-progress' ? 'in_progress' : task.status) as 'scheduled' | 'in_progress' | 'completed' | 'cancelled' || 'scheduled',
                         notes: task.notes || undefined,
                         paid: task.paid || 'unpaid' // Добавляем статус оплаты
                     };
@@ -599,6 +599,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             const startY = startIndex * TIME_SLOT_HEIGHT + HEADER_HEIGHT;
 
             let newDuration = resizeState.originalDuration;
+            let newStartTime = appointment.startTime;
 
             if (resizeState.direction === 'bottom') {
                 const deltaY = mouseY - startY;
@@ -609,25 +610,24 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 newDuration = Math.max(15, Math.round(deltaY / TIME_SLOT_HEIGHT) * 15);
 
                 const newStartMinutes = timeToMinutes(appointment.startTime) - (newDuration - resizeState.originalDuration);
-                const newStartTime = minutesToTime(Math.max(0, newStartMinutes));
-
-                updateAppointment(appointment.id, {
-                    startTime: newStartTime,
-                    duration: newDuration,
-                    endTime: minutesToTime(timeToMinutes(newStartTime) + newDuration)
-                });
-                return;
+                newStartTime = minutesToTime(Math.max(0, newStartMinutes));
             }
 
-            if (newDuration !== appointment.duration) {
-                const newEndMinutes = timeToMinutes(appointment.startTime) + newDuration;
-                updateAppointment(appointment.id, {
-                    duration: newDuration,
-                    endTime: minutesToTime(newEndMinutes)
-                });
+            // Only update local state during resize for smooth interaction
+            // Final API call will be made in handleMouseUp
+            if (newDuration !== appointment.duration || newStartTime !== appointment.startTime) {
+                const newEndMinutes = timeToMinutes(newStartTime) + newDuration;
+                setAppointments(prev => prev.map(apt =>
+                    apt.id === appointment.id ? {
+                        ...apt,
+                        startTime: newStartTime,
+                        duration: newDuration,
+                        endTime: minutesToTime(newEndMinutes)
+                    } : apt
+                ));
             }
         }
-    }, [dragState, resizeState, getPositionFromMouse, timeSlots, updateAppointment]);
+    }, [dragState, resizeState, getPositionFromMouse, timeSlots]);
 
     const handleMouseUp = useCallback(() => {
         if (dragState.isDragging && dragState.draggedAppointment && dragState.targetSlot) {
@@ -640,6 +640,29 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                     employeeId,
                     startTime: timeSlot,
                     endTime: minutesToTime(newEndMinutes)
+                });
+            }
+        }
+
+        // Handle resize completion
+        if (resizeState.isResizing && resizeState.resizedAppointment) {
+            const appointment = resizeState.resizedAppointment;
+            const currentAppointment = appointments.find(apt => apt.id === appointment.id);
+            
+            if (currentAppointment && currentAppointment.duration !== resizeState.originalDuration) {
+                console.log('🔄 Resize completed - sending final update:', {
+                    appointmentId: appointment.id,
+                    originalDuration: resizeState.originalDuration,
+                    newDuration: currentAppointment.duration,
+                    direction: resizeState.direction
+                });
+
+                // Send final PUT request with the updated duration
+                const newEndMinutes = timeToMinutes(currentAppointment.startTime) + currentAppointment.duration;
+                updateAppointment(appointment.id, {
+                    startTime: currentAppointment.startTime,
+                    endTime: minutesToTime(newEndMinutes),
+                    duration: currentAppointment.duration
                 });
             }
         }
@@ -659,7 +682,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             originalDuration: 0,
             direction: null
         });
-    }, [dragState, updateAppointment, doesAppointmentFitWorkingHours]);
+    }, [dragState, resizeState, appointments, updateAppointment, doesAppointmentFitWorkingHours]);
 
     // Global mouse event listeners
     useEffect(() => {
@@ -914,15 +937,15 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
     // Generate colors based on status instead of employee
     const getOverlapColor = useCallback((appointment: Appointment) => {
-        // Define colors for each status
+        // Define colors for each status - новая цветовая схема
         const statusColors = {
-            'scheduled': '#3B82F6',    // blue
-            'in-progress': '#10B981',  // green  
-            'completed': '#6B7280',    // gray
-            'cancelled': '#EF4444'     // red
+            'scheduled': '#10B981',    // green - записан
+            'in_progress': '#3B82F6',  // blue - в процессе
+            'completed': '#F59E0B',    // yellow - завершен 
+            'cancelled': '#EF4444'     // red - отменен
         };
 
-        return statusColors[appointment.status] || '#3B82F6';
+        return statusColors[appointment.status] || '#10B981';
     }, []);
 
     // Render appointment block with smart positioning
@@ -952,24 +975,24 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         });
 
         const statusColors = {
-            'scheduled': 'bg-blue-50 text-blue-900',
-            'in-progress': 'bg-green-50 text-green-900',
-            'completed': 'bg-gray-50 text-gray-900',
-            'cancelled': 'bg-red-50 text-red-900'
+            'scheduled': 'bg-green-50 text-green-900',        // Зеленый - записан
+            'in_progress': 'bg-blue-50 text-blue-900',        // Синий - в процессе  
+            'completed': 'bg-yellow-50 text-yellow-900',      // Желтый - завершен
+            'cancelled': 'bg-red-50 text-red-900'             // Красный - отменен
         };
 
         const statusLabels = {
             'scheduled': 'Запланировано',
-            'in-progress': 'В процессе',
+            'in_progress': 'В процессе',
             'completed': 'Завершено',
             'cancelled': 'Отменено'
         };
 
         const statusColorsTooltip = {
-            'scheduled': 'text-blue-700 bg-blue-100',
-            'in-progress': 'text-green-700 bg-green-100',
-            'completed': 'text-gray-700 bg-gray-100',
-            'cancelled': 'text-red-700 bg-red-100'
+            'scheduled': 'text-green-700 bg-green-100',       // Зеленый - записан
+            'in_progress': 'text-blue-700 bg-blue-100',       // Синий - в процессе
+            'completed': 'text-yellow-700 bg-yellow-100',     // Желтый - завершен
+            'cancelled': 'text-red-700 bg-red-100'            // Красный - отменен
         };
 
         const isDragging = dragState.isDragging && dragState.draggedAppointment?.id === appointment.id;
@@ -991,7 +1014,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 <TaskDialogBtn taskId={parseInt(appointment.id)}>
                     <TooltipTrigger asChild>
                         <div
-                            className={`absolute border-l-4 rounded-r-md text-xs group transition-all duration-100 ${statusColors[appointment.status]
+                            className={`absolute border-l-8 rounded-r-md text-xs group transition-all duration-100 ${statusColors[appointment.status]
                                 } ${isDragging ? 'opacity-70 scale-105 shadow-xl ring-2 ring-blue-400/50' : 'shadow-sm hover:shadow-md'} ${isResizing ? 'ring-2 ring-blue-400' : ''
                                 } hover:opacity-90`}
                             style={{
@@ -999,7 +1022,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                 height: Math.max(height, 20), // Минимальная высота уменьшена до 20px
                                 left: `${(column * width)}%`,
                                 width: `${width}%`,
-                                paddingLeft: column > 0 ? '2px' : '4px',
+                                paddingLeft: column > 0 ? '4px' : '8px',
                                 paddingRight: '4px',
                                 borderLeftColor: borderColor,
                                 zIndex: zIndex,
@@ -1316,9 +1339,9 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                 </div>
                             )}
 
-                            {/* Time Column - Sticky */}
-                            <div className="w-20 flex-shrink-0 border-r border-gray-200 bg-gray-50">
-                                <div className="h-16 border-b border-gray-200 flex items-center justify-center sticky top-0 z-20 bg-gray-50 shadow-sm">
+                            {/* Time Column - Sticky при горизонтальном и вертикальном скролле */}
+                            <div className="w-20 flex-shrink-0 border-r border-gray-200 bg-gray-50 sticky left-0 z-30">
+                                <div className="h-16 border-b border-gray-200 flex items-center justify-center sticky top-0 z-40 bg-gray-50 shadow-sm">
                                     <Clock size={16} className="text-gray-500" />
                                 </div>
                                 {timeSlots.map((slot, index) => (

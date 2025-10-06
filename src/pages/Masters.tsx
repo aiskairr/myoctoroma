@@ -474,15 +474,6 @@ const MasterCard: React.FC<{
         </div>
       </CardContent>
       <CardFooter className="pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onScheduleClick}
-          className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 min-w-[120px] text-sm"
-        >
-          <CalendarDays className="h-4 w-4 mr-2" />
-          Рабочие дни
-        </Button>
         <div className="flex gap-3">
           <Button
             variant="outline"
@@ -491,7 +482,7 @@ const MasterCard: React.FC<{
             className="text-gray-600 border-gray-200 hover:bg-gray-50 min-w-[100px] text-sm"
           >
             <EditIcon className="h-4 w-4 mr-2" />
-            Изменить
+            Настроить
           </Button>
           <Button
             variant="destructive"

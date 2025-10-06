@@ -17,6 +17,9 @@ export default function StatusBadge({ status, className, showIndicator = true }:
     if (statusLower === "inactive") return "Неактивен";
     if (statusLower === "processed") return "Обработан";
     if (statusLower === "completed") return "Завершен";
+    if (statusLower === "in_progress") return "В процессе";
+    if (statusLower === "scheduled") return "Записан";
+    if (statusLower === "cancelled") return "Отменен";
     if (statusLower === "registered") return "Зарегистрирован";
     if (statusLower === "success") return "Успешно";
     if (statusLower === "failed") return "Ошибка";
@@ -39,7 +42,7 @@ export default function StatusBadge({ status, className, showIndicator = true }:
       return <Check className="h-3 w-3" />;
     }
 
-    if (statusLower === "failed" || statusLower === "error") {
+    if (statusLower === "failed" || statusLower === "error" || statusLower === "cancelled") {
       return <XCircle className="h-3 w-3" />;
     }
 
@@ -47,7 +50,7 @@ export default function StatusBadge({ status, className, showIndicator = true }:
       return <AlertCircle className="h-3 w-3" />;
     }
 
-    if (statusLower === "processing" || statusLower === "pending") {
+    if (statusLower === "processing" || statusLower === "pending" || statusLower === "in_progress" || statusLower === "scheduled") {
       return <Clock className="h-3 w-3" />;
     }
 
@@ -58,24 +61,35 @@ export default function StatusBadge({ status, className, showIndicator = true }:
   const getStatusColor = (status: string) => {
     const statusLower = status.toLowerCase();
 
-    if (statusLower === "active" ||
-      statusLower === "processed" ||
-      statusLower === "completed" ||
-      statusLower === "registered" ||
-      statusLower === "success") {
+    // Зеленый - записан (scheduled)
+    if (statusLower === "scheduled") {
       return "bg-green-500 hover:bg-green-600 text-white";
     }
 
-    if (statusLower === "failed" || statusLower === "error") {
+    // Синий - в процессе (in_progress)
+    if (statusLower === "in_progress" || statusLower === "processing" || statusLower === "pending") {
+      return "bg-blue-500 hover:bg-blue-600 text-white";
+    }
+
+    // Желтый - завершен (completed)
+    if (statusLower === "completed") {
+      return "bg-yellow-500 hover:bg-yellow-600 text-white";
+    }
+
+    // Другие статусы
+    if (statusLower === "active" ||
+      statusLower === "processed" ||
+      statusLower === "registered" ||
+      statusLower === "success") {
+      return "bg-emerald-500 hover:bg-emerald-600 text-white";
+    }
+
+    if (statusLower === "failed" || statusLower === "error" || statusLower === "cancelled") {
       return "bg-red-500 hover:bg-red-600 text-white";
     }
 
     if (statusLower === "inactive") {
       return "bg-gray-500 hover:bg-gray-600 text-white";
-    }
-
-    if (statusLower === "processing" || statusLower === "pending") {
-      return "bg-blue-500 hover:bg-blue-600 text-white";
     }
 
     return "bg-gray-200 hover:bg-gray-300 text-gray-800";

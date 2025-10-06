@@ -57,7 +57,7 @@ interface AppointmentDisplay {
     startTime: string;
     endTime: string;
     duration: number;
-    status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
+    status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
     notes?: string;
     paid?: string;
     phone?: string;
@@ -163,7 +163,7 @@ const AdvancedScheduleComponent: React.FC = () => {
             startTime: task.scheduleTime || '',
             endTime: task.endTime || '',
             duration: task.duration || task.serviceDuration || 60,
-            status: task.status as 'scheduled' | 'in-progress' | 'completed' | 'cancelled',
+            status: task.status as 'scheduled' | 'in_progress' | 'completed' | 'cancelled',
             notes: task.notes,
             paid: task.paid,
             phone: task.client?.phoneNumber,

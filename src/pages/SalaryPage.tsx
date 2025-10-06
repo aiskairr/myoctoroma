@@ -68,8 +68,16 @@ export default function SalaryPage() {
   const fetchSalaryData = async () => {
     setIsLoading(true);
     try {
-      const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/salaries`);
       const branchId = getBranchIdWithFallback(currentBranch, branches);
+      
+      // Проверяем что branchId валиден перед запросом
+      if (!branchId) {
+        console.warn('Пропускаем загрузку зарплат: branchId не определен');
+        setIsLoading(false);
+        return;
+      }
+      
+      const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/salaries`);
       url.searchParams.append('branchId', branchId);
       
       const response = await fetch(url.toString());
@@ -88,6 +96,8 @@ export default function SalaryPage() {
         }));
         console.log('Загружены данные зарплат:', formattedData);
         setSalaryRecords(formattedData);
+      } else {
+        console.error('Ошибка загрузки зарплат:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Ошибка загрузки данных зарплат:', error);
@@ -104,16 +114,25 @@ export default function SalaryPage() {
   // Загрузка данных из accounting для расчетов
   const fetchAccountingData = async () => {
     try {
+      const branchId = getBranchIdWithFallback(currentBranch, branches);
+      
+      // Проверяем что branchId валиден перед запросом
+      if (!branchId) {
+        console.warn('Пропускаем загрузку accounting данных: branchId не определен');
+        return;
+      }
+      
       const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/accounting/period`);
       url.searchParams.append('startDate', startDate);
       url.searchParams.append('endDate', endDate);
-      const branchId = getBranchIdWithFallback(currentBranch, branches);
       url.searchParams.append('branchId', branchId);
       
       const response = await fetch(url.toString());
       if (response.ok) {
         const data = await response.json();
         setAccountingData(data);
+      } else {
+        console.error('Ошибка загрузки accounting данных:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Ошибка загрузки данных accounting:', error);
@@ -124,13 +143,22 @@ export default function SalaryPage() {
   const fetchSalaryPayments = async () => {
     try {
       const branchId = getBranchIdWithFallback(currentBranch, branches);
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments?startDate=${startDate}&endDate=${endDate}&branchId=${branchId}`);
+      
+      // Проверяем что branchId валиден перед запросом
+      if (!branchId) {
+        console.warn('Пропускаем загрузку выплат: branchId не определен');
+        return;
+      }
+      
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments?branchId=${branchId}&startDate=${startDate}&endDate=${endDate}`);
       if (response.ok) {
         const data = await response.json();
         console.log('Данные выплат:', data);
         // Убеждаемся что данные это массив
         const paymentsArray = Array.isArray(data) ? data : (data.payments || []);
         setSalaryPayments(paymentsArray);
+      } else {
+        console.error('Ошибка загрузки выплат:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Ошибка загрузки выплат:', error);
@@ -203,19 +231,42 @@ export default function SalaryPage() {
   // Сохранение выплаты
   const savePayment = async (employeeId: number, employeeName: string, amount: number) => {
     try {
+      const branchId = getBranchIdWithFallback(currentBranch, branches);
+      
+      // Проверяем что branchId валиден перед запросом
+      if (!branchId) {
+        console.warn('Не удается сохранить выплату: branchId не определен');
+        toast({
+          title: "Ошибка",
+          description: "Не удается определить филиал для сохранения выплаты",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const paymentData = {
+        // Основные поля согласно API требованиям
+        employeeName: employeeName, // "Employee name" в camelCase
+        amount: amount, // "amount"
+        branchId: branchId, // "branch ID" в camelCase
+        
+        // Дополнительные поля (на случай если API ожидает другие варианты)
+        employee_id: employeeId,
+        employee_name: employeeName,
+        branch_id: branchId,
+        payment_date: new Date().toISOString().split('T')[0],
+        period_start: startDate,
+        period_end: endDate
+      };
+      
+      console.log('💰 Sending salary payment data:', paymentData);
+      
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          employee_id: employeeId,
-          employee_name: employeeName,
-          amount: amount,
-          payment_date: new Date().toISOString().split('T')[0], // Текущая дата
-          period_start: startDate,
-          period_end: endDate
-        }),
+        body: JSON.stringify(paymentData),
       });
 
       if (response.ok) {
@@ -228,6 +279,15 @@ export default function SalaryPage() {
           const updated = { ...prev };
           delete updated[employeeId];
           return updated;
+        });
+      } else {
+        // Получаем детали ошибки от API
+        const errorData = await response.json();
+        console.error('❌ API Error:', errorData);
+        toast({
+          title: "Ошибка API",
+          description: errorData.message || `Статус: ${response.status}`,
+          variant: "destructive",
         });
       }
     } catch (error) {

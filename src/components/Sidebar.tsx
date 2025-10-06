@@ -579,6 +579,7 @@ function AdminSidebar() {
     { path: "/salary", label: "Зарплаты", icon: <DollarSign className="h-5 w-5" /> },
     { path: "/gift-certificates", label: "Сертификаты", icon: <Gift className="h-5 w-5" /> },
     { path: "/reports", label: "Отчеты", icon: <FileBarChart className="h-5 w-5" /> },
+    { path: "/settings", label: "Настройки", icon: <SettingsIcon className="h-5 w-5" /> },
     { path: "/how-to-use", label: "Как пользоваться?", icon: <HelpCircle className="h-5 w-5" /> },
   ];
 

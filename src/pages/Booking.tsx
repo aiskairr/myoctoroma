@@ -67,15 +67,52 @@ const BookingPage: React.FC = () => {
   const searchParams = new URLSearchParams(window.location.search);
   const organisationId = searchParams.get('organisationId') || '';
 
+  // Если organisationId не указан, показываем ошибку
+  if (!organisationId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50">
+        <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+          <div className="container mx-auto px-4 py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                  OCTA CRM
+                </h1>
+                <p className="text-sm text-muted-foreground">Онлайн-запись</p>
+              </div>
+            </div>
+          </div>
+        </header>
+        <main className="container mx-auto px-4 py-8 max-w-6xl">
+          <Card className="max-w-md mx-auto">
+            <CardContent className="pt-6 text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto">
+                <MapPin className="h-8 w-8 text-red-600" />
+              </div>
+              <h2 className="text-xl font-semibold">Ошибка URL</h2>
+              <p className="text-muted-foreground">
+                Не указан идентификатор организации. Проверьте правильность ссылки.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Правильный формат: booking?organisationId=1
+              </p>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
   const [bookingData, setBookingData] = useState<BookingData>({
     name: '',
     phone: '',
     branch: '',
   });
 
-  const { data: organisationBranches, isLoading: organisationBranchesLoading } = useQuery({
-    queryKey: ['organisationBranches'],
-    queryFn: () => getOrganisationBranches(organisationId)
+  const { data: organisationBranches, isLoading: organisationBranchesLoading, error: organisationBranchesError } = useQuery({
+    queryKey: ['organisationBranches', organisationId],
+    queryFn: () => getOrganisationBranches(organisationId),
+    enabled: !!organisationId
   });
 
   const { data: servicesList, isLoading: servicesLoading } = useQuery({
@@ -744,7 +781,7 @@ const BookingPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                Elitaroma
+                OCTA CRM
               </h1>
               <p className="text-sm text-muted-foreground">Онлайн-запись</p>
             </div>

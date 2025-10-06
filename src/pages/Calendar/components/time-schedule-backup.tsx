@@ -639,7 +639,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 <TaskDialogBtn>
                     <TooltipTrigger asChild>
                         <div
-                            className={`absolute border-l-4 rounded-r-md text-xs group transition-all duration-100 ${statusColors[appointment.status]
+                            className={`absolute border-l-8 rounded-r-md text-xs group transition-all duration-100 ${statusColors[appointment.status]
                                 } ${isDragging ? 'opacity-70 scale-105 shadow-xl ring-2 ring-blue-400/50' : 'shadow-sm hover:shadow-md'} ${isResizing ? 'ring-2 ring-blue-400' : ''
                                 } hover:opacity-90`}
                             style={{

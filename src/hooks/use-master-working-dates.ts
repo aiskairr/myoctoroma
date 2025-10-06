@@ -43,7 +43,7 @@ export const useMasterWorkingDates = (date?: string, branchId?: string) => {
 
       return response.json();
     },
-    enabled: !!date, // Запрос выполняется только если передана дата
+    enabled: !!date && !!branchId, // Запрос выполняется только если переданы и дата и branchId
     staleTime: 5 * 60 * 1000, // Данные считаются свежими 5 минут
     refetchOnWindowFocus: false,
   });

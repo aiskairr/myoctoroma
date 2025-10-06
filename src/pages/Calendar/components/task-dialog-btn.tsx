@@ -220,6 +220,37 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         }
     });
 
+    // Watch для отслеживания изменений в форме
+    const watchedServiceType = watch('serviceType');
+
+    // Функция для получения длительностей для выбранной услуги
+    const getAvailableDurations = () => {
+        if (!watchedServiceType) return [];
+        
+        const selectedService = servicesData.find(s => s.name === watchedServiceType);
+        if (!selectedService) return [];
+        
+        return getServiceDurations(selectedService);
+    };
+
+    // Сбрасываем длительность при изменении типа услуги
+    useEffect(() => {
+        if (watchedServiceType) {
+            // Если услуга изменилась, сбрасываем длительность
+            const currentDuration = watch('duration');
+            const availableDurations = getAvailableDurations();
+            const isDurationValid = availableDurations.some(d => `${d.duration} мин - ${d.price} сом` === currentDuration);
+            
+            if (!isDurationValid) {
+                // Сбрасываем длительность если она не подходит к новой услуге
+                reset((formValues) => ({
+                    ...formValues,
+                    duration: ''
+                }));
+            }
+        }
+    }, [watchedServiceType, watch, reset]);
+
     // Update form when task data is loaded
     useEffect(() => {
         if (taskData && !taskLoading) {
@@ -358,9 +389,11 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     }, [additionalServices]);
 
     const calculateTotalPrice = useCallback((basePrice: number = 0) => {
+        // Если basePrice не передан, используем цену из формы или данных задачи
+        const mainPrice = basePrice || parseFloat(watch('cost')) || taskData?.finalPrice || taskData?.servicePrice || 0;
         const additionalPrice = additionalServices.reduce((sum, service) => sum + service.price, 0);
-        return basePrice + additionalPrice;
-    }, [additionalServices]);
+        return mainPrice + additionalPrice;
+    }, [additionalServices, watch, taskData]);
 
     const addAdditionalService = useCallback(() => {
         if (!newAdditionalService.serviceId) return;
@@ -892,27 +925,31 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                         <Select
                                             value={field.value}
                                             onValueChange={field.onChange}
+                                            disabled={!watchedServiceType}
                                         >
                                             <SelectTrigger className={`mt-1 ${errors.duration ? 'border-red-500' : ''}`}>
-                                                <SelectValue />
+                                                <SelectValue placeholder={
+                                                    !watchedServiceType 
+                                                        ? "Сначала выберите услугу" 
+                                                        : "Выберите длительность"
+                                                } />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {services.map(service => {
-                                                    const durations = getServiceDurations(servicesData.find(s => s.name === service.name) || servicesData[0]);
-                                                    return durations.map(({ duration, price }) => (
-                                                        <SelectItem key={`${service.name}-${duration}`} value={`${duration} мин - ${price} сом`}>
-                                                            {duration} мин - {price} сом
-                                                        </SelectItem>
-                                                    ));
-                                                }).flat()}
-                                                {/* Fallback options if no services loaded */}
-                                                {services.length === 0 && (
-                                                    <>
-                                                        <SelectItem value="30 мин - 300 сом">30 мин - 300 сом</SelectItem>
-                                                        <SelectItem value="60 мин - 500 сом">60 мин - 500 сом</SelectItem>
-                                                        <SelectItem value="90 мин - 700 сом">90 мин - 700 сом</SelectItem>
-                                                        <SelectItem value="120 мин - 900 сом">120 мин - 900 сом</SelectItem>
-                                                    </>
+                                                {getAvailableDurations().map(({ duration, price }) => (
+                                                    <SelectItem key={`${duration}-${price}`} value={`${duration} мин - ${price} сом`}>
+                                                        {duration} мин - {price} сом
+                                                    </SelectItem>
+                                                ))}
+                                                {/* Fallback options if no service selected or no durations available */}
+                                                {!watchedServiceType && (
+                                                    <SelectItem value="" disabled>
+                                                        Выберите услугу для отображения длительностей
+                                                    </SelectItem>
+                                                )}
+                                                {watchedServiceType && getAvailableDurations().length === 0 && (
+                                                    <SelectItem value="" disabled>
+                                                        Нет доступных длительностей для этой услуги
+                                                    </SelectItem>
                                                 )}
                                             </SelectContent>
                                         </Select>
@@ -996,10 +1033,10 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Записан">Записан</SelectItem>
-                                                <SelectItem value="В процессе">В процессе</SelectItem>
-                                                <SelectItem value="Завершен">Завершен</SelectItem>
-                                                <SelectItem value="Отменен">Отменен</SelectItem>
+                                                <SelectItem value="scheduled">Записан</SelectItem>
+                                                <SelectItem value="in_progress">В процессе</SelectItem>
+                                                <SelectItem value="completed">Завершен</SelectItem>
+                                                <SelectItem value="cancelled">Отменен</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     )}

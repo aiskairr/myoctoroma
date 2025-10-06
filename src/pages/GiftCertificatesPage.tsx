@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { apiPost } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,63 +53,168 @@ const GiftCertificatesPage = () => {
   const [masters, setMasters] = useState<string[]>([]);
   const [administrators, setAdministrators] = useState<string[]>([]);
   const [serviceTypes, setserviceTypes] = useState<string[]>([]);
+  const [servicesData, setServicesData] = useState<any[]>([]); // Полные данные услуг
+  const [durationOptions, setDurationOptions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Функция для получения доступных длительностей для конкретной услуги
+  const getDurationsForService = (serviceName: string): string[] => {
+    const service = servicesData.find(s => s.name === serviceName);
+    if (!service) return [];
+
+    const durations = new Set<number>();
+    
+    // Проверяем все поля длительностей
+    const durationFields = [
+      'duration10_price', 'duration15_price', 'duration20_price', 'duration30_price',
+      'duration40_price', 'duration50_price', 'duration60_price', 'duration75_price',
+      'duration80_price', 'duration90_price', 'duration110_price', 'duration120_price',
+      'duration150_price', 'duration220_price'
+    ];
+
+    durationFields.forEach(field => {
+      if (service[field] && service[field] > 0) {
+        const duration = parseInt(field.replace('duration', '').replace('_price', ''));
+        durations.add(duration);
+      }
+    });
+
+    // Добавляем defaultDuration, если есть
+    if (service.defaultDuration) {
+      durations.add(service.defaultDuration);
+    }
+
+    // Конвертируем в отсортированный массив строк
+    return Array.from(durations)
+      .sort((a, b) => a - b)
+      .map(duration => `${duration} мин`);
+  };
+
+  // Обработчик изменения типа услуги
+  const handleServiceTypeChange = (serviceType: string) => {
+    setUsageData({ ...usageData, service_type: serviceType, duration: '' }); // Сбрасываем длительность
+    const availableDurations = getDurationsForService(serviceType);
+    setDurationOptions(availableDurations);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!currentBranch?.id) return;
+      
       setIsLoading(true);
       try {
-        // Загружаем сертификаты
-        const certificatesResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?branchId=${currentBranch?.id}`);
+        // Загружаем все данные параллельно для лучшей производительности
+        const [certificatesResponse, mastersResponse, administratorsResponse, serviceTypesResponse] = await Promise.all([
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?branchId=${currentBranch.id}`),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${currentBranch.id}`), // Используем dedicated endpoint для мастеров
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchID=${currentBranch.id}`), // Добавляем фильтр по филиалу
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${currentBranch.id}`) // Используем services endpoint вместо service-types
+        ]);
+
+        // Обрабатываем сертификаты
         if (certificatesResponse.ok) {
           const allCertificates = await certificatesResponse.json();
-
+          const now = new Date();
+          
           const active = allCertificates.filter((cert: GiftCertificate) =>
-            !cert.is_used && !cert.is_expired && new Date(cert.expiry_date) >= new Date()
+            !cert.is_used && !cert.is_expired && new Date(cert.expiry_date) >= now
           );
           const used = allCertificates.filter((cert: GiftCertificate) =>
-            cert.is_used || cert.is_expired || new Date(cert.expiry_date) < new Date()
+            cert.is_used || cert.is_expired || new Date(cert.expiry_date) < now
           );
 
           setActiveCertificates(active);
           setUsedCertificates(used);
+        } else {
+          console.error('Failed to load certificates:', certificatesResponse.status);
         }
 
-        // Загружаем мастеров из таблицы salaries
-        const mastersResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/employees?role=мастер`);
+        // Обрабатываем мастеров
         if (mastersResponse.ok) {
           const mastersData = await mastersResponse.json();
-          const masterNames = mastersData.map((m: any) => m.name).filter((name: string) => Boolean(name));
+          const masterNames = mastersData
+            .filter((m: any) => m.isActive && m.name) // Только активные мастера с именами
+            .map((m: any) => m.name as string);
           setMasters(Array.from(new Set(masterNames)));
+        } else {
+          console.error('Failed to load masters:', mastersResponse.status);
+          // Fallback: пробуем альтернативный endpoint
+          try {
+            const fallbackResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/employees?role=мастер&branchId=${currentBranch.id}`);
+            if (fallbackResponse.ok) {
+              const mastersData = await fallbackResponse.json();
+              const masterNames = mastersData
+                .filter((m: any) => m.name)
+                .map((m: any) => m.name as string);
+              setMasters(Array.from(new Set(masterNames)));
+            }
+          } catch (fallbackError) {
+            console.error('Fallback masters loading failed:', fallbackError);
+          }
         }
 
-        // Загружаем администраторов из таблицы salaries
-        const administratorsResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/employees?role=администратор`);
+        // Обрабатываем администраторов
         if (administratorsResponse.ok) {
           const administratorsData = await administratorsResponse.json();
-          const adminNames = administratorsData.map((a: any) => a.name).filter((name: string) => Boolean(name));
+          const adminNames = administratorsData
+            .filter((a: any) => a.name) // Только записи с именами
+            .map((a: any) => a.name as string);
           setAdministrators(Array.from(new Set(adminNames)));
+        } else {
+          console.error('Failed to load administrators:', administratorsResponse.status);
         }
 
-        // Загружаем типы массажа из таблицы client_tasks
-        const serviceTypesResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/service-types?branchId=${currentBranch?.id}`);
+        // Обрабатываем типы услуг
         if (serviceTypesResponse.ok) {
           const serviceTypesData = await serviceTypesResponse.json();
-          const typeNames = serviceTypesData.map((t: any) => t.service_type).filter((type: string) => Boolean(type));
+          
+          // Сохраняем полные данные услуг
+          setServicesData(serviceTypesData);
+          
+          // Извлекаем только названия активных услуг
+          const typeNames = serviceTypesData
+            .filter((s: any) => s.name && s.isActive !== false) // Только активные услуги
+            .map((s: any) => s.name as string);
           setserviceTypes(Array.from(new Set(typeNames)));
+
+          // Пока не выбрана услуга, показываем пустой список длительностей
+          setDurationOptions([]);
+        } else {
+          console.error('Failed to load service types:', serviceTypesResponse.status);
+          // Fallback: пробуем альтернативный endpoint
+          try {
+            const fallbackResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/service-types?branchId=${currentBranch.id}`);
+            if (fallbackResponse.ok) {
+              const serviceTypesData = await fallbackResponse.json();
+              const typeNames = serviceTypesData
+                .filter((t: any) => t.service_type)
+                .map((t: any) => t.service_type as string);
+              setserviceTypes(Array.from(new Set(typeNames)));
+              
+              // Устанавливаем длительности по умолчанию в случае fallback
+              setDurationOptions([]);
+            }
+          } catch (fallbackError) {
+            console.error('Fallback service types loading failed:', fallbackError);
+            // Устанавливаем длительности по умолчанию при ошибке
+            setDurationOptions([]);
+          }
         }
+
       } catch (error) {
+        console.error('Error loading data:', error);
         toast({
           title: "Ошибка загрузки",
-          description: "Не удалось загрузить данные",
+          description: "Не удалось загрузить данные. Проверьте подключение к интернету.",
           variant: "destructive"
         });
       } finally {
         setIsLoading(false);
       }
     };
+    
     fetchData();
-  }, [currentBranch, toast]);
+  }, [currentBranch?.id, toast]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -317,8 +421,6 @@ const GiftCertificatesPage = () => {
     'Подарочный Сертификат'
   ];
 
-  const durationOptions = ['30 мин', '45 мин', '60 мин', '90 мин', '120 мин'];
-
   if (isLoading) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
@@ -506,7 +608,7 @@ const GiftCertificatesPage = () => {
                           />
                           <Select
                             value={usageData.service_type}
-                            onValueChange={(value) => setUsageData({ ...usageData, service_type: value })}
+                            onValueChange={handleServiceTypeChange}
                           >
                             <SelectTrigger className="rounded-lg">
                               <SelectValue placeholder="Выберите тип массажа*" />
@@ -520,9 +622,16 @@ const GiftCertificatesPage = () => {
                           <Select
                             value={usageData.duration}
                             onValueChange={(value) => setUsageData({ ...usageData, duration: value })}
+                            disabled={!usageData.service_type || durationOptions.length === 0}
                           >
                             <SelectTrigger className="rounded-lg">
-                              <SelectValue placeholder="Выберите длительность*" />
+                              <SelectValue placeholder={
+                                !usageData.service_type 
+                                  ? "Сначала выберите услугу" 
+                                  : durationOptions.length === 0 
+                                    ? "Нет доступных длительностей" 
+                                    : "Выберите длительность*"
+                              } />
                             </SelectTrigger>
                             <SelectContent>
                               {durationOptions.map(duration => (

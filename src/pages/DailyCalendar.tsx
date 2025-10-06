@@ -14,12 +14,15 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useBranch } from "@/contexts/BranchContext";
 import { useIsMaster } from "@/hooks/use-master-role";
+import { useServices } from "@/hooks/use-services";
 import { getBranchIdWithFallback } from "@/utils/branch-utils";
+import { getServiceDurations } from "@/hooks/use-services";
 import { format, addMinutes, isSameDay, addDays, subDays, isToday } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Loader2, Plus, UserPlus, Edit, X, User, Clock, MapPin, CalendarIcon, ChevronLeft, ChevronRight, CreditCard, Banknote, QrCode, Coins } from "lucide-react";
 import { PaymentMethodIcon } from "@/components/BankIcons";
 import { TaskParserControlPanel } from "@/components/TaskParserControlPanel";
+import CancelledAppointments from "@/components/CancelledAppointments";
 
 // Интерфейсы для массажных услуг (из CRMTasks)
 interface serviceService {
@@ -191,10 +194,7 @@ const CreateAppointmentDialog = ({
   });
 
   // Список услуг
-  const { data: serviceServices = [] } = useQuery<serviceService[]>({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/public/service-services`],
-    enabled: isOpen,
-  });
+  const { data: servicesData } = useServices();
 
   // Автоопределение выбранного мастера
   const selectedMaster = masters.find(m => m.id === masterId) || allMasters.find(m => m.id === masterId);
@@ -232,41 +232,29 @@ const CreateAppointmentDialog = ({
   // Доступные длительности для выбранного типа услуги
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
 
-  // Редактируемая длительность
-  const [customDuration, setCustomDuration] = useState<number | null>(null);
-  const [isCustomDuration, setIsCustomDuration] = useState(false);
+  // Функция для получения доступных длительностей для выбранной услуги
+  const getAvailableDurations = () => {
+    if (!formData.serviceType || !servicesData) return [];
+    
+    const selectedService = servicesData.find(service => service.name === formData.serviceType);
+    if (!selectedService) return [];
+    
+    return getServiceDurations(selectedService);
+  };
 
-  const { data: serviceDurations } = useQuery<serviceDurationsResponse>({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations`, formData.serviceType],
-    enabled: !!formData.serviceType && isOpen,
-    queryFn: async () => {
-      if (!formData.serviceType) return null;
-
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceType: formData.serviceType }),
-      });
-      if (!res.ok) return null;
-
-      return res.json();
-    }
-  });
-
-  // Устанавливаем длительность по умолчанию
+  // Сброс длительности при изменении услуги
   useEffect(() => {
-    if (serviceDurations && serviceDurations.availableDurations &&
-      (!selectedDuration ||
-        !serviceDurations.availableDurations.some((d: DurationOption) => d.duration === selectedDuration))) {
-      setSelectedDuration(serviceDurations.defaultDuration);
+    if (formData.serviceType) {
+      setSelectedDuration(null);
     }
-  }, [serviceDurations, selectedDuration]);
+  }, [formData.serviceType]);
 
   // Автоматически рассчитываем цену
   useEffect(() => {
-    if (serviceDurations && (selectedDuration || customDuration)) {
-      const currentDuration = isCustomDuration ? customDuration : selectedDuration;
-      const selectedOption = serviceDurations.availableDurations.find((d: DurationOption) => d.duration === currentDuration);
+    if (selectedDuration && formData.serviceType && servicesData) {
+      const availableDurations = getAvailableDurations();
+      const selectedOption = availableDurations.find(d => d.duration === selectedDuration);
+      
       if (selectedOption) {
         const basePrice = selectedOption.price;
         const discountAmount = (basePrice * formData.discount) / 100;
@@ -275,21 +263,9 @@ const CreateAppointmentDialog = ({
         setFormData(prev => ({ ...prev, finalPrice: finalPrice }));
       }
     }
-  }, [serviceDurations, selectedDuration, customDuration, isCustomDuration, formData.discount]);
+  }, [selectedDuration, formData.serviceType, formData.discount, servicesData]);
 
 
-
-  const handleDurationChange = (value: string) => {
-    const numValue = Number(value);
-    if (value === 'custom') {
-      setIsCustomDuration(true);
-      setCustomDuration(60); // По умолчанию 60 минут
-    } else {
-      setIsCustomDuration(false);
-      setSelectedDuration(numValue);
-      setCustomDuration(null);
-    }
-  };
 
   // Мутация для создания клиента (как в CRMTasks)
   const createClientMutation = useMutation({
@@ -297,8 +273,6 @@ const CreateAppointmentDialog = ({
       if (!formData.clientName) {
         throw new Error("Имя клиента обязательно");
       }
-
-      const currentDuration = isCustomDuration ? customDuration : selectedDuration;
 
       const payload = {
         clientName: formData.clientName,
@@ -309,7 +283,7 @@ const CreateAppointmentDialog = ({
         masterName: formData.masterName,
         notes: formData.notes,
         status: 'scheduled',
-        duration: currentDuration,
+        duration: selectedDuration,
         finalPrice: formData.finalPrice,
         discount: formData.discount,
         branchId: formData.branchId // Добавляем branchId в payload
@@ -350,8 +324,6 @@ const CreateAppointmentDialog = ({
         scheduleTime: selectedTime || ""
       });
       setSelectedDuration(null);
-      setIsCustomDuration(false);
-      setCustomDuration(null);
       onTaskCreated();
       onClose();
     },
@@ -457,10 +429,10 @@ const CreateAppointmentDialog = ({
                   disabled={!formData.serviceType}
                 >
                   <SelectTrigger className="w-full text-sm">
-                    <SelectValue placeholder="В минутах" />
+                    <SelectValue placeholder={!formData.serviceType ? "Сначала выберите услугу" : "Выберите длительность"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {serviceDurations?.availableDurations?.map((duration: DurationOption) => (
+                    {getAvailableDurations().map((duration) => (
                       <SelectItem key={duration.duration} value={duration.duration.toString()}>
                         {duration.duration} мин - {duration.price} сом
                       </SelectItem>
@@ -479,7 +451,7 @@ const CreateAppointmentDialog = ({
                     <SelectValue placeholder="Выберите тип услуги" />
                   </SelectTrigger>
                   <SelectContent>
-                    {serviceServices?.map((service) => (
+                    {servicesData?.map((service) => (
                       <SelectItem key={service.id} value={service.name}>
                         {service.name}
                       </SelectItem>
@@ -614,10 +586,7 @@ const EditAppointmentDialog = ({
   });
 
   // Список услуг
-  const { data: serviceServices = [] } = useQuery<serviceService[]>({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/public/service-services`],
-    enabled: isOpen,
-  });
+  const { data: servicesData } = useServices();
 
   // Загружаем администраторов для выбора в модальном окне оплаты
   const { data: administrators = [] } = useQuery<{ id: number, name: string }[]>({
@@ -775,6 +744,26 @@ const EditAppointmentDialog = ({
     }
   ];
 
+  // Функция для получения доступных длительностей для выбранной услуги
+  const getAvailableDurations = () => {
+    if (!formData.serviceType || !servicesData) return [];
+    
+    const selectedService = servicesData.find(service => service.name === formData.serviceType);
+    if (!selectedService) return [];
+    
+    return getServiceDurations(selectedService);
+  };
+
+  // Сброс длительности при изменении услуги
+  useEffect(() => {
+    if (formData.serviceType) {
+      const availableDurations = getAvailableDurations();
+      if (availableDurations.length > 0 && !availableDurations.find(d => d.duration === selectedDuration)) {
+        setSelectedDuration(availableDurations[0].duration);
+      }
+    }
+  }, [formData.serviceType]);
+
   // ✅ Проверка есть ли несохраненные изменения длительности
   const hasUnsavedDurationChanges = (): boolean => {
     const mainDurationChanged = localMainDuration !== (task?.serviceDuration || task?.duration || 0);
@@ -786,28 +775,12 @@ const EditAppointmentDialog = ({
     return mainDurationChanged || childDurationChanged;
   };
 
-  // ✅ Проверяем является ли длительность стандартной (из service_services)
+  // Проверяем является ли длительность стандартной (из services)
   const isStandardDuration = (duration: number): boolean => {
-    return serviceDurations?.availableDurations?.some((option: any) => option.duration === duration) || false;
+    const availableDurations = getAvailableDurations();
+    return availableDurations.some(option => option.duration === duration);
   };
   const queryClient = useQueryClient();
-
-  const { data: serviceDurations } = useQuery<serviceDurationsResponse>({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations`, formData.serviceType],
-    enabled: !!formData.serviceType && isOpen,
-    queryFn: async () => {
-      if (!formData.serviceType) return null;
-
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/service-services/durations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ serviceType: formData.serviceType }),
-      });
-      if (!res.ok) return null;
-
-      return res.json();
-    }
-  });
 
   // Получаем дочерние задачи (дополнительные услуги)
   const { data: childTasksData } = useQuery<Task[]>({
@@ -835,31 +808,35 @@ const EditAppointmentDialog = ({
   // ✅ Инициализируем локальную длительность основной задачи
   useEffect(() => {
     if (task) {
-      setLocalMainDuration(task.serviceDuration || task.duration || serviceDurations?.defaultDuration || 0);
+      const availableDurations = getAvailableDurations();
+      const defaultDuration = availableDurations.length > 0 ? availableDurations[0].duration : 60;
+      setLocalMainDuration(task.serviceDuration || task.duration || defaultDuration);
     }
-  }, [task, serviceDurations]);
+  }, [task, formData.serviceType, servicesData]);
 
   // Устанавливаем длительность по умолчанию
   useEffect(() => {
-    if (serviceDurations && serviceDurations.availableDurations) {
-      if (!selectedDuration || !serviceDurations.availableDurations.some((d: DurationOption) => d.duration === selectedDuration)) {
-        setSelectedDuration(task?.duration || serviceDurations.defaultDuration);
+    const availableDurations = getAvailableDurations();
+    if (availableDurations.length > 0) {
+      if (!selectedDuration || !availableDurations.some(d => d.duration === selectedDuration)) {
+        setSelectedDuration(task?.duration || availableDurations[0].duration);
       }
     }
-  }, [serviceDurations, selectedDuration, task]);
+  }, [formData.serviceType, servicesData, task]);
 
   // ✅ Упрощенная функция расчета цены основной услуги с учетом произвольной длительности
   const calculateMainServicePrice = (): number => {
-    if (!serviceDurations || !task?.serviceDuration) return task?.servicePrice || task?.finalPrice || 0;
+    if (!task?.serviceDuration) return task?.servicePrice || task?.finalPrice || 0;
 
     const duration = task.serviceDuration;
+    const availableDurations = getAvailableDurations();
 
     // ✅ Если длительность произвольная (не стандартная), возвращаем сохраненную цену без изменений
     if (!isStandardDuration(duration)) {
       return task?.servicePrice || task?.finalPrice || 0;
     }
 
-    const durationOption = serviceDurations.availableDurations.find((d: DurationOption) => d.duration === duration);
+    const durationOption = availableDurations.find(d => d.duration === duration);
 
     // Если есть точное соответствие стандартной длительности, используем его цену
     if (durationOption) {
@@ -1029,20 +1006,21 @@ const EditAppointmentDialog = ({
 
   // ✅ Упрощенный автоматический расчет итоговой цены
   useEffect(() => {
-    if (serviceDurations && task) {
+    if (servicesData && task) {
       const totalPriceAllServices = calculateTotalPrice();
       const discountAmount = (totalPriceAllServices * formData.discount) / 100;
       const finalPriceAllServices = Math.round(totalPriceAllServices - discountAmount);
 
       setFormData(prev => ({ ...prev, finalPrice: finalPriceAllServices }));
     }
-  }, [serviceDurations, task?.serviceDuration, formData.discount, childTasks]);
+  }, [servicesData, task?.serviceDuration, formData.discount, childTasks]);
 
   // Мутация для создания дополнительной услуги
   const createAdditionalServiceMutation = useMutation({
     mutationFn: async (serviceData: { serviceId: number; serviceName: string; duration: number; price: number }) => {
       // Вычисляем время начала дочерней услуги = время окончания основной услуги
-      const mainDuration = task?.serviceDuration || task?.duration || serviceDurations?.defaultDuration || 0;
+      const availableDurations = getAvailableDurations();
+      const mainDuration = task?.serviceDuration || task?.duration || (availableDurations.length > 0 ? availableDurations[0].duration : 60);
       const childStartTime = calculateEndTime(task?.scheduleTime || '', mainDuration);
       const childEndTime = calculateEndTime(childStartTime, serviceData.duration);
 
@@ -1280,10 +1258,10 @@ const EditAppointmentDialog = ({
 
   // Функция для добавления дополнительной услуги
   const handleAddAdditionalService = async (serviceName: string) => {
-    const service = serviceServices.find(s => s.name === serviceName);
+    const service = servicesData?.find(s => s.name === serviceName);
     if (service) {
       const duration = service.defaultDuration;
-      const price = service.duration60Price || 0; // Используем цену за 60 минут по умолчанию
+      const price = service.duration60_price || 0; // Используем цену за 60 минут по умолчанию
 
       createAdditionalServiceMutation.mutate({
         serviceId: service.id,
@@ -1506,7 +1484,7 @@ const EditAppointmentDialog = ({
                       <SelectValue placeholder="В минутах" />
                     </SelectTrigger>
                     <SelectContent>
-                      {serviceDurations?.availableDurations?.map((duration: DurationOption) => (
+                      {getAvailableDurations().map((duration) => (
                         <SelectItem key={duration.duration} value={duration.duration.toString()}>
                           {duration.duration} мин - {duration.price} сом
                         </SelectItem>
@@ -1525,7 +1503,7 @@ const EditAppointmentDialog = ({
                       <SelectValue placeholder="Выберите тип услуги" />
                     </SelectTrigger>
                     <SelectContent>
-                      {serviceServices?.map((service) => (
+                      {servicesData?.map((service) => (
                         <SelectItem key={service.id} value={service.name}>
                           {service.name}
                         </SelectItem>
@@ -1662,7 +1640,7 @@ const EditAppointmentDialog = ({
                     {childTasks.length > 0 ? (
                       <div className="space-y-3">
                         {/* Основная услуга */}
-                        <div className="bg-white rounded-md p-3 border-l-4 border-amber-400">
+                        <div className="bg-white rounded-md p-3 border-l-8 border-amber-400">
                           <div className="flex items-center justify-between text-sm">
                             <div className="flex items-center gap-2">
                               <span className="text-amber-600 font-medium">🏆 Основная:</span>
@@ -1690,7 +1668,7 @@ const EditAppointmentDialog = ({
 
                         {/* Дополнительные услуги */}
                         {childTasks.map((childTask, index) => (
-                          <div key={childTask.id} className="bg-white rounded-md p-3 border-l-4 border-amber-300">
+                          <div key={childTask.id} className="bg-white rounded-md p-3 border-l-8 border-amber-300">
                             <div className="flex items-center justify-between text-sm">
                               <div className="flex items-center gap-2">
                                 <span className="text-amber-500 font-medium">📎 Доп. услуга {index + 1}:</span>
@@ -1777,9 +1755,9 @@ const EditAppointmentDialog = ({
                           <SelectValue placeholder={createAdditionalServiceMutation.isPending ? "Добавление..." : "Добавить дополнительную услугу"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {serviceServices?.map((service) => (
+                          {servicesData?.map((service) => (
                             <SelectItem key={service.id} value={service.name}>
-                              {service.name} (по умолчанию: {service.defaultDuration} мин)
+                              {service.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1952,7 +1930,7 @@ const getRelatedTaskStyles = (task: Task, allTasks: Task[]) => {
   if (isMainTask && hasChildren) {
     return {
       indicator: '🔗', // Индикатор связанной записи
-      borderStyle: 'border-l-4 border-l-amber-500 bg-amber-50 shadow-lg border-2 border-amber-300',
+      borderStyle: 'border-l-8 border-l-amber-500 bg-amber-50 shadow-lg border-2 border-amber-300',
       connectLine: 'after:absolute after:top-full after:left-1/2 after:w-1 after:h-3 after:bg-amber-500 after:transform after:-translate-x-1/2 after:z-20'
     };
   }
@@ -1960,7 +1938,7 @@ const getRelatedTaskStyles = (task: Task, allTasks: Task[]) => {
   if (isChildTask) {
     return {
       indicator: '📎',
-      borderStyle: 'border-l-4 border-l-amber-400 bg-amber-25 border-2 border-amber-200 ml-2',
+      borderStyle: 'border-l-8 border-l-amber-400 bg-amber-25 border-2 border-amber-200 ml-2',
       connectLine: 'before:absolute before:top-0 before:left-1/2 before:w-1 before:h-3 before:bg-amber-400 before:transform before:-translate-x-1/2 before:-top-3 before:z-20'
     };
   }
@@ -1978,25 +1956,28 @@ const getStatusColors = (status: string) => {
         badge: 'bg-blue-600 text-white'
       };
     case 'scheduled':
+      // Зеленый - записан
       return {
-        bg: 'bg-green-200 hover:bg-green-300',
-        border: 'border-green-400',
-        text: 'text-green-900',
-        badge: 'bg-green-600 text-white'
+        bg: 'bg-green-100 hover:bg-green-200',
+        border: 'border-green-500',
+        text: 'text-green-800',
+        badge: 'bg-green-500 text-white'
       };
     case 'in_progress':
+      // Синий - в процессе
       return {
-        bg: 'bg-orange-200 hover:bg-orange-300',
-        border: 'border-orange-400',
-        text: 'text-orange-900',
-        badge: 'bg-orange-600 text-white'
+        bg: 'bg-blue-100 hover:bg-blue-200',
+        border: 'border-blue-500',
+        text: 'text-blue-800',
+        badge: 'bg-blue-500 text-white'
       };
     case 'completed':
+      // Желтый - завершен
       return {
-        bg: 'bg-purple-200 hover:bg-purple-300',
-        border: 'border-purple-400',
-        text: 'text-purple-900',
-        badge: 'bg-purple-600 text-white'
+        bg: 'bg-yellow-100 hover:bg-yellow-200',
+        border: 'border-yellow-500',
+        text: 'text-yellow-800',
+        badge: 'bg-yellow-500 text-white'
       };
     case 'cancelled':
       return {
@@ -2007,10 +1988,10 @@ const getStatusColors = (status: string) => {
       };
     case 'regular':
       return {
-        bg: 'bg-yellow-200 hover:bg-yellow-300',
-        border: 'border-yellow-400',
-        text: 'text-yellow-900',
-        badge: 'bg-yellow-600 text-white'
+        bg: 'bg-gray-200 hover:bg-gray-300',
+        border: 'border-gray-400',
+        text: 'text-gray-900',
+        badge: 'bg-gray-500 text-white'
       };
     default:
       return {
@@ -2107,8 +2088,8 @@ export default function DailyCalendar() {
     refetchOnWindowFocus: false
   });
 
-  // Загружаем все записи из crm_tasks для выбранной даты
-  const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
+  // Загружаем все записи из crm_tasks для выбранной даты (исключая отмененные)
+  const { data: allTasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks`, formattedDate, getBranchIdWithFallback(currentBranch, branches)],
     queryFn: async () => {
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks?date=${formattedDate}&branchId=${getBranchIdWithFallback(currentBranch, branches)}`, {
@@ -2121,6 +2102,14 @@ export default function DailyCalendar() {
     },
     enabled: !!getBranchIdWithFallback(currentBranch, branches)
   });
+
+  // Фильтруем отмененные записи из основного календаря
+  const tasks = useMemo(() => {
+    return allTasks.filter(task => 
+      task.status !== 'cancelled' && 
+      task.status !== 'no_show'
+    );
+  }, [allTasks]);
 
   // Загружаем дочерние задачи для всех основных задач
   const { data: childTasksMap = {} } = useQuery<{ [taskId: number]: Task[] }>({
@@ -2487,9 +2476,12 @@ export default function DailyCalendar() {
               Управление записями клиентов на {format(selectedDate, 'dd MMMM yyyy')}
             </p>
           </div>
-          <Badge variant="outline" className="ml-2">
-            {currentBranch?.branches || 'Филиал'}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <CancelledAppointments />
+            <Badge variant="outline" className="ml-2">
+              {currentBranch?.branches || 'Филиал'}
+            </Badge>
+          </div>
         </div>
 
         {/* Task Parser Control Panel */}
@@ -2729,7 +2721,7 @@ export default function DailyCalendar() {
                                 <TooltipTrigger asChild>
                                   <div
                                     className={`p-1 border-r border-b cursor-move transition-all duration-200 relative rounded-lg overflow-hidden ${getStatusColors(overlappingTask?.status || 'scheduled').bg
-                                      } ${relatedStyles.borderStyle || (getStatusColors(overlappingTask.status || 'scheduled').border + ' border-l-4')}
+                                      } ${relatedStyles.borderStyle || (getStatusColors(overlappingTask.status || 'scheduled').border + ' border-l-8')}
                                 ${draggedTask?.id === overlappingTask.id ? 'opacity-50 scale-95' : ''}`}
                                     style={{
                                       gridColumn: masterIndex + 2,
@@ -2852,7 +2844,7 @@ export default function DailyCalendar() {
                                   : (isHovered || (draggedOver?.time === time && draggedOver?.masterId === master.id))
                                     ? 'bg-green-100 border-green-300 shadow-md cursor-pointer'
                                     : 'hover:bg-green-50 hover:border-green-200 cursor-pointer'
-                                  } ${task ? (relatedStyles.borderStyle || (getStatusColors(task.status || 'scheduled').border + ' border-l-4')) : ''} ${isTaskStart ? 'border-2 border-black' : ''
+                                  } ${task ? (relatedStyles.borderStyle || (getStatusColors(task.status || 'scheduled').border + ' border-l-8')) : ''} ${isTaskStart ? 'border-2 border-black' : ''
                                   } ${task ? relatedStyles.connectLine : ''}
                             ${draggedOver?.time === time && draggedOver?.masterId === master.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}
                             ${draggedTask?.id === task?.id ? 'opacity-50 scale-95' : ''}`}

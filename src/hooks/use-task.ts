@@ -123,15 +123,10 @@ export const formatTaskForForm = (task: Task | undefined) => {
     return `${duration} мин - ${price} сом`;
   };
 
-  // Map API status to form status
+  // Map API status to form status (оставляем английский статус для формы)
   const mapStatus = (status: string) => {
-    const statusMap: Record<string, string> = {
-      'scheduled': 'Записан',
-      'in-progress': 'В процессе',
-      'completed': 'Завершен',
-      'cancelled': 'Отменен'
-    };
-    return statusMap[status] || status;
+    // Убираем перевод, возвращаем оригинальный статус для корректной работы формы
+    return status;
   };
 
   return {
