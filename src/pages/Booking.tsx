@@ -592,7 +592,11 @@ const BookingPage: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="relative">
-                  <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent hover:scrollbar-thumb-primary/40">
+                  <div className="overflow-x-auto pb-4 scrollbar-track-transparent hover:scrollbar-thumb-primary/40" style={{ 
+                    scrollbarWidth: 'auto',
+                    scrollbarColor: 'rgba(251, 191, 36, 0.6) transparent',
+                    scrollbarGutter: 'stable'
+                  }}>
                     <div className="flex gap-3 min-w-max px-2">
                       {timeSlots.map((time, index) => (
                         <button

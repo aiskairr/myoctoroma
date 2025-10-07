@@ -125,3 +125,30 @@ body {
     color: hsl(var(--foreground));
   }
 }
+
+/* Более толстые скролл-бары для WebKit браузеров (Chrome, Safari) */
+::-webkit-scrollbar {
+  width: 16px; /* Увеличиваем ширину вертикального скролла до 16px */
+  height: 16px; /* Увеличиваем высоту горизонтального скролла до 16px */
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: rgba(0, 0, 0, 0.05);
+}

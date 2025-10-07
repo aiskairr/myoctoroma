@@ -498,7 +498,6 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
             if (response.ok) {
                 const additionalServicesData = await response.json();
-                console.log('✅ Additional services loaded:', additionalServicesData);
                 
                 const formattedServices: AdditionalService[] = additionalServicesData.map((service: any) => ({
                     id: service.id,
@@ -537,21 +536,39 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             try {
                 // Находим мастера по имени для получения masterId
                 const selectedMaster = mastersData.find(m => m.name === data.master);
+
+                // Вспомогательные функции
+                const calculateFinalPrice = (servicePrice: number, discount: number): number => {
+                    return Math.max(0, servicePrice - (servicePrice * discount / 100));
+                };
+
+                const calculateEndTime = (startTime: string, duration: number): string => {
+                    const [hours, minutes] = startTime.split(':').map(Number);
+                    const startMinutes = hours * 60 + minutes;
+                    const endMinutes = startMinutes + duration;
+                    const endHours = Math.floor(endMinutes / 60);
+                    const endMins = endMinutes % 60;
+                    return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+                };
+
+                const serviceDuration = parseInt(data.duration.split(' ')[0]) || 60;
+                const servicePrice = parseFloat(data.cost) || 0;
+                const discount = parseFloat(data.discount) || 0;
                 
-                const updatePayload = {
+                const updatePayload: any = {
                     clientName: data.clientName,
                     phoneNumber: data.phone,
                     serviceType: data.serviceType,
                     masterName: data.master,
                     masterId: selectedMaster?.id || null,
                     notes: data.notes,
-                    scheduleDate: convertDateFormat(data.date), // Конвертируем в формат YYYY-MM-DD
                     scheduleTime: data.time,
-                    serviceDuration: parseInt(data.duration.split(' ')[0]) || 60, // Извлекаем число из "60 мин - 1000 сом"
-                    finalPrice: parseFloat(data.cost) || 0,
-                    discount: parseFloat(data.discount) || 0,
+                    serviceDuration: serviceDuration,
+                    finalPrice: calculateFinalPrice(servicePrice, discount),
+                    discount: discount,
                     branchId: data.branch,
                     status: data.status,
+                    endTime: calculateEndTime(data.time, serviceDuration), // Обязательное поле
                     additionalServices: additionalServices.map(service => ({
                         serviceId: service.serviceId,
                         serviceName: service.serviceName,
@@ -559,6 +576,11 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                         price: service.price
                     }))
                 };
+
+                // scheduleDate только если дата заполнена
+                if (data.date && data.date.trim()) {
+                    updatePayload.scheduleDate = convertDateFormat(data.date); // Конвертируем в формат YYYY-MM-DD
+                }
 
                 console.log('🚀 Sending PUT request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`);
                 console.log('📦 Update payload:', updatePayload);
@@ -682,7 +704,25 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         const branchId = data.branch || '1';
         const generatedTaskId = generateTaskId(organisationId, branchId);
         
+        // Вспомогательные функции
+        const calculateFinalPrice = (servicePrice: number, discount: number): number => {
+            return Math.max(0, servicePrice - (servicePrice * discount / 100));
+        };
+
+        const calculateEndTime = (startTime: string, duration: number): string => {
+            const [hours, minutes] = startTime.split(':').map(Number);
+            const startMinutes = hours * 60 + minutes;
+            const endMinutes = startMinutes + duration;
+            const endHours = Math.floor(endMinutes / 60);
+            const endMins = endMinutes % 60;
+            return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+        };
+
         // Парсим данные формы для API
+        const serviceDuration = parseInt(data.duration.split(' ')[0]); // Извлекаем числовое значение
+        const servicePrice = parseFloat(data.cost) || 0;
+        const discount = parseFloat(data.discount) || 0;
+        
         const parsedData = {
             id: generatedTaskId,
             clientName: data.clientName,
@@ -692,8 +732,11 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             scheduleTime: data.time,
             serviceType: data.serviceType,
             masterId: parseInt(data.master),
-            serviceDuration: parseInt(data.duration.split(' ')[0]), // Извлекаем числовое значение
-            servicePrice: parseFloat(data.cost) || 0,
+            serviceDuration: serviceDuration,
+            servicePrice: servicePrice,
+            finalPrice: calculateFinalPrice(servicePrice, discount), // Обязательное поле
+            discount: discount,
+            endTime: calculateEndTime(data.time, serviceDuration), // Обязательное поле
             branchId: branchId,
             status: 'scheduled'
         };
@@ -729,14 +772,37 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             // Создаем основную запись об оплате
             const clientName = taskData?.client?.customName || taskData?.client?.firstName || taskData?.clientName || 'Неизвестный клиент';
             
+            // Улучшенная логика получения имени мастера
+            let masterName = 'Неизвестный мастер';
+            
+            // Пробуем разные источники данных о мастере
+            if (taskData?.masterName && taskData.masterName.trim()) {
+                masterName = taskData.masterName;
+                console.log('✅ Master name from taskData.masterName:', masterName);
+            } else if (taskData?.master?.name && taskData.master.name.trim()) {
+                masterName = taskData.master.name;
+                console.log('✅ Master name from taskData.master.name:', masterName);
+            } else if (taskData?.masterId && mastersData?.length > 0) {
+                const masterFromData = mastersData.find(m => m.id === taskData.masterId);
+                if (masterFromData?.name) {
+                    masterName = masterFromData.name;
+                    console.log('✅ Master name from mastersData by ID:', masterName);
+                }
+            }
+            
             console.log('📊 Payment data debug:');
+            console.log('  taskData.masterName:', taskData?.masterName);
+            console.log('  taskData.master?.name:', taskData?.master?.name);
+            console.log('  taskData.masterId:', taskData?.masterId);
+            console.log('  Available masters:', mastersData?.map(m => ({ id: m.id, name: m.name })));
+            console.log('  Final masterName:', masterName);
             console.log('  taskData.clientName:', taskData?.clientName);
             console.log('  taskData.client?.customName:', taskData?.client?.customName);
             console.log('  taskData.client?.firstName:', taskData?.client?.firstName);
             console.log('  Final clientName:', clientName);
             
             const paymentData = {
-                master: taskData?.masterName || 'Неизвестный мастер',
+                master: masterName,
                 client: clientName,
                 serviceType: taskData?.serviceType || 'Услуга',
                 phoneNumber: taskData?.client?.phoneNumber || '',
@@ -765,15 +831,74 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             }
 
             // Обновляем способ оплаты, администратора и статус оплаты для задачи
-            await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
-                method: 'POST',
+            // Формируем полный payload на основе текущих данных задачи
+            const servicePrice = taskData?.finalPrice || taskData?.servicePrice || 0;
+            const discount = taskData?.discount || 0;
+            const serviceDuration = taskData?.serviceDuration || 60;
+            
+            const calculateFinalPrice = (price: number, discountPercent: number): number => {
+                return Math.max(0, price - (price * discountPercent / 100));
+            };
+
+            const calculateEndTime = (startTime: string, duration: number): string => {
+                const [hours, minutes] = startTime.split(':').map(Number);
+                const startMinutes = hours * 60 + minutes;
+                const endMinutes = startMinutes + duration;
+                const endHours = Math.floor(endMinutes / 60);
+                const endMins = endMinutes % 60;
+                return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+            };
+
+            // Улучшенная логика получения имени клиента для updatePayload
+            const paymentClientName = taskData?.client?.customName || 
+                              taskData?.client?.firstName || 
+                              taskData?.clientName || 
+                              'Неизвестный клиент';
+
+            console.log('📊 Client data debug:');
+            console.log('  taskData.client?.customName:', taskData?.client?.customName);
+            console.log('  taskData.client?.firstName:', taskData?.client?.firstName);
+            console.log('  taskData.clientName:', taskData?.clientName);
+            console.log('  Final paymentClientName:', paymentClientName);
+
+            const updatePayload: any = {
+                clientName: paymentClientName,
+                phoneNumber: taskData?.client?.phoneNumber || '',
+                serviceType: taskData?.serviceType || 'Услуга',
+                masterName: masterName, // Используем то же имя мастера, что и в payment
+                masterId: taskData?.masterId || null,
+                notes: taskData?.notes || '',
+                scheduleTime: taskData?.scheduleTime || '00:00',
+                duration: serviceDuration,
+                finalPrice: calculateFinalPrice(servicePrice, discount), // Обязательное поле
+                discount: discount,
+                branchId: taskData?.branchId || getBranchIdWithFallback(null, branches).toString(),
+                status: 'completed', // ВСЕГДА устанавливаем статус на completed при оплате
+                endTime: calculateEndTime(taskData?.scheduleTime || '00:00', serviceDuration), // Обязательное поле
+                // Добавляем данные об оплате
+                paymentMethod: selectedPaymentMethod,
+                adminName: selectedAdministrator,
+                paid: 'paid'
+            };
+
+            // scheduleDate только если есть валидная дата
+            if (taskData?.scheduleDate && taskData.scheduleDate !== null) {
+                updatePayload.scheduleDate = taskData.scheduleDate;
+            }
+
+            console.log('💳 Updating task with payment info:', updatePayload);
+
+            const updateResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    paymentMethod: selectedPaymentMethod,
-                    adminName: selectedAdministrator,
-                    paid: 'paid'
-                }),
+                body: JSON.stringify(updatePayload),
             });
+
+            if (!updateResponse.ok) {
+                const errorData = await updateResponse.json();
+                console.error('❌ Failed to update task with payment info:', errorData);
+                throw new Error('Failed to update task with payment information');
+            }
 
             return res.json();
         },

@@ -1,128 +1,352 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
-import { apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { queryClient, getQueryFn } from "@/lib/queryClient";
+import { useBranch } from '@/contexts/BranchContext';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Copy } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export default function Settings() {
   const { toast } = useToast();
+  const { currentBranch } = useBranch();
   const [settings, setSettings] = useState<Record<string, string>>({
-    telegramToken: "",
-    openaiApiKey: "",
     systemPrompt: "",
-    webhookUrl: "",
-    botActive: "true",
   });
   
-  // Fetch settings
+  // File upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [importJobId, setImportJobId] = useState<string | null>(null);
+
+  // WhatsApp configuration state
+  const [whatsappConfig, setWhatsappConfig] = useState({
+    apiUrl: "",
+    mediaUrl: "",
+    branchId: "",
+    apiToken: "",
+  });
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+
+  // Fetch settings - новый API endpoint
   const { data, isLoading, error } = useQuery({
-    queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/settings"],
-    queryFn: () => fetch("${import.meta.env.VITE_BACKEND_URL}/api/settings").then(res => res.json()),
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/settings/${currentBranch?.id}`],
+    queryFn: getQueryFn({ on401: "throw" }),
+    retry: false,
+    enabled: !!currentBranch?.id, // Запрос выполняется только если есть branchId
   });
-  
+
+  // Fetch import job status
+  const { data: importStatus, isLoading: isLoadingStatus } = useQuery({
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/import/status/${importJobId}`],
+    queryFn: getQueryFn({ on401: "throw" }),
+    retry: false,
+    enabled: !!importJobId, // Запрос выполняется только если есть jobId
+    refetchInterval: importJobId ? 2000 : false, // Обновляем каждые 2 секунды если есть активная задача
+  });
+
+  // Fetch WhatsApp configuration
+  const { data: whatsappData, isLoading: isLoadingWhatsapp } = useQuery({
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/organisation/${currentBranch?.id}/whatsapp/config`],
+    queryFn: getQueryFn({ on401: "throw" }),
+    retry: false,
+    enabled: !!currentBranch?.id,
+  });
+
   // Mutation for updating settings
   const updateSettingMutation = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
-      const response = await apiRequest("POST", "${import.meta.env.VITE_BACKEND_URL}/api/settings", { key, value });
+      if (!currentBranch?.id) {
+        throw new Error('Branch ID is required');
+      }
+      
+      // Сначала пробуем PUT для обновления существующего промпта
+      let response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/settings/${currentBranch.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${document.cookie.split('token=')[1]?.split(';')[0] || ''}`,
+        },
+        body: JSON.stringify({ key, value }),
+      });
+      
+      // Если получили 404, значит промпт не существует, создаем новый
+      if (response.status === 404) {
+        response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/settings/${currentBranch.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${document.cookie.split('token=')[1]?.split(';')[0] || ''}`,
+          },
+          body: JSON.stringify({ key, value }),
+        });
+      }
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/settings"] });
+      queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/settings/${currentBranch?.id}`] });
+      toast({
+        title: "Настройки сохранены",
+        description: "Системный промпт успешно обновлен",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось сохранить настройки",
+        variant: "destructive",
+      });
     },
   });
-  
-  // Состояние для данных вебхука
-  const [webhookInfo, setWebhookInfo] = useState<{
-    url: string;
-    verifyToken: string;
-    instructions: string;
-  }>({
-    url: "",
-    verifyToken: "",
-    instructions: "",
+
+  // Mutation for Excel import
+  const importMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/import/excel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${document.cookie.split('token=')[1]?.split(';')[0] || ''}`,
+        },
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Ошибка при загрузке файла');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Сохраняем jobId для отслеживания статуса
+      if (data && data.jobId) {
+        setImportJobId(data.jobId);
+      }
+      
+      toast({
+        title: "Импорт запущен",
+        description: "Файл успешно загружен. Импорт выполняется в фоновом режиме.",
+      });
+      setSelectedFile(null);
+      // Reset file input
+      const fileInput = document.getElementById('excel-file') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Ошибка импорта",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // WhatsApp configuration mutations
+  const saveWhatsappConfigMutation = useMutation({
+    mutationFn: async (config: typeof whatsappConfig) => {
+      if (!currentBranch?.id) {
+        throw new Error('Branch ID is required');
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/organisation/${currentBranch.id}/whatsapp/config`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify(config),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to save WhatsApp configuration');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Конфигурация сохранена",
+        description: "WhatsApp конфигурация успешно сохранена",
+      });
+      queryClient.invalidateQueries({
+        queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/organisation/${currentBranch?.id}/whatsapp/config`],
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Ошибка сохранения",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const testWhatsappConnectionMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentBranch?.id) {
+        throw new Error('Branch ID is required');
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/organisation/${currentBranch.id}/whatsapp/test-connection`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Connection test failed');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Соединение успешно",
+        description: `Статус: ${data.details?.instanceStatus || 'connected'}`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Ошибка соединения",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   useEffect(() => {
-    if (data) {
-      // Обработка параметров настроек
-      const settingsMap: Record<string, string> = {};
-      data.settings.forEach((setting: any) => {
-        settingsMap[setting.key] = setting.value;
-      });
-      setSettings(settingsMap);
+    if (data && typeof data === 'object') {
+      // Новая структура API - возвращает объект с полями id, key, value, branchId
+      const apiData = data as any;
+      if (apiData.key && apiData.value) {
+        setSettings((prev) => ({ 
+          ...prev, 
+          [apiData.key]: apiData.value 
+        }));
+      }
+    } else if (error) {
+      // Если была ошибка "SystemPrompt not found", устанавливаем пустое значение
+      const errorMessage = error instanceof Error ? error.message : '';
+      const isSystemPromptNotFound = errorMessage.includes('SystemPrompt not found for branch');
       
-      // Обработка информации о вебхуке, если она есть
-      if (data.webhookInfo) {
-        setWebhookInfo(data.webhookInfo);
+      if (isSystemPromptNotFound) {
+        setSettings((prev) => ({ 
+          ...prev, 
+          systemPrompt: '' 
+        }));
       }
     }
-  }, [data]);
-  
-  const handleInputChange = (key: string, value: string) => {
+  }, [data, error]);
+
+  // Отслеживаем статус импорта и очищаем jobId когда импорт завершен
+  useEffect(() => {
+    if (importStatus && typeof importStatus === 'object') {
+      const status = (importStatus as any);
+      if (status.job && (status.job.status === 'COMPLETED' || status.job.status === 'FAILED')) {
+        // Импорт завершен, показываем финальное уведомление
+        if (status.job.status === 'COMPLETED') {
+          toast({
+            title: "Импорт завершен",
+            description: `Импортировано ${status.job.clientsImported || 0} клиентов и ${status.job.tasksImported || 0} задач`,
+          });
+        } else {
+          toast({
+            title: "Ошибка импорта",
+            description: status.job.errorMessage || "Произошла ошибка при импорте",
+            variant: "destructive",
+          });
+        }
+        
+        // Очищаем jobId через небольшую задержку, чтобы пользователь увидел финальный статус
+        setTimeout(() => {
+          setImportJobId(null);
+        }, 3000);
+      }
+    }
+  }, [importStatus, toast]);
+
+  // Initialize WhatsApp configuration when data loads
+  useEffect(() => {
+    if (whatsappData && typeof whatsappData === 'object') {
+      const configData = (whatsappData as any).config;
+      if (configData) {
+        setWhatsappConfig({
+          apiUrl: configData.apiUrl || "",
+          mediaUrl: configData.mediaUrl || "",
+          branchId: configData.branchId || "",
+          apiToken: configData.apiToken || "",
+        });
+      }
+    }
+  }, [whatsappData]);  const handleInputChange = (key: string, value: string) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
   
   const handleSave = async (key: string) => {
     try {
       await updateSettingMutation.mutateAsync({ key, value: settings[key] });
-      
-      // Русификация сообщений в зависимости от ключа
-      let keyName = "";
-      if (key === "telegramToken") keyName = "Токен Telegram";
-      else if (key === "openaiApiKey") keyName = "API ключ OpenAI";
-      else if (key === "systemPrompt") keyName = "Системный промпт";
-      else keyName = key;
-      
-      toast({
-        title: "Настройки сохранены",
-        description: `${keyName} успешно обновлен.`,
-        variant: "default",
-      });
     } catch (error) {
       console.error(`Error saving ${key}:`, error);
-      toast({
-        title: "Ошибка",
-        description: `Не удалось сохранить настройки.`,
-        variant: "destructive",
-      });
     }
   };
-  
-  const handleSwitchChange = async (checked: boolean) => {
-    const value = checked ? "true" : "false";
-    setSettings((prev) => ({ ...prev, botActive: value }));
+
+  // WhatsApp handlers
+  const handleWhatsappInputChange = (key: keyof typeof whatsappConfig, value: string) => {
+    setWhatsappConfig((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveWhatsappConfig = async () => {
     try {
-      await updateSettingMutation.mutateAsync({ key: "botActive", value });
-      toast({
-        title: "Статус бота обновлен",
-        description: checked ? "Бот теперь активен." : "Бот теперь неактивен.",
-        variant: "default",
-      });
+      await saveWhatsappConfigMutation.mutateAsync(whatsappConfig);
     } catch (error) {
-      console.error("Error updating bot status:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось обновить статус бота.",
-        variant: "destructive",
-      });
+      console.error('Error saving WhatsApp config:', error);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    setIsTestingConnection(true);
+    try {
+      await testWhatsappConnectionMutation.mutateAsync();
+    } finally {
+      setIsTestingConnection(false);
     }
   };
   
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Скопировано в буфер обмена",
-      variant: "default",
-    });
+  // File handling functions
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
   };
+  
+  const handleImport = () => {
+    if (selectedFile) {
+      importMutation.mutate(selectedFile);
+    }
+  };
+  
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Байт';
+    const k = 1024;
+    const sizes = ['Байт', 'КБ', 'МБ', 'ГБ'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+  
   
   const resetSystemPrompt = () => {
     // Используем актуальный промпт из файла very_last_prompt.txt
@@ -248,150 +472,56 @@ export default function Settings() {
       </div>
     );
   }
-  
-  if (error) {
+
+  if (!currentBranch?.id) {
     return (
       <div className="p-6">
-        <div className="text-destructive">Ошибка загрузки настроек</div>
+        <div className="text-muted-foreground">
+          <h2 className="text-lg font-semibold mb-2">Филиал не выбран</h2>
+          <p className="text-sm">Пожалуйста, выберите филиал для работы с настройками</p>
+        </div>
       </div>
     );
+  }
+  
+  if (error) {
+    // Проверяем, является ли это ошибкой "SystemPrompt not found"
+    const errorMessage = error instanceof Error ? error.message : '';
+    const isSystemPromptNotFound = errorMessage.includes('SystemPrompt not found for branch');
+    
+    // Если systemPrompt не найден - это нормально, показываем страницу с пустым полем
+    if (!isSystemPromptNotFound) {
+      return (
+        <div className="p-6">
+          <div className="text-destructive">
+            <h2 className="text-lg font-semibold mb-2">Ошибка загрузки настроек</h2>
+            <p className="text-sm">{errorMessage || 'Произошла ошибка при загрузке настроек'}</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              URL: {import.meta.env.VITE_BACKEND_URL}/api/settings/{currentBranch?.id || '[branchId]'}
+            </p>
+          </div>
+        </div>
+      );
+    }
+    // Если systemPrompt не найден, продолжаем отображение страницы с пустым полем
   }
   
   return (
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-medium mb-1">Настройки</h1>
-        <p className="text-muted-foreground">Настройка бота, API ключей и промптов</p>
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Telegram Bot Settings */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>Настройки Telegram бота</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="bot-token">Токен бота</Label>
-                <Input
-                  id="bot-token"
-                  type="password"
-                  value={settings.telegramToken}
-                  onChange={(e) => handleInputChange("telegramToken", e.target.value)}
-                  placeholder="Введите токен Telegram бота"
-                />
-                <p className="text-xs text-muted-foreground">Получите у BotFather в Telegram</p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="webhook-url">URL для вебхука</Label>
-                <div className="flex">
-                  <Input
-                    id="webhook-url"
-                    value={settings.webhookUrl}
-                    readOnly
-                    className="rounded-r-none"
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="rounded-l-none"
-                    onClick={() => copyToClipboard(settings.webhookUrl)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">Конечная точка для обновлений Telegram</p>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="bot-active"
-                    checked={settings.botActive === "true"}
-                    onCheckedChange={handleSwitchChange}
-                  />
-                  <Label htmlFor="bot-active">Бот активен</Label>
-                </div>
-                <p className="text-xs text-muted-foreground">Включить или отключить бота глобально</p>
-              </div>
-              
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  onClick={() => handleSave("telegramToken")}
-                  disabled={updateSettingMutation.isPending}
-                >
-                  {updateSettingMutation.isPending ? "Сохранение..." : "Сохранить настройки"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-        
-        {/* OpenAI API Settings */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle>Настройки OpenAI API</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="api-key">API ключ</Label>
-                <Input
-                  id="api-key"
-                  type="password"
-                  value={settings.openaiApiKey}
-                  onChange={(e) => handleInputChange("openaiApiKey", e.target.value)}
-                  placeholder="Введите ваш ключ OpenAI API"
-                />
-                <p className="text-xs text-muted-foreground">Ваш ключ OpenAI API для модели GPT-4o-mini</p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="model">Модель</Label>
-                <Input
-                  id="model"
-                  value="gpt-4o-mini"
-                  disabled
-                />
-                <p className="text-xs text-muted-foreground">Поддерживается только GPT-4o-mini</p>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Температура (фиксировано на 0.4)</Label>
-                <Slider
-                  value={[0.4]}
-                  max={2}
-                  step={0.1}
-                  disabled
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>0 (Детерминистично)</span>
-                  <span>0.4</span>
-                  <span>2.0 (Случайно)</span>
-                </div>
-              </div>
-              
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  onClick={() => handleSave("openaiApiKey")}
-                  disabled={updateSettingMutation.isPending}
-                >
-                  {updateSettingMutation.isPending ? "Сохранение..." : "Сохранить настройки"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+        <p className="text-muted-foreground">Импорт данных и настройка промптов</p>
       </div>
       
       {/* System Prompt Settings */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
           <CardTitle>Настройки системного промпта</CardTitle>
+          {error && error instanceof Error && error.message.includes('SystemPrompt not found for branch') && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Системный промпт для данного филиала не найден. Вы можете создать новый промпт ниже.
+            </p>
+          )}
         </CardHeader>
         <CardContent>
           <form className="space-y-4">
@@ -402,9 +532,13 @@ export default function Settings() {
                 rows={8}
                 value={settings.systemPrompt}
                 onChange={(e) => handleInputChange("systemPrompt", e.target.value)}
-                placeholder="Введите системный промпт здесь..."
+                placeholder={
+                  error && error instanceof Error && error.message.includes('SystemPrompt not found for branch')
+                    ? "Системный промпт не найден для данного филиала. Введите новый промпт здесь..."
+                    : "Введите системный промпт здесь..."
+                }
               />
-              <p className="text-xs text-muted-foreground">Этот системный промпт будет отправляться с каждым запросом к OpenAI</p>
+              <p className="text-xs text-muted-foreground">Этот системный промпт будет обрабатывать ChatGPT для общения с вашими клиентами. Инструкциипо по составлению промпта вы можете посмотреть в видеоуроках на странице "Как пользоваться?"</p>
             </div>
             
             <div className="flex justify-end">
@@ -427,64 +561,246 @@ export default function Settings() {
           </form>
         </CardContent>
       </Card>
-      
-      {/* WhatsApp Webhook Settings */}
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle>Настройки веб-хука WhatsApp</CardTitle>
+
+      {/* WhatsApp Configuration Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>WhatsApp API</CardTitle>
+          <CardDescription>
+            Конфигурация подключения к WhatsApp API
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="webhook-url">URL вебхука</Label>
-              <div className="flex">
-                <Input
-                  id="webhook-url"
-                  value={webhookInfo.url}
-                  readOnly
-                  className="rounded-r-none"
-                />
+          {isLoadingWhatsapp ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="ml-2">Загрузка конфигурации...</span>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp-api-url">API URL</Label>
+                  <Input
+                    id="whatsapp-api-url"
+                    type="url"
+                    placeholder="https://xxxx.api.greenapi.com"
+                    value={whatsappConfig.apiUrl}
+                    onChange={(e) => handleWhatsappInputChange('apiUrl', e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp-media-url">Media URL</Label>
+                  <Input
+                    id="whatsapp-media-url"
+                    type="url"
+                    placeholder="https://xxxx.media.greenapi.com"
+                    value={whatsappConfig.mediaUrl}
+                    onChange={(e) => handleWhatsappInputChange('mediaUrl', e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp-branch-id">Branch ID</Label>
+                  <Input
+                    id="whatsapp-branch-id"
+                    type="text"
+                    placeholder="7105292833"
+                    value={whatsappConfig.branchId}
+                    onChange={(e) => handleWhatsappInputChange('branchId', e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp-api-token">API Token</Label>
+                  <Input
+                    id="whatsapp-api-token"
+                    type="password"
+                    placeholder="Введите API токен"
+                    value={whatsappConfig.apiToken}
+                    onChange={(e) => handleWhatsappInputChange('apiToken', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
                 <Button
-                  type="button"
-                  variant="secondary"
-                  className="rounded-l-none"
-                  onClick={() => copyToClipboard(webhookInfo.url)}
+                  onClick={handleSaveWhatsappConfig}
+                  disabled={saveWhatsappConfigMutation.isPending}
+                  className="flex-1"
                 >
-                  <Copy className="h-4 w-4" />
+                  {saveWhatsappConfigMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Сохранение...
+                    </>
+                  ) : (
+                    'Сохранить конфигурацию'
+                  )}
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={handleTestConnection}
+                  disabled={isTestingConnection || testWhatsappConnectionMutation.isPending}
+                >
+                  {(isTestingConnection || testWhatsappConnectionMutation.isPending) ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Тестирование...
+                    </>
+                  ) : (
+                    'Тест соединения'
+                  )}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">URL для настройки вебхука WhatsApp</p>
+
+              <div className="bg-muted p-4 rounded-md">
+                <h3 className="text-sm font-medium mb-2">Информация о настройке</h3>
+                <ul className="text-xs text-muted-foreground space-y-1">
+                  <li>• API URL и Media URL получаются от провайдера WhatsApp API</li>
+                  <li>• Branch ID - идентификатор вашего инстанса</li>
+                  <li>• API Token - секретный ключ для авторизации</li>
+                  <li>• Все данные шифруются перед сохранением в базе данных</li>
+                </ul>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Excel Import Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Импорт данных</CardTitle>
+          <CardDescription>
+            Импорт клиентов и задач из Excel файла
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="excel-file">Выберите Excel файл</Label>
+              <Input
+                id="excel-file"
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileSelect}
+                disabled={importMutation.isPending}
+              />
+              <p className="text-xs text-muted-foreground">
+                Поддерживаются форматы: .xlsx, .xls
+              </p>
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="verify-token">Токен верификации</Label>
-              <div className="flex">
-                <Input
-                  id="verify-token"
-                  value={webhookInfo.verifyToken}
-                  readOnly
-                  className="rounded-r-none"
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="rounded-l-none"
-                  onClick={() => copyToClipboard(webhookInfo.verifyToken)}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
+            {selectedFile && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Выбранный файл:</p>
+                <p className="text-sm text-muted-foreground">{selectedFile.name}</p>
+                <p className="text-xs text-muted-foreground">Размер: {formatFileSize(selectedFile.size)}</p>
               </div>
-              <p className="text-xs text-muted-foreground">Токен для подтверждения вашего вебхука</p>
-            </div>
+            )}
+            
+            <Button
+              onClick={handleImport}
+              disabled={!selectedFile || importMutation.isPending}
+              className="w-full"
+            >
+              {importMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Загрузка...
+                </>
+              ) : (
+                'Импортировать данные'
+              )}
+            </Button>
+
+            {/* Статус импорта */}
+            {importJobId && importStatus && typeof importStatus === 'object' && (
+              <div className="mt-4 p-4 bg-muted rounded-lg border">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">Статус импорта:</span>
+                    <span className={`px-2 py-1 rounded text-sm ${
+                      (importStatus as any).job?.status === 'COMPLETED' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                      (importStatus as any).job?.status === 'FAILED' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                      'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                    }`}>
+                      {(importStatus as any).job?.status === 'COMPLETED' ? 'Завершен' :
+                       (importStatus as any).job?.status === 'FAILED' ? 'Ошибка' :
+                       (importStatus as any).job?.status === 'PROCESSING' ? 'Обработка' : 'В очереди'}
+                    </span>
+                  </div>
+
+                  {/* Прогресс бар */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Прогресс:</span>
+                      <span>{Math.round((importStatus as any).job?.completionPercentage || 0)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${(importStatus as any).job?.completionPercentage || 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Детали импорта */}
+                  {(importStatus as any).job && (
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Обработано строк:</span>
+                        <div className="font-medium">
+                          {(importStatus as any).job.processedRows || 0} / {(importStatus as any).job.totalRows || 0}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Файл:</span>
+                        <div className="font-medium truncate">
+                          {(importStatus as any).job.fileName || 'Неизвестно'}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Клиенты:</span>
+                        <div className="font-medium">
+                          {(importStatus as any).job.clientsImported || 0}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Задачи:</span>
+                        <div className="font-medium">
+                          {(importStatus as any).job.tasksImported || 0}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ошибка если есть */}
+                  {(importStatus as any).job?.status === 'FAILED' && (importStatus as any).job?.errorMessage && (
+                    <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+                      <div className="text-sm text-red-800 dark:text-red-200">
+                        <strong>Ошибка:</strong> {(importStatus as any).job.errorMessage}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             
             <div className="bg-muted p-4 rounded-md">
-              <h3 className="text-sm font-medium mb-2">Инструкции по настройке</h3>
+              <h3 className="text-sm font-medium mb-2">Процесс импорта</h3>
               <p className="text-xs text-muted-foreground">
-                Используйте эти данные для настройки веб-хука в панели управления WhatsApp Business API.
-                При настройке укажите наш URL в качестве Callback URL и токен верификации для подтверждения подписки.
+                Импорт происходит в два этапа:
               </p>
+              <ul className="text-xs text-muted-foreground mt-1 space-y-1">
+                <li>• Этап 1: Импорт клиентов и создание сопоставления номеров телефонов</li>
+                <li>• Этап 2: Импорт задач и привязка к клиентам по client_id</li>
+              </ul>
               <p className="text-xs text-muted-foreground mt-2">
-                Веб-хук поддерживает как GET (верификация), так и POST (приём событий) запросы.
+                Процесс выполняется в фоновом режиме. Вы получите уведомление о завершении.
               </p>
             </div>
           </div>

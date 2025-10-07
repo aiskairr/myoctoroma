@@ -9,31 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { useBranch } from '@/contexts/BranchContext';
-import { getBranchIdWithFallback } from '@/utils/branch-utils';
+import { useAuth } from '@/contexts/SimpleAuthContext';
+import { getBranchId } from '@/utils/branch-utils';
+import { apiGetJson } from '@/lib/api';
 import { format } from 'date-fns';
 import { XCircle, Edit, Calendar, User, Clock, Phone, Search } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
-
-interface CancelledTask {
-  id: number;
-  scheduleDate: string;
-  scheduleTime: string;
-  endTime?: string;
-  serviceType: string;
-  serviceDuration: number;
-  masterName: string;
-  status: string;
-  finalPrice?: number;
-  paid: string;
-  notes?: string;
-  client?: {
-    firstName?: string;
-    customName?: string;
-    phoneNumber?: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
+import { type TaskWithMaster, type TaskFromAPI } from '@/hooks/use-tasks';
+import { useMasters } from '@/hooks/use-masters';
 
 interface CancelledAppointmentsProps {
   trigger?: React.ReactNode;
@@ -41,40 +24,112 @@ interface CancelledAppointmentsProps {
 
 export default function CancelledAppointments({ trigger }: CancelledAppointmentsProps) {
   const { toast } = useToast();
-  const { currentBranch, branches } = useBranch();
   const queryClient = useQueryClient();
+  const { currentBranch } = useBranch();
+  const { user, isAuthenticated } = useAuth();
   
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<CancelledTask | null>(null);
+  const [selectedTask, setSelectedTask] = useState<TaskWithMaster | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
 
-  // Загрузка отмененных записей
-  const { data: cancelledTasks = [], isLoading, refetch } = useQuery({
-    queryKey: ['/api/crm/tasks/cancelled', getBranchIdWithFallback(currentBranch, branches)],
-    queryFn: async () => {
-      const branchId = getBranchIdWithFallback(currentBranch, branches);
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks/cancelled?branchId=${branchId}`);
+  // Получаем мастеров для присваивания имен
+  const { data: mastersData = [] } = useMasters();
+
+  // Мемоизируем даты чтобы избежать бесконечных запросов
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(now.getMonth() - 6);
+    
+    return {
+      scheduledAfter: sixMonthsAgo.toISOString(),
+      scheduledBefore: now.toISOString()
+    };
+  }, []); // Пустой массив зависимостей - даты рассчитываются только один раз
+  
+  const branchId = getBranchId(currentBranch);
+  
+  // Создаем параметры запроса
+  const endpoint = useMemo(() => {
+    const queryParams = new URLSearchParams();
+    if (branchId) queryParams.append('branchId', branchId);
+    queryParams.append('scheduledAfter', dateRange.scheduledAfter);
+    queryParams.append('scheduledBefore', dateRange.scheduledBefore);
+    queryParams.append('sortBy', 'scheduleDate');
+    queryParams.append('sortOrder', 'desc');
+    if (user?.role) queryParams.append('userRole', user.role);
+    if (user?.master_id) queryParams.append('userMasterId', user.master_id.toString());
+    
+    return `/api/tasks?${queryParams.toString()}`;
+  }, [branchId, dateRange.scheduledAfter, dateRange.scheduledBefore, user?.role, user?.master_id]);
+
+  const { data: allTasksRaw = [], isLoading, refetch } = useQuery({
+    queryKey: ['cancelled-tasks', endpoint],
+    queryFn: async (): Promise<TaskFromAPI[]> => {
+      const data = await apiGetJson<TaskFromAPI[]>(endpoint);
       
-      if (!response.ok) {
-        throw new Error('Не удалось загрузить отмененные записи');
+      // Проверяем формат ответа и возвращаем массив задач
+      if (Array.isArray(data)) {
+        return data;
       }
       
-      const data = await response.json();
-      return data.sort((a: CancelledTask, b: CancelledTask) => 
-        new Date(b.scheduleDate).getTime() - new Date(a.scheduleDate).getTime()
-      );
+      // Если данные в другом формате, пытаемся извлечь массив
+      if (data && typeof data === 'object' && 'tasks' in data) {
+        return (data as any).tasks || [];
+      }
+      
+      return [];
     },
-    enabled: isOpen && !!currentBranch,
+    enabled: isOpen && !!branchId && isAuthenticated && !!user,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
+
+  // Объединяем данные задач с информацией о мастерах
+  const allTasks = useMemo(() => {
+    if (!allTasksRaw.length) {
+      return [];
+    }
+
+    // Создаем карту мастеров для быстрого поиска
+    const mastersMap = new Map(mastersData.map(master => [master.id, master]));
+
+    const mergedTasks: TaskWithMaster[] = allTasksRaw.map(task => {
+      const master = task.masterId ? mastersMap.get(task.masterId) : null;
+      const masterName = master ? master.name : null;
+      
+      // Вычисляем clientName для совместимости со старым кодом
+      const clientName = task.client?.customName || 
+                        task.client?.firstName || 
+                        (task.client?.firstName && task.client?.lastName ? 
+                          `${task.client.firstName} ${task.client.lastName}` : '') ||
+                        'Клиент';
+      
+      const mergedTask: TaskWithMaster = {
+        ...task,
+        masterName, // Перезаписываем данными из masters API
+        master,
+        clientName // Добавляем вычисляемое поле
+      };
+
+      return mergedTask;
+    });
+
+    return mergedTasks;
+  }, [allTasksRaw, mastersData]);
+  
+  // Фильтруем только отмененные записи
+  const cancelledTasks = useMemo(() => {
+    return allTasks.filter(task => task.status === 'cancelled' || task.status === 'no_show');
+  }, [allTasks]);
 
   // Мутация для обновления записи
   const updateTaskMutation = useMutation({
-    mutationFn: async (updatedTask: Partial<CancelledTask>) => {
+    mutationFn: async (updatedTask: Partial<TaskWithMaster>) => {
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks/${selectedTask?.id}`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${selectedTask?.id}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -99,7 +154,7 @@ export default function CancelledAppointments({ trigger }: CancelledAppointments
       
       // Обновляем основной календарь, если статус изменился
       queryClient.invalidateQueries({
-        queryKey: ['/api/crm/tasks']
+        queryKey: ['tasks']
       });
     },
     onError: (error: Error) => {
@@ -113,18 +168,20 @@ export default function CancelledAppointments({ trigger }: CancelledAppointments
 
   // Фильтрация записей
   const filteredTasks = useMemo(() => {
-    return cancelledTasks.filter((task: CancelledTask) => {
+    return cancelledTasks.filter((task: TaskWithMaster) => {
       const matchesSearch = 
         task.client?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         task.client?.customName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         task.client?.phoneNumber?.includes(searchTerm) ||
-        task.serviceType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.masterName.toLowerCase().includes(searchTerm.toLowerCase());
+        task.serviceType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        task.masterName?.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
 
       const matchesDate = (() => {
         if (dateFilter === 'all') return true;
+        
+        if (!task.scheduleDate) return false;
         
         const taskDate = new Date(task.scheduleDate);
         const now = new Date();
@@ -148,13 +205,13 @@ export default function CancelledAppointments({ trigger }: CancelledAppointments
     });
   }, [cancelledTasks, searchTerm, statusFilter, dateFilter]);
 
-  const handleEditTask = (task: CancelledTask) => {
+  const handleEditTask = (task: TaskWithMaster) => {
     setSelectedTask(task);
     setIsEditDialogOpen(true);
   };
 
   const handleSaveTask = () => {
-    if (!selectedTask) return;
+    if (!selectedTask || !selectedTask.scheduleDate) return;
 
     updateTaskMutation.mutate({
       ...selectedTask,
@@ -201,39 +258,16 @@ export default function CancelledAppointments({ trigger }: CancelledAppointments
                 />
               </div>
             </div>
-
-            <div className="min-w-[150px]">
-              <Label>Статус</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Все статусы</SelectItem>
-                  <SelectItem value="cancelled">Отменен</SelectItem>
-                  <SelectItem value="no_show">Не пришел</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="min-w-[150px]">
-              <Label>Период</Label>
-              <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Все время</SelectItem>
-                  <SelectItem value="today">Сегодня</SelectItem>
-                  <SelectItem value="week">Неделя</SelectItem>
-                  <SelectItem value="month">Месяц</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           {/* Список отмененных записей */}
-          <div className="space-y-3 max-h-[60vh] overflow-auto">
+          <div 
+            className="space-y-3 max-h-[60vh] overflow-auto" 
+            style={{ 
+              scrollbarWidth: 'auto',
+              scrollbarGutter: 'stable'
+            }}
+          >
             {isLoading ? (
               <div className="text-center py-8">Загрузка...</div>
             ) : filteredTasks.length === 0 ? (
@@ -241,7 +275,7 @@ export default function CancelledAppointments({ trigger }: CancelledAppointments
                 {cancelledTasks.length === 0 ? 'Нет отмененных записей' : 'Не найдено записей по критериям'}
               </div>
             ) : (
-              filteredTasks.map((task: CancelledTask) => (
+              filteredTasks.map((task: TaskWithMaster) => (
                 <Card key={task.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start">
@@ -266,7 +300,7 @@ export default function CancelledAppointments({ trigger }: CancelledAppointments
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-green-500" />
                             <span>
-                              {format(new Date(task.scheduleDate), 'dd.MM.yyyy')}
+                              {task.scheduleDate && format(new Date(task.scheduleDate), 'dd.MM.yyyy')}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -274,12 +308,12 @@ export default function CancelledAppointments({ trigger }: CancelledAppointments
                             {task.scheduleTime} - {task.endTime}
                           </div>
                           <div className="text-sm text-gray-600">
-                            Мастер: {task.masterName}
+                            Мастер: {task.masterName || 'Не указан'}
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <div className="font-medium">{task.serviceType}</div>
+                          <div className="font-medium">{task.serviceType || 'Услуга не указана'}</div>
                           <div className="text-sm text-gray-600">
                             {task.serviceDuration} мин
                           </div>

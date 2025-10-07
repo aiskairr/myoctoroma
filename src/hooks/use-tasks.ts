@@ -209,12 +209,13 @@ export function useTasks(params: TasksQueryParams = {}) {
  * Hook for fetching tasks for a specific date (used by calendar)
  */
 export function useTasksForDate(selectedDate: Date = new Date()) {
-  // Формируем даты для запроса
+  // Формируем даты для запроса - с 23:59 предыдущего дня до 23:59 текущего дня
   const scheduledAfter = new Date(selectedDate);
-  scheduledAfter.setHours(0, 0, 0, 0); // Начало дня
+  scheduledAfter.setDate(scheduledAfter.getDate() - 1); // Предыдущий день
+  scheduledAfter.setHours(23, 59, 0, 0); // 23:59 предыдущего дня
   
   const scheduledBefore = new Date(selectedDate);
-  scheduledBefore.setHours(23, 59, 59, 999); // Конец дня
+  scheduledBefore.setHours(23, 59, 59, 999); // 23:59 текущего дня
   
   return useTasks({
     scheduledAfter: scheduledAfter.toISOString(),
@@ -228,11 +229,14 @@ export function useTasksForDate(selectedDate: Date = new Date()) {
  * Hook for fetching tasks for a date range (used by dashboard)
  */
 export function useTasksForDateRange(startDate: Date, endDate: Date, additionalParams: Partial<TasksQueryParams> = {}) {
+  // Начинаем с 23:59 дня перед startDate
   const scheduledAfter = new Date(startDate);
-  scheduledAfter.setHours(0, 0, 0, 0);
+  scheduledAfter.setDate(scheduledAfter.getDate() - 1); // Предыдущий день
+  scheduledAfter.setHours(23, 59, 0, 0); // 23:59 предыдущего дня
   
+  // Заканчиваем в 23:59 endDate
   const scheduledBefore = new Date(endDate);
-  scheduledBefore.setHours(23, 59, 59, 999);
+  scheduledBefore.setHours(23, 59, 59, 999); // 23:59 конечного дня
   
   return useTasks({
     scheduledAfter: scheduledAfter.toISOString(),
@@ -265,11 +269,14 @@ export function useMyTasks(selectedDate?: Date) {
   };
 
   if (selectedDate) {
+    // Начинаем с 23:59 предыдущего дня
     const scheduledAfter = new Date(selectedDate);
-    scheduledAfter.setHours(0, 0, 0, 0);
+    scheduledAfter.setDate(scheduledAfter.getDate() - 1); // Предыдущий день
+    scheduledAfter.setHours(23, 59, 0, 0); // 23:59 предыдущего дня
     
+    // Заканчиваем в 23:59 выбранного дня
     const scheduledBefore = new Date(selectedDate);
-    scheduledBefore.setHours(23, 59, 59, 999);
+    scheduledBefore.setHours(23, 59, 59, 999); // 23:59 текущего дня
     
     params.scheduledAfter = scheduledAfter.toISOString();
     params.scheduledBefore = scheduledBefore.toISOString();

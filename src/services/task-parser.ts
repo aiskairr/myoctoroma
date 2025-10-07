@@ -215,14 +215,17 @@ export const formatDateForAPI = (date: Date): string => {
 };
 
 export const getDateRange = (date: Date): { scheduledAfter: string; scheduledBefore: string } => {
-  const startOfDay = new Date(date);
-  startOfDay.setHours(0, 0, 0, 0);
+  // Начинаем с 23:59 предыдущего дня
+  const startOfPeriod = new Date(date);
+  startOfPeriod.setDate(startOfPeriod.getDate() - 1); // Предыдущий день
+  startOfPeriod.setHours(23, 59, 0, 0); // 23:59 предыдущего дня
   
-  const endOfDay = new Date(date);
-  endOfDay.setHours(23, 59, 59, 999);
+  // Заканчиваем в 23:59 текущего дня
+  const endOfPeriod = new Date(date);
+  endOfPeriod.setHours(23, 59, 59, 999); // 23:59 текущего дня
   
   return {
-    scheduledAfter: formatDateForAPI(startOfDay),
-    scheduledBefore: formatDateForAPI(endOfDay)
+    scheduledAfter: formatDateForAPI(startOfPeriod),
+    scheduledBefore: formatDateForAPI(endOfPeriod)
   };
 };

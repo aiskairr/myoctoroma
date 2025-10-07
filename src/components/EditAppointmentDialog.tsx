@@ -422,15 +422,60 @@ export const EditAppointmentDialog = ({
         throw new Error('Failed to create payment record');
       }
 
-      // Обновляем способ оплаты и статус оплаты для родительской записи
+      // Обновляем статус задачи на completed и добавляем данные об оплате
+      // Формируем полный payload на основе текущих данных задачи
+      const calculateFinalPrice = (servicePrice: number, discount: number): number => {
+        return Math.max(0, servicePrice - (servicePrice * discount / 100));
+      };
+
+      const calculateEndTime = (startTime: string, duration: number): string => {
+        const [hours, minutes] = startTime.split(':').map(Number);
+        const startMinutes = hours * 60 + minutes;
+        const endMinutes = startMinutes + duration;
+        const endHours = Math.floor(endMinutes / 60);
+        const endMins = endMinutes % 60;
+        return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+      };
+
+      const servicePrice = task.finalPrice || task.servicePrice || 0;
+      const discount = formData.discount || 0;
+      const duration = task.duration || 60;
+
+      // Улучшенная логика получения имени клиента
+      const clientName = task.client?.customName || 
+                        task.client?.firstName || 
+                        task.clientName || 
+                        'Неизвестный клиент';
+
+      const updatePayload: any = {
+        clientName: clientName,
+        phoneNumber: task.client?.phoneNumber || '',
+        serviceType: task.serviceType || 'Услуга',
+        masterName: task.masterName || 'Неизвестный мастер',
+        masterId: task.masterId || null,
+        notes: task.notes || '',
+        scheduleTime: task.scheduleTime || '00:00',
+        duration: duration,
+        finalPrice: calculateFinalPrice(servicePrice, discount),
+        discount: discount,
+        branchId: task.branchId || getBranchIdWithFallback(currentBranch, branches).toString(),
+        status: 'completed', // ВСЕГДА устанавливаем статус на completed при оплате
+        endTime: calculateEndTime(task.scheduleTime || '00:00', duration),
+        // Добавляем данные об оплате
+        paymentMethod: selectedPaymentMethod,
+        adminName: selectedAdministrator,
+        paid: 'paid'
+      };
+
+      // scheduleDate только если есть валидная дата
+      if (task.scheduleDate && task.scheduleDate !== null) {
+        updatePayload.scheduleDate = task.scheduleDate;
+      }
+
       await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paymentMethod: selectedPaymentMethod,
-          adminName: selectedAdministrator,
-          paid: 'paid'
-        }),
+        body: JSON.stringify(updatePayload),
       });
 
       return res.json();
@@ -487,21 +532,44 @@ export const EditAppointmentDialog = ({
         throw new Error("Данные задачи или имя клиента отсутствуют");
       }
 
-      const payload = {
+      // Вспомогательные функции
+      const calculateFinalPrice = (servicePrice: number, discount: number): number => {
+        return Math.max(0, servicePrice - (servicePrice * discount / 100));
+      };
+
+      const calculateEndTime = (startTime: string, duration: number): string => {
+        const [hours, minutes] = startTime.split(':').map(Number);
+        const startMinutes = hours * 60 + minutes;
+        const endMinutes = startMinutes + duration;
+        const endHours = Math.floor(endMinutes / 60);
+        const endMins = endMinutes % 60;
+        return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+      };
+
+      const servicePrice = formData.finalPrice || 0;
+      const discount = formData.discount || 0;
+      const duration = selectedDuration || 60;
+
+      const payload: any = {
         clientName: formData.clientName,
         phoneNumber: formData.phoneNumber,
         serviceType: formData.serviceType,
         masterName: formData.masterName,
         masterId: formData.masterId,
         notes: formData.notes,
-        scheduleDate: formData.scheduleDate,
         scheduleTime: formData.scheduleTime,
-        duration: selectedDuration,
-        finalPrice: formData.finalPrice,
-        discount: formData.discount,
+        duration: duration,
+        finalPrice: calculateFinalPrice(servicePrice, discount), // Обязательное поле
+        discount: discount,
+        endTime: calculateEndTime(formData.scheduleTime, duration), // Обязательное поле
         branchId: formData.branchId,
         status: formData.status
       };
+
+      // scheduleDate только если есть валидная дата
+      if (formData.scheduleDate && formData.scheduleDate !== null && formData.scheduleDate.trim()) {
+        payload.scheduleDate = formData.scheduleDate;
+      }
 
       console.log('Sending PUT request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`);
       console.log('Payload:', payload);

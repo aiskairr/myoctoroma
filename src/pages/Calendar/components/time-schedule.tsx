@@ -2,7 +2,10 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Plus, X, Clock, User, Calendar, GripVertical, Coins } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 import TaskDialogBtn from './task-dialog-btn';
+import CancelledAppointments from '@/components/CancelledAppointments';
 import { useMasters } from '@/hooks/use-masters';
 import { useCalendarTasks } from '@/hooks/use-calendar-tasks';
 import { useServices, convertServicesToLegacyFormat } from '@/hooks/use-services';
@@ -10,6 +13,7 @@ import { useCreateTask, generateTaskId } from '@/hooks/use-task';
 import { useBranch } from '@/contexts/BranchContext';
 import { useAuth } from '@/contexts/SimpleAuthContext';
 import { useMasterWorkingDates } from '@/hooks/use-master-working-dates';
+import type { Master } from '@/hooks/use-masters';
 
 // Types
 interface Employee {
@@ -73,8 +77,7 @@ interface AdvancedScheduleComponentProps {
 }
 
 interface NewEmployeeForm {
-    name: string;
-    role: string;
+    masterId: string;
     startTime: string;
     endTime: string;
 }
@@ -89,16 +92,6 @@ interface NewAppointmentForm {
 }
 
 // Constants
-const ROLES = [
-    'Мужской стилист',
-    'Женский стилист',
-    'Универсальный стилист',
-    'Колорист',
-    'Барбер',
-    'Мастер маникюра',
-    'Массажист'
-] as const;
-
 const EMPLOYEE_COLORS = [
     '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
     '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
@@ -164,6 +157,62 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
     // API mutations
     const createTaskMutation = useCreateTask();
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+
+    // Мутация для добавления мастера на рабочий день
+    const addMasterToWorkingDayMutation = useMutation({
+        mutationFn: async (workingDayData: {
+            masterId: string;
+            workDate: string;
+            startTime: string;
+            endTime: string;
+            branchId: string;
+        }) => {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${workingDayData.masterId}/working-dates`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    workDate: workingDayData.workDate,
+                    startTime: workingDayData.startTime,
+                    endTime: workingDayData.endTime,
+                    branchId: workingDayData.branchId
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Не удалось добавить мастера на рабочий день');
+            }
+            
+            return response.json();
+        },
+        onSuccess: () => {
+            const selectedMaster = allBranchMasters.find(m => m.id.toString() === newEmployee.masterId);
+            toast({
+                title: 'Успешно',
+                description: `Мастер ${selectedMaster?.name || 'Неизвестный'} добавлен на ${currentDateStr}`,
+            });
+            
+            // Обновляем данные рабочих дат
+            queryClient.invalidateQueries({ queryKey: ['/api/masters/working-dates'] });
+            
+            // Закрываем диалог и сбрасываем форму
+            setIsAddEmployeeOpen(false);
+            setNewEmployee({
+                masterId: '',
+                startTime: '07:00',
+                endTime: '23:59'
+            });
+        },
+        onError: (error: Error) => {
+            toast({
+                title: 'Ошибка',
+                description: error.message,
+                variant: 'destructive',
+            });
+        },
+    });
 
     // Convert services data to legacy format for compatibility
     const services = useMemo(() => {
@@ -222,7 +271,12 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             console.log("  - Tasks without masterName:", tasksData.filter(t => !t.masterName && t.masterId).length);
             
             const convertedAppointments = tasksData
-                .filter(task => task.scheduleTime && task.masterId)
+                .filter(task => 
+                    task.scheduleTime && 
+                    task.masterId && 
+                    task.status !== 'cancelled' && 
+                    task.status !== 'no_show'
+                )
                 .map(task => {
                     // Функция для вычисления длительности в минутах между двумя временами
                     const calculateDurationFromTimes = (startTime: string, endTime: string): number => {
@@ -321,8 +375,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     const scheduleRef = useRef<HTMLDivElement>(null);
 
     const [newEmployee, setNewEmployee] = useState<NewEmployeeForm>({
-        name: '',
-        role: '',
+        masterId: '',
         startTime: '07:00',
         endTime: '23:59'
     });
@@ -334,6 +387,26 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         startTime: '',
         duration: 45,
         notes: ''
+    });
+
+    // Отдельный запрос для получения всех мастеров филиала (для диалога добавления)
+    const { data: allBranchMasters = [], isLoading: allMastersLoading } = useQuery<Master[]>({
+        queryKey: [`/api/crm/masters/${currentBranch?.id}`],
+        queryFn: async () => {
+            if (!currentBranch?.id) return [];
+            
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${currentBranch.id}`, {
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                throw new Error('Не удалось загрузить мастеров');
+            }
+            
+            return response.json();
+        },
+        enabled: !!currentBranch?.id && isAddEmployeeOpen,
+        staleTime: 5 * 60 * 1000, // 5 минут
     });
 
     // Update current time line
@@ -398,6 +471,34 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         console.log('👥 All mastersData:', mastersData.map(m => ({ id: m.id, name: m.name, branchId: m.branchId })));
         console.log('👥 All employees:', employees.map(e => ({ id: e.id, name: e.name })));
         
+        // Получаем текущие данные appointment для формирования полного payload
+        const currentAppointment = appointments.find(apt => apt.id === appointmentId);
+        if (!currentAppointment) {
+            console.error('❌ Current appointment not found for ID:', appointmentId);
+            return;
+        }
+
+        // Получаем текущие данные задачи с сервера для полного payload
+        let currentTask = null;
+        try {
+            const taskResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${appointmentId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include'
+            });
+            
+            if (taskResponse.ok) {
+                currentTask = await taskResponse.json();
+                console.log('📋 Current task data:', currentTask);
+            } else {
+                console.warn('⚠️ Could not fetch current task data, using appointment data');
+            }
+        } catch (error) {
+            console.warn('⚠️ Error fetching current task data:', error);
+        }
+        
         // Обновляем локальное состояние
         setAppointments(prev => prev.map(apt =>
             apt.id === appointmentId ? { ...apt, ...updates } : apt
@@ -405,10 +506,80 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
         // Отправляем запрос на сервер
         try {
+            // Вспомогательная функция для вычисления final_price
+            const calculateFinalPrice = (servicePrice: number, discount: number): number => {
+                return Math.max(0, servicePrice - (servicePrice * discount / 100));
+            };
+
+            // Вспомогательная функция для вычисления end_time
+            const calculateEndTime = (startTime: string, duration: number): string => {
+                const [hours, minutes] = startTime.split(':').map(Number);
+                const startMinutes = hours * 60 + minutes;
+                const endMinutes = startMinutes + duration;
+                const endHours = Math.floor(endMinutes / 60);
+                const endMins = endMinutes % 60;
+                return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+            };
+
+            // Формируем полный payload, используя текущие данные задачи и изменения
             const payload: any = {};
             
-            if (updates.startTime) payload.scheduleTime = updates.startTime;
-            if (updates.endTime) payload.endTime = updates.endTime;
+            // Обязательные поля из текущей задачи
+            if (currentTask) {
+                payload.clientName = currentTask.clientName || currentAppointment.clientName;
+                payload.phoneNumber = currentTask.client?.phoneNumber || '';
+                payload.serviceType = currentTask.serviceType || currentAppointment.service;
+                payload.notes = currentTask.notes || currentAppointment.notes || '';
+                
+                // scheduleDate только если есть валидная дата
+                if (currentTask.scheduleDate && currentTask.scheduleDate !== null) {
+                    payload.scheduleDate = currentTask.scheduleDate;
+                }
+                
+                const servicePrice = currentTask.finalPrice || currentTask.servicePrice || 0;
+                const discount = currentTask.discount || 0;
+                payload.finalPrice = calculateFinalPrice(servicePrice, discount);
+                payload.discount = discount;
+                payload.branchId = currentTask.branchId || '1';
+                payload.status = currentTask.status || currentAppointment.status;
+            } else {
+                // Fallback to appointment data if task fetch failed
+                payload.clientName = currentAppointment.clientName;
+                payload.phoneNumber = '';
+                payload.serviceType = currentAppointment.service;
+                payload.notes = currentAppointment.notes || '';
+                // НЕ добавляем scheduleDate если данных нет
+                payload.finalPrice = 0;
+                payload.discount = 0;
+                payload.branchId = '1';
+                payload.status = currentAppointment.status;
+            }
+            
+            // Применяем изменения поверх базовых данных
+            if (updates.startTime) {
+                payload.scheduleTime = updates.startTime;
+                // Вычисляем end_time на основе startTime и текущей длительности
+                const duration = updates.duration || currentAppointment.duration || 60;
+                payload.endTime = calculateEndTime(updates.startTime, duration);
+            }
+            if (updates.endTime) {
+                payload.endTime = updates.endTime;
+            }
+            if (updates.duration) {
+                payload.duration = updates.duration;
+                // Если есть startTime, пересчитываем endTime
+                const startTime = updates.startTime || currentAppointment.startTime;
+                if (startTime) {
+                    payload.endTime = calculateEndTime(startTime, updates.duration);
+                }
+            }
+
+            // Обязательные поля для API
+            if (!payload.endTime && payload.scheduleTime) {
+                const duration = currentAppointment.duration || 60;
+                payload.endTime = calculateEndTime(payload.scheduleTime, duration);
+            }
+            
             if (updates.employeeId) {
                 console.log('🔍 Looking for employeeId:', updates.employeeId);
                 
@@ -437,6 +608,10 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                     console.warn('⚠️ Employee not found for employeeId:', updates.employeeId);
                     console.log('Available employee IDs:', employees.map(e => e.id));
                 }
+            } else if (currentTask) {
+                // Сохраняем текущего мастера если он не изменяется
+                payload.masterId = currentTask.masterId;
+                payload.masterName = currentTask.masterName || currentTask.master?.name;
             }
 
             console.log('🚀 Sending PUT request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${appointmentId}`);
@@ -721,13 +896,35 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         }
     }, [dragState.isDragging, resizeState.isResizing, handleMouseMove, handleMouseUp]);
 
-    // Employee management - since employees come from API, these are simplified
+    // Employee management
     const handleAddEmployee = useCallback(() => {
-        // This would need to call the API to create a new master
-        // For now, we'll show a message that this should be done in the Masters page
-        alert('Добавление мастеров выполняется на странице "Мастера"');
-        setIsAddEmployeeOpen(false);
-    }, []);
+        if (!newEmployee.masterId) {
+            toast({
+                title: 'Ошибка',
+                description: 'Выберите мастера',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        if (!currentBranch?.id) {
+            toast({
+                title: 'Ошибка',
+                description: 'Не выбран филиал',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        // Добавляем мастера на рабочий день
+        addMasterToWorkingDayMutation.mutate({
+            masterId: newEmployee.masterId,
+            workDate: currentDateStr,
+            startTime: newEmployee.startTime,
+            endTime: newEmployee.endTime,
+            branchId: currentBranch.id.toString()
+        });
+    }, [newEmployee, currentBranch, currentDateStr, addMasterToWorkingDayMutation, toast, allBranchMasters]);
 
     const handleRemoveEmployee = useCallback((_employeeId: string) => {
         // This would need to call the API to deactivate a master
@@ -1255,48 +1452,48 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                     </div>
                                 </div>
 
-                                <Dialog open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>
-                                    <DialogTrigger asChild>
-                                        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                                            <Plus size={18} />
-                                            Добавить сотрудника
-                                        </button>
-                                    </DialogTrigger>
+                                <div className="flex items-center gap-3">
+                                    <CancelledAppointments />
+                                    
+                                    <Dialog open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>
+                                        <DialogTrigger asChild>
+                                            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                                                <Plus size={18} />
+                                                Добавить сотрудника
+                                            </button>
+                                        </DialogTrigger>
                                     <DialogContent className="sm:max-w-[500px]">
                                         <DialogHeader>
                                             <DialogTitle className="flex items-center gap-2">
                                                 <User size={20} />
-                                                Новый сотрудник
+                                                Добавить мастера на день
                                             </DialogTitle>
                                         </DialogHeader>
                                         <div className="space-y-6 py-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Имя сотрудника *
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={newEmployee.name}
-                                                    onChange={(e) => setNewEmployee(prev => ({ ...prev, name: e.target.value }))}
-                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                    placeholder="Введите имя сотрудника"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Специализация *
+                                                    Выберите мастера *
                                                 </label>
                                                 <select
-                                                    value={newEmployee.role}
-                                                    onChange={(e) => setNewEmployee(prev => ({ ...prev, role: e.target.value }))}
+                                                    value={newEmployee.masterId}
+                                                    onChange={(e) => setNewEmployee(prev => ({ ...prev, masterId: e.target.value }))}
                                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    disabled={allMastersLoading}
                                                 >
-                                                    <option value="">Выберите специализацию</option>
-                                                    {ROLES.map(role => (
-                                                        <option key={role} value={role}>{role}</option>
-                                                    ))}
+                                                    <option value="">{allMastersLoading ? 'Загрузка...' : 'Выберите мастера'}</option>
+                                                    {allBranchMasters
+                                                        .filter(master => master.isActive)
+                                                        .filter(master => !employees.some(emp => emp.id === master.id.toString()))
+                                                        .map(master => (
+                                                            <option key={master.id} value={master.id}>
+                                                                {master.name} - {master.specialization || 'Без специализации'}
+                                                            </option>
+                                                        ))
+                                                    }
                                                 </select>
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    Дата: {currentDateStr}
+                                                </p>
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-4">
@@ -1339,15 +1536,19 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                                 </button>
                                                 <button
                                                     onClick={handleAddEmployee}
-                                                    disabled={!newEmployee.name.trim() || !newEmployee.role}
-                                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                                                    disabled={!newEmployee.masterId || addMasterToWorkingDayMutation.isPending}
+                                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                                                 >
-                                                    Добавить сотрудника
+                                                    {addMasterToWorkingDayMutation.isPending && (
+                                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                    )}
+                                                    {addMasterToWorkingDayMutation.isPending ? 'Добавление...' : 'Добавить на день'}
                                                 </button>
                                             </div>
                                         </div>
                                     </DialogContent>
                                 </Dialog>
+                            </div>
                             </div>
                         </div>
 

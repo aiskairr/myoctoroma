@@ -399,7 +399,10 @@ export default function Clients() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="max-h-full overflow-y-auto">
+            <div className="max-h-full overflow-y-auto" style={{ 
+              scrollbarWidth: 'auto',
+              scrollbarGutter: 'stable'
+            }}>
               {clients.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
                   <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -581,7 +584,10 @@ export default function Clients() {
                 <h3 className="text-sm font-medium">История сообщений</h3>
               </div>
 
-              <div className="flex-1 px-6 overflow-y-auto">
+              <div className="flex-1 px-6 overflow-y-auto" style={{ 
+                scrollbarWidth: 'auto',
+                scrollbarGutter: 'stable'
+              }}>
                 <ConversationHistory client={selectedClient} messages={messages} />
               </div>
 

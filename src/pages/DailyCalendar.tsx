@@ -1183,30 +1183,93 @@ const EditAppointmentDialog = ({
         throw new Error('Failed to create payment record');
       }
 
-      // Обновляем способ оплаты, администратора и статус оплаты для родительской записи
+      // Обновляем статус задачи на completed и добавляем данные об оплате
+      // Формируем полный payload для родительской задачи
+      const calculateFinalPrice = (servicePrice: number, discount: number): number => {
+        return Math.max(0, servicePrice - (servicePrice * discount / 100));
+      };
+
+      const calculateEndTime = (startTime: string, duration: number): string => {
+        const [hours, minutes] = startTime.split(':').map(Number);
+        const startMinutes = hours * 60 + minutes;
+        const endMinutes = startMinutes + duration;
+        const endHours = Math.floor(endMinutes / 60);
+        const endMins = endMinutes % 60;
+        return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+      };
+
+      const servicePrice = task.finalPrice || task.servicePrice || 0;
+      const discount = formData.discount || 0;
+      const duration = task.duration || 60;
+
+      const updatePayload: any = {
+        clientName: task.clientName || 'Неизвестный клиент',
+        phoneNumber: task.client?.phoneNumber || '',
+        serviceType: task.serviceType || 'Услуга',
+        masterName: task.masterName || 'Неизвестный мастер',
+        masterId: task.masterId || null,
+        notes: task.notes || '',
+        scheduleTime: task.scheduleTime || '00:00',
+        duration: duration,
+        finalPrice: calculateFinalPrice(servicePrice, discount),
+        discount: discount,
+        branchId: task.branchId || getBranchIdWithFallback(currentBranch, branches).toString(),
+        status: 'completed', // ВСЕГДА устанавливаем статус на completed при оплате
+        endTime: calculateEndTime(task.scheduleTime || '00:00', duration),
+        // Добавляем данные об оплате
+        paymentMethod: selectedPaymentMethod,
+        adminName: selectedAdministrator,
+        paid: 'paid'
+      };
+
+      // scheduleDate только если есть валидная дата
+      if (task.scheduleDate && task.scheduleDate !== null) {
+        updatePayload.scheduleDate = task.scheduleDate;
+      }
+
       await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
-        method: 'POST',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paymentMethod: selectedPaymentMethod,
-          adminName: selectedAdministrator,
-          paid: 'paid'
-        }),
+        body: JSON.stringify(updatePayload),
       });
 
-      // Обновляем способ оплаты, администратора и статус оплаты для всех дочерних записей
+      // Обновляем статус для всех дочерних записей
       if (childTasks.length > 0) {
-        await Promise.all(childTasks.map(childTask =>
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTask.id}`, {
-            method: 'POST',
+        await Promise.all(childTasks.map(async (childTask) => {
+          const childServicePrice = childTask.finalPrice || childTask.servicePrice || 0;
+          const childDuration = childTask.duration || 60;
+          
+          const childUpdatePayload: any = {
+            clientName: childTask.clientName || 'Неизвестный клиент',
+            phoneNumber: childTask.client?.phoneNumber || '',
+            serviceType: childTask.serviceType || 'Услуга',
+            masterName: childTask.masterName || 'Неизвестный мастер',
+            masterId: childTask.masterId || null,
+            notes: childTask.notes || '',
+            scheduleTime: childTask.scheduleTime || '00:00',
+            duration: childDuration,
+            finalPrice: calculateFinalPrice(childServicePrice, discount),
+            discount: discount,
+            branchId: childTask.branchId || getBranchIdWithFallback(currentBranch, branches).toString(),
+            status: 'completed', // ВСЕГДА устанавливаем статус на completed при оплате
+            endTime: calculateEndTime(childTask.scheduleTime || '00:00', childDuration),
+            // Добавляем данные об оплате
+            paymentMethod: selectedPaymentMethod,
+            adminName: selectedAdministrator,
+            paid: 'paid'
+          };
+
+          // scheduleDate только если есть валидная дата
+          if (childTask.scheduleDate && childTask.scheduleDate !== null) {
+            childUpdatePayload.scheduleDate = childTask.scheduleDate;
+          }
+
+          return fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTask.id}`, {
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              paymentMethod: selectedPaymentMethod,
-              adminName: selectedAdministrator,
-              paid: 'paid'
-            }),
-          })
-        ));
+            body: JSON.stringify(childUpdatePayload),
+          });
+        }));
       }
 
       return res.json();
@@ -2343,11 +2406,73 @@ export default function DailyCalendar() {
       const newMaster = activeMasters.find(m => m.id === newMasterId);
       if (!newMaster) throw new Error('Мастер не найден');
 
-      const payload = {
-        scheduleTime: newTime,
-        masterId: newMasterId,
-        masterName: newMaster.name
+      // Получаем текущие данные задачи для формирования полного payload
+      let currentTask = null;
+      try {
+        const taskResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include'
+        });
+        
+        if (taskResponse.ok) {
+          currentTask = await taskResponse.json();
+          console.log('📋 Current task data for move:', currentTask);
+        } else {
+          throw new Error('Could not fetch current task data');
+        }
+      } catch (error) {
+        console.error('❌ Error fetching current task data:', error);
+        throw new Error('Failed to fetch current task data for update');
+      }
+
+      // Вспомогательные функции
+      const calculateFinalPrice = (servicePrice: number, discount: number): number => {
+        return Math.max(0, servicePrice - (servicePrice * discount / 100));
       };
+
+      const calculateEndTime = (startTime: string, duration: number): string => {
+        const [hours, minutes] = startTime.split(':').map(Number);
+        const startMinutes = hours * 60 + minutes;
+        const endMinutes = startMinutes + duration;
+        const endHours = Math.floor(endMinutes / 60);
+        const endMins = endMinutes % 60;
+        return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+      };
+
+      // Формируем полный payload
+      const serviceDuration = currentTask.serviceDuration || 60;
+      const servicePrice = currentTask.finalPrice || currentTask.servicePrice || 0;
+      const discount = currentTask.discount || 0;
+      
+      // Улучшенная логика получения имени клиента
+      const clientName = currentTask.client?.customName || 
+                        currentTask.client?.firstName || 
+                        currentTask.clientName || 
+                        'Неизвестный клиент';
+      
+      const payload: any = {
+        clientName: clientName,
+        phoneNumber: currentTask.client?.phoneNumber || '',
+        serviceType: currentTask.serviceType || 'Услуга',
+        masterName: newMaster.name,
+        masterId: newMasterId,
+        notes: currentTask.notes || '',
+        scheduleTime: newTime,
+        duration: serviceDuration,
+        finalPrice: calculateFinalPrice(servicePrice, discount), // Обязательное поле
+        discount: discount,
+        endTime: calculateEndTime(newTime, serviceDuration), // Обязательное поле
+        branchId: currentTask.branchId || '1',
+        status: currentTask.status || 'scheduled'
+      };
+
+      // scheduleDate только если есть валидная дата
+      if (currentTask.scheduleDate && currentTask.scheduleDate !== null) {
+        payload.scheduleDate = currentTask.scheduleDate;
+      }
 
       console.log('Sending PUT request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`);
       console.log('Payload:', payload);

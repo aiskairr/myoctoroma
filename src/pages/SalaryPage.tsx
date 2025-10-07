@@ -243,23 +243,31 @@ export default function SalaryPage() {
         });
         return;
       }
+
+      // Находим данные сотрудника
+      const employee = salaryRecords.find(record => record.id === employeeId);
+      if (!employee) {
+        toast({
+          title: "Ошибка",
+          description: "Данные сотрудника не найдены",
+          variant: "destructive",
+        });
+        return;
+      }
       
+      // Создаем объект согласно API документации
       const paymentData = {
-        // Основные поля согласно API требованиям
-        employeeName: employeeName, // "Employee name" в camelCase
-        amount: amount, // "amount"
-        branchId: branchId, // "branch ID" в camelCase
-        
-        // Дополнительные поля (на случай если API ожидает другие варианты)
-        employee_id: employeeId,
-        employee_name: employeeName,
-        branch_id: branchId,
-        payment_date: new Date().toISOString().split('T')[0],
-        period_start: startDate,
-        period_end: endDate
+        "employee": employeeName,
+        "amount": Number(amount),
+        "branchId": branchId,
+        "masterId": employee.master_id || null,
+        "administratorId": employee.employee_type === 'administrator' ? employeeId : null,
+        "employeeRole": employee.employee_role || employee.employee_type,
+        "baseSlary": Number(employee.base_salary) || 0,
+        "commissionRate": Number(employee.commission_rate) || 0
       };
       
-      console.log('💰 Sending salary payment data:', paymentData);
+      console.log('💰 Sending salary payment data (API format):', paymentData);
       
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments`, {
         method: 'POST',
@@ -269,7 +277,12 @@ export default function SalaryPage() {
         body: JSON.stringify(paymentData),
       });
 
+      console.log('📤 Response status:', response.status);
+      console.log('📤 Response headers:', response.headers);
+
       if (response.ok) {
+        const responseData = await response.json();
+        console.log('✅ Success response:', responseData);
         toast({
           title: "Успех",
           description: "Выплата сохранена",
@@ -283,7 +296,13 @@ export default function SalaryPage() {
       } else {
         // Получаем детали ошибки от API
         const errorData = await response.json();
-        console.error('❌ API Error:', errorData);
+        console.error('❌ API Error Response:', errorData);
+        console.error('❌ Full error details:', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries()),
+          body: errorData
+        });
         toast({
           title: "Ошибка API",
           description: errorData.message || `Статус: ${response.status}`,

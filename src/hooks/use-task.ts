@@ -153,13 +153,14 @@ export interface CreateTaskRequest {
   notes?: string;
   scheduleDate: string; // Формат: YYYY-MM-DD
   scheduleTime: string; // HH:MM format
+  endTime: string; // HH:MM format - обязательное поле
   serviceType: string;
   masterId: number;
   serviceDuration: number;
   servicePrice: number;
+  finalPrice: number; // Обязательное поле: servicePrice - discount
   branchId: string;
   discount?: number;
-  finalPrice?: number;
   status?: string;
 }
 

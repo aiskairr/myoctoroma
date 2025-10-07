@@ -979,7 +979,10 @@ const AccountingPage = () => {
                                 <DialogHeader>
                                   <DialogTitle>Детали записи</DialogTitle>
                                 </DialogHeader>
-                                <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                                <div className="space-y-4 max-h-[400px] overflow-y-auto" style={{ 
+                                  scrollbarWidth: 'auto',
+                                  scrollbarGutter: 'stable'
+                                }}>
                                   <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div className="space-y-2">
                                       <p><strong>ID:</strong> {record.id || 'Не указан'}</p>

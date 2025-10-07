@@ -7,21 +7,13 @@ const CalendarScreen = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const dateParam = urlParams.get('date');
         
-        console.log('📅 CalendarScreen - URL search params:', window.location.search);
-        console.log('📅 CalendarScreen - date param:', dateParam);
         
         if (dateParam) {
             const parsedDate = new Date(dateParam);
-            // Проверяем, что дата валидна
-            if (!isNaN(parsedDate.getTime())) {
-                console.log('📅 CalendarScreen - parsed valid date:', parsedDate.toISOString());
-                return parsedDate;
-            }
         }
         
         // Возвращаем текущую дату, если параметр отсутствует или невалидный
         const today = new Date();
-        console.log('📅 CalendarScreen - using today:', today.toISOString());
         return today;
     };
 
