@@ -1362,42 +1362,56 @@ const Masters: React.FC = () => {
 
   return (
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Мастера</h1>
-        <div className="flex gap-3">
-          <Dialog open={isAddAdministratorDialogOpen} onOpenChange={setIsAddAdministratorDialogOpen}>
-            <DialogTrigger asChild>
+      {/* Header */}
+      <Card className="rounded-xl shadow-lg mb-8">
+        <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-xl">
+          <div className="flex justify-between items-center">
+            <CardTitle className="flex items-center gap-3 text-2xl">
+              <User className="h-8 w-8" />
+              Мастера
+            </CardTitle>
+            <div className="flex gap-3">
+              <Dialog open={isAddAdministratorDialogOpen} onOpenChange={setIsAddAdministratorDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="border-white/20 text-white hover:bg-white/10 bg-white/5"
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    Добавить администратора
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px] bg-white rounded-xl">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-semibold text-gray-900">Добавить администратора</DialogTitle>
+                    <DialogDescription className="text-gray-500">
+                      Заполните данные нового администратора.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <AdministratorForm
+                    onSubmit={handleAddAdministrator}
+                    isPending={createAdministratorMutation.isPending}
+                    branchUsers={branchUsers}
+                  />
+                </DialogContent>
+              </Dialog>
               <Button
+                onClick={() => setIsAddDialogOpen(true)}
+                className="bg-white/20 hover:bg-white/30 text-white border-white/20"
                 variant="outline"
-                className="border-indigo-200 text-indigo-600 hover:bg-indigo-50"
               >
-                <User className="h-4 w-4 mr-2" />
-                Добавить администратора
+                <Plus className="h-4 w-4 mr-2" />
+                Добавить мастера
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] bg-white rounded-xl">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-semibold text-gray-900">Добавить администратора</DialogTitle>
-                <DialogDescription className="text-gray-500">
-                  Заполните данные нового администратора.
-                </DialogDescription>
-              </DialogHeader>
-              <AdministratorForm
-                onSubmit={handleAddAdministrator}
-                isPending={createAdministratorMutation.isPending}
-                branchUsers={branchUsers}
-              />
-            </DialogContent>
-          </Dialog>
-          <Button
-            onClick={() => setIsAddDialogOpen(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Добавить мастера
-          </Button>
-        </div>
-      </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="text-sm text-gray-600">
+            Управление мастерами и администраторами
+          </div>
+        </CardContent>
+      </Card>
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">

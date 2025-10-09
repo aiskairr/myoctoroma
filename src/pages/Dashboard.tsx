@@ -664,23 +664,33 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50/50">
       <div className="space-y-4 p-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-              Панель управления
-            </h1>
-            <p className="text-sm text-gray-500">
-              Обзор активности и аналитики системы
-            </p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${botStatus ? 'bg-green-500' : 'bg-red-500'}`} />
-              <span className="text-sm font-medium text-gray-700">Статус:</span>
+        <Card className="rounded-xl shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-3 text-2xl">
+                  <Activity className="h-8 w-8" />
+                  Панель управления
+                </CardTitle>
+                <p className="text-blue-100 mt-1">
+                  Обзор активности и аналитики системы
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${botStatus ? 'bg-green-400' : 'bg-red-400'}`} />
+                  <span className="text-sm font-medium text-blue-100">Статус:</span>
+                </div>
+                <StatusBadge status={botStatus ? "Online" : "Offline"} />
+              </div>
             </div>
-            <StatusBadge status={botStatus ? "Online" : "Offline"} />
-          </div>
-        </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="text-sm text-gray-600">
+              Текущий филиал: {currentBranch?.name || 'Не выбран'}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">

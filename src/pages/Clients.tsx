@@ -390,8 +390,11 @@ export default function Clients() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-screen">
       {/* Список клиентов */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Список клиентов</CardTitle>
+        <CardHeader className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-t-xl">
+          <CardTitle className="flex items-center gap-3 text-lg">
+            <User className="h-6 w-6" />
+            Список клиентов
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {clientsQuery.isLoading ? (
@@ -423,8 +426,11 @@ export default function Clients() {
 
       {/* Детали клиента */}
       <Card className="lg:col-span-2 flex flex-col">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Информация о клиенте</CardTitle>
+        <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-t-xl">
+          <CardTitle className="flex items-center gap-3 text-lg">
+            <MessageSquare className="h-6 w-6" />
+            Информация о клиенте
+          </CardTitle>
         </CardHeader>
 
         {clientDetailsQuery.isLoading ? (

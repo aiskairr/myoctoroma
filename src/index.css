@@ -6,6 +6,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Импорт стилей темной темы для букинга */
+@import './styles/booking-theme.css';
+
 body {
   font-family: "Manrope", "Inter", "Montserrat", sans-serif;
 }
