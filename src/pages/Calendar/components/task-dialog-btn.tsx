@@ -448,15 +448,39 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
     // Additional services functions
     const calculateTotalDuration = useCallback((baseDuration: number = 0) => {
-        const additionalDuration = additionalServices.reduce((sum, service) => sum + service.duration, 0);
-        return baseDuration + additionalDuration;
+        console.log('🔍 calculateTotalDuration called with baseDuration:', baseDuration);
+        console.log('🔍 additionalServices:', additionalServices);
+        
+        const additionalDuration = additionalServices.reduce((sum, service) => {
+            const duration = service.duration || 0;
+            console.log('🔍 Service duration:', service.serviceName, duration);
+            return sum + duration;
+        }, 0);
+        
+        const total = baseDuration + additionalDuration;
+        console.log('🔍 Total duration:', total, '(base:', baseDuration, '+ additional:', additionalDuration, ')');
+        return total;
     }, [additionalServices]);
 
     const calculateTotalPrice = useCallback((basePrice: number = 0) => {
+        console.log('🔍 calculateTotalPrice called with basePrice:', basePrice);
+        console.log('🔍 watch cost:', watch('cost'));
+        console.log('🔍 taskData:', taskData);
+        console.log('🔍 additionalServices:', additionalServices);
+        
         // Если basePrice не передан, используем цену из формы или данных задачи
         const mainPrice = basePrice || parseFloat(watch('cost')) || taskData?.finalPrice || taskData?.servicePrice || 0;
-        const additionalPrice = additionalServices.reduce((sum, service) => sum + service.price, 0);
-        return mainPrice + additionalPrice;
+        console.log('🔍 Main price:', mainPrice);
+        
+        const additionalPrice = additionalServices.reduce((sum, service) => {
+            const price = service.price || 0;
+            console.log('🔍 Service price:', service.serviceName, price);
+            return sum + price;
+        }, 0);
+        
+        const total = mainPrice + additionalPrice;
+        console.log('🔍 Total price:', total, '(main:', mainPrice, '+ additional:', additionalPrice, ')');
+        return total;
     }, [additionalServices, watch, taskData]);
 
     const addAdditionalService = useCallback(() => {
@@ -487,7 +511,79 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
     // Функция для загрузки дополнительных услуг
     const loadAdditionalServices = useCallback(async (taskId: string) => {
+        console.log('🔍 loadAdditionalServices called for taskId:', taskId);
         try {
+            // Сначала пробуем загрузить дочерние задачи
+            const childrenResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}/children`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include'
+            });
+
+            console.log('🔍 children response status:', childrenResponse.status);
+
+            if (childrenResponse.ok) {
+                const childTasksData = await childrenResponse.json();
+                console.log('🔍 childTasksData from API:', childTasksData);
+                
+                if (childTasksData && childTasksData.length > 0) {
+                    const formattedServices: AdditionalService[] = await Promise.all(
+                        childTasksData.map(async (task: any) => {
+                            console.log('🔍 Processing child task:', {
+                                id: task.id,
+                                serviceType: task.serviceType,
+                                serviceServiceId: task.serviceServiceId,
+                                duration: task.duration,
+                                serviceDuration: task.serviceDuration,
+                                servicePrice: task.servicePrice,
+                                finalPrice: task.finalPrice,
+                                cost: task.cost,
+                                price: task.price,
+                                allFields: Object.keys(task)
+                            });
+                            
+                            let price = task.servicePrice || task.finalPrice || task.cost || task.price || 0;
+                            
+                            // Если цена не найдена и есть serviceServiceId, попробуем получить цену из услуги
+                            if (!price && task.serviceServiceId) {
+                                try {
+                                    const serviceResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/services/${task.serviceServiceId}`, {
+                                        method: 'GET',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        credentials: 'include'
+                                    });
+                                    
+                                    if (serviceResponse.ok) {
+                                        const serviceData = await serviceResponse.json();
+                                        console.log('🔍 Service data for ID', task.serviceServiceId, ':', serviceData);
+                                        price = serviceData.price || serviceData.basePrice || 0;
+                                    }
+                                } catch (error) {
+                                    console.log('🔍 Failed to fetch service price for ID', task.serviceServiceId, ':', error);
+                                }
+                            }
+                            
+                            return {
+                                id: task.id,
+                                serviceId: task.serviceServiceId || 0,
+                                serviceName: task.serviceType || 'Дополнительная услуга',
+                                duration: task.serviceDuration || task.duration || 0,
+                                price: price
+                            };
+                        })
+                    );
+                    
+                    console.log('🔍 formattedServices from children:', formattedServices);
+                    setAdditionalServices(formattedServices);
+                    return;
+                }
+            }
+
+            // Если дочерних задач нет, пробуем старый API
             const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}/additional-services`, {
                 method: 'GET',
                 headers: {
@@ -496,8 +592,11 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 credentials: 'include'
             });
 
+            console.log('🔍 additional-services response status:', response.status);
+
             if (response.ok) {
                 const additionalServicesData = await response.json();
+                console.log('🔍 additionalServicesData from API:', additionalServicesData);
                 
                 const formattedServices: AdditionalService[] = additionalServicesData.map((service: any) => ({
                     id: service.id,
@@ -507,6 +606,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     price: service.price
                 }));
                 
+                console.log('🔍 formattedServices:', formattedServices);
                 setAdditionalServices(formattedServices);
             } else {
                 console.log('ℹ️ No additional services found for task:', taskId);
@@ -610,15 +710,13 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     for (const additionalService of additionalServices) {
                         try {
                             const additionalServicePayload = {
-                                taskId: taskId,
-                                serviceId: additionalService.serviceId,
-                                serviceName: additionalService.serviceName,
-                                duration: additionalService.duration,
-                                price: additionalService.price,
-                                branchId: data.branch
+                                id: generateTaskId(), // Генерируем уникальный ID для дополнительной услуги
+                                serviceType: additionalService.serviceName,
+                                serviceServiceId: additionalService.serviceId,
+                                duration: additionalService.duration
                             };
 
-                            const additionalResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/additional-services`, {
+                            const additionalResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}/additional-services`, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -1109,54 +1207,147 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                 <Controller
                                     name="duration"
                                     control={control}
-                                    rules={{ required: "Выберите длительность" }}
-                                    render={({ field }) => (
-                                        <Select
-                                            value={field.value}
-                                            onValueChange={(value) => {
-                                                field.onChange(value);
-                                                // Автоматически обновляем стоимость при выборе длительности
-                                                if (value && value.includes('сом')) {
-                                                    const priceMatch = value.match(/(\d+)\s*сом$/);
-                                                    if (priceMatch) {
-                                                        const price = priceMatch[1];
-                                                        reset((formValues) => ({
-                                                            ...formValues,
-                                                            duration: value,
-                                                            cost: price
-                                                        }));
-                                                    }
-                                                }
-                                            }}
-                                            disabled={!watchedServiceType}
-                                        >
-                                            <SelectTrigger className={`mt-1 ${errors.duration ? 'border-red-500' : ''}`}>
-                                                <SelectValue placeholder={
-                                                    !watchedServiceType 
-                                                        ? "Сначала выберите услугу" 
-                                                        : "Выберите длительность"
-                                                } />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {getAvailableDurations().map(({ duration, price }) => (
-                                                    <SelectItem key={`${duration}-${price}`} value={`${duration} мин - ${price} сом`}>
-                                                        {duration} мин - {price} сом
-                                                    </SelectItem>
-                                                ))}
-                                                {/* Fallback options if no service selected or no durations available */}
-                                                {!watchedServiceType && (
-                                                    <SelectItem value="" disabled>
-                                                        Выберите услугу для отображения длительностей
-                                                    </SelectItem>
+                                    rules={{ required: "Выберите или введите длительность" }}
+                                    render={({ field }) => {
+                                        const availableDurations = getAvailableDurations();
+                                        const [isCustomMode, setIsCustomMode] = useState(false);
+                                        const [customDuration, setCustomDuration] = useState('');
+                                        const [customPrice, setCustomPrice] = useState('');
+
+                                        // Проверяем, является ли текущее значение кастомным
+                                        const isCurrentValueCustom = field.value && !availableDurations.some(d => 
+                                            `${d.duration} мин - ${d.price} сом` === field.value
+                                        );
+
+                                        return (
+                                            <div className="space-y-2">
+                                                {!isCustomMode && !isCurrentValueCustom ? (
+                                                    // Обычный Select
+                                                    <div className="space-y-2">
+                                                        <Select
+                                                            value={field.value}
+                                                            onValueChange={(value) => {
+                                                                if (value === 'custom') {
+                                                                    setIsCustomMode(true);
+                                                                    setCustomDuration('');
+                                                                    setCustomPrice('');
+                                                                } else {
+                                                                    field.onChange(value);
+                                                                    // Автоматически обновляем стоимость при выборе длительности
+                                                                    if (value && value.includes('сом')) {
+                                                                        const priceMatch = value.match(/(\d+)\s*сом$/);
+                                                                        if (priceMatch) {
+                                                                            const price = priceMatch[1];
+                                                                            reset((formValues) => ({
+                                                                                ...formValues,
+                                                                                duration: value,
+                                                                                cost: price
+                                                                            }));
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }}
+                                                            disabled={!watchedServiceType}
+                                                        >
+                                                            <SelectTrigger className={`mt-1 ${errors.duration ? 'border-red-500' : ''}`}>
+                                                                <SelectValue placeholder={
+                                                                    !watchedServiceType 
+                                                                        ? "Сначала выберите услугу" 
+                                                                        : "Выберите длительность"
+                                                                } />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {availableDurations.map(({ duration, price }) => (
+                                                                    <SelectItem key={`${duration}-${price}`} value={`${duration} мин - ${price} сом`}>
+                                                                        {duration} мин - {price} сом
+                                                                    </SelectItem>
+                                                                ))}
+                                                                <SelectItem value="custom">
+                                                                    ✏️ Произвольная длительность
+                                                                </SelectItem>
+                                                                {/* Fallback options */}
+                                                                {!watchedServiceType && (
+                                                                    <SelectItem value="" disabled>
+                                                                        Выберите услугу для отображения длительностей
+                                                                    </SelectItem>
+                                                                )}
+                                                                {watchedServiceType && availableDurations.length === 0 && (
+                                                                    <SelectItem value="" disabled>
+                                                                        Нет доступных длительностей для этой услуги
+                                                                    </SelectItem>
+                                                                )}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                ) : (
+                                                    // Кастомный ввод
+                                                    <div className="space-y-2">
+                                                        <div className="flex gap-2">
+                                                            <div className="flex-1">
+                                                                <Input
+                                                                    type="number"
+                                                                    placeholder="Минуты"
+                                                                    value={isCurrentValueCustom ? field.value.match(/(\d+)\s*мин/)?.[1] || '' : customDuration}
+                                                                    onChange={(e) => {
+                                                                        const minutes = e.target.value;
+                                                                        setCustomDuration(minutes);
+                                                                        if (minutes && customPrice) {
+                                                                            const newValue = `${minutes} мин - ${customPrice} сом`;
+                                                                            field.onChange(newValue);
+                                                                            reset((formValues) => ({
+                                                                                ...formValues,
+                                                                                duration: newValue,
+                                                                                cost: customPrice
+                                                                            }));
+                                                                        }
+                                                                    }}
+                                                                    className={`${errors.duration ? 'border-red-500' : ''}`}
+                                                                />
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <Input
+                                                                    type="number"
+                                                                    placeholder="Цена"
+                                                                    value={isCurrentValueCustom ? field.value.match(/(\d+)\s*сом/)?.[1] || '' : customPrice}
+                                                                    onChange={(e) => {
+                                                                        const price = e.target.value;
+                                                                        setCustomPrice(price);
+                                                                        if (customDuration && price) {
+                                                                            const newValue = `${customDuration} мин - ${price} сом`;
+                                                                            field.onChange(newValue);
+                                                                            reset((formValues) => ({
+                                                                                ...formValues,
+                                                                                duration: newValue,
+                                                                                cost: price
+                                                                            }));
+                                                                        }
+                                                                    }}
+                                                                    className={`${errors.duration ? 'border-red-500' : ''}`}
+                                                                />
+                                                            </div>
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    setIsCustomMode(false);
+                                                                    field.onChange('');
+                                                                    setCustomDuration('');
+                                                                    setCustomPrice('');
+                                                                }}
+                                                                className="px-2"
+                                                            >
+                                                                ↩️
+                                                            </Button>
+                                                        </div>
+                                                        <div className="text-xs text-gray-500">
+                                                            Введите длительность в минутах и цену
+                                                        </div>
+                                                    </div>
                                                 )}
-                                                {watchedServiceType && getAvailableDurations().length === 0 && (
-                                                    <SelectItem value="" disabled>
-                                                        Нет доступных длительностей для этой услуги
-                                                    </SelectItem>
-                                                )}
-                                            </SelectContent>
-                                        </Select>
-                                    )}
+                                            </div>
+                                        );
+                                    }}
                                 />
                                 {errors.duration && (
                                     <p className="text-red-500 text-xs mt-1">{errors.duration.message}</p>
@@ -1408,9 +1599,9 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                 {additionalServices.map((additionalService) => (
                                     <div key={additionalService.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
                                         <div className="flex-1">
-                                            <span className="text-sm font-medium">{additionalService.serviceName}</span>
+                                            <span className="text-sm font-medium">{additionalService.serviceName || 'Дополнительная услуга'}</span>
                                             <div className="text-xs text-gray-500">
-                                                {additionalService.duration} мин • {additionalService.price} сом
+                                                {parseFloat(String(additionalService.duration)) || 0} мин • {parseFloat(String(additionalService.price)) || 0} сом
                                             </div>
                                         </div>
                                         <Button
@@ -1485,22 +1676,36 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                         {/* Итоговая информация */}
                         {additionalServices.length > 0 && (
                             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                                <div className="text-sm text-gray-600 space-y-1">
+                                {/* Список дополнительных услуг */}
+                                <div className="mb-3">
+                                    <div className="text-sm font-medium text-gray-700 mb-2">Дополнительные услуги:</div>
+                                    <div className="space-y-1">
+                                        {additionalServices.map((service) => (
+                                            <div key={service.id} className="flex justify-between text-xs text-gray-600 pl-2">
+                                                <span>• {service.serviceName || 'Дополнительная услуга'}</span>
+                                                <span>{parseFloat(String(service.duration)) || 0} мин</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                {/* Итоговые суммы */}
+                                <div className="text-sm text-gray-600 space-y-1 border-t pt-2">
                                     <div className="flex justify-between">
                                         <span>Основная услуга:</span>
-                                        <span>{watch('cost')} сом</span>
+                                        <span>{parseInt(watch('cost')) || 0} сом</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span>Дополнительные услуги:</span>
-                                        <span>{calculateTotalPrice(0)} сом</span>
+                                        <span>{additionalServices.reduce((sum, service) => sum + (parseFloat(String(service.price)) || 0), 0)} сом</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span>Общее время:</span>
-                                        <span>{(parseInt(watch('duration')) || 0) + calculateTotalDuration()} мин</span>
+                                        <span>{(parseInt(watch('duration')) || 0) + additionalServices.reduce((sum, service) => sum + (parseFloat(String(service.duration)) || 0), 0)} мин</span>
                                     </div>
                                     <div className="flex justify-between font-medium border-t pt-1">
                                         <span>Итого:</span>
-                                        <span>{(parseInt(watch('cost')) || 0) + calculateTotalPrice(0)} сом</span>
+                                        <span>{(parseInt(watch('cost')) || 0) + additionalServices.reduce((sum, service) => sum + (parseFloat(String(service.price)) || 0), 0)} сом</span>
                                     </div>
                                 </div>
                             </div>

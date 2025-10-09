@@ -10,10 +10,18 @@ const CalendarScreen = () => {
         
         if (dateParam) {
             const parsedDate = new Date(dateParam);
+            // Проверяем, что дата валидная
+            if (!isNaN(parsedDate.getTime())) {
+                console.log('📅 Found date param in URL:', dateParam, 'parsed as:', parsedDate.toISOString());
+                return parsedDate;
+            } else {
+                console.warn('⚠️ Invalid date param in URL:', dateParam);
+            }
         }
         
         // Возвращаем текущую дату, если параметр отсутствует или невалидный
         const today = new Date();
+        console.log('📅 No valid date param, using today:', today.toISOString());
         return today;
     };
 
@@ -25,7 +33,11 @@ const CalendarScreen = () => {
     useEffect(() => {
         const handleUrlChange = () => {
             const newDate = getDateFromUrl();
-            setSelectedDate(newDate);
+            console.log('📅 URL changed, new date:', newDate.toISOString(), 'current selectedDate:', selectedDate.toISOString());
+            if (newDate.getTime() !== selectedDate.getTime()) {
+                console.log('📅 Setting new selectedDate');
+                setSelectedDate(newDate);
+            }
         };
 
         // Обновляем дату при изменении URL
@@ -33,6 +45,7 @@ const CalendarScreen = () => {
 
         // Слушаем события навигации браузера (назад/вперед)
         const handlePopState = () => {
+            console.log('📅 popstate event');
             handleUrlChange();
         };
 
@@ -43,35 +56,19 @@ const CalendarScreen = () => {
         };
     }, []);
 
-    // Также слушаем изменения в URL через MutationObserver для случаев программного изменения URL
+    // Периодическая проверка изменений URL (для случаев программного изменения)
     useEffect(() => {
-        const observer = new MutationObserver(() => {
+        const checkUrlPeriodically = () => {
             const newDate = getDateFromUrl();
-            const currentDateString = selectedDate.toISOString().split('T')[0];
-            const newDateString = newDate.toISOString().split('T')[0];
-            
-            if (currentDateString !== newDateString) {
-                setSelectedDate(newDate);
-            }
-        });
-
-        // Наблюдаем за изменениями в URL
-        const checkUrl = () => {
-            const newDate = getDateFromUrl();
-            const currentDateString = selectedDate.toISOString().split('T')[0];
-            const newDateString = newDate.toISOString().split('T')[0];
-            
-            if (currentDateString !== newDateString) {
+            if (newDate.getTime() !== selectedDate.getTime()) {
+                console.log('📅 Periodic check: URL date changed from', selectedDate.toISOString(), 'to', newDate.toISOString());
                 setSelectedDate(newDate);
             }
         };
 
-        const interval = setInterval(checkUrl, 100);
+        const interval = setInterval(checkUrlPeriodically, 500); // Проверяем каждые 500мс
         
-        return () => {
-            clearInterval(interval);
-            observer.disconnect();
-        };
+        return () => clearInterval(interval);
     }, [selectedDate]);
 
     return (

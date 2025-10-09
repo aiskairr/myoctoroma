@@ -121,8 +121,14 @@ function UserCalendar({ user, events, onAddEvent }: {
     onAddEvent: (newEvent: UserEvent) => void
 }) {
     const eventsService = useState(() => createEventsServicePlugin())[0]
-    const dragAndDrop = useState(() => createDragAndDropPlugin())[0]
-    const resize = useState(() => createResizePlugin())[0]
+    const dragAndDrop = useState(() => {
+        console.log('🔧 Инициализация drag-and-drop плагина для', user.name)
+        return createDragAndDropPlugin()
+    })[0]
+    const resize = useState(() => {
+        console.log('🔧 Инициализация resize плагина для', user.name)
+        return createResizePlugin()
+    })[0]
     const [previousEventState, setPreviousEventState] = useState(new Map())
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedTime, setSelectedTime] = useState(null)
@@ -142,11 +148,18 @@ function UserCalendar({ user, events, onAddEvent }: {
 
     const userEvents = events
         .filter(event => event.userId === user.id)
-        .map(event => ({
-            ...event,
-            backgroundColor: user.color,
-            borderColor: user.color
-        }))
+        .map(event => {
+            const mappedEvent = {
+                ...event,
+                backgroundColor: user.color,
+                borderColor: user.color,
+                // Добавляем свойства для drag-and-drop
+                draggable: true,
+                resizable: true
+            }
+            console.log(`📅 Событие для ${user.name}:`, mappedEvent)
+            return mappedEvent
+        })
 
     const handleCreateTask = (title: string, start: any, end: any) => {
         const newEvent = {
@@ -179,7 +192,9 @@ function UserCalendar({ user, events, onAddEvent }: {
         plugins: [eventsService, dragAndDrop, resize],
         callbacks: {
             onRender: () => {
+                console.log(`🎨 onRender called for ${user.name}`)
                 const allEvents = eventsService.getAll()
+                console.log(`📋 Все события в eventsService для ${user.name}:`, allEvents)
                 const eventMap = new Map()
                 allEvents.forEach(event => {
                     eventMap.set(event.id, {
@@ -190,8 +205,25 @@ function UserCalendar({ user, events, onAddEvent }: {
                 setPreviousEventState(eventMap)
                 console.log(`${user.name} events:`, allEvents)
             },
-            onEventUpdate: (updatedEvent) => {
-                console.log(`${user.name} event update attempt:`, updatedEvent)
+            onEventClick: (event) => {
+                console.log(`🖱️ Клик по событию ${user.name}:`, event)
+            },
+            onEventUpdate: async (updatedEvent) => {
+                console.log('🔥 onEventUpdate called!')
+                console.log('updatedEvent:', updatedEvent)
+                console.log('Тип изменения:', updatedEvent._isDrag ? 'DRAG' : updatedEvent._isResize ? 'RESIZE' : 'UNKNOWN')
+                
+                // Проверяем, изменилось ли что-то
+                const prevState = previousEventState.get(updatedEvent.id)
+                console.log('Предыдущее состояние:', prevState)
+                console.log('Новое состояние:', { start: updatedEvent.start, end: updatedEvent.end })
+                
+                if (!prevState || 
+                    prevState.start?.toString() === updatedEvent.start?.toString() && 
+                    prevState.end?.toString() === updatedEvent.end?.toString()) {
+                    console.log('⚠️ Состояние не изменилось, пропускаем обновление')
+                    return true
+                }
 
                 const allEvents = eventsService.getAll()
                 const hasConflict = checkEventConflict(updatedEvent, allEvents)
@@ -212,6 +244,42 @@ function UserCalendar({ user, events, onAddEvent }: {
                     }
 
                     alert(`❌ Событие ${user.name} не может пересекаться с другими событиями!`)
+                    return false
+                }
+
+                // Формируем payload для API
+                const payload = {
+                    start: updatedEvent.start?.toString(),
+                    end: updatedEvent.end?.toString(),
+                    title: updatedEvent.title,
+                    userId: updatedEvent.userId
+                }
+                
+                console.log('📤 Отправка PUT запроса:', payload)
+                
+                try {
+                    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${updatedEvent.id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(payload),
+                        credentials: 'include'
+                    })
+                    
+                    console.log('📡 Ответ сервера:', response.status, response.ok)
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json()
+                        console.error('❌ Ошибка ответа:', errorData)
+                        alert(`Ошибка обновления события: ${errorData.message || response.status}`)
+                        return false
+                    }
+                    
+                    console.log(`✅ PUT /api/tasks/${updatedEvent.id} успешно отправлен!`)
+                } catch (error) {
+                    console.error('❌ Ошибка сети:', error)
+                    alert(`Ошибка сети при обновлении события: ${error}`)
                     return false
                 }
 
@@ -240,10 +308,15 @@ function UserCalendar({ user, events, onAddEvent }: {
                 borderRadius: '8px',
                 border: `2px solid ${user.color}`
             }}>
-                📅 {user.name}
+                📅 {user.name} (ID: {user.id})
             </h3>
             <div style={{ border: `2px solid ${user.color}`, borderRadius: '8px', overflow: 'hidden', minWidth: '500px' }}>
                 <ScheduleXCalendar calendarApp={calendar} />
+            </div>
+            <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
+                🔧 Drag-and-drop: {dragAndDrop ? 'активен' : 'неактивен'} | 
+                Resize: {resize ? 'активен' : 'неактивен'} | 
+                Событий: {userEvents.length}
             </div>
             <CreateTaskModal
                 isOpen={isModalOpen}

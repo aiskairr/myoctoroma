@@ -32,6 +32,16 @@ interface SalaryPayment {
   payment_date: string;
   period_start: string;
   period_end: string;
+  employee: string;
+  employee_role: string;
+  master_id: number | null;
+  administrator_id: string | null;
+  branch_id: string;
+  description: string | null;
+  payment_method: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface AccountingData {
@@ -154,8 +164,10 @@ export default function SalaryPage() {
       if (response.ok) {
         const data = await response.json();
         console.log('Данные выплат:', data);
-        // Убеждаемся что данные это массив
-        const paymentsArray = Array.isArray(data) ? data : (data.payments || []);
+        // API возвращает объект с полем data, содержащим массив платежей
+        const paymentsArray = data.data || [];
+        console.log('Массив платежей:', paymentsArray);
+        console.log('Пример платежа:', paymentsArray[0]);
         setSalaryPayments(paymentsArray);
       } else {
         console.error('Ошибка загрузки выплат:', response.status, response.statusText);
@@ -217,15 +229,33 @@ export default function SalaryPage() {
   };
 
   // Получение общей выплаченной суммы для сотрудника за период
-  const getTotalPaidAmount = (employeeName: string) => {
+  const getTotalPaidAmount = (record: SalaryRecord) => {
     if (!Array.isArray(salaryPayments)) {
       console.warn('salaryPayments is not an array:', salaryPayments);
       return 0;
     }
 
-    return salaryPayments
-      .filter(payment => payment.employee_name === employeeName)
-      .reduce((sum, payment) => sum + payment.amount, 0);
+    // Суммируем платежи по employee полю (имя сотрудника)
+    const employeePayments = salaryPayments.filter(payment => {
+      const matches = payment.employee === record.employee;
+      console.log(`Проверка платежа для ${record.employee}: payment.employee=${payment.employee} vs record.employee=${record.employee}, matches=${matches}`);
+      return matches;
+    });
+
+    const totalAmount = employeePayments.reduce((sum, payment) => {
+      const amount = parseFloat(payment.amount.toString() || '0');
+      console.log(`Добавляем платеж: ${amount} для ${record.employee}`);
+      return sum + amount;
+    }, 0);
+
+    console.log(`Выплаты для ${record.employee} (${record.employee_role}):`, {
+      recordId: record.id,
+      masterId: record.master_id,
+      payments: employeePayments,
+      total: totalAmount
+    });
+
+    return totalAmount;
   };
 
   // Сохранение выплаты
@@ -568,7 +598,7 @@ export default function SalaryPage() {
               <tbody>
                 {salaryRecords.map((record, index) => {
                   const calculatedSalary = calculateSalary(record);
-                  const totalPaid = getTotalPaidAmount(record.employee);
+                  const totalPaid = getTotalPaidAmount(record);
                   const remaining = calculatedSalary - totalPaid;
                   const currentPayment = editedPayments[record.id!] || 0;
 
@@ -760,7 +790,7 @@ export default function SalaryPage() {
                   });
 
                   const totalPaid = relevantEmployees.reduce((sum, record) => {
-                    const paidAmount = getTotalPaidAmount(record.employee);
+                    const paidAmount = getTotalPaidAmount(record);
                     console.log(`Выплачено ${record.employee}:`, paidAmount);
                     return sum + paidAmount;
                   }, 0);
@@ -787,7 +817,7 @@ export default function SalaryPage() {
 
                   const totalToPay = relevantEmployees.reduce((sum, record) => {
                     const calculatedSalary = calculateSalary(record);
-                    const paidAmount = getTotalPaidAmount(record.employee);
+                    const paidAmount = getTotalPaidAmount(record);
                     return sum + (calculatedSalary - paidAmount);
                   }, 0);
 

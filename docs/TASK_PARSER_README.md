@@ -18,7 +18,7 @@ Task Parser API - это система для регулярного опрос
 
 По умолчанию парсер обращается к:
 ```
-https://puny-noemi-promconsulting-453531f5.koyeb.app/api/tasks
+https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app/api/tasks
 ```
 
 ### Параметры запроса
@@ -33,7 +33,7 @@ https://puny-noemi-promconsulting-453531f5.koyeb.app/api/tasks
 ### Пример полного URL
 
 ```
-https://puny-noemi-promconsulting-453531f5.koyeb.app/api/tasks?branchId=1&scheduledAfter=2025-10-02T18%3A00%3A00.000Z&scheduledBefore=2025-10-03T17%3A59%3A59.999Z&sortBy=scheduleDate&sortOrder=asc&userRole=superadmin
+https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app/api/tasks?branchId=1&scheduledAfter=2025-10-02T18%3A00%3A00.000Z&scheduledBefore=2025-10-03T17%3A59%3A59.999Z&sortBy=scheduleDate&sortOrder=asc&userRole=superadmin
 ```
 
 ## Установка и использование

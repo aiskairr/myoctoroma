@@ -33,7 +33,7 @@
 
 ### ⚡ API Endpoint
 ```
-https://puny-noemi-promconsulting-453531f5.koyeb.app/api/tasks
+https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app/api/tasks
 ```
 
 ### 📋 Параметры запроса
@@ -123,7 +123,7 @@ const MyComponent = () => {
 
 ```
 [TaskParser] Starting task parser...
-[TaskParser] Fetching tasks from: https://puny-noemi-promconsulting-453531f5.koyeb.app/api/tasks?...
+[TaskParser] Fetching tasks from: https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app/api/tasks?...
 [TaskParser] Successfully fetched 5 tasks at 2025-10-03T12:00:00.000Z
 [useTaskParser] Received data: {...}
 [DailyCalendar] Received parser data: {...}

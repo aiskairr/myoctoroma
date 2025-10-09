@@ -18,8 +18,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        // target: 'https://puny-noemi-promconsulting-453531f5.koyeb.app',
-        target: 'https://puny-noemi-promconsulting-453531f5.koyeb.app',
+        // target: 'https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app',
+        target: 'https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app',
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {

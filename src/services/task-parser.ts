@@ -43,7 +43,7 @@ class TaskParserService {
   private subscribers: ((data: TaskParserResponse) => void)[] = [];
   
   // URL для парсинга
-  private readonly API_URL = 'https://puny-noemi-promconsulting-453531f5.koyeb.app/api/tasks';
+  private readonly API_URL = 'https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app/api/tasks';
   private readonly DEFAULT_PARAMS = {
     branchId: '1',
     sortBy: 'scheduleDate',

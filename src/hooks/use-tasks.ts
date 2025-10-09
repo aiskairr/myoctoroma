@@ -217,6 +217,12 @@ export function useTasksForDate(selectedDate: Date = new Date()) {
   const scheduledBefore = new Date(selectedDate);
   scheduledBefore.setHours(23, 59, 59, 999); // 23:59 текущего дня
   
+  console.log('📅 useTasksForDate:', {
+    selectedDate: selectedDate.toISOString(),
+    scheduledAfter: scheduledAfter.toISOString(),
+    scheduledBefore: scheduledBefore.toISOString()
+  });
+  
   return useTasks({
     scheduledAfter: scheduledAfter.toISOString(),
     scheduledBefore: scheduledBefore.toISOString(),

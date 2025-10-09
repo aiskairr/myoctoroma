@@ -219,7 +219,7 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
           </summary>
           <div className="mt-2 font-mono text-gray-600 break-all">
             <div className="mb-1">
-              <strong>URL:</strong> https://puny-noemi-promconsulting-453531f5.koyeb.app/api/tasks
+              <strong>URL:</strong> https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app/api/tasks
             </div>
             <div className="mb-1">
               <strong>Параметры:</strong>

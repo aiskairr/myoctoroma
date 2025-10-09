@@ -1,11 +1,13 @@
 @import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-  font-family: "Montserrat", sans-serif;
+  font-family: "Manrope", "Inter", "Montserrat", sans-serif;
 }
 
 .sx__week-grid__date.sx__monday.sx__week-grid__date--is-today {
@@ -54,62 +56,69 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%; /* Белый, hsl для background */
-    --foreground: 222 47% 11%; /* Тёмный текст */
-    --border: 214 32% 91%; /* Светло-синий для границ */
-    --primary-green: 125 59% 12%; /* Sidebar */
-    --accent-blue: 207 90% 54%; /* Попапы и кнопки */
+    /* Новая цветовая схема */
+    --primary-blue: 195 100% 47%; /* #00aeef в HSL */
+    --light-blue: 185 100% 75%; /* #7bf3ff в HSL */
+    --dark-blue: 210 66% 12%; /* #0A1931 в HSL */
+    --black: 0 0% 0%; /* Чёрный */
+    --white: 0 0% 100%; /* Белый */
+    
+    --background: var(--white);
+    --foreground: var(--dark-blue);
+    --border: var(--light-blue);
+    --primary-green: var(--primary-blue); /* Заменяем зелёный на синий */
+    --accent-blue: var(--primary-blue);
 
-    /* Standard shadcn/ui variables */
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
+    /* Standard shadcn/ui variables с новыми цветами */
+    --card: var(--white);
+    --card-foreground: var(--dark-blue);
+    --popover: var(--white);
+    --popover-foreground: var(--dark-blue);
+    --primary: var(--primary-blue);
+    --primary-foreground: var(--white);
+    --secondary: var(--light-blue);
+    --secondary-foreground: var(--dark-blue);
+    --muted: 185 50% 90%; /* Очень светлый голубой */
+    --muted-foreground: var(--dark-blue);
+    --accent: var(--light-blue);
+    --accent-foreground: var(--dark-blue);
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --destructive-foreground: var(--white);
+    --input: 185 50% 95%; /* Очень светлый голубой для инпутов */
+    --ring: var(--primary-blue);
+    --chart-1: var(--primary-blue);
+    --chart-2: var(--light-blue);
+    --chart-3: var(--dark-blue);
+    --chart-4: var(--black);
+    --chart-5: var(--white);
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
+    --background: var(--dark-blue);
+    --foreground: var(--white);
+    --card: var(--dark-blue);
+    --card-foreground: var(--white);
+    --popover: var(--dark-blue);
+    --popover-foreground: var(--white);
+    --primary: var(--primary-blue);
+    --primary-foreground: var(--white);
+    --secondary: 210 50% 20%; /* Тёмно-синий */
+    --secondary-foreground: var(--white);
+    --muted: 210 50% 15%; /* Очень тёмно-синий */
+    --muted-foreground: var(--light-blue);
+    --accent: var(--light-blue);
+    --accent-foreground: var(--dark-blue);
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --destructive-foreground: var(--white);
+    --border: 210 50% 25%; /* Тёмно-синий для границ */
+    --input: 210 50% 20%; /* Тёмно-синий для инпутов */
+    --ring: var(--primary-blue);
+    --chart-1: var(--primary-blue);
+    --chart-2: var(--light-blue);
+    --chart-3: var(--white);
+    --chart-4: var(--black);
+    --chart-5: var(--dark-blue);
   }
 
   * {
@@ -151,4 +160,147 @@ body {
 
 ::-webkit-scrollbar-corner {
   background: rgba(0, 0, 0, 0.05);
+}
+
+/* Calendar Component Enhanced Styles */
+.rdp {
+  margin: 0 auto !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+.rdp-month {
+  width: auto !important;
+  max-width: none !important;
+}
+
+.rdp-table {
+  width: auto !important;
+  table-layout: auto !important;
+}
+
+.rdp-tbody {
+  width: auto !important;
+}
+
+.rdp-row {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+.rdp-cell {
+  width: auto !important;
+  padding: 4px !important;
+  text-align: center !important;
+}
+
+.rdp-day {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 12px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  font-size: 16px !important;
+  position: relative !important;
+}
+
+@media (min-width: 640px) {
+  .rdp-day {
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    font-size: 18px !important;
+  }
+}
+
+.rdp-day_button {
+  background: transparent !important;
+  border: none !important;
+  width: 100% !important;
+  height: 100% !important;
+  cursor: pointer !important;
+  border-radius: inherit !important;
+}
+
+.rdp-day_button:hover {
+  background-color: rgba(0, 174, 239, 0.1) !important;
+}
+
+.rdp-day_selected {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-light-blue)) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(0, 174, 239, 0.3) !important;
+}
+
+.rdp-day_today {
+  background-color: rgba(123, 243, 255, 0.2) !important;
+  font-weight: 700 !important;
+  color: var(--color-dark-blue) !important;
+}
+
+.rdp-head_cell {
+  color: var(--color-dark-blue) !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  padding-bottom: 8px !important;
+  text-align: center !important;
+}
+
+.rdp-caption {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  margin-bottom: 16px !important;
+  color: var(--color-dark-blue) !important;
+  text-align: center !important;
+}
+
+@media (min-width: 640px) {
+  .rdp-caption {
+    font-size: 24px !important;
+  }
+}
+
+/* Backdrop blur effect */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.backdrop-blur-md {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Smooth animations */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.3s ease-out;
+}
+
+/* Gradient animations */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
 }

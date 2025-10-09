@@ -39,7 +39,7 @@ export default function Settings() {
   });
 
   // Fetch import job status
-  const { data: importStatus, isLoading: isLoadingStatus } = useQuery({
+  const { data: importStatus } = useQuery({
     queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/import/status/${importJobId}`],
     queryFn: getQueryFn({ on401: "throw" }),
     retry: false,
@@ -126,10 +126,37 @@ export default function Settings() {
       
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       // Сохраняем jobId для отслеживания статуса
       if (data && data.jobId) {
         setImportJobId(data.jobId);
+        console.log('📁 Файл загружен, jobId:', data.jobId);
+        
+        // Автоматически запускаем фоновую обработку
+        try {
+          console.log('🚀 Автоматический запуск фоновой обработки для jobId:', data.jobId);
+          const processResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/import/process/${data.jobId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (!processResponse.ok) {
+            const errorText = await processResponse.text();
+            throw new Error(`HTTP ${processResponse.status}: ${errorText}`);
+          }
+          
+          const processData = await processResponse.json();
+          console.log('✅ Фоновая обработка успешно запущена:', processData);
+        } catch (error) {
+          console.error('❌ Ошибка автоматического запуска фоновой обработки:', error);
+          toast({
+            title: "Предупреждение",
+            description: "Файл загружен, но автоматический запуск обработки не удался. Используйте кнопку ручного запуска.",
+            variant: "destructive",
+          });
+        }
       }
       
       toast({
@@ -336,6 +363,34 @@ export default function Settings() {
   const handleImport = () => {
     if (selectedFile) {
       importMutation.mutate(selectedFile);
+    }
+  };
+
+  const handleManualProcess = async (jobId: string) => {
+    try {
+      console.log('🚀 Ручной запуск обработки для jobId:', jobId);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/public/import/process/${jobId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Ошибка при запуске обработки');
+      }
+      
+      toast({
+        title: "Обработка запущена",
+        description: "Фоновая обработка успешно запущена",
+      });
+    } catch (error) {
+      console.error('❌ Ошибка запуска обработки:', error);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось запустить обработку",
+        variant: "destructive",
+      });
     }
   };
   
@@ -717,8 +772,19 @@ export default function Settings() {
               )}
             </Button>
 
+            {/* Ручной запуск обработки для отладки */}
+            {importJobId && (!importStatus || !((importStatus as any)?.job?.status) || ((importStatus as any)?.job?.status === 'PENDING')) && (
+              <Button
+                onClick={() => handleManualProcess(importJobId)}
+                variant="outline"
+                className="w-full mt-2"
+              >
+                Запустить обработку вручную
+              </Button>
+            )}
+
             {/* Статус импорта */}
-            {importJobId && importStatus && typeof importStatus === 'object' && (
+            {importJobId && importStatus && typeof importStatus === 'object' && importStatus !== null && (
               <div className="mt-4 p-4 bg-muted rounded-lg border">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -793,14 +859,15 @@ export default function Settings() {
             <div className="bg-muted p-4 rounded-md">
               <h3 className="text-sm font-medium mb-2">Процесс импорта</h3>
               <p className="text-xs text-muted-foreground">
-                Импорт происходит в два этапа:
+                Импорт происходит в три этапа:
               </p>
               <ul className="text-xs text-muted-foreground mt-1 space-y-1">
-                <li>• Этап 1: Импорт клиентов и создание сопоставления номеров телефонов</li>
-                <li>• Этап 2: Импорт задач и привязка к клиентам по client_id</li>
+                <li>• Этап 1: Загрузка файла и сохранение в облачное хранилище</li>
+                <li>• Этап 2: Запуск фоновой обработки через очередь задач</li>
+                <li>• Этап 3: Импорт клиентов и задач с отслеживанием прогресса</li>
               </ul>
               <p className="text-xs text-muted-foreground mt-2">
-                Процесс выполняется в фоновом режиме. Вы получите уведомление о завершении.
+                <strong>Преимущества:</strong> Фоновая обработка позволяет импортировать большие файлы без блокировки интерфейса
               </p>
             </div>
           </div>

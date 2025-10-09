@@ -15,10 +15,11 @@ import {
   CreditCard,
   Save
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { Appointment, calendarService, ClientTask } from '@/services/calendar-service';
+import { generateTaskId } from '@/hooks/use-task';
 import axios from 'axios';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -157,6 +158,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
+          id: generateTaskId(),
           serviceType,
           duration
         })
@@ -748,7 +750,7 @@ export const AppointmentDialog: React.FC<AppointmentDialogProps> = ({ appointmen
                 <span className="text-sm font-medium">Дата:</span>
                 <span className="text-sm ml-2">
                   {format(
-                    parseISO(appointment.appointment_date),
+                    new Date(appointment.appointment_date),
                     'dd MMMM yyyy (EEEE)',
                     { locale: ru }
                   )}

@@ -61,6 +61,7 @@ interface Appointment {
     isAdditionalService?: boolean; // Флаг дополнительной услуги
     serviceId?: number; // ID услуги из справочника
     paid?: string; // Статус оплаты: 'paid' или 'unpaid'
+    childServices?: any[]; // Дочерние услуги для группировки
 }
 
 // Интерфейс для дополнительной услуги
@@ -132,7 +133,14 @@ const getCurrentTimePosition = (): number => {
 // Main Component
 const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ initialDate }) => {
     // State
-    const [currentDate] = useState(() => initialDate || new Date());
+    const currentDate = useMemo(() => initialDate || new Date(), [initialDate]);
+    
+    console.log('📅 AdvancedScheduleComponent mounted with initialDate:', initialDate?.toISOString(), 'currentDate:', currentDate.toISOString());
+
+    // Debug: логируем изменения даты
+    useEffect(() => {
+        console.log('📅 currentDate changed to:', currentDate.toISOString());
+    }, [currentDate]);
 
     // Context
     const { currentBranch } = useBranch();
@@ -270,12 +278,28 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             console.log("  - Tasks with masterName:", tasksData.filter(t => t.masterName).length);
             console.log("  - Tasks without masterName:", tasksData.filter(t => !t.masterName && t.masterId).length);
             
+            // Создаем карту дочерних задач для расчета общей длительности
+            const childTasksMap: { [taskId: string]: any[] } = {};
+            tasksData
+                .filter(task => task.mother && task.status !== 'cancelled' && task.status !== 'no_show')
+                .forEach(childTask => {
+                    const motherId = childTask.mother;
+                    if (motherId) {
+                        const motherIdStr = motherId.toString();
+                        if (!childTasksMap[motherIdStr]) {
+                            childTasksMap[motherIdStr] = [];
+                        }
+                        childTasksMap[motherIdStr].push(childTask);
+                    }
+                });
+            
             const convertedAppointments = tasksData
                 .filter(task => 
                     task.scheduleTime && 
                     task.masterId && 
                     task.status !== 'cancelled' && 
-                    task.status !== 'no_show'
+                    task.status !== 'no_show' &&
+                    !task.mother // Исключаем дочерние услуги - они будут показаны внутри родительской записи
                 )
                 .map(task => {
                     // Функция для вычисления длительности в минутах между двумя временами
@@ -289,24 +313,29 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                         return Math.max(0, endTotalMinutes - startTotalMinutes);
                     };
                     
-                    // Вычисляем endTime если его нет
+                    // Вычисляем endTime если его нет, с учетом дочерних услуг
                     let endTime = task.endTime;
                     let calculatedDuration = task.serviceDuration || 60; // fallback значение
+                    
+                    // Добавляем длительность дочерних услуг
+                    const childTasks = childTasksMap[task.id.toString()] || [];
+                    const childrenDuration = childTasks.reduce((sum, child) => sum + (child.serviceDuration || child.duration || 0), 0);
                     
                     if (endTime && task.scheduleTime) {
                         // Если у нас есть оба времени, вычисляем длительность на их основе
                         calculatedDuration = calculateDurationFromTimes(task.scheduleTime, endTime);
                         console.log(`⏱️ Calculated duration from times: ${task.scheduleTime} -> ${endTime} = ${calculatedDuration} minutes`);
-                    } else if (!endTime && task.scheduleTime && task.serviceDuration) {
-                        // Если endTime нет, вычисляем его на основе serviceDuration
+                    } else if (!endTime && task.scheduleTime && (task.serviceDuration || childrenDuration)) {
+                        // Если endTime нет, вычисляем его на основе serviceDuration + дочерние услуги
+                        const totalDuration = (task.serviceDuration || 60) + childrenDuration;
                         const [hours, minutes] = task.scheduleTime.split(':').map(Number);
                         const startMinutes = hours * 60 + minutes;
-                        const endMinutes = startMinutes + task.serviceDuration;
+                        const endMinutes = startMinutes + totalDuration;
                         const endHours = Math.floor(endMinutes / 60);
                         const endMins = endMinutes % 60;
                         endTime = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
-                        calculatedDuration = task.serviceDuration;
-                        console.log(`⏱️ Generated endTime from serviceDuration: ${task.scheduleTime} + ${task.serviceDuration}min = ${endTime}`);
+                        calculatedDuration = totalDuration;
+                        console.log(`⏱️ Generated endTime with children: ${task.scheduleTime} + ${totalDuration}min (${task.serviceDuration}+${childrenDuration}) = ${endTime}`);
                     }
                     
                     const appointment = {
@@ -319,7 +348,8 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                         duration: calculatedDuration,
                         status: (task.status === 'in-progress' ? 'in_progress' : task.status) as 'scheduled' | 'in_progress' | 'completed' | 'cancelled' || 'scheduled',
                         notes: task.notes || undefined,
-                        paid: task.paid || 'unpaid' // Добавляем статус оплаты
+                        paid: task.paid || 'unpaid', // Добавляем статус оплаты
+                        childServices: childTasks // Добавляем информацию о дочерних услугах
                     };
                     
                     console.log(`📋 Converted appointment:`, {
@@ -472,15 +502,20 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         console.log('👥 All employees:', employees.map(e => ({ id: e.id, name: e.name })));
         
         // Получаем текущие данные appointment для формирования полного payload
-        const currentAppointment = appointments.find(apt => apt.id === appointmentId);
+        console.log('🔍 Searching for appointment with ID:', appointmentId, 'Type:', typeof appointmentId);
+        console.log('📋 Available appointments:', appointments.map(apt => ({ id: apt.id, type: typeof apt.id })));
+        
+        const currentAppointment = appointments.find(apt => String(apt.id) === String(appointmentId));
         if (!currentAppointment) {
             console.error('❌ Current appointment not found for ID:', appointmentId);
+            console.error('Available IDs:', appointments.map(apt => apt.id));
             return;
         }
 
         // Получаем текущие данные задачи с сервера для полного payload
         let currentTask = null;
         try {
+            console.log('📡 Fetching current task data from server...')
             const taskResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${appointmentId}`, {
                 method: 'GET',
                 headers: {
@@ -501,7 +536,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         
         // Обновляем локальное состояние
         setAppointments(prev => prev.map(apt =>
-            apt.id === appointmentId ? { ...apt, ...updates } : apt
+            String(apt.id) === String(appointmentId) ? { ...apt, ...updates } : apt
         ));
 
         // Отправляем запрос на сервер
@@ -627,6 +662,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             });
 
             console.log('📡 Response status:', response.status);
+            console.log('📡 Response ok:', response.ok);
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -641,7 +677,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             console.error('❌ Error updating appointment:', error);
             // В случае ошибки, откатываем локальное состояние
             setAppointments(prev => prev.map(apt =>
-                apt.id === appointmentId ? apt : apt
+                String(apt.id) === String(appointmentId) ? apt : apt
             ));
         }
     }, [employees, mastersData]);
@@ -734,6 +770,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     const handleMouseDown = useCallback((e: React.MouseEvent, appointment: Appointment, action: 'drag' | 'resize-top' | 'resize-bottom') => {
         e.preventDefault();
         e.stopPropagation();
+        console.log('🖱️ handleMouseDown called:', { action, appointmentId: appointment.id })
 
         if (action === 'drag') {
             setDragState({
@@ -745,6 +782,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 dragOffset: { x: 0, y: 0 }
             });
         } else {
+            console.log('📏 Setting resize state:', { action, appointmentId: appointment.id, duration: appointment.duration })
             setResizeState({
                 isResizing: true,
                 resizedAppointment: appointment,
@@ -810,39 +848,61 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
             // Only update local state during resize for smooth interaction
             // Final API call will be made in handleMouseUp
+            console.log('🔄 Resize preview update:', { newDuration, newStartTime, originalDuration: resizeState.originalDuration })
             if (newDuration !== appointment.duration || newStartTime !== appointment.startTime) {
+                console.log('📝 Updating local state for resize preview')
                 const newEndMinutes = timeToMinutes(newStartTime) + newDuration;
                 setAppointments(prev => prev.map(apt =>
-                    apt.id === appointment.id ? {
+                    String(apt.id) === String(appointment.id) ? {
                         ...apt,
                         startTime: newStartTime,
                         duration: newDuration,
                         endTime: minutesToTime(newEndMinutes)
                     } : apt
                 ));
+            } else {
+                console.log('⚠️ No changes detected in resize preview')
             }
         }
     }, [dragState, resizeState, getPositionFromMouse, timeSlots]);
 
     const handleMouseUp = useCallback(() => {
+        console.log('🖱️ handleMouseUp called')
+        console.log('dragState:', dragState)
+        console.log('resizeState:', resizeState)
+
         if (dragState.isDragging && dragState.draggedAppointment && dragState.targetSlot) {
+            console.log('🎯 Drag completed, calling updateAppointment')
+            console.log('Dragged appointment ID:', dragState.draggedAppointment.id, 'Type:', typeof dragState.draggedAppointment.id)
             const { employeeId, timeSlot } = dragState.targetSlot;
             const appointment = dragState.draggedAppointment;
 
             if (doesAppointmentFitWorkingHours(employeeId, timeSlot, appointment.duration)) {
                 const newEndMinutes = timeToMinutes(timeSlot) + appointment.duration;
+                console.log('📤 Calling updateAppointment with:', {
+                    appointmentId: appointment.id,
+                    employeeId,
+                    startTime: timeSlot,
+                    endTime: minutesToTime(newEndMinutes)
+                })
                 updateAppointment(appointment.id, {
                     employeeId,
                     startTime: timeSlot,
                     endTime: minutesToTime(newEndMinutes)
                 });
+            } else {
+                console.log('⚠️ Appointment does not fit working hours')
             }
         }
 
         // Handle resize completion
         if (resizeState.isResizing && resizeState.resizedAppointment) {
+            console.log('📏 Resize completed, calling updateAppointment')
             const appointment = resizeState.resizedAppointment;
-            const currentAppointment = appointments.find(apt => apt.id === appointment.id);
+            console.log('Resized appointment:', appointment)
+            const currentAppointment = appointments.find(apt => String(apt.id) === String(appointment.id));
+            console.log('Current appointment in state:', currentAppointment)
+            console.log('Original duration:', resizeState.originalDuration, 'Current duration:', currentAppointment?.duration)
             
             if (currentAppointment && currentAppointment.duration !== resizeState.originalDuration) {
                 console.log('🔄 Resize completed - sending final update:', {
@@ -854,14 +914,22 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
                 // Send final PUT request with the updated duration
                 const newEndMinutes = timeToMinutes(currentAppointment.startTime) + currentAppointment.duration;
+                console.log('📤 Calling updateAppointment for resize with:', {
+                    startTime: currentAppointment.startTime,
+                    endTime: minutesToTime(newEndMinutes),
+                    duration: currentAppointment.duration
+                })
                 updateAppointment(appointment.id, {
                     startTime: currentAppointment.startTime,
                     endTime: minutesToTime(newEndMinutes),
                     duration: currentAppointment.duration
                 });
+            } else {
+                console.log('⚠️ No resize changes detected')
             }
         }
 
+        console.log('🔄 Resetting drag and resize states')
         setDragState({
             isDragging: false,
             draggedAppointment: null,
@@ -1136,7 +1204,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             overlapping.sort((a, b) => b.duration - a.duration);
 
             const totalColumns = overlapping.length;
-            const columnIndex = overlapping.findIndex(apt => apt.id === currentApt.id);
+            const columnIndex = overlapping.findIndex(apt => String(apt.id) === String(currentApt.id));
 
             const zIndex = 10 + (overlapping.length - columnIndex - 1);
 
@@ -1376,6 +1444,26 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                 {appointment.paid !== 'paid' && <Coins className="inline h-6 w-6 ml-1 text-amber-500" />}
                             </span>
                         </div>
+
+                        {/* Дополнительные услуги */}
+                        {appointment.childServices && appointment.childServices.length > 0 && (
+                            <div className="pt-2 border-t border-gray-200">
+                                <span className="text-gray-600 text-xs font-medium">Дополнительные услуги:</span>
+                                <div className="mt-1 space-y-1">
+                                    {appointment.childServices.map((childService, index) => (
+                                        <div key={index} className="text-xs bg-amber-50 p-2 rounded">
+                                            <div className="font-medium text-amber-800">
+                                                📎 {childService.serviceType || 'Дополнительная услуга'}
+                                            </div>
+                                            <div className="text-amber-600">
+                                                {childService.serviceDuration || childService.duration || 0} мин
+                                                {childService.servicePrice && ` • ${childService.servicePrice} сом`}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {appointment.notes && (
                             <div className="pt-2 border-t border-gray-200">

@@ -233,13 +233,26 @@ export const EditAppointmentDialog = ({
   });
 
   useEffect(() => {
+    console.log('🔍 useEffect for childTasksData triggered');
+    console.log('🔍 childTasksData:', childTasksData);
+    
     if (childTasksData) {
+      console.log('🔍 Setting childTasks to:', childTasksData);
       setChildTasks(childTasksData);
       const initialChildDurations: { [key: number]: number } = {};
       childTasksData.forEach(child => {
         initialChildDurations[child.id] = child.serviceDuration || child.duration || 0;
+        console.log('🔍 Child duration mapping:', {
+          id: child.id,
+          serviceDuration: child.serviceDuration,
+          duration: child.duration,
+          mapped: initialChildDurations[child.id]
+        });
       });
       setLocalChildDurations(initialChildDurations);
+    } else {
+      console.log('🔍 childTasksData is null/undefined, clearing childTasks');
+      setChildTasks([]);
     }
   }, [childTasksData]);
 
@@ -349,30 +362,82 @@ export const EditAppointmentDialog = ({
     }
   };
 
-  // Упрощенная функция расчета цены основной услуги
+  // Функция расчета цены основной услуги
   const calculateMainServicePrice = (): number => {
-    if (!serviceDurations || !task?.serviceDuration) return task?.servicePrice || task?.finalPrice || 0;
-
-    const duration = task.serviceDuration;
-
-    if (!isStandardDuration(duration)) {
-      return task?.servicePrice || task?.finalPrice || 0;
-    }
-
-    const durationOption = serviceDurations.availableDurations.find((d: DurationOption) => d.duration === duration);
-
-    if (durationOption) {
-      return durationOption.price;
-    }
-
-    return task?.servicePrice || task?.finalPrice || 0;
+    console.log('🔍 calculateMainServicePrice called');
+    console.log('🔍 task:', task);
+    console.log('🔍 task.finalPrice:', task?.finalPrice);
+    console.log('🔍 task.servicePrice:', task?.servicePrice);
+    
+    const result = parseFloat(String(task?.finalPrice || 0)) || 0;
+    console.log('🔍 Main service price:', result, 'isNaN:', isNaN(result));
+    return isNaN(result) ? 0 : result;
   };
 
-  // Расчет общей цены с учетом дополнительных услуг
+  // Расчет цены дополнительных услуг (только дочерние задачи)
+  const calculateAdditionalServicesPrice = (): number => {
+    console.log('🔍 calculateAdditionalServicesPrice called');
+    console.log('🔍 childTasks:', childTasks);
+    console.log('🔍 childTasks.length:', childTasks?.length);
+    
+    if (!childTasks || childTasks.length === 0) {
+      console.log('🔍 No child tasks, returning 0');
+      return 0;
+    }
+    
+    const result = childTasks.reduce((sum, child) => {
+      const price = parseFloat(String(child.finalPrice || 0)) || 0;
+      console.log('🔍 Child task:', {
+        id: child.id,
+        serviceType: child.serviceType,
+        finalPrice: child.finalPrice,
+        servicePrice: child.servicePrice,
+        calculatedPrice: price,
+        isNaN: isNaN(price)
+      });
+      return sum + price;
+    }, 0);
+    
+    console.log('🔍 Total additional services price:', result, 'isNaN:', isNaN(result));
+    return isNaN(result) ? 0 : result;
+  };
+
+  // Расчет общего времени (основная + дочерние)
+  const calculateTotalDuration = (): number => {
+    console.log('🔍 calculateTotalDuration called');
+    console.log('🔍 task:', task);
+    console.log('🔍 task.serviceDuration:', task?.serviceDuration);
+    console.log('🔍 childTasks:', childTasks);
+    
+    const mainDuration = parseFloat(String(task?.serviceDuration || 0)) || 0;
+    const childrenDuration = childTasks.reduce((sum, child) => {
+      const duration = parseFloat(String(child.serviceDuration || 0)) || 0;
+      console.log('🔍 Child duration:', {
+        id: child.id,
+        serviceDuration: child.serviceDuration,
+        duration: child.duration,
+        calculatedDuration: duration,
+        isNaN: isNaN(duration)
+      });
+      return sum + duration;
+    }, 0);
+    
+    const total = mainDuration + childrenDuration;
+    console.log('🔍 Total duration:', total, '(main:', mainDuration, '+ children:', childrenDuration, ') isNaN:', isNaN(total));
+    return isNaN(total) ? 0 : total;
+  };
+
+  // Расчет общей цены (сумма всех finalPrice)
   const calculateTotalPrice = (): number => {
-    const mainPrice = calculateMainServicePrice();
-    const childrenPrice = childTasks.reduce((sum, child) => sum + (child.servicePrice || child.finalPrice || 0), 0);
-    return mainPrice + childrenPrice;
+    console.log('🔍 calculateTotalPrice called');
+    const mainPrice = parseFloat(String(task?.finalPrice || 0)) || 0;
+    const childrenPrice = childTasks.reduce((sum, child) => {
+      const price = parseFloat(String(child.finalPrice || 0)) || 0;
+      return sum + price;
+    }, 0);
+    const total = mainPrice + childrenPrice;
+    console.log('🔍 Total price:', total, '(main:', mainPrice, '+ children:', childrenPrice, ') isNaN:', isNaN(total));
+    return isNaN(total) ? 0 : total;
   };
 
   // Автоматический расчет итоговой цены
@@ -948,10 +1013,22 @@ export const EditAppointmentDialog = ({
                   <span>Основная услуга:</span>
                   <span>{calculateMainServicePrice()} сом</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Скидка ({formData.discount}%):</span>
-                  <span>-{Math.round(calculateTotalPrice() * formData.discount / 100)} сом</span>
+                {childTasks.length > 0 && (
+                  <div className="flex justify-between">
+                    <span>Дополнительные услуги:</span>
+                    <span>{calculateAdditionalServicesPrice()} сом</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm text-gray-600">
+                  <span>Общее время:</span>
+                  <span>{calculateTotalDuration()} мин</span>
                 </div>
+                {formData.discount > 0 && (
+                  <div className="flex justify-between">
+                    <span>Скидка ({formData.discount}%):</span>
+                    <span>-{Math.round(calculateTotalPrice() * formData.discount / 100)} сом</span>
+                  </div>
+                )}
                 <hr className="my-3" />
                 <div className="flex justify-between font-bold">
                   <span>Итого:</span>

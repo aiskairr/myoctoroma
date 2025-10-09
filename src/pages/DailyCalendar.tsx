@@ -1985,9 +1985,9 @@ const EditAppointmentDialog = ({
 // Основной компонент календаря
 // Функции для цветового кодирования статусов
 // Функция для получения стилей связанных записей
-const getRelatedTaskStyles = (task: Task, allTasks: Task[]) => {
+const getRelatedTaskStyles = (task: Task, childTasksMap: { [taskId: number]: Task[] }) => {
   const isMainTask = !task.mother; // Основная задача не имеет поля mother
-  const hasChildren = allTasks.some(t => t.mother === task.id);
+  const hasChildren = childTasksMap[task.id] && childTasksMap[task.id].length > 0;
   const isChildTask = !!task.mother;
 
   if (isMainTask && hasChildren) {
@@ -2166,44 +2166,40 @@ export default function DailyCalendar() {
     enabled: !!getBranchIdWithFallback(currentBranch, branches)
   });
 
-  // Фильтруем отмененные записи из основного календаря
+  // Фильтруем отмененные записи и дочерние услуги из основного календаря
+  // Дочерние услуги (с полем mother) не должны отображаться отдельно
   const tasks = useMemo(() => {
     return allTasks.filter(task => 
       task.status !== 'cancelled' && 
-      task.status !== 'no_show'
+      task.status !== 'no_show' &&
+      !task.mother // Исключаем дочерние услуги - они будут показаны внутри родительской записи
     );
   }, [allTasks]);
 
-  // Загружаем дочерние задачи для всех основных задач
-  const { data: childTasksMap = {} } = useQuery<{ [taskId: number]: Task[] }>({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/calendar/child-tasks`, formattedDate, getBranchIdWithFallback(currentBranch, branches)],
-    queryFn: async () => {
-      const childrenMap: { [taskId: number]: Task[] } = {};
-
-      // Получаем только основные задачи (без поля mother)
-      const mainTasks = tasks.filter(task => !task.mother);
-
-      // Загружаем дочерние задачи для каждой основной задачи
-      for (const task of mainTasks) {
-        try {
-          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}/children`, {
-            credentials: 'include'
-          });
-          if (res.ok) {
-            childrenMap[task.id] = await res.json();
-          } else {
-            childrenMap[task.id] = [];
-          }
-        } catch (error) {
-          console.error(`Error loading children for task ${task.id}:`, error);
-          childrenMap[task.id] = [];
+  // Создаем карту дочерних задач из уже загруженных данных
+  const childTasksMap = useMemo(() => {
+    const childrenMap: { [taskId: number]: Task[] } = {};
+    
+    // Фильтруем дочерние задачи из allTasks
+    const childTasks = allTasks.filter(task => 
+      task.mother && 
+      task.status !== 'cancelled' && 
+      task.status !== 'no_show'
+    );
+    
+    // Группируем дочерние задачи по mother ID
+    childTasks.forEach(childTask => {
+      const motherId = childTask.mother;
+      if (motherId) {
+        if (!childrenMap[motherId]) {
+          childrenMap[motherId] = [];
         }
+        childrenMap[motherId].push(childTask);
       }
-
-      return childrenMap;
-    },
-    enabled: !!getBranchIdWithFallback(currentBranch, branches) && tasks.length > 0
-  });
+    });
+    
+    return childrenMap;
+  }, [allTasks]);
 
   // Загружаем услуги массажа для правильного расчета длительности
   const { data: serviceServices = [] } = useQuery<serviceService[]>({
@@ -2816,7 +2812,7 @@ export default function DailyCalendar() {
                             let gridRowEnd: number | undefined;
 
                             // Логика для определения длительности (как в оригинале)
-                            const childTasks = (tasks || []).filter(t => t.mother === overlappingTask.id);
+                            const childTasks = childTasksMap[overlappingTask.id] || [];
                             const childrenDuration = childTasks.reduce((sum, child) => sum + (child.serviceDuration || child.duration || 0), 0);
 
                             let mainDuration = overlappingTask.serviceDuration || overlappingTask.duration;
@@ -2838,7 +2834,7 @@ export default function DailyCalendar() {
                               gridRowEnd = gridRow + slotsCount;
                             }
 
-                            const relatedStyles = getRelatedTaskStyles(overlappingTask, tasks || []);
+                            const relatedStyles = getRelatedTaskStyles(overlappingTask, childTasksMap);
                             const zIndex = 10 + taskIndex; // Более поздние задачи имеют больший z-index
 
                             return (
@@ -2930,7 +2926,7 @@ export default function DailyCalendar() {
 
                         if (shouldShowTaskContent && task) {
                           // ✅ Используем общую длительность включая дополнительные услуги
-                          const childTasks = (tasks || []).filter(t => t.mother === task.id);
+                          const childTasks = childTasksMap[task.id] || [];
                           const childrenDuration = childTasks.reduce((sum, child) => sum + (child.serviceDuration || child.duration || 0), 0);
 
                           // Улучшенная логика определения длительности основной услуги
@@ -2958,7 +2954,7 @@ export default function DailyCalendar() {
                         }
 
                         // Получаем стили для связанных записей
-                        const relatedStyles = task ? getRelatedTaskStyles(task, tasks || []) : { indicator: '', borderStyle: '', connectLine: '' };
+                        const relatedStyles = task ? getRelatedTaskStyles(task, childTasksMap) : { indicator: '', borderStyle: '', connectLine: '' };
 
                         return (
                           <Tooltip key={`${time}-${master.id}`}>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест Drag and Drop</title>
+    <style>
+        .task {
+            width: 200px;
+            height: 50px;
+            background-color: #3B82F6;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px;
+            cursor: grab;
+            user-select: none;
+        }
+        .task.dragging {
+            opacity: 0.5;
+        }
+        .slot {
+            width: 220px;
+            height: 60px;
+            border: 2px dashed #ccc;
+            margin: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+        .slot.drag-over {
+            background-color: #e0f2fe;
+            border-color: #3B82F6;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тест Drag and Drop</h1>
+    <div id="log"></div>
+    
+    <h2>Задачи для перетаскивания:</h2>
+    <div class="task" draggable="true" id="task1">Задача 1</div>
+    <div class="task" draggable="true" id="task2">Задача 2</div>
+    
+    <h2>Слоты для сброса:</h2>
+    <div class="slot" id="slot1">Слот 1</div>
+    <div class="slot" id="slot2">Слот 2</div>
+    <div class="slot" id="slot3">Слот 3</div>
+
+    <script>
+        const log = document.getElementById('log');
+        
+        function addLog(message) {
+            log.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+            console.log(message);
+        }
+
+        // Задачи
+        const tasks = document.querySelectorAll('.task');
+        tasks.forEach(task => {
+            task.addEventListener('dragstart', (e) => {
+                addLog('🔥 dragstart на задаче: ' + task.id);
+                e.dataTransfer.setData('text/plain', task.id);
+                task.classList.add('dragging');
+            });
+            
+            task.addEventListener('dragend', (e) => {
+                addLog('🏁 dragend на задаче: ' + task.id);
+                task.classList.remove('dragging');
+            });
+        });
+
+        // Слоты
+        const slots = document.querySelectorAll('.slot');
+        slots.forEach(slot => {
+            slot.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                addLog('📍 dragover на слоте: ' + slot.id);
+                slot.classList.add('drag-over');
+            });
+            
+            slot.addEventListener('dragleave', (e) => {
+                addLog('👋 dragleave на слоте: ' + slot.id);
+                slot.classList.remove('drag-over');
+            });
+            
+            slot.addEventListener('drop', (e) => {
+                e.preventDefault();
+                addLog('🎯 drop на слоте: ' + slot.id);
+                slot.classList.remove('drag-over');
+                
+                const taskId = e.dataTransfer.getData('text/plain');
+                const task = document.getElementById(taskId);
+                
+                if (task) {
+                    addLog('✅ Перемещение задачи ' + taskId + ' в слот ' + slot.id);
+                    slot.innerHTML = task.textContent;
+                    task.style.display = 'none';
+                    
+                    // Имитация API запроса
+                    setTimeout(() => {
+                        addLog('🚀 Отправка PUT /api/tasks/' + taskId + ' с новыми данными');
+                        addLog('📡 Ответ: 200 OK');
+                    }, 500);
+                }
+            });
+        });
+
+        addLog('✅ Тестовая страница загружена');
+    </script>
+</body>
+</html>
