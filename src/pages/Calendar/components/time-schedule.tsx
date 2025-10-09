@@ -222,6 +222,49 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         },
     });
 
+    // Мутация для обновления задач
+    const updateTaskMutation = useMutation({
+        mutationFn: async ({ taskId, updates }: { taskId: string, updates: any }) => {
+            console.log('🚀 Sending PUT request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`);
+            console.log('📦 Payload:', updates);
+
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updates),
+                credentials: 'include'
+            });
+
+            console.log('📡 Response status:', response.status);
+            console.log('📡 Response ok:', response.ok);
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('❌ Error response:', errorData);
+                throw new Error(errorData.message || 'Failed to update task');
+            }
+
+            const result = await response.json();
+            console.log('✅ Success response:', result);
+            return result;
+        },
+        onSuccess: () => {
+            console.log('✅ Task updated successfully');
+            // Инвалидируем кэш календарных задач
+            queryClient.invalidateQueries({ queryKey: ['calendar-tasks'] });
+        },
+        onError: (error: any) => {
+            console.error('❌ Error updating task:', error);
+            toast({
+                title: "Ошибка обновления",
+                description: error.message || "Не удалось обновить запись",
+                variant: "destructive",
+            });
+        }
+    });
+
     // Convert services data to legacy format for compatibility
     const services = useMemo(() => {
         return convertServicesToLegacyFormat(servicesData);
@@ -652,26 +695,8 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             console.log('🚀 Sending PUT request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${appointmentId}`);
             console.log('📦 Payload:', payload);
 
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${appointmentId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-                credentials: 'include'
-            });
-
-            console.log('📡 Response status:', response.status);
-            console.log('📡 Response ok:', response.ok);
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                console.error('❌ Error response:', errorData);
-                throw new Error(errorData.message || 'Failed to update appointment');
-            }
-
-            const result = await response.json();
-            console.log('✅ Success response:', result);
+            // Используем мутацию вместо прямого fetch
+            updateTaskMutation.mutate({ taskId: appointmentId, updates: payload });
 
         } catch (error) {
             console.error('❌ Error updating appointment:', error);
@@ -680,7 +705,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 String(apt.id) === String(appointmentId) ? apt : apt
             ));
         }
-    }, [employees, mastersData]);
+    }, [employees, mastersData, updateTaskMutation]);
 
     // Validation functions
     const isWithinWorkingHours = useCallback((employeeId: string, timeSlot: string): boolean => {
@@ -1541,7 +1566,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                 </div>
 
                                 <div className="flex items-center gap-3">
-                                    <CancelledAppointments />
+                                    <CancelledAppointments selectedDate={currentDate} />
                                     
                                     <Dialog open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>
                                         <DialogTrigger asChild>

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Clock, CalendarIcon, Loader2, CreditCard, Trash2, Plus } from "lucide-react";
+import { Clock, CalendarIcon, Loader2, CreditCard, Trash2, Plus, CheckCircle, X, Scissors } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import type React from "react";
@@ -1157,10 +1157,81 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                     render={({ field }) => (
                                         <Textarea
                                             {...field}
-                                            className="mt-1 min-h-[80px] resize-none"
+                                            className="mt-1 min-h-[60px] resize-none"
                                         />
                                     )}
                                 />
+                            </div>
+
+                            <div>
+                                <Label className="text-sm text-gray-600 mb-3 block">Статус</Label>
+                                <Controller
+                                    name="status"
+                                    control={control}
+                                    rules={{ required: "Выберите статус" }}
+                                    render={({ field }) => (
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Button
+                                                type="button"
+                                                variant={field.value === 'scheduled' ? 'default' : 'outline'}
+                                                className={`h-14 flex flex-col items-center justify-center transition-all text-xs ${
+                                                    field.value === 'scheduled' 
+                                                        ? 'bg-blue-500 text-white border-blue-500' 
+                                                        : 'hover:bg-blue-50 hover:border-blue-300'
+                                                }`}
+                                                onClick={() => field.onChange('scheduled')}
+                                            >
+                                                <Clock className="h-4 w-4 mb-1" />
+                                                <span>Записан</span>
+                                            </Button>
+                                            
+                                            <Button
+                                                type="button"
+                                                variant={field.value === 'in_progress' ? 'default' : 'outline'}
+                                                className={`h-14 flex flex-col items-center justify-center transition-all text-xs ${
+                                                    field.value === 'in_progress' 
+                                                        ? 'bg-orange-500 text-white border-orange-500' 
+                                                        : 'hover:bg-orange-50 hover:border-orange-300'
+                                                }`}
+                                                onClick={() => field.onChange('in_progress')}
+                                            >
+                                                <Scissors className="h-4 w-4 mb-1" />
+                                                <span>В процессе</span>
+                                            </Button>
+                                            
+                                            <Button
+                                                type="button"
+                                                variant={field.value === 'completed' ? 'default' : 'outline'}
+                                                className={`h-14 flex flex-col items-center justify-center transition-all text-xs ${
+                                                    field.value === 'completed' 
+                                                        ? 'bg-green-500 text-white border-green-500' 
+                                                        : 'hover:bg-green-50 hover:border-green-300'
+                                                }`}
+                                                onClick={() => field.onChange('completed')}
+                                            >
+                                                <CheckCircle className="h-4 w-4 mb-1" />
+                                                <span>Завершен</span>
+                                            </Button>
+                                            
+                                            <Button
+                                                type="button"
+                                                variant={field.value === 'cancelled' ? 'default' : 'outline'}
+                                                className={`h-14 flex flex-col items-center justify-center transition-all text-xs ${
+                                                    field.value === 'cancelled' 
+                                                        ? 'bg-red-500 text-white border-red-500' 
+                                                        : 'hover:bg-red-50 hover:border-red-300'
+                                                }`}
+                                                onClick={() => field.onChange('cancelled')}
+                                            >
+                                                <X className="h-4 w-4 mb-1" />
+                                                <span>Отменен</span>
+                                            </Button>
+                                        </div>
+                                    )}
+                                />
+                                {errors.status && (
+                                    <p className="text-red-500 text-xs mt-1">{errors.status.message}</p>
+                                )}
                             </div>
                         </div>
 
@@ -1409,34 +1480,6 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                 />
                                 {errors.master && (
                                     <p className="text-red-500 text-xs mt-1">{errors.master.message}</p>
-                                )}
-                            </div>
-
-                            <div>
-                                <Label className="text-sm text-gray-600">Статус</Label>
-                                <Controller
-                                    name="status"
-                                    control={control}
-                                    rules={{ required: "Выберите статус" }}
-                                    render={({ field }) => (
-                                        <Select
-                                            value={field.value}
-                                            onValueChange={field.onChange}
-                                        >
-                                            <SelectTrigger className={`mt-1 ${errors.status ? 'border-red-500' : ''}`}>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="scheduled">Записан</SelectItem>
-                                                <SelectItem value="in_progress">В процессе</SelectItem>
-                                                <SelectItem value="completed">Завершен</SelectItem>
-                                                <SelectItem value="cancelled">Отменен</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    )}
-                                />
-                                {errors.status && (
-                                    <p className="text-red-500 text-xs mt-1">{errors.status.message}</p>
                                 )}
                             </div>
 

@@ -9,7 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useBranch } from "@/contexts/BranchContext";
 import { getBranchIdWithFallback } from "@/utils/branch-utils";
-import { Loader2, CreditCard } from "lucide-react";
+import { Loader2, CreditCard, CheckCircle, X, Scissors, Clock } from "lucide-react";
 
 // Интерфейсы
 interface Task {
@@ -838,23 +838,64 @@ export const EditAppointmentDialog = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="status" className="block font-semibold text-gray-700 text-sm mb-1">Статус</Label>
-                  <Select
-                    value={formData.status || 'scheduled'}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
-                  >
-                    <SelectTrigger className="w-full text-sm">
-                      <SelectValue placeholder="Выберите статус" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="new">Неразобранные</SelectItem>
-                      <SelectItem value="scheduled">Записан</SelectItem>
-                      <SelectItem value="in_progress">В процессе</SelectItem>
-                      <SelectItem value="completed">Обслуженные</SelectItem>
-                      <SelectItem value="cancelled">Отмененные</SelectItem>
-                      <SelectItem value="regular">Постоянные</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label className="block font-semibold text-gray-700 text-sm mb-3">Статус</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant={formData.status === 'scheduled' ? 'default' : 'outline'}
+                      className={`h-16 flex flex-col items-center justify-center transition-all ${
+                        formData.status === 'scheduled' 
+                          ? 'bg-blue-500 text-white border-blue-500' 
+                          : 'hover:bg-blue-50 hover:border-blue-300'
+                      }`}
+                      onClick={() => setFormData(prev => ({ ...prev, status: 'scheduled' }))}
+                    >
+                      <Clock className="h-5 w-5 mb-1" />
+                      <span className="text-xs">Записан</span>
+                    </Button>
+                    
+                    <Button
+                      type="button"
+                      variant={formData.status === 'in_progress' ? 'default' : 'outline'}
+                      className={`h-16 flex flex-col items-center justify-center transition-all ${
+                        formData.status === 'in_progress' 
+                          ? 'bg-orange-500 text-white border-orange-500' 
+                          : 'hover:bg-orange-50 hover:border-orange-300'
+                      }`}
+                      onClick={() => setFormData(prev => ({ ...prev, status: 'in_progress' }))}
+                    >
+                      <Scissors className="h-5 w-5 mb-1" />
+                      <span className="text-xs">В процессе</span>
+                    </Button>
+                    
+                    <Button
+                      type="button"
+                      variant={formData.status === 'completed' ? 'default' : 'outline'}
+                      className={`h-16 flex flex-col items-center justify-center transition-all ${
+                        formData.status === 'completed' 
+                          ? 'bg-green-500 text-white border-green-500' 
+                          : 'hover:bg-green-50 hover:border-green-300'
+                      }`}
+                      onClick={() => setFormData(prev => ({ ...prev, status: 'completed' }))}
+                    >
+                      <CheckCircle className="h-5 w-5 mb-1" />
+                      <span className="text-xs">Завершен</span>
+                    </Button>
+                    
+                    <Button
+                      type="button"
+                      variant={formData.status === 'cancelled' ? 'default' : 'outline'}
+                      className={`h-16 flex flex-col items-center justify-center transition-all ${
+                        formData.status === 'cancelled' 
+                          ? 'bg-red-500 text-white border-red-500' 
+                          : 'hover:bg-red-50 hover:border-red-300'
+                      }`}
+                      onClick={() => setFormData(prev => ({ ...prev, status: 'cancelled' }))}
+                    >
+                      <X className="h-5 w-5 mb-1" />
+                      <span className="text-xs">Отменен</span>
+                    </Button>
+                  </div>
                 </div>
 
                 <div>

@@ -124,10 +124,10 @@ class TaskParserService {
     // Немедленный первый запрос
     this.performRequest(customParams);
 
-    // Запуск интервала каждую минуту (60000 мс)
+    // Запуск интервала каждые 20 секунд (20000 мс)
     this.intervalId = setInterval(() => {
       this.performRequest(customParams);
-    }, 60000);
+    }, 20000);
 
     console.log('[TaskParser] Parser started successfully');
   }

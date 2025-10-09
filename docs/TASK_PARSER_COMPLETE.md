@@ -45,7 +45,7 @@ https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app/api/tasks
 - `userRole=superadmin`
 
 ### ⏰ Интервал
-- **1 минута** (60000 мс)
+- **20 секунд** (20000 мс)
 - Автоматический перезапуск при изменении даты
 - Graceful обработка ошибок
 

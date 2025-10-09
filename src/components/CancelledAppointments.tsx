@@ -20,9 +20,10 @@ import { useMasters } from '@/hooks/use-masters';
 
 interface CancelledAppointmentsProps {
   trigger?: React.ReactNode;
+  selectedDate?: Date; // Добавляем выбранную дату
 }
 
-export default function CancelledAppointments({ trigger }: CancelledAppointmentsProps) {
+export default function CancelledAppointments({ trigger, selectedDate }: CancelledAppointmentsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { currentBranch } = useBranch();
@@ -32,23 +33,28 @@ export default function CancelledAppointments({ trigger }: CancelledAppointments
   const [selectedTask, setSelectedTask] = useState<TaskWithMaster | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [dateFilter, setDateFilter] = useState('all');
+  const [statusFilter] = useState('all');
+  const [dateFilter] = useState('all');
 
   // Получаем мастеров для присваивания имен
   const { data: mastersData = [] } = useMasters();
 
-  // Мемоизируем даты чтобы избежать бесконечных запросов
+  // Мемоизируем даты для выбранного дня
   const dateRange = useMemo(() => {
-    const now = new Date();
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(now.getMonth() - 6);
+    const targetDate = selectedDate || new Date();
+    
+    // Создаем диапазон для выбранного дня (с начала до конца дня)
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
     
     return {
-      scheduledAfter: sixMonthsAgo.toISOString(),
-      scheduledBefore: now.toISOString()
+      scheduledAfter: startOfDay.toISOString(),
+      scheduledBefore: endOfDay.toISOString()
     };
-  }, []); // Пустой массив зависимостей - даты рассчитываются только один раз
+  }, [selectedDate]); // Зависимость от selectedDate
   
   const branchId = getBranchId(currentBranch);
   
