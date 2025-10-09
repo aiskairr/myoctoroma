@@ -25,7 +25,7 @@ export const ThemeToggle: React.FC = () => {
         {theme === 'light' ? (
           <Moon className="h-5 w-5 transition-all duration-300 rotate-0 scale-100" />
         ) : (
-          <Sun className="h-5 w-5 transition-all duration-300 rotate-0 scale-100 animate-pulse" />
+          <Sun className="h-5 w-5 transition-all duration-300 rotate-0 scale-100" />
         )}
       </div>
       
