@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { BookingLinkCopy } from "@/components/BookingLinkCopy";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -121,12 +122,30 @@ export default function Settings() {
       });
       
       if (!response.ok) {
+        if (response.status === 504) {
+          // 504 Gateway Timeout означает, что импорт начался
+          return { status: 'timeout', message: 'Import started' };
+        }
         throw new Error('Ошибка при загрузке файла');
       }
       
       return response.json();
     },
     onSuccess: async (data) => {
+      // Проверяем, если это timeout (504 ошибка)
+      if (data && data.status === 'timeout') {
+        toast({
+          title: "Импорт начался",
+          description: "Импорт начался, ожидайте 60 мин пока все данные не импортируются.",
+          variant: "default",
+        });
+        setSelectedFile(null);
+        // Reset file input
+        const fileInput = document.getElementById('excel-file') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+        return;
+      }
+      
       // Сохраняем jobId для отслеживания статуса
       if (data && data.jobId) {
         setImportJobId(data.jobId);
@@ -566,6 +585,11 @@ export default function Settings() {
       <div className="mb-6">
         <h1 className="text-2xl font-medium mb-1">Настройки</h1>
         <p className="text-muted-foreground">Импорт данных и настройка промптов</p>
+      </div>
+      
+      {/* Booking Link Copy */}
+      <div className="mb-6">
+        <BookingLinkCopy />
       </div>
       
       {/* System Prompt Settings */}
