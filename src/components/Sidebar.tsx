@@ -331,7 +331,7 @@ function AdminOnlySidebar() {
       icon: <FileClock className="h-5 w-5" />,
       children: [
         { path: "/crm/calendar", label: "Календарь", icon: <CalendarIcon className="h-5 w-5" /> },
-        { path: "/crm/masters", label: "Расписание сотрудников", icon: <CalendarIcon className="h-5 w-5" /> },
+        { path: "/crm/masters", label: "Мастера", icon: <UserRound className="h-5 w-5" /> },
         { path: "/services", label: "Услуги", icon: <Sparkles className="h-5 w-5" /> }
       ]
     },
