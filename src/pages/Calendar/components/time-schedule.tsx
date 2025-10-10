@@ -1255,7 +1255,9 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             'cancelled': '#EF4444'     // red - отменен
         };
 
-        return statusColors[appointment.status] || '#10B981';
+        // Нормализуем статус и обеспечиваем fallback
+        const normalizedStatus = appointment.status?.trim() || 'scheduled';
+        return statusColors[normalizedStatus] || statusColors.scheduled;
     }, []);
 
     // Render appointment block with smart positioning
@@ -1307,21 +1309,33 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             'scheduled': 'bg-green-50 text-green-900',        // Зеленый - записан
             'in_progress': 'bg-blue-50 text-blue-900',        // Синий - в процессе  
             'completed': 'bg-yellow-50 text-yellow-900',      // Желтый - завершен
-            'cancelled': 'bg-red-50 text-red-900'             // Красный - отменен
+            'cancelled': 'bg-red-50 text-red-900',            // Красный - отменен
+            // Fallback для пустых/null значений
+            '': 'bg-green-50 text-green-900',
+            'null': 'bg-green-50 text-green-900',
+            'undefined': 'bg-green-50 text-green-900'
         };
 
         const statusLabels = {
             'scheduled': 'Запланировано',
             'in_progress': 'В процессе',
             'completed': 'Завершено',
-            'cancelled': 'Отменено'
+            'cancelled': 'Отменено',
+            // Fallback для пустых/null значений
+            '': 'Запланировано',
+            'null': 'Запланировано',
+            'undefined': 'Запланировано'
         };
 
         const statusColorsTooltip = {
             'scheduled': 'text-green-700 bg-green-100',       // Зеленый - записан
             'in_progress': 'text-blue-700 bg-blue-100',       // Синий - в процессе
             'completed': 'text-yellow-700 bg-yellow-100',     // Желтый - завершен
-            'cancelled': 'text-red-700 bg-red-100'            // Красный - отменен
+            'cancelled': 'text-red-700 bg-red-100',           // Красный - отменен
+            // Fallback для пустых/null значений
+            '': 'text-green-700 bg-green-100',
+            'null': 'text-green-700 bg-green-100',
+            'undefined': 'text-green-700 bg-green-100'
         };
 
         const isDragging = dragState.isDragging && dragState.draggedAppointment?.id === appointment.id;
@@ -1343,7 +1357,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 <TaskDialogBtn taskId={parseInt(appointment.id)}>
                     <TooltipTrigger asChild>
                         <div
-                            className={`absolute border-l-8 rounded-r-md text-xs group transition-all duration-100 ${statusColors[appointment.status]
+                            className={`absolute border-l-8 rounded-r-md text-xs group transition-all duration-100 ${statusColors[appointment.status as keyof typeof statusColors] || statusColors.scheduled
                                 } ${isDragging ? 'opacity-70 scale-105 shadow-xl ring-2 ring-blue-400/50' : 'shadow-sm hover:shadow-md'} ${isResizing ? 'ring-2 ring-blue-400' : ''
                                 } hover:opacity-90`}
                             style={{
@@ -1429,8 +1443,8 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                             />
                             <h3 className="font-semibold text-gray-900">{appointment.clientName}</h3>
                         </div>
-                        <span className={`px-2 py-1 text-xs rounded-full ${statusColorsTooltip[appointment.status]}`}>
-                            {statusLabels[appointment.status]}
+                        <span className={`px-2 py-1 text-xs rounded-full ${statusColorsTooltip[appointment.status as keyof typeof statusColorsTooltip] || statusColorsTooltip.scheduled}`}>
+                            {statusLabels[appointment.status as keyof typeof statusLabels] || statusLabels.scheduled}
                         </span>
                     </div>
 

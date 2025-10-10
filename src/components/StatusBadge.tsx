@@ -3,12 +3,15 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Clock, XCircle, AlertCircle } from "lucide-react";
 
 type StatusBadgeProps = {
-  status: string;
+  status: string | null | undefined;
   className?: string;
   showIndicator?: boolean;
 };
 
 export default function StatusBadge({ status, className, showIndicator = true }: StatusBadgeProps) {
+  // Нормализуем статус
+  const normalizedStatus = status?.trim() || 'scheduled';
+  
   // Перевод статусов
   const translateStatus = (status: string): string => {
     const statusLower = status.toLowerCase();
@@ -32,7 +35,7 @@ export default function StatusBadge({ status, className, showIndicator = true }:
 
   // Define icon for status
   const StatusIcon = () => {
-    const statusLower = status.toLowerCase();
+    const statusLower = normalizedStatus.toLowerCase();
 
     if (statusLower === "active" ||
       statusLower === "processed" ||
@@ -100,25 +103,25 @@ export default function StatusBadge({ status, className, showIndicator = true }:
     return (
       <span className={cn(
         "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium",
-        getStatusColor(status),
+        getStatusColor(normalizedStatus),
         className
       )}>
         {showIndicator && <StatusIcon />}
-        {translateStatus(status)}
+        {translateStatus(normalizedStatus)}
       </span>
     );
   }
 
   return (
     <Badge className={cn(
-      getStatusColor(status),
+      getStatusColor(normalizedStatus),
       "flex items-center w-fit gap-1",
       className
     )}>
-      {showIndicator && status.length > 0 &&
+      {showIndicator && normalizedStatus.length > 0 &&
         (className?.includes("icon") ? <StatusIcon /> : <span className="w-2 h-2 bg-white rounded-full mr-1" />)
       }
-      {translateStatus(status)}
+      {translateStatus(normalizedStatus)}
     </Badge>
   );
 }

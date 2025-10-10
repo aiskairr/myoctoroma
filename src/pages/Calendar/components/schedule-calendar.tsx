@@ -24,6 +24,40 @@ interface UserEvent {
     userId: string
 }
 
+// Функция для безопасного получения цвета пользователя
+const getUserColor = (user: User | undefined | null): string => {
+    const color = user?.color?.trim();
+    
+    // Проверяем валидность HEX цвета
+    if (color && /^#[0-9A-F]{6}$/i.test(color)) {
+        return color;
+    }
+    
+    // Fallback цвета для разных пользователей
+    const fallbackColors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
+    const userId = user?.id || '1';
+    const colorIndex = parseInt(userId) - 1;
+    
+    return fallbackColors[colorIndex] || '#3B82F6'; // Синий по умолчанию
+};
+
+// Функция для получения контрастного цвета текста
+const getTextColor = (backgroundColor: string): string => {
+    // Убираем # если есть
+    const hex = backgroundColor.replace('#', '');
+    
+    // Проверяем валидность
+    if (hex.length !== 6) return '#000000';
+    
+    // Вычисляем яркость
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    
+    return brightness > 128 ? '#000000' : '#FFFFFF';
+};
+
 // Компонент модального окна для создания задачи
 function CreateTaskModal({ isOpen, onClose, onCreate, defaultTime, user }: {
     isOpen: boolean,
@@ -69,9 +103,9 @@ function CreateTaskModal({ isOpen, onClose, onCreate, defaultTime, user }: {
                 padding: '20px',
                 borderRadius: '8px',
                 width: '300px',
-                border: `2px solid ${user.color}`
+                border: `2px solid ${getUserColor(user)}`
             }}>
-                <h3 style={{ color: user.color }}>Новая задача для {user.name}</h3>
+                <h3 style={{ color: getUserColor(user) }}>Новая задача для {user.name}</h3>
                 <form onSubmit={handleSubmit}>
                     <input
                         type="text"
@@ -89,8 +123,8 @@ function CreateTaskModal({ isOpen, onClose, onCreate, defaultTime, user }: {
                     <div style={{ display: 'flex', gap: '10px' }}>
                         <button type="submit" style={{
                             padding: '8px 16px',
-                            backgroundColor: user.color,
-                            color: 'white',
+                            backgroundColor: getUserColor(user),
+                            color: getTextColor(getUserColor(user)),
                             border: 'none',
                             borderRadius: '4px',
                             cursor: 'pointer'
@@ -149,10 +183,11 @@ function UserCalendar({ user, events, onAddEvent }: {
     const userEvents = events
         .filter(event => event.userId === user.id)
         .map(event => {
+            const userColor = getUserColor(user);
             const mappedEvent = {
                 ...event,
-                backgroundColor: user.color,
-                borderColor: user.color,
+                backgroundColor: userColor,
+                borderColor: userColor,
                 // Добавляем свойства для drag-and-drop
                 draggable: true,
                 resizable: true
@@ -162,14 +197,15 @@ function UserCalendar({ user, events, onAddEvent }: {
         })
 
     const handleCreateTask = (title: string, start: any, end: any) => {
+        const userColor = getUserColor(user);
         const newEvent = {
             id: `${user.id}-${Date.now()}`,
             title,
             start,
             end,
             userId: user.id,
-            backgroundColor: user.color,
-            borderColor: user.color
+            backgroundColor: userColor,
+            borderColor: userColor
         }
 
         const hasConflict = checkEventConflict(newEvent, eventsService.getAll())
@@ -301,16 +337,16 @@ function UserCalendar({ user, events, onAddEvent }: {
     return (
         <div style={{ marginBottom: '30px' }}>
             <h3 style={{
-                color: user.color,
+                color: getUserColor(user),
                 margin: '10px 0',
                 padding: '10px',
-                backgroundColor: `${user.color}20`,
+                backgroundColor: `${getUserColor(user)}20`,
                 borderRadius: '8px',
-                border: `2px solid ${user.color}`
+                border: `2px solid ${getUserColor(user)}`
             }}>
                 📅 {user.name} (ID: {user.id})
             </h3>
-            <div style={{ border: `2px solid ${user.color}`, borderRadius: '8px', overflow: 'hidden', minWidth: '500px' }}>
+            <div style={{ border: `2px solid ${getUserColor(user)}`, borderRadius: '8px', overflow: 'hidden', minWidth: '500px' }}>
                 <ScheduleXCalendar calendarApp={calendar} />
             </div>
             <div style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>

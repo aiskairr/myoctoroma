@@ -1029,7 +1029,7 @@ const EditAppointmentDialog = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientId: task?.clientId,
-          status: task?.status, // ✅ Дочерние услуги наследуют статус материнской записи
+          status: task?.status || 'scheduled', // ✅ Дочерние услуги наследуют статус материнской записи
           serviceType: serviceData.serviceName,
           serviceServiceId: serviceData.serviceId,
           scheduleDate: task?.scheduleDate,
@@ -2050,8 +2050,11 @@ const getRelatedTaskStyles = (task: Task, childTasksMap: { [taskId: number]: Tas
   return { indicator: '', borderStyle: '', connectLine: '' };
 };
 
-const getStatusColors = (status: string) => {
-  switch (status) {
+const getStatusColors = (status: string | null | undefined) => {
+  // Нормализуем статус и убеждаемся, что он не null/undefined/пустая строка
+  const normalizedStatus = status?.trim() || 'scheduled';
+  
+  switch (normalizedStatus) {
     case 'new':
       return {
         bg: 'bg-blue-200 hover:bg-blue-300',
@@ -2098,17 +2101,21 @@ const getStatusColors = (status: string) => {
         badge: 'bg-gray-500 text-white'
       };
     default:
+      // Для любых неизвестных статусов используем зеленый (scheduled)
+      console.warn(`Неизвестный статус задачи: "${status}". Используется fallback 'scheduled'.`);
       return {
-        bg: 'bg-gray-200 hover:bg-gray-300',
-        border: 'border-gray-400',
-        text: 'text-gray-900',
-        badge: 'bg-gray-500 text-white'
+        bg: 'bg-green-100 hover:bg-green-200',
+        border: 'border-green-500',
+        text: 'text-green-800',
+        badge: 'bg-green-500 text-white'
       };
   }
 };
 
-const getStatusLabel = (status: string) => {
-  switch (status) {
+const getStatusLabel = (status: string | null | undefined) => {
+  const normalizedStatus = status?.trim() || 'scheduled';
+  
+  switch (normalizedStatus) {
     case 'new':
       return 'Неразобранные';
     case 'scheduled':
@@ -2122,7 +2129,7 @@ const getStatusLabel = (status: string) => {
     case 'regular':
       return 'Постоянные';
     default:
-      return 'Неизвестный';
+      return 'Записан'; // Fallback для неизвестных статусов
   }
 };
 
@@ -2882,8 +2889,8 @@ export default function DailyCalendar() {
                               <Tooltip key={`${time}-${master.id}-${overlappingTask.id}-${taskIndex}`}>
                                 <TooltipTrigger asChild>
                                   <div
-                                    className={`p-1 border-r border-b cursor-move transition-all duration-200 relative rounded-lg overflow-hidden ${getStatusColors(overlappingTask?.status || 'scheduled').bg
-                                      } ${relatedStyles.borderStyle || (getStatusColors(overlappingTask.status || 'scheduled').border + ' border-l-8')}
+                                    className={`p-1 border-r border-b cursor-move transition-all duration-200 relative rounded-lg overflow-hidden ${getStatusColors(overlappingTask?.status).bg
+                                      } ${relatedStyles.borderStyle || (getStatusColors(overlappingTask?.status).border + ' border-l-8')}
                                 ${draggedTask?.id === overlappingTask.id ? 'opacity-50 scale-95' : ''}`}
                                     style={{
                                       gridColumn: masterIndex + 2,
@@ -2906,7 +2913,7 @@ export default function DailyCalendar() {
                                       )}
 
                                       <div className="flex items-center justify-between min-h-0 w-full max-w-full">
-                                        <div className={`font-medium ${getStatusColors(overlappingTask.status || 'scheduled').text} flex items-center gap-0.5 truncate flex-1 text-xs max-w-full`}>
+                                        <div className={`font-medium ${getStatusColors(overlappingTask?.status).text} flex items-center gap-0.5 truncate flex-1 text-xs max-w-full`}>
                                           {relatedStyles.indicator && (
                                             <span className="text-amber-500 text-xs flex-shrink-0">{relatedStyles.indicator}</span>
                                           )}
@@ -3002,11 +3009,11 @@ export default function DailyCalendar() {
                             <TooltipTrigger asChild>
                               <div
                                 className={`p-1 border-r border-b transition-all duration-200 relative rounded-lg overflow-hidden ${isOccupied
-                                  ? getStatusColors(task?.status || 'scheduled').bg + (task ? ' cursor-move' : '')
+                                  ? getStatusColors(task?.status).bg + (task ? ' cursor-move' : '')
                                   : (isHovered || (draggedOver?.time === time && draggedOver?.masterId === master.id))
                                     ? 'bg-green-100 border-green-300 shadow-md cursor-pointer'
                                     : 'hover:bg-green-50 hover:border-green-200 cursor-pointer'
-                                  } ${task ? (relatedStyles.borderStyle || (getStatusColors(task.status || 'scheduled').border + ' border-l-8')) : ''} ${isTaskStart ? 'border-2 border-black' : ''
+                                  } ${task ? (relatedStyles.borderStyle || (getStatusColors(task?.status).border + ' border-l-8')) : ''} ${isTaskStart ? 'border-2 border-black' : ''
                                   } ${task ? relatedStyles.connectLine : ''}
                             ${draggedOver?.time === time && draggedOver?.masterId === master.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}
                             ${draggedTask?.id === task?.id ? 'opacity-50 scale-95' : ''}`}
@@ -3034,7 +3041,7 @@ export default function DailyCalendar() {
                                     )}
 
                                     <div className="flex items-center justify-between min-h-0 w-full max-w-full">
-                                      <div className={`font-medium ${getStatusColors(task.status || 'scheduled').text} flex items-center gap-0.5 truncate flex-1 text-xs max-w-full`}>
+                                      <div className={`font-medium ${getStatusColors(task?.status).text} flex items-center gap-0.5 truncate flex-1 text-xs max-w-full`}>
                                         {relatedStyles.indicator && (
                                           <span className="text-amber-500 text-xs flex-shrink-0">{relatedStyles.indicator}</span>
                                         )}
@@ -3093,7 +3100,7 @@ export default function DailyCalendar() {
                                     <div><strong>Время:</strong> {task.scheduleTime} - {task.endTime}</div>
                                     <div><strong>Длительность:</strong> {task.duration || task.serviceDuration || 60} мин</div>
                                     <div><strong>Мастер:</strong> {task.masterName || 'Не назначен'}</div>
-                                    <div><strong>Статус:</strong> {getStatusLabel(task.status || 'scheduled')}</div>
+                                    <div><strong>Статус:</strong> {getStatusLabel(task?.status)}</div>
                                     <div><strong>Оплата:</strong> <span className={task.paid === 'paid' ? 'text-green-600' : 'text-red-600'}>{task.paid === 'paid' ? 'Оплачено' : 'Не оплачено'}</span></div>
                                     {task.finalPrice && (
                                       <div><strong>Цена:</strong> {task.finalPrice} сом</div>

@@ -82,6 +82,10 @@ const statusColors = {
   completed: "bg-green-100 text-green-800",
   cancelled: "bg-red-100 text-red-800",
   regular: "bg-purple-100 text-purple-800",
+  // Добавляем fallback для пустых/null значений
+  '': "bg-blue-100 text-blue-800", // Используем 'scheduled' стиль для пустых статусов
+  'null': "bg-blue-100 text-blue-800",
+  'undefined': "bg-blue-100 text-blue-800",
 };
 
 const statusLabels = {
@@ -91,6 +95,10 @@ const statusLabels = {
   completed: "Завершено",
   cancelled: "Отменено",
   regular: "Постоянная",
+  // Добавляем fallback для пустых/null значений
+  '': "Записан",
+  'null': "Записан",
+  'undefined': "Записан",
 };
 
 export default function MasterCalendar() {
@@ -490,7 +498,7 @@ export default function MasterCalendar() {
                             <div
                               className={`
                                 absolute inset-1 rounded-lg p-2 text-xs
-                                ${statusColors[primaryTask.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'}
+                                ${statusColors[(primaryTask.status || 'scheduled') as keyof typeof statusColors] || statusColors.scheduled}
                                 cursor-pointer hover:shadow-md transition-shadow
                               `}
                               style={{
@@ -518,7 +526,7 @@ export default function MasterCalendar() {
                                 variant="secondary" 
                                 className="text-xs mt-1"
                               >
-                                {statusLabels[primaryTask.status as keyof typeof statusLabels]}
+                                {statusLabels[(primaryTask.status || 'scheduled') as keyof typeof statusLabels] || statusLabels.scheduled}
                               </Badge>
                             </div>
                           )}
