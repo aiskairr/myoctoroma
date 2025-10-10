@@ -17,6 +17,8 @@ import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { LocaleProvider, useLocale } from '@/contexts/LocaleContext';
+import { LocaleToggle } from '@/components/ui/locale-toggle';
 
 interface BookingData {
   branch?: string;
@@ -210,7 +212,9 @@ type BookingStepType = typeof BookingStep[keyof typeof BookingStep];
 const BookingPageWithTheme: React.FC = () => {
   return (
     <ThemeProvider>
-      <BookingPageContent />
+      <LocaleProvider>
+        <BookingPageContent />
+      </LocaleProvider>
     </ThemeProvider>
   );
 };
@@ -219,6 +223,7 @@ const BookingPageContent: React.FC = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { theme } = useTheme();
+  const { t } = useLocale();
 
   // Получаем organisationId из URL query параметров
   const searchParams = new URLSearchParams(window.location.search);
@@ -239,7 +244,7 @@ const BookingPageContent: React.FC = () => {
                 />
                 <div>
                   <h1 className="text-2xl font-bold text-[var(--color-dark-blue)]">
-                    OCTO CRM
+                    Octō CRM
                   </h1>
                   <p className="text-sm text-muted-foreground">Онлайн-запись</p>
                 </div>
@@ -518,7 +523,14 @@ const BookingPageContent: React.FC = () => {
   };
 
   const ProgressBar = () => {
-    const steps = ['Филиал', 'Услуга', 'Дата', 'Мастер', 'Время', 'Контакты'];
+    const steps = [
+      t('booking.step.branch'),
+      t('booking.step.service'),
+      t('booking.step.date'),
+      t('booking.step.master'),
+      t('booking.step.time'),
+      t('booking.step.contacts')
+    ];
     const progress = (currentStep / 5) * 100;
 
     return (
@@ -575,7 +587,7 @@ const BookingPageContent: React.FC = () => {
             theme === 'dark' ? 'text-amber-400' : 'text-amber-600'
           }`}>
             <Sparkles className="h-4 w-4" />
-            Ваша запись
+            {t('booking.confirmation.title').replace('!', '')} {t('booking.title').toLowerCase()}
           </CardTitle>
         </CardHeader>
         <CardContent className={`space-y-2 text-sm transition-colors duration-300 ${
@@ -641,12 +653,12 @@ const BookingPageContent: React.FC = () => {
         <h2 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${
           theme === 'dark' ? 'text-white' : ''
         }`}>
-          Выберите филиал
+          {t('booking.branch.title')}
         </h2>
         <p className={`transition-colors duration-300 ${
           theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
         }`}>
-          Где вам удобнее?
+          {t('booking.branch.subtitle')}
         </p>
       </div>
 
@@ -700,12 +712,12 @@ const BookingPageContent: React.FC = () => {
             <h2 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${
               theme === 'dark' ? 'text-white' : ''
             }`}>
-              Выберите услугу
+              {t('booking.service.title')}
             </h2>
             <p className={`transition-colors duration-300 ${
               theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
             }`}>
-              Что вам нужно?
+              {t('booking.service.subtitle')}
             </p>
           </div>
           <Button 
@@ -777,7 +789,7 @@ const BookingPageContent: React.FC = () => {
                         <div className={`font-semibold transition-colors duration-300 ${
                           theme === 'dark' ? 'text-blue-400' : 'text-primary'
                         }`}>
-                          {service[firstAvailableDuration.key]} сом
+                          {t('booking.service.price')} {service[firstAvailableDuration.key]} сом
                         </div>
                       ) : (
                         <div className={`font-semibold transition-colors duration-300 ${
@@ -789,7 +801,7 @@ const BookingPageContent: React.FC = () => {
                       <div className={`text-xs transition-colors duration-300 ${
                         theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
                       }`}>
-                        {firstAvailableDuration?.duration || service.defaultDuration} мин
+                        {firstAvailableDuration?.duration || service.defaultDuration} {t('booking.service.duration')}
                       </div>
                     </div>
                   </div>
@@ -809,12 +821,12 @@ const BookingPageContent: React.FC = () => {
           <h2 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${
             theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
           }`}>
-            Выберите мастера
+            {t('booking.master.title')}
           </h2>
           <p className={`transition-colors duration-300 ${
             theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
           }`}>
-            Кто вас обслужит?
+            {t('booking.master.subtitle')}
           </p>
         </div>
         <Button 
@@ -959,12 +971,12 @@ const BookingPageContent: React.FC = () => {
             <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight transition-colors duration-300 ${
               theme === 'dark' ? 'text-white' : ''
             }`}>
-              Выберите дату
+              {t('booking.time.select_date_title')}
             </h2>
             <p className={`text-sm sm:text-base transition-colors duration-300 ${
               theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
             }`}>
-              Когда вам удобно записаться?
+              {t('booking.time.select_date_subtitle')}
             </p>
           </div>
           <Button 
@@ -1047,7 +1059,7 @@ const BookingPageContent: React.FC = () => {
                 }`}
               >
                 <CalendarIcon className="h-4 w-4 mr-2" />
-                <span className="font-medium">Сегодня</span>
+                <span className="font-medium">{t('booking.time.today')}</span>
                 <span className="ml-2 text-xs opacity-70">
                   {new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
                 </span>
@@ -1097,7 +1109,7 @@ const BookingPageContent: React.FC = () => {
                 }`}
               >
                 <Sun className="h-4 w-4 mr-2" />
-                <span className="font-medium">Завтра</span>
+                <span className="font-medium">{t('booking.time.tomorrow')}</span>
                 <span className="ml-2 text-xs opacity-70">
                   {(() => {
                     const tomorrow = new Date();
@@ -1233,12 +1245,12 @@ const BookingPageContent: React.FC = () => {
             <h2 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${
               theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
             }`}>
-              Выберите время
+              {t('booking.time.title')}
             </h2>
             <p className={`transition-colors duration-300 ${
               theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
             }`}>
-              Когда вам удобно?
+              {t('booking.time.subtitle')}
             </p>
           </div>
           <Button 
@@ -1283,7 +1295,7 @@ const BookingPageContent: React.FC = () => {
                       <CalendarIcon className={`h-5 w-5 transition-colors duration-300 ${
                         theme === 'dark' ? 'text-blue-400' : 'text-[var(--color-primary)]'
                       }`} />
-                      Дата записи
+                      {t('booking.time.appointment_date')}
                     </h3>
                     <p className={`mt-1 transition-colors duration-300 ${
                       theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
@@ -1304,7 +1316,7 @@ const BookingPageContent: React.FC = () => {
                         : 'bg-[var(--color-primary)]/10 text-[var(--color-dark-blue)] border-[var(--color-primary)]/20'
                     }`}
                   >
-                    Выбрано
+                    {t('booking.time.selected')}
                   </Badge>
                 </div>
               </div>
@@ -1322,17 +1334,17 @@ const BookingPageContent: React.FC = () => {
                   <Clock className={`h-5 w-5 transition-colors duration-300 ${
                     theme === 'dark' ? 'text-blue-400' : 'text-[var(--color-primary)]'
                   }`} />
-                  Свободное время
+                  {t('booking.time.available')}
                 </h3>
                 <p className={`mb-4 transition-colors duration-300 ${
                   theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
                 }`}>
-                  Рабочие часы: {workingHours.start} - {workingHours.end}
+                  {t('booking.time.working_hours')}: {workingHours.start} - {workingHours.end}
                   {availableSlots && availableSlots.length > 0 && (
                     <span className={`block text-xs mt-1 transition-colors duration-300 ${
                       theme === 'dark' ? 'text-green-400' : 'text-green-600'
                     }`}>
-                      Найдено {availableSlots.filter(slot => slot.available).length} доступных вариантов для записи
+                      {t('booking.time.slots_found').replace('{count}', availableSlots.filter(slot => slot.available).length.toString())}
                     </span>
                   )}
                 </p>
@@ -1403,7 +1415,7 @@ const BookingPageContent: React.FC = () => {
                   <div className="mt-4 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
                     <div className="flex items-center gap-1">
                       <div className="w-6 h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-                      <span>Листайте для просмотра всех слотов</span>
+                      <span>{t('booking.time.scroll_hint')}</span>
                       <div className="w-6 h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
                     </div>
                   </div>
@@ -1421,8 +1433,8 @@ const BookingPageContent: React.FC = () => {
     <div className="space-y-6 max-w-2xl mx-auto">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h2 className={`text-3xl font-bold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Ваши контакты</h2>
-          <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-muted-foreground'}`}>Почти готово!</p>
+          <h2 className={`text-3xl font-bold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{t('booking.contacts.title')}</h2>
+          <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-muted-foreground'}`}>{t('booking.contacts.subtitle')}</p>
         </div>
         <Button variant="ghost" size="icon" onClick={() => goToStep(BookingStep.Time)}>
           <ChevronLeft className="h-5 w-5" />
@@ -1438,10 +1450,10 @@ const BookingPageContent: React.FC = () => {
       } backdrop-blur-sm rounded-xl border p-8 transition-all duration-300 hover:shadow-xl`}>
         <div className="pt-2 space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="name" className={theme === 'dark' ? 'text-gray-200' : ''}>Ваше имя</Label>
+            <Label htmlFor="name" className={theme === 'dark' ? 'text-gray-200' : ''}>{t('booking.contacts.name')}</Label>
             <Input
               id="name"
-              placeholder="Иван Иванов"
+              placeholder={t('booking.contacts.name_placeholder')}
               value={bookingData.name}
               onChange={(e) => setBookingData(prev => ({ ...prev, name: e.target.value }))}
               className={theme === 'dark' ? 'bg-slate-700/50 border-slate-600 text-white placeholder:text-gray-400 focus:border-blue-400 focus:ring-blue-400/20' : ''}
@@ -1449,17 +1461,17 @@ const BookingPageContent: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone" className={theme === 'dark' ? 'text-gray-200' : ''}>Номер телефона</Label>
+            <Label htmlFor="phone" className={theme === 'dark' ? 'text-gray-200' : ''}>{t('booking.contacts.phone')}</Label>
             <Input
               id="phone"
-              placeholder="+996 XXX XXX XXX"
+              placeholder={t('booking.contacts.phone_placeholder')}
               value={bookingData.phone}
               onChange={handlePhoneChange}
               className={theme === 'dark' ? 'bg-slate-700/50 border-slate-600 text-white placeholder:text-gray-400 focus:border-blue-400 focus:ring-blue-400/20' : ''}
             />
             {bookingData.phone && !isPhoneValid(bookingData.phone) && (
               <p className="text-sm text-destructive">
-                Введите корректный номер
+                {t('booking.contacts.phone_error')}
               </p>
             )}
           </div>
@@ -1478,11 +1490,11 @@ const BookingPageContent: React.FC = () => {
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Создание записи...
+                {t('booking.contacts.creating')}
               </>
             ) : (
               <>
-                Подтвердить запись
+                {t('booking.contacts.submit')}
                 <ChevronRight className="ml-2 h-5 w-5" />
               </>
             )}
@@ -1509,11 +1521,11 @@ const BookingPageContent: React.FC = () => {
         </div>
         <h2 className={`text-3xl font-bold tracking-tight mb-2 ${
           theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
-        }`}>Готово!</h2>
+        }`}>{t('booking.confirmation.title')}</h2>
         <p className={`text-lg ${
           theme === 'dark' ? 'text-gray-300' : 'text-muted-foreground'
         }`}>
-          Ваша запись успешно создана
+          {t('booking.confirmation.subtitle')}
         </p>
       </div>
 
@@ -1536,7 +1548,7 @@ const BookingPageContent: React.FC = () => {
           {selectedMaster && (
             <div className="flex items-center gap-3">
               <Scissors className={`h-5 w-5 ${theme === 'dark' ? 'text-gray-400' : 'text-muted-foreground'}`} />
-              <span className={theme === 'dark' ? 'text-gray-200' : ''}>Мастер: {selectedMaster.name}</span>
+              <span className={theme === 'dark' ? 'text-gray-200' : ''}>{t('booking.confirmation.master')}: {selectedMaster.name}</span>
             </div>
           )}
           {selectedMaster && <Separator className={theme === 'dark' ? 'bg-slate-600' : ''} />}
@@ -1579,7 +1591,7 @@ const BookingPageContent: React.FC = () => {
           goToStep(BookingStep.Branch);
         }}
       >
-        Создать новую запись
+        {t('booking.confirmation.new_booking')}
       </Button>
     </div>
     );
@@ -1630,16 +1642,19 @@ const BookingPageContent: React.FC = () => {
                 <h1 className={`text-2xl font-bold transition-colors duration-300 ${
                   theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
                 }`}>
-                  OCTO CRM
+                  Octō CRM
                 </h1>
                 <p className={`text-sm transition-colors duration-300 ${
                   theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
                 }`}>
-                  Онлайн-запись
+                  {t('booking.title')}
                 </p>
               </div>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <LocaleToggle />
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </header>

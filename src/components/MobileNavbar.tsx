@@ -63,7 +63,7 @@ export function MobileNavbar() {
       <div className="flex items-center">
 
         <img width={20} height={10} src={LOGO} alt="logo" />
-        <h1 className="font-medium text-lg">Octo CRM</h1>
+        <h1 className="font-medium text-lg">Octō CRM</h1>
       </div>
 
       <div className="flex items-center gap-2">
@@ -80,7 +80,7 @@ export function MobileNavbar() {
               <div className="p-4 flex items-center justify-between border-b">
                 <div className="flex items-center">
                   <Bot className="text-primary h-6 w-6 mr-2" />
-                  <h1 className="font-medium text-lg">Octo CRM</h1>
+                  <h1 className="font-medium text-lg">Octō CRM</h1>
                 </div>
                 <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
                   <X className="h-5 w-5" />

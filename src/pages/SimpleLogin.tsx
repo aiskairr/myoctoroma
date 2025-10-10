@@ -78,7 +78,7 @@ export default function SimpleLogin() {
             Вход в систему
           </CardTitle>
           <CardDescription className="text-gray-600">
-            Octo CRM - Система управления записями
+            Octō CRM - Система управления записями
           </CardDescription>
         </CardHeader>
         <CardContent>

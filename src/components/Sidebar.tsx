@@ -153,7 +153,7 @@ function MasterSidebar() {
             </div>
             <div>
               <h1 className="font-bold text-xl bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                Octo CRM
+                Octō CRM
               </h1>
               <p className="text-slate-400 text-xs mt-0.5">Мастер панель</p>
             </div>
@@ -353,7 +353,7 @@ function AdminOnlySidebar() {
             </div>
             <div>
               <h1 className="font-bold text-xl bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                Octo CRM
+                Octō CRM
               </h1>
               <p className="text-slate-400 text-xs mt-0.5">Админ панель</p>
             </div>
@@ -596,7 +596,7 @@ function AdminSidebar() {
             </div>
             <div>
               <h1 className="font-bold text-xl bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                Octo CRM
+                Octō CRM
               </h1>
             </div>
           </div>

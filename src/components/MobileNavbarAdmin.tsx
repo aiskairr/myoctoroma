@@ -60,7 +60,7 @@ export function MobileNavbarAdmin() {
     <div className="bg-background border-b shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center">
         <img width={20} height={10} src={LOGO} alt="logo" />
-        <h1 className="font-medium text-lg">Octo CRM</h1>
+        <h1 className="font-medium text-lg">Octō CRM</h1>
       </div>
 
       <div className="flex items-center gap-2">
@@ -77,7 +77,7 @@ export function MobileNavbarAdmin() {
               <div className="p-4 flex items-center justify-between border-b">
                 <div className="flex items-center">
                   <Bot className="text-primary h-6 w-6 mr-2" />
-                  <h1 className="font-medium text-lg">Octo CRM</h1>
+                  <h1 className="font-medium text-lg">Octō CRM</h1>
                 </div>
                 <Button variant="ghost" size="icon" className="text-[#faf4f0]" onClick={() => setOpen(false)}>
                   <X className="h-5 w-5" />

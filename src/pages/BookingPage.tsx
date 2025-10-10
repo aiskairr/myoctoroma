@@ -107,7 +107,7 @@ const BookingPage = () => {
         <div className="relative container mx-auto px-6 text-center">
           <div className="flex items-center justify-center mb-6">
             <Sparkles className="h-12 w-12 text-amber-400 mr-4" />
-            <h1 className="text-5xl font-light text-white tracking-wide">Octo CRM</h1>
+            <h1 className="text-5xl font-light text-white tracking-wide">Octō CRM</h1>
           </div>
           <p className="text-xl text-amber-200 font-light max-w-2xl mx-auto">
             Выберите идеальную процедуру для вашего расслабления и восстановления
@@ -265,7 +265,7 @@ const BookingPage = () => {
         <div className="container mx-auto px-6 text-center">
           <div className="flex items-center justify-center mb-4">
             <Sparkles className="h-6 w-6 text-amber-400 mr-2" />
-            <span className="text-white font-light">Octo CRM</span>
+            <span className="text-white font-light">Octō CRM</span>
           </div>
           <p className="text-slate-400 text-sm font-light">
             ул. Токтогула, 93 • Бишкек • Кыргызстан
