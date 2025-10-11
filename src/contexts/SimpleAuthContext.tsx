@@ -4,11 +4,12 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 // Получаем URL бэкенда из переменной окружения
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+// В dev режиме используем проксированные пути, в production - полный URL
+const BACKEND_URL = import.meta.env.DEV ? '' : import.meta.env.VITE_BACKEND_URL;
 
-// Проверяем, что URL существует, чтобы избежать ошибок
-if (!BACKEND_URL) {
-  console.error("Ошибка конфигурации: URL бэкенда не найден.");
+// Проверяем, что URL существует в production режиме
+if (!import.meta.env.DEV && !import.meta.env.VITE_BACKEND_URL) {
+  console.error("Ошибка конфигурации: URL бэкенда не найден для production.");
 }
 
 // Настраиваем axios для отправки куки

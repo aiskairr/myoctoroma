@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useBranchFilter } from "@/hooks/use-branch-filter";
+import { createApiUrl } from "@/utils/api-url";
 
 export default function Clients() {
   const { toast } = useToast();
@@ -211,8 +212,22 @@ export default function Clients() {
     const currentUserId = userQuery.data?.id;
     if (!currentUserId) return;
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    // Получаем правильный URL для WebSocket
+    const getWebSocketUrl = () => {
+      if (import.meta.env.DEV) {
+        // В dev-режиме используем localhost с тем же портом что и dev-сервер
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        return `${protocol}//${window.location.host}/ws`;
+      } else {
+        // В production используем URL из переменной окружения
+        const backendUrl = import.meta.env.VITE_BACKEND_URL;
+        const protocol = backendUrl?.startsWith('https') ? "wss:" : "ws:";
+        const host = backendUrl?.replace(/^https?:\/\//, '');
+        return `${protocol}//${host}/ws`;
+      }
+    };
+
+    const wsUrl = getWebSocketUrl();
 
     const createConnection = () => {
       try {
@@ -220,7 +235,7 @@ export default function Clients() {
         socketRef.current = socket;
 
         socket.onopen = () => {
-          console.log("✅ WebSocket connected");
+          console.log("✅ WebSocket connected to:", wsUrl);
           setWsConnected(true);
           socket.send(JSON.stringify({ type: 'identify', userId: currentUserId.toString() }));
         };

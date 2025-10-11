@@ -39,6 +39,7 @@ import {
 } from 'recharts';
 import { useBranch } from "@/contexts/BranchContext";
 import { useIsMaster } from "@/hooks/use-master-role";
+import { BookingLinksStats } from "@/components/BookingLinksStats";
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
 
@@ -817,6 +818,9 @@ export default function Dashboard() {
             {renderMastersChart()}
           </CardContent>
         </Card>
+
+        {/* Booking Links Statistics */}
+        <BookingLinksStats />
 
         {/* Recent Activity */}
         <Card className="border-0 shadow-sm">

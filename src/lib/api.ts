@@ -2,7 +2,8 @@
 
 import Cookies from "js-cookie";
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
+// В dev режиме используем проксированные пути, в production - полный URL
+const API_BASE_URL = import.meta.env.DEV ? '' : import.meta.env.VITE_BACKEND_URL;
 
 interface ApiRequestOptions extends RequestInit {
   skipPragmaHeader?: boolean;

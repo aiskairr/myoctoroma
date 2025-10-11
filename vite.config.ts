@@ -18,10 +18,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        // target: 'https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app',
         target: 'https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app',
         changeOrigin: true,
-        secure: false,
+        secure: true,
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('proxy error', err);
@@ -31,6 +30,20 @@ export default defineConfig({
           });
           proxy.on('proxyRes', (proxyRes, req, _res) => {
             console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+          });
+        },
+      },
+      '/ws': {
+        target: 'wss://partial-elfrida-promconsulting-9e3c84f1.koyeb.app',
+        changeOrigin: true,
+        secure: true,
+        ws: true,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('WebSocket proxy error', err);
+          });
+          proxy.on('proxyReqWs', (_proxyReq, req, _socket) => {
+            console.log('Sending WebSocket Request to the Target:', req.url);
           });
         },
       }
