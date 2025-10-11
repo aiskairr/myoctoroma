@@ -5,7 +5,7 @@ export type Locale = 'ru' | 'ky' | 'en';
 interface LocaleContextType {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: string) => string;
+  t: (key: string, variables?: Record<string, string>) => string;
 }
 
 const LocaleContext = createContext<LocaleContextType | undefined>(undefined);
@@ -117,9 +117,9 @@ const translations = {
     'booking.time.select_date_subtitle': 'Когда вам удобно записаться?',
 
     // Мессенджер
-    'messenger.title': 'AI Консультант ElitAroma',
+    'messenger.title': 'AI Консультант {organizationName}',
     'messenger.subtitle': 'Задайте вопрос о наших услугах или запишитесь на процедуру',
-    'messenger.welcome.title': 'Добро пожаловать в ElitAroma!',
+    'messenger.welcome.title': 'Добро пожаловать в {organizationName}!',
     'messenger.welcome.description': 'Я ваш AI-консультант. Задайте любой вопрос о наших услугах массажа, ценах или запишитесь на процедуру. Также можете отправить фото или файл.',
     'messenger.input.placeholder': 'Введите ваше сообщение...',
     'messenger.send': 'Отправить',
@@ -236,9 +236,9 @@ const translations = {
     'booking.time.select_date_subtitle': 'Качан жазылууну каалайсыз?',
 
     // Мессенджер
-    'messenger.title': 'AI Консультант ElitAroma',
+    'messenger.title': 'AI Консультант {organizationName}',
     'messenger.subtitle': 'Биздин кызматтар жөнүндө суроо бериңиз же процедурага жазылыңыз',
-    'messenger.welcome.title': 'ElitAroma\'га кош келиңиз!',
+    'messenger.welcome.title': '{organizationName}\'га кош келиңиз!',
     'messenger.welcome.description': 'Мен сиздин AI-консультантыңызмын. Массаж кызматтарыбыз, баалар же процедурага жазылуу жөнүндө каалаган суроону бериңиз. Ошондой эле сүрөт же файл жөнөтө аласыз.',
     'messenger.input.placeholder': 'Билдирүүңүздү киргизиңиз...',
     'messenger.send': 'Жөнөтүү',
@@ -355,9 +355,9 @@ const translations = {
     'booking.time.select_date_subtitle': 'When would you like to book?',
 
     // Мессенджер
-    'messenger.title': 'AI Consultant ElitAroma',
+    'messenger.title': 'AI Consultant {organizationName}',
     'messenger.subtitle': 'Ask about our services or book a procedure',
-    'messenger.welcome.title': 'Welcome to ElitAroma!',
+    'messenger.welcome.title': 'Welcome to {organizationName}!',
     'messenger.welcome.description': 'I am your AI consultant. Ask any question about our massage services, prices or book a procedure. You can also send photos or files.',
     'messenger.input.placeholder': 'Enter your message...',
     'messenger.send': 'Send',
@@ -384,8 +384,20 @@ export const LocaleProvider: React.FC<LocaleProviderProps> = ({ children }) => {
     localStorage.setItem('booking-locale', locale);
   }, [locale]);
 
-  const t = (key: string): string => {
-    return (translations[locale] as any)[key] || key;
+  const t = (key: string, variables?: Record<string, string>): string => {
+    let translation = (translations[locale] as any)[key] || key;
+    
+    // Заменяем переменные в переводе
+    if (variables) {
+      Object.keys(variables).forEach(variable => {
+        translation = translation.replace(
+          new RegExp(`\\{${variable}\\}`, 'g'), 
+          variables[variable]
+        );
+      });
+    }
+    
+    return translation;
   };
 
   return (

@@ -77,6 +77,7 @@ const InternalMessengerComponent: React.FC<InternalMessengerProps> = ({
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [organizationName, setOrganizationName] = useState<string>('ElitAroma');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -109,7 +110,30 @@ const InternalMessengerComponent: React.FC<InternalMessengerProps> = ({
   // Загрузка истории при монтировании
   useEffect(() => {
     loadHistory();
+    loadOrganizationInfo();
   }, []);
+
+  const loadOrganizationInfo = async () => {
+    try {
+      // Попробуем получить информацию об организации
+      const response = await fetch(createApiUrl(`/api/organizations/${organisationId}`), {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.organization?.name) {
+          setOrganizationName(data.organization.name);
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки информации об организации:', error);
+      // Оставляем название по умолчанию ElitAroma
+    }
+  };
 
   const loadHistory = async () => {
     try {
@@ -415,7 +439,7 @@ const InternalMessengerComponent: React.FC<InternalMessengerProps> = ({
               <div>
                                 <div>
                   <CardTitle className="text-xl font-semibold">
-                    {t('messenger.title')}
+                    {t('messenger.title', { organizationName })}
                   </CardTitle>
                   <p className="text-blue-100 text-sm">
                     {t('messenger.subtitle')}
@@ -453,7 +477,7 @@ const InternalMessengerComponent: React.FC<InternalMessengerProps> = ({
                   <h3 className={`text-lg font-semibold mb-2 ${
                     theme === 'dark' ? 'text-white' : 'text-gray-900'
                   }`}>
-                    {t('messenger.welcome.title')}
+                    {t('messenger.welcome.title', { organizationName })}
                   </h3>
                   <p className={`text-sm max-w-sm ${
                     theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
