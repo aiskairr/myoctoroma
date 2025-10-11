@@ -19,6 +19,7 @@ import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { LocaleProvider, useLocale } from '@/contexts/LocaleContext';
 import { LocaleToggle } from '@/components/ui/locale-toggle';
+import { extractTrackingInfo } from '@/utils/tracking';
 
 interface BookingData {
   branch?: string;
@@ -473,11 +474,14 @@ const BookingPageContent: React.FC = () => {
     try {
       setIsSubmitting(true);
 
-      // Формируем datetime в формате YYYY-MM-DDTHH:mm
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
+      // Извлекаем информацию об источнике записи для отслеживания
+      const trackingInfo = extractTrackingInfo();
+
+      // Формируем datetime в формате YYYY-MM-DDTHH:mm из выбранной даты
+      const selectedDate = bookingData.date || new Date();
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
       const datetime = `${year}-${month}-${day}T${bookingData.time}`;
 
       const bookingPayload = {
@@ -488,10 +492,17 @@ const BookingPageContent: React.FC = () => {
         phone: bookingData.phone,
         serviceDuration: Number(bookingData.serviceDuration),
         serviceId: String(bookingData.serviceId),
-        servicePrice: Number(bookingData.servicePrice)
+        servicePrice: Number(bookingData.servicePrice),
+        // Добавляем notes с информацией об источнике если есть параметры
+        ...(trackingInfo.notesText && { notes: trackingInfo.notesText })
       };
 
       console.log('Booking payload:', bookingPayload);
+      if (trackingInfo.notesText) {
+        console.log('Added tracking notes:', trackingInfo.notesText);
+        console.log('Tracking source:', trackingInfo.trackingSource || 'Direct');
+        console.log('URL parameters:', trackingInfo.parameters);
+      }
 
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/booking`,
