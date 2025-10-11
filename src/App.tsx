@@ -17,6 +17,7 @@ import MasterCalendar from "./pages/MasterCalendar";
 import Masters from "./pages/Masters";
 import Booking from "./pages/Booking";
 import BookingPage from "./pages/BookingPage";
+import InternalMessenger from "./pages/InternalMessenger";
 import AccountingPage from "./pages/AccountingPage";
 import SalaryPage from "./pages/SalaryPage";
 import GiftCertificatesPage from "./pages/GiftCertificatesPage";
@@ -76,6 +77,22 @@ function App() {
           <Route path="/login" component={SimpleLogin} />
           <Route path="/public/booking" component={BookingPage} />
           <Route path="/booking" component={Booking} />
+          
+          {/* Публичный Internal Messenger */}
+          <Route path="/messenger">
+            {() => {
+              const urlParams = new URLSearchParams(window.location.search);
+              const organisationId = urlParams.get('organisationId') || '1';
+              const branchId = urlParams.get('branchId') || undefined;
+              
+              return (
+                <InternalMessenger 
+                  organisationId={organisationId} 
+                  branchId={branchId}
+                />
+              );
+            }}
+          </Route>
 
           {/* Мобильная версия для мастеров */}
           <Route path="/mobile" component={MobileApp} />

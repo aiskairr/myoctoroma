@@ -2,6 +2,9 @@
 export default {
   darkMode: ["class"],
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  variants: {
+    scrollbar: ['rounded']
+  },
   theme: {
     extend: {
       colors: {
@@ -53,5 +56,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), require("tailwind-scrollbar")],
 };

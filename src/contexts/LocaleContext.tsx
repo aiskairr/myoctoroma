@@ -115,6 +115,20 @@ const translations = {
     'booking.time.tomorrow': 'Завтра',
     'booking.time.select_date_title': 'Выберите дату',
     'booking.time.select_date_subtitle': 'Когда вам удобно записаться?',
+
+    // Мессенджер
+    'messenger.title': 'AI Консультант ElitAroma',
+    'messenger.subtitle': 'Задайте вопрос о наших услугах или запишитесь на процедуру',
+    'messenger.welcome.title': 'Добро пожаловать в ElitAroma!',
+    'messenger.welcome.description': 'Я ваш AI-консультант. Задайте любой вопрос о наших услугах массажа, ценах или запишитесь на процедуру. Также можете отправить фото или файл.',
+    'messenger.input.placeholder': 'Введите ваше сообщение...',
+    'messenger.send': 'Отправить',
+    'messenger.attach': 'Прикрепить файл',
+    'messenger.file_selected': 'Выбран файл: {filename}',
+    'messenger.formats_hint': 'Поддерживаемые форматы: JPG, PNG, GIF, MP3, WAV, PDF, TXT (до 10MB)',
+    'messenger.config_error': 'Ошибка конфигурации',
+    'messenger.org_required': 'organisationId обязателен для работы мессенджера',
+    'messenger.loading': 'Отправка...',
   },
 
   ky: {
@@ -220,6 +234,20 @@ const translations = {
     'booking.time.tomorrow': 'Эртең',
     'booking.time.select_date_title': 'Күндү тандаңыз',
     'booking.time.select_date_subtitle': 'Качан жазылууну каалайсыз?',
+
+    // Мессенджер
+    'messenger.title': 'AI Консультант ElitAroma',
+    'messenger.subtitle': 'Биздин кызматтар жөнүндө суроо бериңиз же процедурага жазылыңыз',
+    'messenger.welcome.title': 'ElitAroma\'га кош келиңиз!',
+    'messenger.welcome.description': 'Мен сиздин AI-консультантыңызмын. Массаж кызматтарыбыз, баалар же процедурага жазылуу жөнүндө каалаган суроону бериңиз. Ошондой эле сүрөт же файл жөнөтө аласыз.',
+    'messenger.input.placeholder': 'Билдирүүңүздү киргизиңиз...',
+    'messenger.send': 'Жөнөтүү',
+    'messenger.attach': 'Файл тиркөө',
+    'messenger.file_selected': 'Файл тандалды: {filename}',
+    'messenger.formats_hint': 'Колдоого алынган форматтар: JPG, PNG, GIF, MP3, WAV, PDF, TXT (10MB чейин)',
+    'messenger.config_error': 'Конфигурация катасы',
+    'messenger.org_required': 'Мессенджердин иштеши үчүн organisationId милдеттүү',
+    'messenger.loading': 'Жөнөтүлүүдө...',
   },
 
   en: {
@@ -325,6 +353,20 @@ const translations = {
     'booking.time.tomorrow': 'Tomorrow',
     'booking.time.select_date_title': 'Select Date',
     'booking.time.select_date_subtitle': 'When would you like to book?',
+
+    // Мессенджер
+    'messenger.title': 'AI Consultant ElitAroma',
+    'messenger.subtitle': 'Ask about our services or book a procedure',
+    'messenger.welcome.title': 'Welcome to ElitAroma!',
+    'messenger.welcome.description': 'I am your AI consultant. Ask any question about our massage services, prices or book a procedure. You can also send photos or files.',
+    'messenger.input.placeholder': 'Enter your message...',
+    'messenger.send': 'Send',
+    'messenger.attach': 'Attach file',
+    'messenger.file_selected': 'File selected: {filename}',
+    'messenger.formats_hint': 'Supported formats: JPG, PNG, GIF, MP3, WAV, PDF, TXT (up to 10MB)',
+    'messenger.config_error': 'Configuration error',
+    'messenger.org_required': 'organisationId is required for messenger to work',
+    'messenger.loading': 'Sending...',
   },
 };
 

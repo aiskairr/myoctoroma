@@ -51,6 +51,10 @@ export const BookingLinkCopy: React.FC = () => {
 
   // Генерируем базовую ссылку на основе текущего домена и organisationId
   const baseBookingUrl = `${window.location.origin}/booking?organisationId=${currentBranch?.organisationId || ''}`;
+  
+  // Генерируем ссылки для Internal Messenger
+  const messengerOrgUrl = `${window.location.origin}/messenger?organisationId=${currentBranch?.organisationId || ''}`;
+  const messengerOrgBranchUrl = `${window.location.origin}/messenger?organisationId=${currentBranch?.organisationId || ''}&branchId=${currentBranch?.id || ''}`;
 
   // Запрос списка созданных ссылок
   const { data: bookingLinks, isLoading: linksLoading } = useQuery<{ success: boolean; links: BookingLink[] }>({
@@ -238,6 +242,144 @@ export const BookingLinkCopy: React.FC = () => {
                 variant="outline"
                 size="sm"
                 className="border-purple-300 text-purple-700 hover:bg-purple-50 hover:border-purple-400 transition-all duration-200 hover:scale-105"
+              >
+                <QrCode className="h-4 w-4 mr-2" />
+                QR код
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Ссылка мессенджера с organisationId */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-purple-200 shadow-sm">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="bg-purple-100 p-1.5 rounded-lg">
+                <Share2 className="h-4 w-4 text-purple-600" />
+              </div>
+              <span className="text-sm font-medium text-purple-700">
+                Internal Messenger - общий доступ по организации
+              </span>
+            </div>
+            
+            <Input
+              value={messengerOrgUrl}
+              readOnly
+              className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-300 focus:border-purple-500 focus:ring-purple-200 text-sm font-mono text-gray-700 cursor-pointer"
+              onClick={() => copyToClipboard(messengerOrgUrl, 'messenger-org')}
+            />
+            
+            <div className="text-xs text-purple-600 mb-2 bg-purple-50 p-2 rounded">
+              💬 Для клиентов всей организации - можно использовать на корпоративном сайте
+            </div>
+            
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                onClick={() => copyToClipboard(messengerOrgUrl, 'messenger-org')}
+                size="sm"
+                className={`transition-all duration-300 transform hover:scale-105 ${
+                  isCopied === 'messenger-org'
+                    ? 'bg-green-500 hover:bg-green-600 text-white shadow-green-200' 
+                    : 'bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-purple-200'
+                } shadow-lg`}
+              >
+                {isCopied === 'messenger-org' ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Скопировано!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Копировать
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                onClick={() => openBookingPage(messengerOrgUrl)}
+                variant="outline"
+                size="sm"
+                className="border-purple-300 text-purple-700 hover:bg-purple-50 hover:border-purple-400 transition-all duration-200 hover:scale-105"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Открыть
+              </Button>
+
+              <Button
+                onClick={() => generateQRCode(messengerOrgUrl)}
+                variant="outline"
+                size="sm"
+                className="border-purple-300 text-purple-700 hover:bg-purple-50 hover:border-purple-400 transition-all duration-200 hover:scale-105"
+              >
+                <QrCode className="h-4 w-4 mr-2" />
+                QR код
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Ссылка мессенджера с organisationId + branchId */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-indigo-200 shadow-sm">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="bg-indigo-100 p-1.5 rounded-lg">
+                <Share2 className="h-4 w-4 text-indigo-600" />
+              </div>
+              <span className="text-sm font-medium text-indigo-700">
+                Internal Messenger - для конкретного филиала
+              </span>
+            </div>
+            
+            <Input
+              value={messengerOrgBranchUrl}
+              readOnly
+              className="bg-gradient-to-r from-indigo-50 to-indigo-100 border-indigo-300 focus:border-indigo-500 focus:ring-indigo-200 text-sm font-mono text-gray-700 cursor-pointer"
+              onClick={() => copyToClipboard(messengerOrgBranchUrl, 'messenger-org-branch')}
+            />
+            
+            <div className="text-xs text-indigo-600 mb-2 bg-indigo-50 p-2 rounded">
+              🏢 Специально для этого филиала - можно размещать в локальной рекламе
+            </div>
+            
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                onClick={() => copyToClipboard(messengerOrgBranchUrl, 'messenger-org-branch')}
+                size="sm"
+                className={`transition-all duration-300 transform hover:scale-105 ${
+                  isCopied === 'messenger-org-branch'
+                    ? 'bg-green-500 hover:bg-green-600 text-white shadow-green-200' 
+                    : 'bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white shadow-indigo-200'
+                } shadow-lg`}
+              >
+                {isCopied === 'messenger-org-branch' ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Скопировано!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Копировать
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                onClick={() => openBookingPage(messengerOrgBranchUrl)}
+                variant="outline"
+                size="sm"
+                className="border-indigo-300 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-400 transition-all duration-200 hover:scale-105"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Открыть
+              </Button>
+
+              <Button
+                onClick={() => generateQRCode(messengerOrgBranchUrl)}
+                variant="outline"
+                size="sm"
+                className="border-indigo-300 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-400 transition-all duration-200 hover:scale-105"
               >
                 <QrCode className="h-4 w-4 mr-2" />
                 QR код
@@ -464,6 +606,36 @@ export const BookingLinkCopy: React.FC = () => {
             )}
           </CollapsibleContent>
         </Collapsible>
+
+        {/* Info Section для Messenger */}
+        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="bg-purple-500 rounded-full p-2 mt-0.5 shadow-md">
+              <Share2 className="w-3 h-3 text-white" />
+            </div>
+            <div className="text-sm text-purple-700">
+              <p className="font-semibold mb-2 text-purple-800">💬 Internal Messenger - для связи с клиентами:</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-purple-600">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-purple-400 rounded-full"></span>
+                  <span>Поддержка клиентов онлайн</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-purple-400 rounded-full"></span>
+                  <span>Консультации перед записью</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-purple-400 rounded-full"></span>
+                  <span>Размещение на сайте/соцсетях</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-purple-400 rounded-full"></span>
+                  <span>Отправка файлов и документов</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Info Section */}
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 shadow-sm">
