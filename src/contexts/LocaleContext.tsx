@@ -279,6 +279,7 @@ const translations = {
     'dashboard.revenue_label': 'Выручка',
     'dashboard.appointments_count': 'Количество записей',
     'dashboard.currency': 'сом',
+    'dashboard.access_denied': 'Доступ запрещен. Только для учредителей!',
     
     // Clients page
     'clients.page_title': 'Клиенты',
@@ -1062,6 +1063,7 @@ const translations = {
     'dashboard.revenue_label': 'Кирешелер',
     'dashboard.appointments_count': 'Жазылуулардын саны',
     'dashboard.currency': 'сом',
+    'dashboard.access_denied': 'Кирүүгө тыюу салынган. Башкаруучулар гана!',
     
     // Clients page  
     'clients.page_title': 'Кардарлар',
@@ -1843,6 +1845,7 @@ const translations = {
     'dashboard.revenue_label': 'Revenue',
     'dashboard.appointments_count': 'Appointments Count',
     'dashboard.currency': 'KGS',
+    'dashboard.access_denied': 'Access denied. For founders only!',
     
     // Clients page
     'clients.page_title': 'Clients',

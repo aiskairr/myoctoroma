@@ -103,6 +103,12 @@ function App() {
           {/* Защищенные маршруты */}
           <Route path="/">
             <ProtectedLayout>
+              <HowToUsePage />
+            </ProtectedLayout>
+          </Route>
+
+          <Route path="/dashboard">
+            <ProtectedLayout>
               <Dashboard />
             </ProtectedLayout>
           </Route>
@@ -205,12 +211,6 @@ function App() {
             <ProtectedLayout>
               <CRMServices />
               <div></div>
-            </ProtectedLayout>
-          </Route>
-
-          <Route path="/how-to-use">
-            <ProtectedLayout>
-              <HowToUsePage />
             </ProtectedLayout>
           </Route>
 

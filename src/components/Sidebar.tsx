@@ -333,6 +333,8 @@ function AdminOnlySidebar() {
   const isCalendarPage = location === "/crm/calendar";
 
   const navItems: NavItem[] = [
+    { path: "/", label: t('sidebar.how_to_use'), icon: <HelpCircle className="h-5 w-5" /> },
+    { path: "/clients", label: t('sidebar.clients'), icon: <Users className="h-5 w-5" /> },
     { path: "/chats", label: t('sidebar.chats'), icon: <MessageCircle className="h-5 w-5" /> },
     {
       label: t('sidebar.crm'),
@@ -346,7 +348,6 @@ function AdminOnlySidebar() {
     { path: "/accounting", label: t('sidebar.accounting'), icon: <Calculator className="h-5 w-5" /> },
     { path: "/salary", label: t('sidebar.salary'), icon: <DollarSign className="h-5 w-5" /> },
     { path: "/gift-certificates", label: t('sidebar.certificates'), icon: <Gift className="h-5 w-5" /> },
-    { path: "/how-to-use", label: t('sidebar.how_to_use'), icon: <HelpCircle className="h-5 w-5" /> },
     { path: "/settings", label: t('sidebar.settings'), icon: <SettingsIcon className="h-5 w-5" /> },
   ];
 
@@ -576,7 +577,8 @@ function AdminSidebar() {
   const isCalendarPage = location === "/crm/calendar";
 
   const navItems: NavItem[] = [
-    { path: "/", label: t('sidebar.dashboard'), icon: <LayoutDashboard className="h-5 w-5" /> },
+    { path: "/", label: t('sidebar.how_to_use'), icon: <HelpCircle className="h-5 w-5" /> },
+    { path: "/dashboard", label: t('sidebar.dashboard'), icon: <LayoutDashboard className="h-5 w-5" /> },
     { path: "/clients", label: t('sidebar.clients'), icon: <Users className="h-5 w-5" /> },
     { path: "/chats", label: t('sidebar.chats'), icon: <MessageCircle className="h-5 w-5" /> },
     {
@@ -593,7 +595,6 @@ function AdminSidebar() {
     { path: "/gift-certificates", label: t('sidebar.certificates'), icon: <Gift className="h-5 w-5" /> },
     { path: "/reports", label: t('sidebar.reports'), icon: <FileBarChart className="h-5 w-5" /> },
     { path: "/settings", label: t('sidebar.settings'), icon: <SettingsIcon className="h-5 w-5" /> },
-    { path: "/how-to-use", label: t('sidebar.how_to_use'), icon: <HelpCircle className="h-5 w-5" /> },
   ];
 
   return (

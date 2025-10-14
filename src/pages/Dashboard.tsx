@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Redirect } from "wouter";
+import { useAuth } from "@/contexts/SimpleAuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StatusBadge from "@/components/StatusBadge";
 import {
@@ -61,9 +62,23 @@ export default function Dashboard() {
   const { t } = useLocale();
   const { currentBranch } = useBranch();
   const { isMaster, isLoading: masterRoleLoading } = useIsMaster();
+  const { user } = useAuth();
 
   if (!masterRoleLoading && isMaster) {
     return <Redirect to="/master/calendar" />;
+  }
+
+  // Проверка доступа только для суперадминов
+  if (user && user.role !== 'superadmin') {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg text-red-600 font-semibold">
+            {t('dashboard.access_denied')}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const [botStatus, setBotStatus] = useState(false);
