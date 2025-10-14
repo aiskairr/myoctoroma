@@ -20,6 +20,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { LocaleProvider, useLocale } from '@/contexts/LocaleContext';
 import { LocaleToggle } from '@/components/ui/locale-toggle';
 import { extractTrackingInfo } from '@/utils/tracking';
+import PrivacyConsent from "@/components/PrivacyConsent";
 
 interface BookingData {
   branch?: string;
@@ -215,6 +216,7 @@ const BookingPageWithTheme: React.FC = () => {
     <ThemeProvider>
       <LocaleProvider>
         <BookingPageContent />
+        <PrivacyConsent storageKey="consent_booking_v1" />
       </LocaleProvider>
     </ThemeProvider>
   );
