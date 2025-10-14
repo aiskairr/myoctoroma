@@ -26,6 +26,7 @@ import { LocaleToggle } from '@/components/ui/locale-toggle';
 import { createApiUrl } from '@/utils/api-url';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import PrivacyConsent from "@/components/PrivacyConsent";
 
 interface Message {
   id: number;
@@ -626,6 +627,7 @@ const InternalMessenger: React.FC<InternalMessengerProps> = (props) => {
     <ThemeProvider>
       <LocaleProvider>
         <InternalMessengerComponent {...props} />
+        <PrivacyConsent storageKey="consent_messenger_v1" />
       </LocaleProvider>
     </ThemeProvider>
   );
