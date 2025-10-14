@@ -42,8 +42,8 @@ interface ClientsResponse {
   clients: Client[];
   total: number;
   searchPattern: string;
+  normalizedPattern: string;
   branchId: string;
-  timestamp: string;
 }
 
 interface ClientTasksResponse {
@@ -104,7 +104,7 @@ export default function Clients() {
     
     setLoading(true);
     try {
-      // Используем новый эндпоинт для поиска клиентов по telegram ID
+      // Используем новый эндпоинт для поиска клиентов по номеру телефона
       const data: ClientsResponse = await apiGetJson(`/api/clients/${encodeURIComponent(query.trim())}?branchId=${currentBranch.id}`);
       
       setClients(data.clients || []);
@@ -363,7 +363,7 @@ export default function Clients() {
           <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-xl">
             <CardTitle className="flex items-center gap-3 text-xl">
               <Search className="h-6 w-6" />
-              {t('clients.searchResults')}
+              {t('clients.searchResults')} {clients.length > 0 && `(${clients.length})`}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
