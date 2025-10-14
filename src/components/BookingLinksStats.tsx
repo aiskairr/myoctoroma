@@ -31,6 +31,7 @@ import { useBranch } from "@/contexts/BranchContext";
 import { createApiUrl } from "@/utils/api-url";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useLocale } from "@/contexts/LocaleContext";
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
 
@@ -45,6 +46,7 @@ interface BookingLinkStat {
 type ChartType = 'pie' | 'bar' | 'line' | 'area';
 
 export const BookingLinksStats: React.FC = () => {
+  const { t } = useLocale();
   const { currentBranch } = useBranch();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [chartType, setChartType] = useState<ChartType>('bar');
@@ -116,7 +118,7 @@ export const BookingLinksStats: React.FC = () => {
         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
       },
       formatter: (value: any, name: any, props: any) => [
-        `${value} записей`,
+        `${value} ${t('dashboard.appointments_count')}`,
         props.payload?.fullName || name
       ]
     };
@@ -246,17 +248,17 @@ export const BookingLinksStats: React.FC = () => {
                   <Link className="h-5 w-5 text-purple-600" />
                   <div className="text-left">
                     <CardTitle className="text-gray-900 text-base">
-                      Статистика ссылок бронирования
+                      {t('dashboard.booking_links_stats')}
                     </CardTitle>
                     <p className="text-sm text-gray-500 font-normal">
-                      Отслеживание источников трафика
+                      {t('dashboard.traffic_sources')}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 ml-auto">
                   {totalBookings > 0 && (
                     <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-                      {totalBookings} записей
+                      {totalBookings} {t('dashboard.appointments')}
                     </Badge>
                   )}
                   {isCollapsed ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -273,7 +275,7 @@ export const BookingLinksStats: React.FC = () => {
                   <BarChart3 className="h-5 w-5 text-purple-600" />
                 </div>
                 <div className="text-2xl font-bold text-purple-700">{totalLinks}</div>
-                <div className="text-xs text-purple-600">Всего ссылок</div>
+                <div className="text-xs text-purple-600">{t('dashboard.total_links')}</div>
               </div>
               
               <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 text-center">
@@ -281,7 +283,7 @@ export const BookingLinksStats: React.FC = () => {
                   <Users className="h-5 w-5 text-blue-600" />
                 </div>
                 <div className="text-2xl font-bold text-blue-700">{totalBookings}</div>
-                <div className="text-xs text-blue-600">Записей</div>
+                <div className="text-xs text-blue-600">{t('dashboard.appointments')}</div>
               </div>
               
               <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 text-center">
@@ -289,7 +291,7 @@ export const BookingLinksStats: React.FC = () => {
                   <TrendingUp className="h-5 w-5 text-green-600" />
                 </div>
                 <div className="text-2xl font-bold text-green-700">{activeLinks}</div>
-                <div className="text-xs text-green-600">Активных</div>
+                <div className="text-xs text-green-600">{t('dashboard.active')}</div>
               </div>
               
               <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 text-center">
@@ -297,23 +299,23 @@ export const BookingLinksStats: React.FC = () => {
                   <Calendar className="h-5 w-5 text-orange-600" />
                 </div>
                 <div className="text-2xl font-bold text-orange-700">{averageBookings}</div>
-                <div className="text-xs text-orange-600">Среднее/ссылку</div>
+                <div className="text-xs text-orange-600">{t('dashboard.average_per_link')}</div>
               </div>
             </div>
 
             {/* График и селектор */}
             {chartData.length > 0 && (
               <div className="flex items-center justify-between mb-4">
-                <h4 className="font-medium text-gray-700">Распределение записей по ссылкам</h4>
+                <h4 className="font-medium text-gray-700">{t('dashboard.appointments_by_links')}</h4>
                 <Select value={chartType} onValueChange={(value) => setChartType(value as ChartType)}>
                   <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Тип графика" />
+                    <SelectValue placeholder={t('dashboard.chart_type_placeholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="bar">📊 Столбчатая</SelectItem>
-                    <SelectItem value="pie">🥧 Круговая</SelectItem>
-                    <SelectItem value="line">📈 Линейная</SelectItem>
-                    <SelectItem value="area">📉 Площадная</SelectItem>
+                    <SelectItem value="bar">{t('dashboard.bar_chart')}</SelectItem>
+                    <SelectItem value="pie">{t('dashboard.pie_chart')}</SelectItem>
+                    <SelectItem value="line">{t('dashboard.line_chart')}</SelectItem>
+                    <SelectItem value="area">{t('dashboard.area_chart')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -327,7 +329,7 @@ export const BookingLinksStats: React.FC = () => {
             {/* Детальная таблица */}
             {chartData.length > 0 && (
               <div className="mt-6 bg-gray-50 rounded-lg p-4">
-                <h4 className="font-medium text-gray-700 mb-3">Детальная статистика</h4>
+                <h4 className="font-medium text-gray-700 mb-3">{t('dashboard.detailed_stats')}</h4>
                 <div className="space-y-2">
                   {stats
                     .sort((a, b) => b.bookingCount - a.bookingCount)
@@ -342,7 +344,7 @@ export const BookingLinksStats: React.FC = () => {
                         </div>
                         {stat.lastUsed && (
                           <div className="text-xs text-gray-500 mt-1">
-                            Последнее использование: {format(new Date(stat.lastUsed), 'dd.MM.yyyy HH:mm')}
+                            {t('dashboard.last_used')}: {format(new Date(stat.lastUsed), 'dd.MM.yyyy HH:mm')}
                           </div>
                         )}
                       </div>
@@ -351,7 +353,7 @@ export const BookingLinksStats: React.FC = () => {
                           variant={stat.bookingCount > 0 ? "default" : "secondary"}
                           className="text-sm"
                         >
-                          {stat.bookingCount} записей
+                          {stat.bookingCount} {t('dashboard.appointments_count')}
                         </Badge>
                         <Button
                           size="sm"

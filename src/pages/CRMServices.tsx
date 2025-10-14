@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useBranch } from "@/contexts/BranchContext";
+import { useLocale } from "@/contexts/LocaleContext";
 import { Plus, Sparkles, Search, Edit, Trash2, Eye, Clock, DollarSign } from "lucide-react";
 
 interface serviceService {
@@ -36,6 +37,7 @@ interface ServiceFormData {
 }
 
 export default function CRMServices() {
+  const { t } = useLocale();
   const { currentBranch } = useBranch();
   const branchID = currentBranch?.id;
   
@@ -96,8 +98,8 @@ export default function CRMServices() {
       setIsAddDialogOpen(false);
       resetForm();
       toast({
-        title: "Успех",
-        description: "Услуга успешно создана",
+        title: t('success'),
+        description: t('services.service_created'),
       });
     },
     onError: (error: Error) => {
@@ -138,8 +140,8 @@ export default function CRMServices() {
       setSelectedService(null);
       resetForm();
       toast({
-        title: "Успех",
-        description: "Услуга успешно обновлена",
+        title: t('success'),
+        description: t('services.service_updated'),
       });
     },
     onError: (error: Error) => {
@@ -169,8 +171,8 @@ export default function CRMServices() {
       queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
       setSelectedService(null);
       toast({
-        title: "Успех",
-        description: "Услуга успешно удалена",
+        title: t('success'),
+        description: t('services.service_deleted'),
       });
     },
     onError: (error: Error) => {
@@ -311,7 +313,7 @@ export default function CRMServices() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Загрузка услуг...</div>
+        <div className="text-lg">{t('services.loading')}</div>
       </div>
     );
   }
@@ -322,11 +324,11 @@ export default function CRMServices() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Sparkles className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">Управление услугами</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('services.page_title')}</h1>
         </div>
         <Button onClick={handleAddService} className="flex items-center space-x-2">
           <Plus className="h-4 w-4" />
-          <span>Добавить услугу</span>
+          <span>{t('services.add_service')}</span>
         </Button>
       </div>
 
@@ -335,7 +337,7 @@ export default function CRMServices() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Поиск услуг..."
+            placeholder={t('services.search_placeholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -343,20 +345,20 @@ export default function CRMServices() {
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Статус" />
+            <SelectValue placeholder={t('services.status')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Все услуги</SelectItem>
-            <SelectItem value="active">Активные</SelectItem>
-            <SelectItem value="inactive">Неактивные</SelectItem>
+            <SelectItem value="all">{t('services.all_services')}</SelectItem>
+            <SelectItem value="active">{t('services.active')}</SelectItem>
+            <SelectItem value="inactive">{t('services.inactive')}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={groupFilter} onValueChange={setGroupFilter}>
           <SelectTrigger className="w-full sm:w-64">
-            <SelectValue placeholder="Фильтр по группе" />
+            <SelectValue placeholder={t('services.filter_by_group')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Все группы</SelectItem>
+            <SelectItem value="all">{t('services.all_groups')}</SelectItem>
             {serviceGroups.map(group => (
               <SelectItem key={group} value={group}>{group}</SelectItem>
             ))}
@@ -372,7 +374,7 @@ export default function CRMServices() {
               <div className="flex items-start justify-between">
                 <CardTitle className="text-lg font-semibold">{service.name}</CardTitle>
                 <Badge variant={service.isActive ? "default" : "secondary"}>
-                  {service.isActive ? "Активна" : "Неактивна"}
+                  {service.isActive ? t('services.active') : t('services.inactive')}
                 </Badge>
               </div>
               {service.description && (
@@ -412,7 +414,7 @@ export default function CRMServices() {
                     className="flex items-center space-x-1"
                   >
                     <Eye className="h-4 w-4" />
-                    <span>Просмотр</span>
+                    <span>{t('services.view')}</span>
                   </Button>
                   <div className="flex space-x-1">
                     <Button
@@ -422,7 +424,7 @@ export default function CRMServices() {
                       className="flex items-center space-x-1"
                     >
                       <Edit className="h-4 w-4" />
-                      <span>Изменить</span>
+                      <span>{t('services.edit')}</span>
                     </Button>
                     <Button
                       variant="ghost"
@@ -431,7 +433,7 @@ export default function CRMServices() {
                       className="flex items-center space-x-1 text-destructive hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
-                      <span>Удалить</span>
+                      <span>{t('services.delete')}</span>
                     </Button>
                   </div>
                 </div>
@@ -465,12 +467,12 @@ export default function CRMServices() {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {selectedService ? "Редактировать услугу" : "Добавить новую услугу"}
+              {selectedService ? t('services.edit_service') : t('services.add_new_service')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="name">Название услуги *</Label>
+              <Label htmlFor="name">{t('services.name')} *</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -494,7 +496,7 @@ export default function CRMServices() {
             </div>
 
             <div>
-              <Label htmlFor="description">Описание</Label>
+              <Label htmlFor="description">{t('services.description')}</Label>
               <Textarea
                 id="description"
                 value={formData.description}
@@ -510,7 +512,7 @@ export default function CRMServices() {
                 checked={formData.isActive}
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
               />
-              <Label htmlFor="isActive">Активная услуга</Label>
+              <Label htmlFor="isActive">{t('services.active_service')}</Label>
             </div>
 
             <div>
@@ -547,13 +549,13 @@ export default function CRMServices() {
               setSelectedService(null);
               resetForm();
             }}>
-              Отмена
+              {t('services.cancel')}
             </Button>
             <Button 
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
             >
-              {createMutation.isPending || updateMutation.isPending ? "Сохранение..." : "Сохранить"}
+              {createMutation.isPending || updateMutation.isPending ? t('services.saving') : t('services.save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -568,12 +570,12 @@ export default function CRMServices() {
       }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Просмотр услуги</DialogTitle>
+            <DialogTitle>{t('services.view_service')}</DialogTitle>
           </DialogHeader>
           {selectedService && (
             <div className="space-y-4">
               <div>
-                <Label className="font-medium">Название</Label>
+                <Label className="font-medium">{t('services.name')}</Label>
                 <p className="text-sm">{selectedService.name}</p>
               </div>
 
@@ -592,10 +594,10 @@ export default function CRMServices() {
               )}
 
               <div>
-                <Label className="font-medium">Статус</Label>
+                <Label className="font-medium">{t('services.status')}</Label>
                 <p className="text-sm">
                   <Badge variant={selectedService.isActive ? "default" : "secondary"}>
-                    {selectedService.isActive ? "Активна" : "Неактивна"}
+                    {selectedService.isActive ? t('services.active') : t('services.inactive')}
                   </Badge>
                 </p>
               </div>

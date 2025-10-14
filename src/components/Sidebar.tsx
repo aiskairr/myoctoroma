@@ -1,5 +1,6 @@
 import { useLocation } from "wouter";
 import { useAuth } from "../contexts/SimpleAuthContext";
+import { useLocale } from '@/contexts/LocaleContext';
 import {
   LayoutDashboard,
   Users,
@@ -15,7 +16,8 @@ import {
   Sparkles,
   HelpCircle,
   ChevronDown,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  MessageCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -23,6 +25,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "@/components/ui/calendar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { LocaleToggle } from '@/components/ui/locale-toggle';
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { BranchSelectorDialog, BranchIndicator } from "./BranchSelector";
@@ -92,6 +95,7 @@ function MasterSidebar() {
   const [location, setLocation] = useLocation() as [string, (path: string, options?: { replace?: boolean }) => void];
   const { logout } = useAuth() as AuthContext;
   const { toast } = useToast() as ToastContext;
+  const { t } = useLocale();
 
   // Initialize with today's date or query param
   const [date, setDate] = useState<Date | any>(() => {
@@ -134,8 +138,8 @@ function MasterSidebar() {
   const handleLogout = async () => {
     await logout();
     toast({
-      title: "Выход из системы",
-      description: "Вы успешно вышли из системы.",
+      title: t('sidebar.logout_success'),
+      description: t('sidebar.logout_success_desc'),
       variant: "default",
     });
   };
@@ -147,16 +151,19 @@ function MasterSidebar() {
       <aside className="bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700/50 shadow-2xl w-80 flex flex-col transition-all duration-300 backdrop-blur-sm">
         {/* Header */}
         <div className="p-6">
-          <div className="flex items-center justify-start space-x-3">
-            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-lg">
-              <img width={20} height={10} src={LOGO} alt="logo" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-lg">
+                <img width={20} height={10} src={LOGO} alt="logo" />
+              </div>
+              <div>
+                <h1 className="font-bold text-xl bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                  Octō CRM
+                </h1>
+                <p className="text-slate-400 text-xs mt-0.5">{t('sidebar.master_panel')}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-bold text-xl bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                Octō CRM
-              </h1>
-              <p className="text-slate-400 text-xs mt-0.5">Мастер панель</p>
-            </div>
+            <LocaleToggle />
           </div>
         </div>
 
@@ -214,7 +221,7 @@ function MasterSidebar() {
               onClick={() => setLocation("/master/calendar")}
             >
               <CalendarIcon className="h-5 w-5 shrink-0" />
-              <span className="ml-3 font-medium">Календарь</span>
+              <span className="ml-3 font-medium">{t('sidebar.calendar')}</span>
             </Button>
           </nav>
         </ScrollArea>
@@ -230,7 +237,7 @@ function MasterSidebar() {
             onClick={handleLogout}
           >
             <LogOut className="h-5 w-5 shrink-0" />
-            <span className="ml-3 font-medium">Выйти</span>
+            <span className="ml-3 font-medium">{t('sidebar.logout')}</span>
           </Button>
         </div>
       </aside>
@@ -265,6 +272,7 @@ function AdminOnlySidebar() {
   const [location, setLocation] = useLocation() as [string, (path: string, options?: { replace?: boolean }) => void];
   const { logout } = useAuth() as AuthContext;
   const { toast } = useToast() as ToastContext;
+  const { t } = useLocale();
   const [openGroups, setOpenGroups] = useState<string[]>(['CRM']);
 
   // Initialize with today's date or query param
@@ -308,8 +316,8 @@ function AdminOnlySidebar() {
   const handleLogout = async () => {
     await logout();
     toast({
-      title: "Выход из системы",
-      description: "Вы успешно вышли из системы.",
+      title: t('sidebar.logout_success'),
+      description: t('sidebar.logout_success_desc'),
       variant: "default",
     });
   };
@@ -325,21 +333,21 @@ function AdminOnlySidebar() {
   const isCalendarPage = location === "/crm/calendar";
 
   const navItems: NavItem[] = [
-    { path: "/clients", label: "Клиенты", icon: <Users className="h-5 w-5" /> },
+    { path: "/chats", label: t('sidebar.chats'), icon: <MessageCircle className="h-5 w-5" /> },
     {
-      label: "CRM",
+      label: t('sidebar.crm'),
       icon: <FileClock className="h-5 w-5" />,
       children: [
-        { path: "/crm/calendar", label: "Календарь", icon: <CalendarIcon className="h-5 w-5" /> },
-        { path: "/crm/masters", label: "Мастера", icon: <UserRound className="h-5 w-5" /> },
-        { path: "/services", label: "Услуги", icon: <Sparkles className="h-5 w-5" /> }
+        { path: "/crm/calendar", label: t('sidebar.calendar'), icon: <CalendarIcon className="h-5 w-5" /> },
+        { path: "/crm/masters", label: t('sidebar.masters'), icon: <UserRound className="h-5 w-5" /> },
+        { path: "/services", label: t('sidebar.services'), icon: <Sparkles className="h-5 w-5" /> }
       ]
     },
-    { path: "/accounting", label: "Бухгалтерия", icon: <Calculator className="h-5 w-5" /> },
-    { path: "/salary", label: "Зарплаты", icon: <DollarSign className="h-5 w-5" /> },
-    { path: "/gift-certificates", label: "Сертификаты", icon: <Gift className="h-5 w-5" /> },
-    { path: "/how-to-use", label: "Как пользоваться?", icon: <HelpCircle className="h-5 w-5" /> },
-    { path: "/settings", label: "Настройки", icon: <SettingsIcon className="h-5 w-5" /> },
+    { path: "/accounting", label: t('sidebar.accounting'), icon: <Calculator className="h-5 w-5" /> },
+    { path: "/salary", label: t('sidebar.salary'), icon: <DollarSign className="h-5 w-5" /> },
+    { path: "/gift-certificates", label: t('sidebar.certificates'), icon: <Gift className="h-5 w-5" /> },
+    { path: "/how-to-use", label: t('sidebar.how_to_use'), icon: <HelpCircle className="h-5 w-5" /> },
+    { path: "/settings", label: t('sidebar.settings'), icon: <SettingsIcon className="h-5 w-5" /> },
   ];
 
   return (
@@ -347,16 +355,19 @@ function AdminOnlySidebar() {
       <aside className="bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700/50 shadow-2xl w-80 flex flex-col transition-all duration-300 backdrop-blur-sm">
         {/* Header */}
         <div className="p-6">
-          <div className="flex items-center justify-start space-x-3">
-            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-lg">
-              <img width={20} height={10} src={LOGO} alt="logo" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-lg">
+                <img width={20} height={10} src={LOGO} alt="logo" />
+              </div>
+              <div>
+                <h1 className="font-bold text-xl bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                  Octō CRM
+                </h1>
+                <p className="text-slate-400 text-xs mt-0.5">{t('sidebar.admin_panel')}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-bold text-xl bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                Octō CRM
-              </h1>
-              <p className="text-slate-400 text-xs mt-0.5">Админ панель</p>
-            </div>
+            <LocaleToggle />
           </div>
         </div>
         <Separator className="bg-slate-700/50" />
@@ -491,7 +502,7 @@ function AdminOnlySidebar() {
             onClick={handleLogout}
           >
             <LogOut className="h-5 w-5 shrink-0" />
-            <span className="ml-3 font-medium">Выйти</span>
+            <span className="ml-3 font-medium">{t('sidebar.logout')}</span>
           </Button>
         </div>
       </aside>
@@ -504,6 +515,7 @@ function AdminSidebar() {
   const [location, setLocation] = useLocation() as [string, (path: string, options?: { replace?: boolean }) => void];
   const { logout } = useAuth() as AuthContext;
   const { toast } = useToast() as ToastContext;
+  const { t } = useLocale();
   const [openGroups, setOpenGroups] = useState<string[]>(['CRM']);
 
   // Initialize with today's date or query param
@@ -547,8 +559,8 @@ function AdminSidebar() {
   const handleLogout = async () => {
     await logout();
     toast({
-      title: "Выход из системы",
-      description: "Вы успешно вышли из системы.",
+      title: t('sidebar.logout_success'),
+      description: t('sidebar.logout_success_desc'),
       variant: "default",
     });
   };
@@ -564,23 +576,24 @@ function AdminSidebar() {
   const isCalendarPage = location === "/crm/calendar";
 
   const navItems: NavItem[] = [
-    { path: "/", label: "Дашборд", icon: <LayoutDashboard className="h-5 w-5" /> },
-    { path: "/clients", label: "Клиенты", icon: <Users className="h-5 w-5" /> },
+    { path: "/", label: t('sidebar.dashboard'), icon: <LayoutDashboard className="h-5 w-5" /> },
+    { path: "/clients", label: t('sidebar.clients'), icon: <Users className="h-5 w-5" /> },
+    { path: "/chats", label: t('sidebar.chats'), icon: <MessageCircle className="h-5 w-5" /> },
     {
-      label: "CRM",
+      label: t('sidebar.crm'),
       icon: <FileClock className="h-5 w-5" />,
       children: [
-        { path: "/crm/calendar", label: "Календарь", icon: <CalendarIcon className="h-5 w-5" /> },
-        { path: "/crm/masters", label: "Мастера", icon: <UserRound className="h-5 w-5" /> },
-        { path: "/services", label: "Услуги", icon: <Sparkles className="h-5 w-5" /> }
+        { path: "/crm/calendar", label: t('sidebar.calendar'), icon: <CalendarIcon className="h-5 w-5" /> },
+        { path: "/crm/masters", label: t('sidebar.masters'), icon: <UserRound className="h-5 w-5" /> },
+        { path: "/services", label: t('sidebar.services'), icon: <Sparkles className="h-5 w-5" /> }
       ]
     },
-    { path: "/accounting", label: "Бухгалтерия", icon: <Calculator className="h-5 w-5" /> },
-    { path: "/salary", label: "Зарплаты", icon: <DollarSign className="h-5 w-5" /> },
-    { path: "/gift-certificates", label: "Сертификаты", icon: <Gift className="h-5 w-5" /> },
-    { path: "/reports", label: "Отчеты", icon: <FileBarChart className="h-5 w-5" /> },
-    { path: "/settings", label: "Настройки", icon: <SettingsIcon className="h-5 w-5" /> },
-    { path: "/how-to-use", label: "Как пользоваться?", icon: <HelpCircle className="h-5 w-5" /> },
+    { path: "/accounting", label: t('sidebar.accounting'), icon: <Calculator className="h-5 w-5" /> },
+    { path: "/salary", label: t('sidebar.salary'), icon: <DollarSign className="h-5 w-5" /> },
+    { path: "/gift-certificates", label: t('sidebar.certificates'), icon: <Gift className="h-5 w-5" /> },
+    { path: "/reports", label: t('sidebar.reports'), icon: <FileBarChart className="h-5 w-5" /> },
+    { path: "/settings", label: t('sidebar.settings'), icon: <SettingsIcon className="h-5 w-5" /> },
+    { path: "/how-to-use", label: t('sidebar.how_to_use'), icon: <HelpCircle className="h-5 w-5" /> },
   ];
 
   return (
@@ -588,17 +601,20 @@ function AdminSidebar() {
       <aside className="bg-gradient-to-b from-slate-900 to-slate-800 border-r border-slate-700/50 shadow-2xl w-80 flex flex-col transition-all duration-300 backdrop-blur-sm">
         {/* Header */}
         <div className="p-6">
-          <div className="flex items-center justify-start space-x-3">
-            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-lg">
+                <div>
+                  <img width={20} height={10} src={LOGO} alt="logo" />
+                </div>
+              </div>
               <div>
-                <img width={20} height={10} src={LOGO} alt="logo" />
+                <h1 className="font-bold text-xl bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                  Octō CRM
+                </h1>
               </div>
             </div>
-            <div>
-              <h1 className="font-bold text-xl bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                Octō CRM
-              </h1>
-            </div>
+            <LocaleToggle />
           </div>
         </div>
 
@@ -736,7 +752,7 @@ function AdminSidebar() {
             onClick={handleLogout}
           >
             <LogOut className="h-5 w-5 shrink-0" />
-            <span className="ml-3 font-medium">Выйти</span>
+            <span className="ml-3 font-medium">{t('sidebar.logout')}</span>
           </Button>
         </div>
       </aside>

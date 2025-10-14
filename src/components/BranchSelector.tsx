@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Building, Building2, Pencil, Loader2 } from "lucide-react";
 import { useBranch } from "../contexts/BranchContext";
 import { useAuth } from "../contexts/SimpleAuthContext";
+import { useLocale } from '../contexts/LocaleContext';
 import { useToast } from "@/hooks/use-toast";
 import type { Branch } from "../contexts/BranchContext";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,8 @@ interface EditBranchData {
 
 // Карточка филиала для модального окна
 const BranchCard: React.FC<BranchCardProps> = ({ branch, isSelected, onClick, onEdit }) => {
+  const { t } = useLocale();
+  
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Предотвращаем выбор филиала при клике на карандаш
     if (onEdit) {
@@ -56,19 +59,19 @@ const BranchCard: React.FC<BranchCardProps> = ({ branch, isSelected, onClick, on
           <h3 className="font-medium">{branch.branches}</h3>
           {isSelected && (
             <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
-              Выбран
+              {t('branch.selected')}
             </span>
           )}
         </div>
         <p className="text-sm text-muted-foreground">{branch.address}</p>
-        <p className="text-xs text-muted-foreground mt-1">Тел: {branch.phoneNumber}</p>
+        <p className="text-xs text-muted-foreground mt-1">{t('branch.phone_prefix')}{branch.phoneNumber}</p>
       </div>
       <Button
         variant="ghost"
         size="sm"
         className="h-8 w-8 p-0 hover:bg-primary/10 text-muted-foreground hover:text-primary"
         onClick={handleEditClick}
-        title="Редактировать филиал"
+        title={t('branch.edit_tooltip')}
       >
         <Pencil className="h-4 w-4" />
       </Button>
@@ -84,6 +87,7 @@ interface BranchSelectorDialogProps {
 export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSelect }) => {
   const { currentBranch, setBranch, branches, isLoading, refetchBranches } = useBranch();
   const { user } = useAuth(); // Получаем данные пользователя
+  const { t } = useLocale();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(currentBranch);
@@ -145,8 +149,8 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
       }
 
       toast({
-        title: "Успех",
-        description: "Филиал успешно обновлен"
+        title: t('common.success'),
+        description: t('branch.update_success')
       });
 
       // Обновляем список филиалов
@@ -159,8 +163,8 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
     } catch (error) {
       console.error('Error updating branch:', error);
       toast({
-        title: "Ошибка",
-        description: "Не удалось обновить филиал",
+        title: t('common.error'),
+        description: t('branch.update_error'),
         variant: "destructive"
       });
     } finally {
@@ -172,7 +176,7 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
     return (
       <Button variant="ghost" className="justify-start px-3 py-2 w-full hover:text-white hover:bg-white/10 text-slate-300" disabled>
         <Building2 className="h-5 w-5 mr-2" />
-        <span className="text-left">Загрузка...</span>
+        <span className="text-left">{t('branch.loading')}</span>
       </Button>
     );
   }
@@ -183,14 +187,14 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
         <DialogTrigger asChild>
           <Button variant="ghost" className="justify-start px-3 py-2 w-full hover:text-white hover:bg-white/10 text-slate-300">
             <Building2 className="h-5 w-5 mr-2" />
-            <span className="text-left">Филиал</span>
+            <span className="text-left">{t('branch.title')}</span>
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Выбор филиала</DialogTitle>
+            <DialogTitle>{t('branch.select_title')}</DialogTitle>
             <DialogDescription>
-              Выберите филиал для работы с клиентами
+              {t('branch.select_description')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-4">
@@ -206,10 +210,10 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Отмена
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleSave} disabled={!selectedBranch}>
-              Подтвердить
+              {t('common.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -219,37 +223,37 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
       <Dialog open={editDialog} onOpenChange={setEditDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Редактирование филиала</DialogTitle>
+            <DialogTitle>{t('branch.edit_title')}</DialogTitle>
             <DialogDescription>
-              Измените информацию о филиале
+              {t('branch.edit_description')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <Label htmlFor="branchName">Название филиала</Label>
+              <Label htmlFor="branchName">{t('branch.name_label')}</Label>
               <Input
                 id="branchName"
                 value={editData.branches}
                 onChange={(e) => setEditData({ ...editData, branches: e.target.value })}
-                placeholder="Введите название филиала"
+                placeholder={t('branch.name_placeholder')}
               />
             </div>
             <div>
-              <Label htmlFor="branchAddress">Адрес</Label>
+              <Label htmlFor="branchAddress">{t('branch.address_label')}</Label>
               <Input
                 id="branchAddress"
                 value={editData.address}
                 onChange={(e) => setEditData({ ...editData, address: e.target.value })}
-                placeholder="Введите адрес филиала"
+                placeholder={t('branch.address_placeholder')}
               />
             </div>
             <div>
-              <Label htmlFor="branchPhone">Телефон</Label>
+              <Label htmlFor="branchPhone">{t('branch.phone_label')}</Label>
               <Input
                 id="branchPhone"
                 value={editData.phoneNumber}
                 onChange={(e) => setEditData({ ...editData, phoneNumber: e.target.value })}
-                placeholder="Введите номер телефона"
+                placeholder={t('branch.phone_placeholder')}
               />
             </div>
           </div>
@@ -259,7 +263,7 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
               onClick={() => setEditDialog(false)}
               disabled={isUpdating}
             >
-              Отмена
+              {t('common.cancel')}
             </Button>
             <Button 
               onClick={handleUpdateBranch}
@@ -268,10 +272,10 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
               {isUpdating ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Сохранение...
+                  {t('branch.saving')}
                 </>
               ) : (
-                "Сохранить"
+                t('common.save')
               )}
             </Button>
           </DialogFooter>
@@ -289,6 +293,7 @@ interface BranchIndicatorProps {
 export const BranchIndicator: React.FC<BranchIndicatorProps> = ({ compact = false }) => {
   const { currentBranch, isLoading } = useBranch();
   const { user } = useAuth(); // Получаем данные пользователя
+  const { t } = useLocale();
 
   // Проверяем, является ли пользователь админом или суперадмином
   const isAdminOrSuperAdmin = user?.role === 'admin' || user?.role === 'superadmin';
@@ -307,7 +312,7 @@ export const BranchIndicator: React.FC<BranchIndicatorProps> = ({ compact = fals
         )}>
           <Building className="h-4 w-4" />
           <span className={compact ? "hidden sm:inline" : ""}>
-            {isLoading ? "Загрузка..." : "Нет филиала"}
+            {isLoading ? t('branch.loading') : t('branch.no_branch')}
           </span>
         </div>
       </div>

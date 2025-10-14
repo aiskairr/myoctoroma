@@ -12,6 +12,7 @@ import { useBranch } from '@/contexts/BranchContext';
 import { useAuth } from '@/contexts/SimpleAuthContext';
 import { getBranchId } from '@/utils/branch-utils';
 import { apiGetJson } from '@/lib/api';
+import { useLocale } from '@/contexts/LocaleContext';
 import { format } from 'date-fns';
 import { XCircle, Edit, Calendar, User, Clock, Phone, Search } from 'lucide-react';
 import StatusBadge from '@/components/StatusBadge';
@@ -24,6 +25,7 @@ interface CancelledAppointmentsProps {
 }
 
 export default function CancelledAppointments({ trigger, selectedDate }: CancelledAppointmentsProps) {
+  const { t } = useLocale();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { currentBranch } = useBranch();
@@ -229,7 +231,7 @@ export default function CancelledAppointments({ trigger, selectedDate }: Cancell
   const defaultTrigger = (
     <Button variant="outline" className="gap-2">
       <XCircle className="h-4 w-4" />
-      Отмененные записи
+      {t('calendar.cancelled_appointments')}
     </Button>
   );
 
@@ -242,7 +244,7 @@ export default function CancelledAppointments({ trigger, selectedDate }: Cancell
         <DialogHeader className="p-6 pb-0">
           <DialogTitle className="flex items-center gap-2">
             <XCircle className="h-5 w-5 text-red-500" />
-            Отмененные записи
+            {t('calendar.cancelled_appointments')}
             <Badge variant="secondary" className="ml-2">
               {filteredTasks.length}
             </Badge>
@@ -253,11 +255,11 @@ export default function CancelledAppointments({ trigger, selectedDate }: Cancell
           {/* Фильтры */}
           <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-lg">
             <div className="flex-1 min-w-[200px]">
-              <Label>Поиск</Label>
+              <Label>{t('common.search')}</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Поиск по имени, телефону, услуге..."
+                  placeholder={t('calendar.search_placeholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9"

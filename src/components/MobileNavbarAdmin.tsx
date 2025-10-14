@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../contexts/SimpleAuthContext";
 import {
-  Users,
   Settings as SettingsIcon,
   LogOut,
   Bot,
@@ -14,7 +13,8 @@ import {
   DollarSign,
   Gift,
   HelpCircle,
-  Sparkles
+  Sparkles,
+  MessageCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -40,7 +40,7 @@ export function MobileNavbarAdmin() {
   };
 
   const navItems = [
-    { path: "/clients", label: "Клиенты", icon: <Users className="h-5 w-5" /> },
+    { path: "/chats", label: "Чаты", icon: <MessageCircle className="h-5 w-5" /> },
     {
       label: "CRM",
       icon: <FileClock className="h-5 w-5" />,

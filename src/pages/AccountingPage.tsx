@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useBranch } from '@/contexts/BranchContext';
+import { useLocale } from '@/contexts/LocaleContext';
 import { getBranchIdWithFallback } from '@/utils/branch-utils';
 import { accountingService } from '@/services/accounting-service';
 import { expenseService, type ExpenseRecord } from '@/services/expense-service';
@@ -80,6 +81,7 @@ interface Administrator {
 }
 
 const AccountingPage = () => {
+  const { t } = useLocale();
   const { currentBranch, branches } = useBranch();
   const [records, setRecords] = useState<AccountingRecord[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
@@ -523,7 +525,7 @@ const AccountingPage = () => {
         <div className="space-y-2">
           <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
             <Receipt className="h-8 w-8 text-blue-600" />
-            Бухгалтерия
+            {t('accounting.page_title')}
           </h1>
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <Building2 className="h-4 w-4" />
@@ -635,15 +637,15 @@ const AccountingPage = () => {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="records" className="gap-2">
             <Receipt className="h-4 w-4" />
-            Записи бухгалтерии
+            {t('accounting.records')}
           </TabsTrigger>
           <TabsTrigger value="expenses" className="gap-2">
             <TrendingUp className="h-4 w-4" />
-            Расходы
+            {t('accounting.expenses')}
           </TabsTrigger>
           <TabsTrigger value="report" className="gap-2">
             <FileText className="h-4 w-4" />
-            Отчет
+            {t('accounting.reports')}
           </TabsTrigger>
         </TabsList>
 
@@ -651,7 +653,7 @@ const AccountingPage = () => {
           <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <CardTitle className="text-xl">Записи бухгалтерии</CardTitle>
+                <CardTitle className="text-xl">{t('accounting.records')}</CardTitle>
                 <div className="flex gap-3">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />

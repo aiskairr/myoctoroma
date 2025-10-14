@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, getQueryFn } from "@/lib/queryClient";
 import { useBranch } from '@/contexts/BranchContext';
+import { useLocale } from '@/contexts/LocaleContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,7 @@ import { Loader2 } from "lucide-react";
 import { BookingLinkCopy } from "@/components/BookingLinkCopy";
 
 export default function Settings() {
+  const { t } = useLocale();
   const { toast } = useToast();
   const { currentBranch } = useBranch();
   const [settings, setSettings] = useState<Record<string, string>>({
@@ -94,14 +96,14 @@ export default function Settings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/settings/${currentBranch?.id}`] });
       toast({
-        title: "Настройки сохранены",
-        description: "Системный промпт успешно обновлен",
+        title: t('settings.settings_saved'),
+        description: t('settings.system_prompt_updated'),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Ошибка",
-        description: error.message || "Не удалось сохранить настройки",
+        title: t('error'),
+        description: error.message || t('settings.save_failed'),
         variant: "destructive",
       });
     },
@@ -126,7 +128,7 @@ export default function Settings() {
           // 504 Gateway Timeout означает, что импорт начался
           return { status: 'timeout', message: 'Import started' };
         }
-        throw new Error('Ошибка при загрузке файла');
+        throw new Error(t('settings.file_upload_error'));
       }
       
       return response.json();
@@ -135,8 +137,8 @@ export default function Settings() {
       // Проверяем, если это timeout (504 ошибка)
       if (data && data.status === 'timeout') {
         toast({
-          title: "Импорт начался",
-          description: "Импорт начался, ожидайте 60 мин пока все данные не импортируются.",
+          title: t('settings.import_started'),
+          description: t('settings.import_started_description'),
           variant: "default",
         });
         setSelectedFile(null);
@@ -171,16 +173,16 @@ export default function Settings() {
         } catch (error) {
           console.error('❌ Ошибка автоматического запуска фоновой обработки:', error);
           toast({
-            title: "Предупреждение",
-            description: "Файл загружен, но автоматический запуск обработки не удался. Используйте кнопку ручного запуска.",
+            title: t('settings.warning'),
+            description: t('settings.manual_process_warning'),
             variant: "destructive",
           });
         }
       }
       
       toast({
-        title: "Импорт запущен",
-        description: "Файл успешно загружен. Импорт выполняется в фоновом режиме.",
+        title: t('settings.import_launched'),
+        description: t('settings.import_background'),
       });
       setSelectedFile(null);
       // Reset file input
@@ -189,7 +191,7 @@ export default function Settings() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Ошибка импорта",
+        title: t('settings.import_error'),
         description: error.message,
         variant: "destructive",
       });
@@ -221,8 +223,8 @@ export default function Settings() {
     },
     onSuccess: () => {
       toast({
-        title: "Конфигурация сохранена",
-        description: "WhatsApp конфигурация успешно сохранена",
+        title: t('settings.config_saved'),
+        description: t('settings.whatsapp_config_saved'),
       });
       queryClient.invalidateQueries({
         queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/organisation/${currentBranch?.id}/whatsapp/config`],
@@ -230,7 +232,7 @@ export default function Settings() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Ошибка сохранения",
+        title: t('error'),
         description: error.message,
         variant: "destructive",
       });
@@ -400,23 +402,23 @@ export default function Settings() {
       }
       
       toast({
-        title: "Обработка запущена",
-        description: "Фоновая обработка успешно запущена",
+        title: t('settings.processing_started'),
+        description: t('settings.background_processing_started'),
       });
     } catch (error) {
       console.error('❌ Ошибка запуска обработки:', error);
       toast({
-        title: "Ошибка",
-        description: "Не удалось запустить обработку",
+        title: t('error'),
+        description: t('settings.processing_start_failed'),
         variant: "destructive",
       });
     }
   };
   
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Байт';
+    if (bytes === 0) return `0 ${t('settings.file_size_bytes')}`;
     const k = 1024;
-    const sizes = ['Байт', 'КБ', 'МБ', 'ГБ'];
+    const sizes = [t('settings.file_size_bytes'), t('settings.file_size_kb'), t('settings.file_size_mb'), t('settings.file_size_gb')];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
@@ -595,17 +597,17 @@ export default function Settings() {
       {/* System Prompt Settings */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
-          <CardTitle>Настройки системного промпта</CardTitle>
+          <CardTitle>{t('settings.system_prompt_title')}</CardTitle>
           {error && error instanceof Error && error.message.includes('SystemPrompt not found for branch') && (
             <p className="text-sm text-muted-foreground mt-2">
-              Системный промпт для данного филиала не найден. Вы можете создать новый промпт ниже.
+              {t('settings.system_prompt_not_found')}
             </p>
           )}
         </CardHeader>
         <CardContent>
           <form className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="system-prompt">Системный промпт</Label>
+              <Label htmlFor="system-prompt">{t('settings.system_prompt_label')}</Label>
               <Textarea
                 id="system-prompt"
                 rows={8}
@@ -613,11 +615,11 @@ export default function Settings() {
                 onChange={(e) => handleInputChange("systemPrompt", e.target.value)}
                 placeholder={
                   error && error instanceof Error && error.message.includes('SystemPrompt not found for branch')
-                    ? "Системный промпт не найден для данного филиала. Введите новый промпт здесь..."
-                    : "Введите системный промпт здесь..."
+                    ? t('settings.system_prompt_placeholder_not_found')
+                    : t('settings.system_prompt_placeholder')
                 }
               />
-              <p className="text-xs text-muted-foreground">Этот системный промпт будет обрабатывать ChatGPT для общения с вашими клиентами. Инструкциипо по составлению промпта вы можете посмотреть в видеоуроках на странице "Как пользоваться?"</p>
+              <p className="text-xs text-muted-foreground">{t('settings.system_prompt_description')}</p>
             </div>
             
             <div className="flex justify-end">
@@ -627,14 +629,14 @@ export default function Settings() {
                 onClick={resetSystemPrompt}
                 className="mr-2"
               >
-                Сбросить к стандартному
+                {t('settings.reset_to_default')}
               </Button>
               <Button
                 type="button"
                 onClick={() => handleSave("systemPrompt")}
                 disabled={updateSettingMutation.isPending}
               >
-                {updateSettingMutation.isPending ? "Сохранение..." : "Сохранить промпт"}
+                {updateSettingMutation.isPending ? t('settings.saving') : t('settings.save_prompt')}
               </Button>
             </div>
           </form>
@@ -644,7 +646,7 @@ export default function Settings() {
       {/* WhatsApp Configuration Section */}
       <Card>
         <CardHeader>
-          <CardTitle>WhatsApp API</CardTitle>
+          <CardTitle>{t('settings.whatsapp_api')}</CardTitle>
           <CardDescription>
             Конфигурация подключения к WhatsApp API
           </CardDescription>
@@ -803,7 +805,7 @@ export default function Settings() {
                 variant="outline"
                 className="w-full mt-2"
               >
-                Запустить обработку вручную
+                {t('settings.manual_process')}
               </Button>
             )}
 
@@ -812,22 +814,22 @@ export default function Settings() {
               <div className="mt-4 p-4 bg-muted rounded-lg border">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">Статус импорта:</span>
+                    <span className="font-medium">{t('settings.import_status')}:</span>
                     <span className={`px-2 py-1 rounded text-sm ${
                       (importStatus as any).job?.status === 'COMPLETED' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
                       (importStatus as any).job?.status === 'FAILED' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                       'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                     }`}>
-                      {(importStatus as any).job?.status === 'COMPLETED' ? 'Завершен' :
-                       (importStatus as any).job?.status === 'FAILED' ? 'Ошибка' :
-                       (importStatus as any).job?.status === 'PROCESSING' ? 'Обработка' : 'В очереди'}
+                      {(importStatus as any).job?.status === 'COMPLETED' ? t('settings.completed') :
+                       (importStatus as any).job?.status === 'FAILED' ? t('settings.failed') :
+                       (importStatus as any).job?.status === 'PROCESSING' ? t('settings.processing') : t('settings.pending')}
                     </span>
                   </div>
 
                   {/* Прогресс бар */}
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span>Прогресс:</span>
+                      <span>{t('settings.progress')}:</span>
                       <span>{Math.round((importStatus as any).job?.completionPercentage || 0)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -842,7 +844,7 @@ export default function Settings() {
                   {(importStatus as any).job && (
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-muted-foreground">Обработано строк:</span>
+                        <span className="text-muted-foreground">{t('settings.processed_rows')}:</span>
                         <div className="font-medium">
                           {(importStatus as any).job.processedRows || 0} / {(importStatus as any).job.totalRows || 0}
                         </div>

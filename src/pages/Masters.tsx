@@ -14,6 +14,7 @@ import MasterWorkingDatesManager from "@/components/MasterWorkingDatesManager";
 import MasterWorkingDatesDisplay from "@/components/MasterWorkingDatesDisplay";
 import MasterWorkingDatesCalendar from "@/components/MasterWorkingDatesCalendar";
 import { useBranch } from "@/contexts/BranchContext";
+import { useLocale } from "@/contexts/LocaleContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -80,6 +81,7 @@ const MasterForm: React.FC<{
   isPending: boolean;
   branchUsers?: BranchUser[];
 }> = ({ master, onSubmit, isPending, branchUsers }) => {
+  const { t } = useLocale();
   const [formData, setFormData] = useState({
     name: master?.name || '',
     specialty: master?.specialty || '',
@@ -210,7 +212,7 @@ const MasterForm: React.FC<{
         <div className="space-y-5">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="col-span-1 text-sm font-medium text-gray-700">
-              Имя <span className="text-red-500">*</span>
+              {t('masters.name')} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="name"
@@ -223,7 +225,7 @@ const MasterForm: React.FC<{
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="specialty" className="col-span-1 text-sm font-medium text-gray-700">
-              Специализация
+              {t('masters.specialty')}
             </Label>
             <Input
               id="specialty"
@@ -236,7 +238,7 @@ const MasterForm: React.FC<{
           </div>
           <div className="grid grid-cols-4 items-start gap-4">
             <Label htmlFor="description" className="col-span-1 pt-2 text-sm font-medium text-gray-700">
-              Описание
+              {t('masters.description')}
             </Label>
             <Textarea
               id="description"
@@ -249,7 +251,7 @@ const MasterForm: React.FC<{
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="isActive" className="col-span-1 text-sm font-medium text-gray-700">
-              Активный
+              {t('masters.active')}
             </Label>
             <Switch
               id="isActive"
@@ -292,7 +294,7 @@ const MasterForm: React.FC<{
       <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-semibold text-gray-900">
-            {master && userAccountData ? 'Редактировать аккаунт' : 'Создать аккаунт'}
+            {master && userAccountData ? 'Редактировать аккаунт' : t('masters.create_account')}
           </h3>
           <Switch
             checked={accountData.createAccount}
@@ -318,7 +320,7 @@ const MasterForm: React.FC<{
           <div className="space-y-5 p-4 bg-blue-50 rounded-lg border border-blue-200 transition-all duration-200">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="accountEmail" className="col-span-1 text-sm font-medium text-gray-700">
-                Email
+                {t('masters.email')}
               </Label>
               <Input
                 id="accountEmail"
@@ -333,7 +335,7 @@ const MasterForm: React.FC<{
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="accountPassword" className="col-span-1 text-sm font-medium text-gray-700">
-                Пароль
+                {t('masters.password')}
               </Label>
               <Input
                 id="accountPassword"
@@ -377,7 +379,7 @@ const MasterForm: React.FC<{
           onClick={() => window.dispatchEvent(new Event('close-dialog'))}
           className="border-gray-300 text-gray-700 hover:bg-gray-50"
         >
-          Отмена
+          {t('masters.cancel')}
         </Button>
         <Button
           type="submit"
@@ -385,7 +387,7 @@ const MasterForm: React.FC<{
           className="bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200"
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-          {master ? 'Сохранить изменения' : 'Добавить мастера'}
+          {master ? t('masters.save') : t('masters.add_master')}
         </Button>
       </DialogFooter>
     </form>
@@ -506,6 +508,7 @@ const AdministratorForm: React.FC<{
   isPending: boolean;
   branchUsers?: BranchUser[];
 }> = ({ administrator, onSubmit, isPending, branchUsers }) => {
+  const { t } = useLocale();
   const { currentBranch } = useBranch();
   const [formData, setFormData] = useState({
     name: administrator?.name || '',
@@ -611,7 +614,7 @@ const AdministratorForm: React.FC<{
         <div className="space-y-5">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="admin-name" className="col-span-1 text-sm font-medium text-gray-700">
-              Имя <span className="text-red-500">*</span>
+              {t('masters.name')} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="admin-name"
@@ -867,6 +870,7 @@ const findUserByName = (users: BranchUser[] | undefined, name: string): BranchUs
 
 // Основной компонент страницы мастеров
 const Masters: React.FC = () => {
+  const { t } = useLocale();
   const { toast } = useToast();
   const { currentBranch } = useBranch();
 
@@ -974,8 +978,8 @@ const Masters: React.FC = () => {
     onSuccess: () => {
       setIsAddDialogOpen(false);
       toast({
-        title: 'Мастер добавлен',
-        description: 'Новый мастер успешно добавлен',
+        title: t('masters.master_created'),
+        description: t('masters.master_created'),
         variant: 'default',
       });
       refetch();
@@ -1060,8 +1064,8 @@ const Masters: React.FC = () => {
       setIsEditDialogOpen(false);
       setEditMaster(null);
       toast({
-        title: 'Мастер обновлен',
-        description: 'Данные мастера успешно обновлены',
+        title: t('masters.master_updated'),
+        description: t('masters.master_updated'),
         variant: 'default',
       });
       refetch();
@@ -1087,8 +1091,8 @@ const Masters: React.FC = () => {
     },
     onSuccess: () => {
       toast({
-        title: 'Мастер удален',
-        description: 'Мастер успешно удален из системы',
+        title: t('masters.master_deleted'),
+        description: t('masters.master_deleted'),
         variant: 'default',
       });
       refetch();
@@ -1287,8 +1291,8 @@ const Masters: React.FC = () => {
     onSuccess: (_, variables) => {
       setUploadingImages(prev => ({ ...prev, [variables.masterId]: false }));
       toast({
-        title: 'Изображение загружено',
-        description: 'Фотография мастера успешно загружена',
+        title: t('masters.photo_uploaded'),
+        description: t('masters.photo_uploaded'),
         variant: 'default',
       });
       refetch();
@@ -1296,7 +1300,7 @@ const Masters: React.FC = () => {
     onError: (error, variables) => {
       setUploadingImages(prev => ({ ...prev, [variables.masterId]: false }));
       toast({
-        title: 'Ошибка загрузки',
+        title: t('masters.error_uploading_photo'),
         description: `${error}`,
         variant: 'destructive',
       });
@@ -1368,7 +1372,7 @@ const Masters: React.FC = () => {
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-3 text-2xl">
               <User className="h-8 w-8" />
-              Мастера
+              {t('masters.page_title')}
             </CardTitle>
             <div className="flex gap-3">
               <Dialog open={isAddAdministratorDialogOpen} onOpenChange={setIsAddAdministratorDialogOpen}>
@@ -1378,7 +1382,7 @@ const Masters: React.FC = () => {
                     className="border-white/20 text-white hover:bg-white/10 bg-white/5"
                   >
                     <User className="h-4 w-4 mr-2" />
-                    Добавить администратора
+                    {t('masters.add_administrator')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px] bg-white rounded-xl">
@@ -1401,14 +1405,14 @@ const Masters: React.FC = () => {
                 variant="outline"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Добавить мастера
+                {t('masters.add_master')}
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-6">
           <div className="text-sm text-gray-600">
-            Управление мастерами и администраторами
+            {t('masters.management_description')}
           </div>
         </CardContent>
       </Card>
@@ -1419,20 +1423,20 @@ const Masters: React.FC = () => {
         </div>
       ) : isError ? (
         <div className="bg-red-50 p-6 rounded-lg text-red-800 my-8 border border-red-200">
-          Ошибка при загрузке мастеров. Пожалуйста, попробуйте обновить страницу.
+          {t('masters.loading_error')}
         </div>
       ) : !masters || masters.length === 0 ? (
         <div className="bg-gray-50 p-8 rounded-lg text-center my-8 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Пока нет добавленных мастеров</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('masters.no_masters_title')}</h3>
           <p className="text-gray-500 mb-4">
-            Добавьте первого мастера, чтобы начать работу с календарем.
+            {t('masters.no_masters_description')}
           </p>
           <Button
             onClick={() => setIsAddDialogOpen(true)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Добавить мастера
+            {t('masters.add_master')}
           </Button>
         </div>
       ) : (
@@ -1452,7 +1456,7 @@ const Masters: React.FC = () => {
       )}
 
       <div className="mt-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Администраторы</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('masters.administrators')}</h2>
         {administrators && administrators.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {administrators.map((administrator: Administrator) => (
@@ -1466,9 +1470,9 @@ const Masters: React.FC = () => {
           </div>
         ) : (
           <div className="bg-indigo-50 p-8 rounded-lg text-center my-8 border border-indigo-200">
-            <h3 className="text-lg font-semibold text-indigo-900 mb-2">Пока нет добавленных администраторов</h3>
+            <h3 className="text-lg font-semibold text-indigo-900 mb-2">{t('masters.no_administrators_title')}</h3>
             <p className="text-indigo-700 mb-4">
-              Добавьте первого администратора для управления филиалом.
+              {t('masters.no_administrators_description')}
             </p>
             <Button
               onClick={() => setIsAddAdministratorDialogOpen(true)}
@@ -1476,7 +1480,7 @@ const Masters: React.FC = () => {
               className="border-indigo-200 text-indigo-600 hover:bg-indigo-50"
             >
               <User className="h-4 w-4 mr-2" />
-              Добавить администратора
+              {t('masters.add_administrator')}
             </Button>
           </div>
         )}
@@ -1485,9 +1489,9 @@ const Masters: React.FC = () => {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-gray-900">Добавить нового мастера</DialogTitle>
+            <DialogTitle className="text-xl font-semibold text-gray-900">{t('masters.add_new_master')}</DialogTitle>
             <DialogDescription className="text-gray-500">
-              Заполните данные нового мастера. Поля, отмеченные звездочкой (*), обязательны.
+              {t('masters.add_master_description')}
             </DialogDescription>
           </DialogHeader>
           <MasterForm
@@ -1501,9 +1505,9 @@ const Masters: React.FC = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-gray-900">Редактировать мастера</DialogTitle>
+            <DialogTitle className="text-2xl font-bold text-gray-900">{t('masters.edit_master')}</DialogTitle>
             <DialogDescription className="text-gray-500">
-              Измените данные мастера. Поля, отмеченные звездочкой (*), обязательны для заполнения.
+              {t('masters.edit_master_description')}
             </DialogDescription>
           </DialogHeader>
           {editMaster && (
@@ -1520,7 +1524,7 @@ const Masters: React.FC = () => {
       <Dialog open={isScheduleDialogOpen} onOpenChange={setIsScheduleDialogOpen}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-gray-900">Рабочие дни мастера</DialogTitle>
+            <DialogTitle className="text-xl font-semibold text-gray-900">{t('masters.working_dates')}</DialogTitle>
             <DialogDescription className="text-gray-500">
               {selectedMasterForSchedule && `Управление рабочими днями для ${selectedMasterForSchedule.name}`}
             </DialogDescription>

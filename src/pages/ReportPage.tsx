@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useBranch } from '@/contexts/BranchContext';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface DailyCashReport {
   id: number;
@@ -31,6 +32,7 @@ interface User {
 }
 
 export default function ReportPage() {
+  const { t } = useLocale();
   const [user, setUser] = useState<User | null>(null);
   const [reports, setReports] = useState<DailyCashReport[]>([]);
   const [startDate, setStartDate] = useState<string>(() => {
@@ -175,7 +177,7 @@ export default function ReportPage() {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Загрузка...</div>
+          <div className="text-lg">{t('report.loading')}</div>
         </div>
       </div>
     );
@@ -186,7 +188,7 @@ export default function ReportPage() {
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
           <div className="text-lg text-red-600 font-semibold">
-            Доступ только для администраторов!
+            {t('report.access_denied')}
           </div>
         </div>
       </div>
@@ -202,12 +204,12 @@ export default function ReportPage() {
         <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-xl">
           <CardTitle className="flex items-center gap-3 text-2xl">
             <Calendar className="h-8 w-8" />
-            Ежедневные отчеты по доходам и расходам
+            {t('report.page_title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <div className="flex items-center gap-4 flex-wrap">
-            <label className="text-sm font-medium">Филиал:</label>
+            <label className="text-sm font-medium">{t('report.branch')}:</label>
             <select
               value={selectedBranch}
               onChange={(e) => setSelectedBranch(e.target.value)}
@@ -219,14 +221,14 @@ export default function ReportPage() {
                 </option>
               ))}
             </select>
-            <label className="text-sm font-medium">Период с:</label>
+            <label className="text-sm font-medium">{t('report.period_from')}:</label>
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            <label className="text-sm font-medium">по:</label>
+            <label className="text-sm font-medium">{t('report.period_to')}:</label>
             <input
               type="date"
               value={endDate}
@@ -239,7 +241,7 @@ export default function ReportPage() {
               size="sm"
               className="ml-2"
             >
-              Текущий месяц
+              {t('report.current_month')}
             </Button>
           </div>
         </CardContent>
@@ -263,20 +265,20 @@ export default function ReportPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">Дата</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Доходы</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Расходы</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Итого</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Остаток</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Оптима</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">М-Банк</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">М-Бизнес</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Демир</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Бакай</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">O!Банк</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Инкассация</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">ЗП выплачено</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">Заметки</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">{t('report.date')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.total_revenue')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.expenses')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.income')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.cash_balance')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.optima')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.mbank')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.mbusiness')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.demir')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.bakai')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.obank')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.collection')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.salary_payments')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">{t('report.notes')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -286,40 +288,40 @@ export default function ReportPage() {
                       {new Date(report.date).toLocaleDateString('ru-RU')}
                     </td>
                     <td className="px-4 py-3 text-right border-b text-green-600 font-medium">
-                      {(report.total_revenue || 0).toLocaleString()} сом
+                      {(report.total_revenue || 0).toLocaleString()} {t('report.som')}
                     </td>
                     <td className="px-4 py-3 text-right border-b text-red-600 font-medium">
-                      {(report.petty_expenses || 0).toLocaleString()} сом
+                      {(report.petty_expenses || 0).toLocaleString()} {t('report.som')}
                     </td>
                     <td className="px-4 py-3 text-right border-b font-bold">
-                      {(report.total_income || 0).toLocaleString()} сом
+                      {(report.total_income || 0).toLocaleString()} {t('report.som')}
                     </td>
                     <td className="px-4 py-3 text-right border-b">
-                      {(report.end_balance || 0).toLocaleString()} сом
+                      {(report.end_balance || 0).toLocaleString()} {t('report.som')}
                     </td>
                     <td className="px-4 py-3 text-right border-b">
-                      {(report.optima_payments || 0).toLocaleString()} сом
+                      {(report.optima_payments || 0).toLocaleString()} {t('report.som')}
                     </td>
                     <td className="px-4 py-3 text-right border-b">
-                      {(report.mbank_payments || 0).toLocaleString()} сом
+                      {(report.mbank_payments || 0).toLocaleString()} {t('report.som')}
                     </td>
                     <td className="px-4 py-3 text-right border-b">
-                      {(report.mbusiness_payments || 0).toLocaleString()} сом
+                      {(report.mbusiness_payments || 0).toLocaleString()} {t('report.som')}
                     </td>
                     <td className="px-4 py-3 text-right border-b">
-                      {(report.demir_payments || 0).toLocaleString()} сом
+                      {(report.demir_payments || 0).toLocaleString()} {t('report.som')}
                     </td>
                     <td className="px-4 py-3 text-right border-b">
-                      {(report.bakai_payments || 0).toLocaleString()} сом
+                      {(report.bakai_payments || 0).toLocaleString()} {t('report.som')}
                     </td>
                     <td className="px-4 py-3 text-right border-b">
-                      {(report.obank_payments || 0).toLocaleString()} сом
+                      {(report.obank_payments || 0).toLocaleString()} {t('report.som')}
                     </td>
                     <td className="px-4 py-3 text-right border-b">
-                      {(report.cash_collection || 0).toLocaleString()} сом
+                      {(report.cash_collection || 0).toLocaleString()} {t('report.som')}
                     </td>
                     <td className="px-4 py-3 text-right border-b text-purple-600 font-medium">
-                      {(report.salary_payments || 0).toLocaleString()} сом
+                      {(report.salary_payments || 0).toLocaleString()} {t('report.som')}
                     </td>
                     <td className="px-4 py-3 border-b text-xs text-gray-600">
                       {report.notes || '-'}
@@ -329,42 +331,42 @@ export default function ReportPage() {
                 
                 {/* Totals Row */}
                 <tr className="bg-blue-50 font-bold">
-                  <td className="px-4 py-3 border-b font-bold">ИТОГО</td>
+                  <td className="px-4 py-3 border-b font-bold">{t('report.total')}</td>
                   <td className="px-4 py-3 text-right border-b text-green-600">
-                    {totals.totalRevenue.toLocaleString()} сом
+                    {totals.totalRevenue.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b text-red-600">
-                    {totals.totalExpenses.toLocaleString()} сом
+                    {totals.totalExpenses.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b">
-                    {totals.totalIncome.toLocaleString()} сом
+                    {totals.totalIncome.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b">
-                    {totals.totalCash.toLocaleString()} сом
+                    {totals.totalCash.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b">
-                    {totals.totalOptima.toLocaleString()} сом
+                    {totals.totalOptima.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b">
-                    {totals.totalMBank.toLocaleString()} сом
+                    {totals.totalMBank.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b">
-                    {totals.totalMBusiness.toLocaleString()} сом
+                    {totals.totalMBusiness.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b">
-                    {totals.totalDemir.toLocaleString()} сом
+                    {totals.totalDemir.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b">
-                    {totals.totalBakai.toLocaleString()} сом
+                    {totals.totalBakai.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b">
-                    {totals.totalOBank.toLocaleString()} сом
+                    {totals.totalOBank.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b">
-                    {totals.totalCollection.toLocaleString()} сом
+                    {totals.totalCollection.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b text-purple-600">
-                    {totals.totalSalaryPayments.toLocaleString()} сом
+                    {totals.totalSalaryPayments.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 border-b"></td>
                 </tr>
@@ -374,8 +376,8 @@ export default function ReportPage() {
             {reports.length === 0 && (
               <div className="text-center py-12 text-gray-500">
                 <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg">Нет данных за выбранный период</p>
-                <p className="text-sm">Попробуйте изменить период или проверьте наличие отчетов</p>
+                <p className="text-lg">{t('report.no_data')}</p>
+                <p className="text-sm">{t('report.no_data_hint')}</p>
               </div>
             )}
           </div>

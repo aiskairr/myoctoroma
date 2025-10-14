@@ -3,8 +3,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { CalendarComponent } from './calendar';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const ListCalendar = () => {
+    const { t } = useLocale();
     const today = new Date();
     const [selectedFullDate, setSelectedFullDate] = useState<Date>(today);
     const [currentMonth, setCurrentMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -16,14 +18,24 @@ const ListCalendar = () => {
     }, [selectedFullDate]);
 
     const getDayOfWeek = (date: Date) => {
-        const days = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+        const days = [
+            t('calendar.day_sun'),
+            t('calendar.day_mon'),
+            t('calendar.day_tue'),
+            t('calendar.day_wed'),
+            t('calendar.day_thu'),
+            t('calendar.day_fri'),
+            t('calendar.day_sat')
+        ];
         return days[date.getDay()];
     };
 
     const getMonthName = (date: Date) => {
         const months = [
-            'январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
-            'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'
+            t('calendar.month_jan'), t('calendar.month_feb'), t('calendar.month_mar'),
+            t('calendar.month_apr'), t('calendar.month_may'), t('calendar.month_jun'),
+            t('calendar.month_jul'), t('calendar.month_aug'), t('calendar.month_sep'),
+            t('calendar.month_oct'), t('calendar.month_nov'), t('calendar.month_dec')
         ];
         return months[date.getMonth()];
     };

@@ -3,6 +3,7 @@ import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "./contexts/SimpleAuthContext";
 import { BranchProvider } from "./contexts/BranchContext";
+import { LocaleProvider } from "./contexts/LocaleContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useIsMaster } from "@/hooks/use-master-role";
 import { useIsAdmin } from "@/hooks/use-admin-role";
@@ -10,6 +11,7 @@ import SimpleLogin from "@/pages/SimpleLogin";
 import { SimpleProtectedRoute } from "@/components/SimpleProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
 import Clients from "@/pages/Clients";
+import Chats from "@/pages/Chats";
 import Settings from "@/pages/Settings";
 import CRMTasks from "./pages/CRMTasks";
 import DailyCalendar from "./pages/DailyCalendar";
@@ -70,8 +72,9 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <AuthProvider>
-      <div className="min-h-screen">
+    <LocaleProvider>
+      <AuthProvider>
+        <div className="min-h-screen">
         <Switch>
           {/* Публичные маршруты */}
           <Route path="/login" component={SimpleLogin} />
@@ -113,6 +116,12 @@ function App() {
           <Route path="/clients">
             <ProtectedLayout>
               <Clients />
+            </ProtectedLayout>
+          </Route>
+
+          <Route path="/chats">
+            <ProtectedLayout>
+              <Chats />
             </ProtectedLayout>
           </Route>
 
@@ -211,8 +220,9 @@ function App() {
           </Route>
         </Switch>
       </div>
-      <Toaster />
-    </AuthProvider>
+        <Toaster />
+      </AuthProvider>
+    </LocaleProvider>
   );
 }
 

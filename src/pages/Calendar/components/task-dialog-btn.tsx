@@ -21,6 +21,7 @@ import { PaymentMethodIcon } from "@/components/BankIcons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocale } from "@/contexts/LocaleContext";
 
 // Интерфейс для способов оплаты
 interface PaymentMethod {
@@ -77,6 +78,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     // Hooks
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const { t } = useLocale();
 
     // Fetch task data from API
     const { data: taskData, isLoading: taskLoading, error: taskError } = useTask(taskId);
@@ -108,34 +110,34 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     // Доступные способы оплаты
     const paymentMethods: PaymentMethod[] = [
         {
-            value: "Наличные",
-            label: "Наличные",
+            value: "cash",
+            label: t('calendar.payment_cash'),
             icon: "💰",
-            description: "Оплата наличными деньгами"
+            description: t('calendar.payment_cash_desc')
         },
         {
-            value: "МБанк - Перевод",
-            label: "МБанк - Перевод",
+            value: "mbank_transfer",
+            label: t('calendar.payment_mbank_transfer'),
             icon: "🏦",
-            description: "Банковский перевод через МБанк"
+            description: t('calendar.payment_mbank_transfer_desc')
         },
         {
-            value: "МБанк - POS",
-            label: "МБанк - POS",
+            value: "mbank_pos",
+            label: t('calendar.payment_mbank_pos'),
             icon: "💳",
-            description: "POS терминал МБанк"
+            description: t('calendar.payment_mbank_pos_desc')
         },
         {
-            value: "МБизнес - Перевод",
-            label: "МБизнес - Перевод",
+            value: "mbusiness_transfer",
+            label: t('calendar.payment_mbusiness_transfer'),
             icon: "🏢",
-            description: "Банковский перевод через МБизнес"
+            description: t('calendar.payment_mbusiness_transfer_desc')
         },
         {
-            value: "МБизнес - POS",
-            label: "МБизнес - POS",
+            value: "mbusiness_pos",
+            label: t('calendar.payment_mbusiness_pos'),
             icon: "💳",
-            description: "POS терминал МБизнес"
+            description: t('calendar.payment_mbusiness_pos_desc')
         },
         {
             value: "О!Банк - Перевод",
@@ -570,7 +572,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                             return {
                                 id: task.id,
                                 serviceId: task.serviceServiceId || 0,
-                                serviceName: task.serviceType || 'Дополнительная услуга',
+                                serviceName: task.serviceType || t('calendar.additional_service_default'),
                                 duration: task.serviceDuration || task.duration || 0,
                                 price: price
                             };
@@ -765,7 +767,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         
         // Валидация обязательных полей для новой задачи
         if (!data.clientName.trim()) {
-            alert('Пожалуйста, введите имя клиента');
+            alert(t('calendar.please_enter_client_name'));
             return;
         }
         
@@ -902,7 +904,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             const paymentData = {
                 master: masterName,
                 client: clientName,
-                serviceType: taskData?.serviceType || 'Услуга',
+                serviceType: taskData?.serviceType || t('calendar.service_label'),
                 phoneNumber: taskData?.client?.phoneNumber || '',
                 amount: calculateTotalPrice() - Math.round(calculateTotalPrice() * ((taskData?.discount || 0) / 100)),
                 discount: taskData?.discount || 0,
@@ -962,7 +964,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             const updatePayload: any = {
                 clientName: paymentClientName,
                 phoneNumber: taskData?.client?.phoneNumber || '',
-                serviceType: taskData?.serviceType || 'Услуга',
+                serviceType: taskData?.serviceType || t('calendar.service_label'),
                 masterName: masterName, // Используем то же имя мастера, что и в payment
                 masterId: taskData?.masterId || null,
                 notes: taskData?.notes || '',
@@ -1003,7 +1005,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         onSuccess: () => {
             toast({
                 title: "Оплата зафиксирована",
-                description: `Платеж через ${selectedPaymentMethod} успешно записан`,
+                description: t('calendar.payment_success', { method: selectedPaymentMethod }),
                 variant: "default",
             });
 
@@ -1058,7 +1060,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     <div className="flex items-center gap-2">
                         <span className="w-3 h-3 bg-red-500 rounded-full"></span>
                         <DialogTitle className="text-sm font-medium text-gray-600">
-                            НЕ ОПЛАЧЕНО
+                            {t('calendar.not_paid')}
                         </DialogTitle>
                     </div>
                 </DialogHeader>
@@ -1099,7 +1101,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                     name="clientName"
                                     control={control}
                                     rules={{
-                                        required: "Имя клиента обязательно",
+                                        required: t('calendar.client_name_required_validation'),
                                         minLength: {
                                             value: 2,
                                             message: "Имя должно содержать минимум 2 символа"
@@ -1150,7 +1152,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                             </div>
 
                             <div>
-                                <Label className="text-sm text-gray-600">Примечания</Label>
+                                <Label className="text-sm text-gray-600">{t('calendar.notes')}</Label>
                                 <Controller
                                     name="notes"
                                     control={control}
@@ -1164,11 +1166,11 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                             </div>
 
                             <div>
-                                <Label className="text-sm text-gray-600 mb-3 block">Статус</Label>
+                                <Label className="text-sm text-gray-600 mb-3 block">{t('calendar.status_label')}</Label>
                                 <Controller
                                     name="status"
                                     control={control}
-                                    rules={{ required: "Выберите статус" }}
+                                    rules={{ required: t('calendar.select_status_required') }}
                                     render={({ field }) => (
                                         <div className="grid grid-cols-2 gap-2">
                                             <Button
@@ -1182,7 +1184,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                                 onClick={() => field.onChange('scheduled')}
                                             >
                                                 <Clock className="h-4 w-4 mb-1" />
-                                                <span>Записан</span>
+                                                <span>{t('calendar.status_scheduled')}</span>
                                             </Button>
                                             
                                             <Button
@@ -1196,7 +1198,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                                 onClick={() => field.onChange('in_progress')}
                                             >
                                                 <Scissors className="h-4 w-4 mb-1" />
-                                                <span>В процессе</span>
+                                                <span>{t('calendar.status_in_progress')}</span>
                                             </Button>
                                             
                                             <Button
@@ -1210,7 +1212,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                                 onClick={() => field.onChange('completed')}
                                             >
                                                 <CheckCircle className="h-4 w-4 mb-1" />
-                                                <span>Завершен</span>
+                                                <span>{t('calendar.status_completed')}</span>
                                             </Button>
                                             
                                             <Button
@@ -1224,7 +1226,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                                 onClick={() => field.onChange('cancelled')}
                                             >
                                                 <X className="h-4 w-4 mb-1" />
-                                                <span>Отменен</span>
+                                                <span>{t('calendar.status_cancelled')}</span>
                                             </Button>
                                         </div>
                                     )}
@@ -1245,7 +1247,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                     name="time"
                                     control={control}
                                     rules={{
-                                        required: "Время обязательно"
+                                        required: t('calendar.time_required')
                                     }}
                                     render={({ field }) => (
                                         <Select
@@ -1255,7 +1257,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                             <SelectTrigger className={`mt-1 ${errors.time ? 'border-red-500' : ''}`}>
                                                 <div className="flex items-center gap-2">
                                                     <Clock className="w-4 h-4 text-gray-400" />
-                                                    <SelectValue placeholder="Выберите время" />
+                                                    <SelectValue placeholder={t('calendar.select_time')} />
                                                 </div>
                                             </SelectTrigger>
                                             <SelectContent className="max-h-60">
@@ -1357,7 +1359,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                                             <div className="flex-1">
                                                                 <Input
                                                                     type="number"
-                                                                    placeholder="Минуты"
+                                                                    placeholder={t('calendar.minutes_placeholder')}
                                                                     value={isCurrentValueCustom ? field.value.match(/(\d+)\s*мин/)?.[1] || '' : customDuration}
                                                                     onChange={(e) => {
                                                                         const minutes = e.target.value;
@@ -1378,7 +1380,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                                             <div className="flex-1">
                                                                 <Input
                                                                     type="number"
-                                                                    placeholder="Цена"
+                                                                    placeholder={t('calendar.price_placeholder')}
                                                                     value={isCurrentValueCustom ? field.value.match(/(\d+)\s*сом/)?.[1] || '' : customPrice}
                                                                     onChange={(e) => {
                                                                         const price = e.target.value;
@@ -1642,7 +1644,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                 {additionalServices.map((additionalService) => (
                                     <div key={additionalService.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
                                         <div className="flex-1">
-                                            <span className="text-sm font-medium">{additionalService.serviceName || 'Дополнительная услуга'}</span>
+                                            <span className="text-sm font-medium">{additionalService.serviceName || t('calendar.additional_service_default')}</span>
                                             <div className="text-xs text-gray-500">
                                                 {parseFloat(String(additionalService.duration)) || 0} мин • {parseFloat(String(additionalService.price)) || 0} сом
                                             </div>
@@ -1677,7 +1679,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                     }
                                 >
                                     <SelectTrigger className="text-xs">
-                                        <SelectValue placeholder="Выберите услугу" />
+                                        <SelectValue placeholder={t('calendar.select_service_placeholder')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {services?.map((service) => (
@@ -1691,7 +1693,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                             <div>
                                 <Input
                                     type="number"
-                                    placeholder="Мин"
+                                    placeholder={t('calendar.duration_placeholder')}
                                     value={newAdditionalService.duration}
                                     onChange={(e) =>
                                         setNewAdditionalService({
@@ -1725,7 +1727,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                     <div className="space-y-1">
                                         {additionalServices.map((service) => (
                                             <div key={service.id} className="flex justify-between text-xs text-gray-600 pl-2">
-                                                <span>• {service.serviceName || 'Дополнительная услуга'}</span>
+                                                <span>• {service.serviceName || t('calendar.additional_service_default')}</span>
                                                 <span>{parseFloat(String(service.duration)) || 0} мин</span>
                                             </div>
                                         ))}
@@ -1735,7 +1737,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                 {/* Итоговые суммы */}
                                 <div className="text-sm text-gray-600 space-y-1 border-t pt-2">
                                     <div className="flex justify-between">
-                                        <span>Основная услуга:</span>
+                                        <span>{t('calendar.main_service_label')}</span>
                                         <span>{parseInt(watch('cost')) || 0} сом</span>
                                     </div>
                                     <div className="flex justify-between">
@@ -1743,7 +1745,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                         <span>{additionalServices.reduce((sum, service) => sum + (parseFloat(String(service.price)) || 0), 0)} сом</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span>Общее время:</span>
+                                        <span>{t('calendar.total_time_label_short')}</span>
                                         <span>{(parseInt(watch('duration')) || 0) + additionalServices.reduce((sum, service) => sum + (parseFloat(String(service.duration)) || 0), 0)} мин</span>
                                     </div>
                                     <div className="flex justify-between font-medium border-t pt-1">
@@ -1787,7 +1789,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                     Создание...
                                 </>
                             ) : (
-                                taskId ? 'Сохранить' : 'Создать задачу'
+                                taskId ? t('calendar.save') : t('calendar.create_task')
                             )}
                         </Button>
                     </div>
@@ -1803,7 +1805,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <CreditCard className="h-5 w-5 text-amber-600" />
-                            Оплата услуг
+                            {t('calendar.payment_services_title')}
                         </DialogTitle>
                     </DialogHeader>
 
@@ -1841,7 +1843,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
                             <div className="space-y-2">
                                 <div className="flex justify-between">
-                                    <span className="text-sm">Услуга:</span>
+                                    <span className="text-sm">{t('calendar.service_title')}</span>
                                     <span className="text-sm font-medium">{taskData.serviceType}</span>
                                 </div>
 
@@ -1886,7 +1888,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                         <Label className="text-sm font-semibold mb-2 block">Администратор</Label>
                         <Select value={selectedAdministrator} onValueChange={setSelectedAdministrator}>
                             <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Выберите администратора" />
+                                <SelectValue placeholder={t('calendar.select_administrator')} />
                             </SelectTrigger>
                             <SelectContent>
                                 {administrators.map((admin: { id: number; name: string }) => (

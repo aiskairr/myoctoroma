@@ -33,7 +33,6 @@ export const LocaleToggle: React.FC = () => {
           className="h-8 px-2 gap-1 text-sm font-medium"
         >
           <span className="text-base">{localeFlags[locale]}</span>
-          <span className="hidden sm:block">{localeNames[locale]}</span>
           <ChevronDown className="h-3 w-3" />
         </Button>
       </DropdownMenuTrigger>

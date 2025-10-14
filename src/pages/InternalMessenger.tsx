@@ -115,22 +115,54 @@ const InternalMessengerComponent: React.FC<InternalMessengerProps> = ({
 
   const loadOrganizationInfo = async () => {
     try {
-      // Попробуем получить информацию об организации
-      const response = await fetch(createApiUrl(`/api/organizations/${organisationId}`), {
+      console.log('Загружаем информацию для organizationId:', organisationId, 'branchId:', branchId);
+      
+      // Сначала пытаемся получить информацию о филиале, если branchId передан
+      if (branchId) {
+        console.log('Пытаемся загрузить информацию о филиале:', branchId);
+        const branchResponse = await fetch(createApiUrl(`/api/branches/${branchId}`), {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+          }
+        });
+        
+        if (branchResponse.ok) {
+          const branchData = await branchResponse.json();
+          console.log('Данные филиала:', branchData);
+          if (branchData.success && branchData.branch?.name) {
+            // Используем название филиала, если оно есть
+            console.log('Используем название филиала:', branchData.branch.name);
+            setOrganizationName(branchData.branch.name);
+            return;
+          }
+        } else {
+          console.log('Ошибка загрузки филиала, status:', branchResponse.status);
+        }
+      }
+
+      // Если branchId не передан или не удалось получить филиал, 
+      // загружаем информацию об организации
+      console.log('Загружаем информацию об организации:', organisationId);
+      const orgResponse = await fetch(createApiUrl(`/api/organizations/${organisationId}`), {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
         }
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.organization?.name) {
-          setOrganizationName(data.organization.name);
+      if (orgResponse.ok) {
+        const orgData = await orgResponse.json();
+        console.log('Данные организации:', orgData);
+        if (orgData.success && orgData.organization?.name) {
+          console.log('Используем название организации:', orgData.organization.name);
+          setOrganizationName(orgData.organization.name);
         }
+      } else {
+        console.log('Ошибка загрузки организации, status:', orgResponse.status);
       }
     } catch (error) {
-      console.error('Ошибка загрузки информации об организации:', error);
+      console.error('Ошибка загрузки информации об организации/филиале:', error);
       // Оставляем название по умолчанию ElitAroma
     }
   };

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../contexts/SimpleAuthContext";
+import { useLocale } from '@/contexts/LocaleContext';
 import {
   LayoutDashboard,
   Users,
@@ -15,9 +16,11 @@ import {
   UserRound,
   Calculator,
   DollarSign,
-  Gift
+  Gift,
+  MessageCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LocaleToggle } from '@/components/ui/locale-toggle';
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { BranchSelectorDialog, BranchIndicator } from "./BranchSelector";
@@ -28,42 +31,44 @@ export function MobileNavbar() {
   const [location] = useLocation();
   const { logout } = useAuth();
   const { toast } = useToast();
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
     toast({
-      title: "Выход из системы",
-      description: "Вы успешно вышли из системы.",
+      title: t('sidebar.logout_success'),
+      description: t('sidebar.logout_success_desc'),
       variant: "default",
     });
     setOpen(false);
   };
 
   const navItems = [
-    { path: "/", label: "Дашборд", icon: <LayoutDashboard className="h-5 w-5" /> },
-    { path: "/clients", label: "Клиенты", icon: <Users className="h-5 w-5" /> },
+    { path: "/", label: t('sidebar.dashboard'), icon: <LayoutDashboard className="h-5 w-5" /> },
+    { path: "/clients", label: t('sidebar.clients'), icon: <Users className="h-5 w-5" /> },
+    { path: "/chats", label: t('sidebar.chats'), icon: <MessageCircle className="h-5 w-5" /> },
     {
-      label: "CRM",
+      label: t('sidebar.crm'),
       icon: <FileClock className="h-5 w-5" />,
       children: [
-        { path: "/crm/tasks", label: "Задачи", icon: <Clock className="h-5 w-5" /> },
-        { path: "/crm/calendar", label: "Календарь", icon: <CalendarDays className="h-5 w-5" /> },
-        { path: "/crm/masters", label: "Мастера", icon: <UserRound className="h-5 w-5" /> }
+        { path: "/crm/tasks", label: t('sidebar.tasks'), icon: <Clock className="h-5 w-5" /> },
+        { path: "/crm/calendar", label: t('sidebar.calendar'), icon: <CalendarDays className="h-5 w-5" /> },
+        { path: "/crm/masters", label: t('sidebar.masters'), icon: <UserRound className="h-5 w-5" /> }
       ]
     },
-    { path: "/accounting", label: "Бухгалтерия", icon: <Calculator className="h-5 w-5" /> },
-    { path: "/salary", label: "Зарплаты", icon: <DollarSign className="h-5 w-5" /> },
-    { path: "/gift-certificates", label: "Сертификаты", icon: <Gift className="h-5 w-5" /> },
-    { path: "/settings", label: "Настройки", icon: <SettingsIcon className="h-5 w-5" /> },
+    { path: "/accounting", label: t('sidebar.accounting'), icon: <Calculator className="h-5 w-5" /> },
+    { path: "/salary", label: t('sidebar.salary'), icon: <DollarSign className="h-5 w-5" /> },
+    { path: "/gift-certificates", label: t('sidebar.certificates'), icon: <Gift className="h-5 w-5" /> },
+    { path: "/settings", label: t('sidebar.settings'), icon: <SettingsIcon className="h-5 w-5" /> },
   ];
 
   return (
     <div className="bg-background border-b shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-50">
-      <div className="flex items-center">
-
+      <div className="flex items-center gap-2">
         <img width={20} height={10} src={LOGO} alt="logo" />
         <h1 className="font-medium text-lg">Octō CRM</h1>
+        <LocaleToggle />
       </div>
 
       <div className="flex items-center gap-2">
@@ -150,7 +155,7 @@ export function MobileNavbar() {
                   onClick={handleLogout}
                 >
                   <LogOut className="h-5 w-5" />
-                  <span className="ml-3">Выйти</span>
+                  <span className="ml-3">{t('sidebar.logout')}</span>
                 </Button>
               </div>
             </div>

@@ -6,6 +6,7 @@ import { Calendar, User, DollarSign, Calculator, Trash2, Edit, Check, X } from '
 import { useToast } from '@/hooks/use-toast';
 import { useBranch } from '@/contexts/BranchContext';
 import { getBranchIdWithFallback } from '@/utils/branch-utils';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface SalaryRecord {
   id?: number;
@@ -55,6 +56,7 @@ interface AccountingData {
 
 export default function SalaryPage() {
   const { currentBranch, branches } = useBranch();
+  const { t } = useLocale();
   const [salaryRecords, setSalaryRecords] = useState<SalaryRecord[]>([]);
   const [salaryPayments, setSalaryPayments] = useState<SalaryPayment[]>([]);
   const [accountingData, setAccountingData] = useState<AccountingData[]>([]);
@@ -112,8 +114,8 @@ export default function SalaryPage() {
     } catch (error) {
       console.error('Ошибка загрузки данных зарплат:', error);
       toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить данные зарплат",
+        title: t('salary.error'),
+        description: t('salary.failed_to_load'),
         variant: "destructive",
       });
     } finally {
@@ -278,7 +280,7 @@ export default function SalaryPage() {
       const employee = salaryRecords.find(record => record.id === employeeId);
       if (!employee) {
         toast({
-          title: "Ошибка",
+          title: t('salary.error'),
           description: "Данные сотрудника не найдены",
           variant: "destructive",
         });
@@ -405,8 +407,8 @@ export default function SalaryPage() {
 
       if (response.ok) {
         toast({
-          title: "Успех",
-          description: "Данные обновлены",
+          title: t('salary.success'),
+          description: t('salary.data_updated'),
         });
         fetchSalaryData();
       }
@@ -458,8 +460,8 @@ export default function SalaryPage() {
     if (!data) {
       console.log('Нет данных для сохранения');
       toast({
-        title: "Ошибка",
-        description: "Нет данных для сохранения",
+        title: t('salary.error'),
+        description: t('salary.no_data_to_save'),
         variant: "destructive",
       });
       return;
@@ -489,8 +491,8 @@ export default function SalaryPage() {
         const responseData = await response.json();
         console.log('Успешный ответ:', responseData);
         toast({
-          title: "Успех",
-          description: "Данные сотрудника обновлены",
+          title: t('salary.success'),
+          description: t('salary.employee_updated'),
         });
         cancelEditing(id);
         fetchSalaryData();
@@ -528,7 +530,7 @@ export default function SalaryPage() {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Загрузка...</div>
+          <div className="text-lg">{t('salary.loading')}</div>
         </div>
       </div>
     );
@@ -541,13 +543,13 @@ export default function SalaryPage() {
         <CardHeader className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-t-xl">
           <CardTitle className="flex items-center gap-3 text-2xl">
             <DollarSign className="h-8 w-8" />
-            Управление зарплатами
+            {t('salary.page_title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <div className="flex items-center gap-4 flex-wrap">
             <Calendar className="h-5 w-5 text-gray-600" />
-            <label className="text-sm font-medium">Период:</label>
+            <label className="text-sm font-medium">{t('salary.period')}:</label>
             <div className="flex items-center gap-2">
               <label className="text-sm">С:</label>
               <input
@@ -585,14 +587,14 @@ export default function SalaryPage() {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="border border-gray-200 p-3 text-left font-semibold rounded-tl-lg">Сотрудник</th>
-                  <th className="border border-gray-200 p-3 text-left font-semibold">Роль</th>
-                  <th className="border border-gray-200 p-3 text-left font-semibold">Базовая ЗП</th>
-                  <th className="border border-gray-200 p-3 text-left font-semibold">Комиссия</th>
-                  <th className="border border-gray-200 p-3 text-left font-semibold">Расчетная ЗП</th>
-                  <th className="border border-gray-200 p-3 text-left font-semibold">Выплачено</th>
-                  <th className="border border-gray-200 p-3 text-left font-semibold">Остаток</th>
-                  <th className="border border-gray-200 p-3 text-left font-semibold rounded-tr-lg">Действия</th>
+                                    <th className="border border-gray-200 p-3 text-left font-semibold rounded-tl-lg">{t('salary.employee')}</th>
+                  <th className="border border-gray-200 p-3 text-left font-semibold">{t('salary.role')}</th>
+                  <th className="border border-gray-200 p-3 text-left font-semibold">{t('salary.base_salary')}</th>
+                  <th className="border border-gray-200 p-3 text-left font-semibold">{t('salary.commission_rate')}</th>
+                  <th className="border border-gray-200 p-3 text-left font-semibold">{t('salary.services_completed')}</th>
+                  <th className="border border-gray-200 p-3 text-left font-semibold">{t('salary.commission')}</th>
+                  <th className="border border-gray-200 p-3 text-left font-semibold">{t('salary.total_salary')}</th>
+                  <th className="border border-gray-200 p-3 text-left font-semibold">{t('salary.paid_amount')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -632,8 +634,8 @@ export default function SalaryPage() {
                               <SelectValue placeholder="Выберите роль" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="администратор">Администратор</SelectItem>
-                              <SelectItem value="мастер">Мастер</SelectItem>
+                              <SelectItem value="администратор">{t('salary.administrator')}</SelectItem>
+                              <SelectItem value="мастер">{t('salary.master')}</SelectItem>
                             </SelectContent>
                           </Select>
                         ) : (
@@ -699,7 +701,7 @@ export default function SalaryPage() {
                           )}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          Всего выплачено: {Math.round(totalPaid).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} сом
+                          {t('salary.total_paid_amount')}: {Math.round(totalPaid).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} {t('salary.som')}
                         </div>
                       </td>
                       <td className="border border-gray-200 p-3">
@@ -756,7 +758,7 @@ export default function SalaryPage() {
 
           {salaryRecords.length === 0 && (
             <div className="text-center py-8 text-gray-500">
-              Нет данных о сотрудниках
+              {t('salary.no_employees')}
             </div>
           )}
         </CardContent>
@@ -769,17 +771,17 @@ export default function SalaryPage() {
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-blue-50 p-4 rounded-lg text-center">
-              <h3 className="text-lg font-semibold text-blue-800">Общая сумма ЗП</h3>
+              <h3 className="text-lg font-semibold text-blue-800">{t('salary.total_salary_sum')}</h3>
               <p className="text-2xl font-bold text-blue-600">
                 {(() => {
                   const total = salaryRecords.reduce((sum, record) => sum + calculateSalary(record), 0);
                   console.log('Общая сумма ЗП:', total);
                   return Math.round(total).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-                })()} сом
+                })()} {t('salary.som')}
               </p>
             </div>
             <div className="bg-green-50 p-4 rounded-lg text-center">
-              <h3 className="text-lg font-semibold text-green-800">Выплачено</h3>
+              <h3 className="text-lg font-semibold text-green-800">{t('salary.total_paid')}</h3>
               <p className="text-2xl font-bold text-green-600">
                 {(() => {
                   // Фильтруем только тех сотрудников, которые работали в выбранном периоде
@@ -806,7 +808,7 @@ export default function SalaryPage() {
               </p>
             </div>
             <div className="bg-red-50 p-4 rounded-lg text-center">
-              <h3 className="text-lg font-semibold text-red-800">К доплате</h3>
+              <h3 className="text-lg font-semibold text-red-800">{t('salary.total_remaining')}</h3>
               <p className="text-2xl font-bold text-red-600">
                 {(() => {
                   const relevantEmployees = salaryRecords.filter(record => {

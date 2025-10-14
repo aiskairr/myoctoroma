@@ -11,10 +11,12 @@ import {
     DrawerHeader,
     DrawerTrigger,
 } from "@/components/ui/drawer"
+import { useLocale } from "@/contexts/LocaleContext"
 
 export function CalendarComponent() {
     const [open, setOpen] = React.useState(false)
     const [date, setDate] = React.useState<Date | undefined>(undefined)
+    const { t } = useLocale()
 
     const formatDateRussian = (date: Date) => {
         return date.toLocaleDateString('ru-RU', {
@@ -33,7 +35,7 @@ export function CalendarComponent() {
                         id="date"
                         className="w-48 justify-between font-normal"
                     >
-                        {date ? formatDateRussian(date) : "Выберите дату"}
+                        {date ? formatDateRussian(date) : t('calendar.select_date')}
                         <CalendarPlusIcon />
                     </Button>
                 </DrawerTrigger>

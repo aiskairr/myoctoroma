@@ -38,6 +38,7 @@ import {
   RadialBarChart, RadialBar
 } from 'recharts';
 import { useBranch } from "@/contexts/BranchContext";
+import { useLocale } from "@/contexts/LocaleContext";
 import { useIsMaster } from "@/hooks/use-master-role";
 import { BookingLinksStats } from "@/components/BookingLinksStats";
 
@@ -57,6 +58,7 @@ interface MasterStats {
 type ChartType = 'pie' | 'bar' | 'line' | 'area' | 'radar' | 'radialBar';
 
 export default function Dashboard() {
+  const { t } = useLocale();
   const { currentBranch } = useBranch();
   const { isMaster, isLoading: masterRoleLoading } = useIsMaster();
 
@@ -671,10 +673,10 @@ export default function Dashboard() {
               <div>
                 <CardTitle className="flex items-center gap-3 text-2xl">
                   <Activity className="h-8 w-8" />
-                  Панель управления
+                  {t('dashboard.title')}
                 </CardTitle>
                 <p className="text-blue-100 mt-1">
-                  Обзор активности и аналитики системы
+                  {t('dashboard.overview_title')}
                 </p>
               </div>
               <div className="flex items-center space-x-2">
@@ -686,11 +688,6 @@ export default function Dashboard() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-6">
-            <div className="text-sm text-gray-600">
-              Текущий филиал: {currentBranch?.name || 'Не выбран'}
-            </div>
-          </CardContent>
         </Card>
 
         {/* Stats Cards */}
@@ -702,7 +699,7 @@ export default function Dashboard() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Доходы за день</p>
+                  <p className="text-sm font-medium text-gray-600">{t('dashboard.daily_income')}</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{(dailyCashData?.dailyIncome || 0).toLocaleString()}</p>
                 </div>
                 <div className="p-2 bg-blue-50 rounded-lg">
@@ -716,7 +713,7 @@ export default function Dashboard() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Расходы за день</p>
+                  <p className="text-sm font-medium text-gray-600">{t('dashboard.daily_expenses')}</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{(dailyCashData?.dailyExpenses || 0).toLocaleString()}</p>
                 </div>
                 <div className="p-2 bg-red-50 rounded-lg">
@@ -730,7 +727,7 @@ export default function Dashboard() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Записей за день</p>
+                  <p className="text-sm font-medium text-gray-600">{t('dashboard.daily_records')}</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{dailyAccountingStats.recordsCount}</p>
                 </div>
                 <div className="p-2 bg-green-50 rounded-lg">
@@ -744,7 +741,7 @@ export default function Dashboard() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Прибыль за день</p>
+                  <p className="text-sm font-medium text-gray-600">{t('dashboard.daily_profit')}</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{(dailyCashData?.netProfit || 0).toLocaleString()}</p>
                 </div>
                 <div className="p-2 bg-purple-50 rounded-lg">
@@ -764,17 +761,17 @@ export default function Dashboard() {
                 <div>
                   <CardTitle className="flex items-center text-gray-900">
                     <PieChartIcon className="h-5 w-5 mr-2 text-blue-600" />
-                    Типы услуг (текущий месяц)
+                    {t('dashboard.service_types_month')}
                   </CardTitle>
-                  <p className="text-sm text-gray-500">Распределение по выручке</p>
+                  <p className="text-sm text-gray-500">{t('dashboard.revenue_distribution')}</p>
                 </div>
                 <Select value={servicesChartType} onValueChange={(value) => setServicesChartType(value as ChartType)}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Тип графика" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pie">🥧 Круговая</SelectItem>
-                    <SelectItem value="bar">📊 Столбчатая</SelectItem>
+                    <SelectItem value="pie">{t('dashboard.pie_chart')}</SelectItem>
+                    <SelectItem value="bar">{t('dashboard.bar_chart')}</SelectItem>
                     <SelectItem value="line">📈 Линейная</SelectItem>
                     <SelectItem value="area">📉 Площадная</SelectItem>
                     <SelectItem value="radialBar">⭕ Радиальная</SelectItem>
@@ -795,19 +792,19 @@ export default function Dashboard() {
               <div>
                 <CardTitle className="flex items-center text-gray-900">
                   <BarChartIcon className="h-5 w-5 mr-2 text-green-600" />
-                  Загруженность мастеров (текущий месяц)
+                  {t('dashboard.masters_workload_month')}
                 </CardTitle>
-                <p className="text-sm text-gray-500">Количество записей по мастерам</p>
+                <p className="text-sm text-gray-500">{t('dashboard.appointments_by_masters')}</p>
               </div>
               <Select value={mastersChartType} onValueChange={(value) => setMastersChartType(value as ChartType)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Тип графика" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bar">📊 Столбчатая</SelectItem>
+                  <SelectItem value="bar">{t('dashboard.bar_chart')}</SelectItem>
                   <SelectItem value="line">📈 Линейная</SelectItem>
                   <SelectItem value="area">📉 Площадная</SelectItem>
-                  <SelectItem value="pie">🥧 Круговая</SelectItem>
+                  <SelectItem value="pie">{t('dashboard.pie_chart')}</SelectItem>
                   <SelectItem value="radar">🎯 Радарная</SelectItem>
                   <SelectItem value="radialBar">⭕ Радиальная</SelectItem>
                 </SelectContent>
@@ -827,9 +824,9 @@ export default function Dashboard() {
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center text-gray-900">
               <Users className="h-5 w-5 mr-2 text-gray-600" />
-              Последние действия
+              {t('dashboard.recent_actions')}
             </CardTitle>
-            <p className="text-sm text-gray-500">Активность пользователей в реальном времени</p>
+            <p className="text-sm text-gray-500">{t('dashboard.user_activity_realtime')}</p>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="overflow-x-auto">
@@ -849,10 +846,10 @@ export default function Dashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-gray-200 hover:bg-transparent">
-                      <TableHead className="text-gray-500 font-medium">Время</TableHead>
-                      <TableHead className="text-gray-500 font-medium">Пользователь</TableHead>
-                      <TableHead className="text-gray-500 font-medium">Событие</TableHead>
-                      <TableHead className="text-gray-500 font-medium">Статус</TableHead>
+                      <TableHead className="text-gray-500 font-medium">{t('dashboard.time')}</TableHead>
+                      <TableHead className="text-gray-500 font-medium">{t('dashboard.user')}</TableHead>
+                      <TableHead className="text-gray-500 font-medium">{t('dashboard.event')}</TableHead>
+                      <TableHead className="text-gray-500 font-medium">{t('dashboard.status')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

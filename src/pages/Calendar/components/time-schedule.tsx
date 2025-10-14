@@ -13,6 +13,7 @@ import { useCreateTask, generateTaskId } from '@/hooks/use-task';
 import { useBranch } from '@/contexts/BranchContext';
 import { useAuth } from '@/contexts/SimpleAuthContext';
 import { useMasterWorkingDates } from '@/hooks/use-master-working-dates';
+import { useLocale } from '@/contexts/LocaleContext';
 import type { Master } from '@/hooks/use-masters';
 
 // Types
@@ -145,6 +146,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     // Context
     const { currentBranch } = useBranch();
     const { user } = useAuth();
+    const { t } = useLocale();
 
     // Fetch real data from API
     const { data: mastersData = [], isLoading: mastersLoading, error: mastersError } = useMasters();
@@ -190,7 +192,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || 'Не удалось добавить мастера на рабочий день');
+                throw new Error(errorData.message || t('calendar.failed_to_add_master'));
             }
             
             return response.json();
@@ -1029,12 +1031,12 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     const handleAddAppointment = useCallback(() => {
         // Валидация обязательных полей
         if (!newAppointment.clientName.trim()) {
-            alert('Пожалуйста, введите имя клиента');
+            alert(t('calendar.please_enter_client_name'));
             return;
         }
 
         if (!newAppointment.phone.trim()) {
-            alert('Пожалуйста, введите номер телефона');
+            alert(t('calendar.please_enter_phone'));
             return;
         }
 
@@ -1058,7 +1060,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             const duration = service?.duration || newAppointment.duration;
 
             if (!doesAppointmentFitWorkingHours(selectedEmployeeId, selectedTimeSlot, duration)) {
-                alert('Запись не помещается в рабочее время сотрудника');
+                alert(t('calendar.appointment_not_fit'));
                 return;
             }
 
@@ -1466,7 +1468,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
                         <div className="flex justify-between">
                             <span className="text-gray-600">Длительность:</span>
-                            <span className="font-medium">{appointment.duration} мин</span>
+                            <span className="font-medium">{appointment.duration} {t('calendar.min')}</span>
                         </div>
 
                         {service && (
@@ -1479,7 +1481,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                         <div className="flex justify-between">
                             <span className="text-gray-600">Оплата:</span>
                             <span className={`font-medium ${appointment.paid === 'paid' ? 'text-green-600' : 'text-red-600'}`}>
-                                {appointment.paid === 'paid' ? 'Оплачено' : 'Не оплачено'}
+                                {appointment.paid === 'paid' ? t('calendar.paid') : t('calendar.not_paid_status')}
                                 {appointment.paid !== 'paid' && <Coins className="inline h-6 w-6 ml-1 text-amber-500" />}
                             </span>
                         </div>
@@ -1487,7 +1489,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                         {/* Дополнительные услуги */}
                         {appointment.childServices && appointment.childServices.length > 0 && (
                             <div className="pt-2 border-t border-gray-200">
-                                <span className="text-gray-600 text-xs font-medium">Дополнительные услуги:</span>
+                                <span className="text-gray-600 text-xs font-medium">{t('calendar.additional_services_label')}</span>
                                 <div className="mt-1 space-y-1">
                                     {appointment.childServices.map((childService, index) => (
                                         <div key={index} className="text-xs bg-amber-50 p-2 rounded">
@@ -1495,7 +1497,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                                 📎 {childService.serviceType || 'Дополнительная услуга'}
                                             </div>
                                             <div className="text-amber-600">
-                                                {childService.serviceDuration || childService.duration || 0} мин
+                                                {childService.serviceDuration || childService.duration || 0} {t('calendar.min')}
                                                 {childService.servicePrice && ` • ${childService.servicePrice} сом`}
                                             </div>
                                         </div>
@@ -1566,11 +1568,11 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                     <Calendar className="text-gray-600" size={20} />
                                     <div>
                                         <h2 className="text-xl font-semibold text-gray-900">
-                                            Расписание на {dateString}
+                                            {t('calendar.schedule_for', { date: dateString })}
                                         </h2>
                                         <p className="text-sm text-gray-500 mt-1">
                                             {employees.length > 0 
-                                                ? `Работает ${employees.length} из ${mastersData.length} мастеров`
+                                                ? t('calendar.working_masters', { working: employees.length, total: mastersData.length })
                                                 : mastersData.length > 0
                                                     ? `Ни один из ${mastersData.length} мастеров не работает`
                                                     : 'Нет мастеров'
@@ -1586,20 +1588,20 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                         <DialogTrigger asChild>
                                             <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
                                                 <Plus size={18} />
-                                                Добавить сотрудника
+                                                {t('calendar.add_employee')}
                                             </button>
                                         </DialogTrigger>
                                     <DialogContent className="sm:max-w-[500px]">
                                         <DialogHeader>
                                             <DialogTitle className="flex items-center gap-2">
                                                 <User size={20} />
-                                                Добавить мастера на день
+                                                {t('calendar.add_master_to_day')}
                                             </DialogTitle>
                                         </DialogHeader>
                                         <div className="space-y-6 py-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Выберите мастера *
+                                                    {t('calendar.select_master_required')}
                                                 </label>
                                                 <select
                                                     value={newEmployee.masterId}
@@ -1607,7 +1609,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                     disabled={allMastersLoading}
                                                 >
-                                                    <option value="">{allMastersLoading ? 'Загрузка...' : 'Выберите мастера'}</option>
+                                                    <option value="">{allMastersLoading ? t('calendar.loading') : t('calendar.select_master')}</option>
                                                     {allBranchMasters
                                                         .filter(master => master.isActive)
                                                         .filter(master => !employees.some(emp => emp.id === master.id.toString()))
@@ -1619,14 +1621,14 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                                     }
                                                 </select>
                                                 <p className="text-xs text-gray-500 mt-1">
-                                                    Дата: {currentDateStr}
+                                                    {t('calendar.date_label', { date: currentDateStr })}
                                                 </p>
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Начало смены
+                                                        {t('calendar.start_shift')}
                                                     </label>
                                                     <select
                                                         value={newEmployee.startTime}
@@ -1640,7 +1642,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                                 </div>
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Конец смены
+                                                        {t('calendar.end_shift')}
                                                     </label>
                                                     <select
                                                         value={newEmployee.endTime}
@@ -1669,7 +1671,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                                     {addMasterToWorkingDayMutation.isPending && (
                                                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                                     )}
-                                                    {addMasterToWorkingDayMutation.isPending ? 'Добавление...' : 'Добавить на день'}
+                                                    {addMasterToWorkingDayMutation.isPending ? t('calendar.adding') : t('calendar.add_to_day_button')}
                                                 </button>
                                             </div>
                                         </div>
@@ -1689,18 +1691,20 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                             <GripVertical size={16} />
                                             {dragState.targetSlot ? (
                                                 <span>
-                                                    Перемещение к {employees.find(emp => emp.id === dragState.targetSlot!.employeeId)?.name}
-                                                    на {dragState.targetSlot.timeSlot}
+                                                    {t('calendar.moving_to', { 
+                                                        masterName: employees.find(emp => emp.id === dragState.targetSlot!.employeeId)?.name,
+                                                        timeSlot: dragState.targetSlot.timeSlot
+                                                    })}
                                                 </span>
                                             ) : (
-                                                'Перетащите в нужную позицию'
+                                                t('calendar.drag_to_position')
                                             )}
                                         </>
                                     )}
                                     {resizeState.isResizing && (
                                         <>
                                             <Clock size={16} />
-                                            Изменение длительности: {resizeState.resizedAppointment?.duration || 0} мин
+                                            {t('calendar.duration_change', { duration: String(resizeState.resizedAppointment?.duration || 0) })}
                                         </>
                                     )}
                                 </div>
@@ -1774,7 +1778,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                                     )}
                                                 </div>
                                                 <div className="text-xs opacity-60">
-                                                    ({dragState.draggedAppointment?.duration} мин)
+                                                    ({dragState.draggedAppointment?.duration} {t('calendar.min')})
                                                     <br />
                                                     → {employees.find(emp => emp.id === dragState.targetSlot!.employeeId)?.name}
                                                 </div>
@@ -1843,7 +1847,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                                     <button
                                                         onClick={() => handleRemoveEmployee(employee.id)}
                                                         className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all rounded flex-shrink-0"
-                                                        title="Удалить сотрудника"
+                                                        title={t('calendar.delete_employee')}
                                                     >
                                                         <X size={16} />
                                                     </button>
@@ -1937,10 +1941,10 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                             onChange={(e) => handleServiceChange(e.target.value)}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
-                                            <option value="">Выберите услугу</option>
+                                            <option value="">{t('calendar.select_service')}</option>
                                             {services.map(service => (
                                                 <option key={service.name} value={service.name}>
-                                                    {service.name} ({service.duration} мин, {service.price} сом)
+                                                    {service.name} ({service.duration} {t('calendar.min')}, {service.price} {t('calendar.som')})
                                                 </option>
                                             ))}
                                         </select>
@@ -1948,7 +1952,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Продолжительность (минуты)
+                                            {t('calendar.duration_minutes_label')}
                                         </label>
                                         <input
                                             type="number"
@@ -1978,10 +1982,10 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                     <div className="border-t pt-4">
                                         <div className="flex items-center justify-between mb-3">
                                             <label className="block text-sm font-medium text-gray-700">
-                                                Дополнительные услуги
+                                                {t('calendar.additional_services')}
                                             </label>
                                             <div className="text-sm text-gray-600">
-                                                Общее время: {calculateTotalDuration({ duration: newAppointment.duration })} мин
+                                                {t('calendar.total_time_label', { time: String(calculateTotalDuration({ duration: newAppointment.duration })) })}
                                             </div>
                                         </div>
 
@@ -2063,7 +2067,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                     {selectedEmployeeId && (
                                         <div className="p-3 bg-gray-50 rounded-lg">
                                             <div className="text-sm font-medium text-gray-700">
-                                                Сотрудник: {employees.find(emp => emp.id === selectedEmployeeId)?.name}
+                                                {t('calendar.employee_label')} {employees.find(emp => emp.id === selectedEmployeeId)?.name}
                                             </div>
                                             <div className="text-sm text-gray-600">
                                                 Время: {selectedTimeSlot} - {minutesToTime(timeToMinutes(selectedTimeSlot) + newAppointment.duration)}
@@ -2086,7 +2090,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                             {createTaskMutation.isPending && (
                                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                             )}
-                                            {createTaskMutation.isPending ? 'Создание...' : 'Создать запись'}
+                                            {createTaskMutation.isPending ? t('calendar.creating') : t('calendar.create_appointment')}
                                         </button>
                                     </div>
                                 </div>
