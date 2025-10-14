@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from "../contexts/SimpleAuthContext";
+import { useLocale } from "../contexts/LocaleContext";
 import { 
   LogOut, 
   Bot
@@ -9,13 +10,14 @@ import { useToast } from "@/hooks/use-toast";
 
 export function MobileNavbarMaster() {
   const { logout } = useAuth();
+  const { t } = useLocale();
   const { toast } = useToast();
 
   const handleLogout = async () => {
     await logout();
     toast({
-      title: "Выход из системы",
-      description: "Вы успешно вышли из системы.",
+      title: t('nav.logout_title'),
+      description: t('nav.logout_success'),
       variant: "default",
     });
   };
@@ -35,7 +37,7 @@ export function MobileNavbarMaster() {
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4" />
-          <span className="ml-2 hidden sm:inline">Выйти</span>
+          <span className="ml-2 hidden sm:inline">{t('nav.logout')}</span>
         </Button>
       </div>
     </div>

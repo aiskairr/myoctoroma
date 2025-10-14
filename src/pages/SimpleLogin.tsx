@@ -4,10 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, LogIn, Eye, EyeOff, Globe } from "lucide-react";
+import { Loader2, LogIn, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/SimpleAuthContext";
 import { useLocale } from "@/contexts/LocaleContext";
-import type { Locale } from "@/contexts/LocaleContext";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import Lottie from "lottie-react";
 import abstractionAnimation from "@/lotties/Abstraction.json";
 
@@ -18,7 +18,7 @@ export default function SimpleLogin() {
   const [error, setError] = useState("");
   
   const { login, isLoading, isAuthenticated, user } = useAuth();
-  const { t, locale, setLocale } = useLocale();
+  const { t } = useLocale();
 
   // Если пользователь уже авторизован, перенаправляем его
   useEffect(() => {
@@ -85,21 +85,8 @@ export default function SimpleLogin() {
       </div>
 
       {/* Переключатель языка */}
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-1 sm:gap-2 bg-white/10 backdrop-blur-md rounded-lg p-1.5 sm:p-2">
-        <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-white/70" />
-        {(['ru', 'ky', 'en'] as Locale[]).map((lang) => (
-          <button
-            key={lang}
-            onClick={() => setLocale(lang)}
-            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 ${
-              locale === lang
-                ? 'bg-white text-blue-900 shadow-md'
-                : 'text-white/70 hover:text-white hover:bg-white/10'
-            }`}
-          >
-            {lang.toUpperCase()}
-          </button>
-        ))}
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageSelector variant="transparent" size="sm" />
       </div>
 
       {/* Модуль авторизации поверх анимации */}

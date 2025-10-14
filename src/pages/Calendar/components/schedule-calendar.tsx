@@ -8,6 +8,7 @@ import { createResizePlugin } from '@schedule-x/resize'
 import 'temporal-polyfill/global'
 import '@schedule-x/theme-default/dist/index.css'
 import { useState } from 'react'
+import { useLocale } from '@/contexts/LocaleContext'
 
 // Типы для пользователей
 interface User {
@@ -67,13 +68,14 @@ function CreateTaskModal({ isOpen, onClose, onCreate, defaultTime, user }: {
     user: User
 }) {
     const [taskTitle, setTaskTitle] = useState('')
+    const { t } = useLocale()
 
     if (!isOpen) return null
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         if (!taskTitle.trim()) {
-            alert('Название задачи не может быть пустым!')
+            alert(t('calendar.task_title_required'))
             return
         }
 
@@ -105,13 +107,13 @@ function CreateTaskModal({ isOpen, onClose, onCreate, defaultTime, user }: {
                 width: '300px',
                 border: `2px solid ${getUserColor(user)}`
             }}>
-                <h3 style={{ color: getUserColor(user) }}>Новая задача для {user.name}</h3>
+                <h3 style={{ color: getUserColor(user) }}>{t('calendar.new_task_for')} {user.name}</h3>
                 <form onSubmit={handleSubmit}>
                     <input
                         type="text"
                         value={taskTitle}
                         onChange={(e) => setTaskTitle(e.target.value)}
-                        placeholder="Название задачи"
+                        placeholder={t('calendar.task_title_placeholder')}
                         style={{
                             width: '100%',
                             padding: '8px',
@@ -129,7 +131,7 @@ function CreateTaskModal({ isOpen, onClose, onCreate, defaultTime, user }: {
                             borderRadius: '4px',
                             cursor: 'pointer'
                         }}>
-                            Создать
+                            {t('common.create')}
                         </button>
                         <button type="button" onClick={onClose} style={{
                             padding: '8px 16px',
@@ -139,7 +141,7 @@ function CreateTaskModal({ isOpen, onClose, onCreate, defaultTime, user }: {
                             borderRadius: '4px',
                             cursor: 'pointer'
                         }}>
-                            Отмена
+                            {t('common.cancel')}
                         </button>
                     </div>
                 </form>

@@ -262,13 +262,13 @@ export default function Settings() {
     },
     onSuccess: (data) => {
       toast({
-        title: "Соединение успешно",
-        description: `Статус: ${data.details?.instanceStatus || 'connected'}`,
+        title: t('settings.connection_successful'),
+        description: t('settings.connection_status', { status: data.details?.instanceStatus || 'connected' }),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Ошибка соединения",
+        title: t('settings.connection_error'),
         description: error.message,
         variant: "destructive",
       });
@@ -307,13 +307,16 @@ export default function Settings() {
         // Импорт завершен, показываем финальное уведомление
         if (status.job.status === 'COMPLETED') {
           toast({
-            title: "Импорт завершен",
-            description: `Импортировано ${status.job.clientsImported || 0} клиентов и ${status.job.tasksImported || 0} задач`,
+            title: t('settings.import_completed'),
+            description: t('settings.import_stats', { 
+              clients: String(status.job.clientsImported || 0), 
+              tasks: String(status.job.tasksImported || 0) 
+            }),
           });
         } else {
           toast({
-            title: "Ошибка импорта",
-            description: status.job.errorMessage || "Произошла ошибка при импорте",
+            title: t('settings.import_failed'),
+            description: status.job.errorMessage || t('settings.import_failed_message'),
             variant: "destructive",
           });
         }

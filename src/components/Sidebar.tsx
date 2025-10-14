@@ -25,7 +25,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Calendar } from "@/components/ui/calendar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { LocaleToggle } from '@/components/ui/locale-toggle';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { BranchSelectorDialog, BranchIndicator } from "./BranchSelector";
@@ -163,7 +163,7 @@ function MasterSidebar() {
                 <p className="text-slate-400 text-xs mt-0.5">{t('sidebar.master_panel')}</p>
               </div>
             </div>
-            <LocaleToggle />
+            <LanguageSelector variant="sidebar" size="sm" />
           </div>
         </div>
 
@@ -368,7 +368,7 @@ function AdminOnlySidebar() {
                 <p className="text-slate-400 text-xs mt-0.5">{t('sidebar.admin_panel')}</p>
               </div>
             </div>
-            <LocaleToggle />
+            <LanguageSelector variant="sidebar" size="sm" />
           </div>
         </div>
         <Separator className="bg-slate-700/50" />
@@ -615,7 +615,7 @@ function AdminSidebar() {
                 </h1>
               </div>
             </div>
-            <LocaleToggle />
+            <LanguageSelector variant="sidebar" size="sm" />
           </div>
         </div>
 

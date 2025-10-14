@@ -60,8 +60,8 @@ export default function ReportPage() {
     } catch (error) {
       console.error('Ошибка загрузки данных пользователя:', error);
       toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить данные пользователя",
+        title: t('salary.error'),
+        description: t('report.failed_to_load_user_data'),
         variant: "destructive",
       });
     }
@@ -84,8 +84,8 @@ export default function ReportPage() {
     } catch (error) {
       console.error('Ошибка загрузки отчетов:', error);
       toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить данные отчетов",
+        title: t('salary.error'),
+        description: t('report.failed_to_load_reports'),
         variant: "destructive",
       });
     } finally {

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useBranch } from "@/contexts/BranchContext";
+import { useLocale } from "@/contexts/LocaleContext";
 import { getBranchIdWithFallback } from "@/utils/branch-utils";
 import { Loader2, CreditCard, CheckCircle, X, Scissors, Clock } from "lucide-react";
 
@@ -114,6 +115,7 @@ export const EditAppointmentDialog = ({
   onClose,
   onTaskUpdated
 }: EditAppointmentDialogProps) => {
+  const { t } = useLocale();
   const { toast } = useToast();
   const { currentBranch, branches } = useBranch();
   const queryClient = useQueryClient();
@@ -348,15 +350,15 @@ export const EditAppointmentDialog = ({
       onTaskUpdated();
 
       toast({
-        title: "Длительность обновлена",
-        description: "Длительность основной услуги изменена",
+        title: t('edit_appointment.success'),
+        description: t('edit_appointment.task_updated'),
         variant: "default",
       });
     } catch (error) {
       console.error('Error updating main service duration:', error);
       toast({
-        title: "Ошибка",
-        description: "Не удалось обновить длительность",
+        title: t('edit_appointment.error'),
+        description: t('edit_appointment.update_failed'),
         variant: "destructive",
       });
     }
@@ -466,14 +468,14 @@ export const EditAppointmentDialog = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          master: task.masterName || 'Неизвестный мастер',
-          client: task.client?.customName || task.client?.firstName || 'Неизвестный клиент',
-          serviceType: task.serviceType || 'Услуга',
+          master: task.masterName || t('edit_appointment.unknown_client'),
+          client: task.client?.customName || task.client?.firstName || t('edit_appointment.unknown_client'),
+          serviceType: task.serviceType || t('edit_appointment.service'),
           phoneNumber: task.client?.phoneNumber || '',
           amount: calculateTotalPrice() - Math.round(calculateTotalPrice() * formData.discount / 100),
           discount: formData.discount || 0,
           duration: task.duration || 60,
-          comment: `Оплата через ${selectedPaymentMethod}`,
+          comment: `${t('edit_appointment.payment_method')} ${selectedPaymentMethod}`,
           paymentMethod: selectedPaymentMethod,
           dailyReport: calculateTotalPrice() - Math.round(calculateTotalPrice() * formData.discount / 100),
           adminName: selectedAdministrator,
@@ -510,7 +512,7 @@ export const EditAppointmentDialog = ({
       const clientName = task.client?.customName || 
                         task.client?.firstName || 
                         task.clientName || 
-                        'Неизвестный клиент';
+                        t('edit_appointment.unknown_client');
 
       const updatePayload: any = {
         clientName: clientName,
@@ -547,8 +549,8 @@ export const EditAppointmentDialog = ({
     },
     onSuccess: () => {
       toast({
-        title: "Оплата зафиксирована",
-        description: `Платеж через ${selectedPaymentMethod} успешно записан`,
+        title: t('edit_appointment.success'),
+        description: t('edit_appointment.payment_recorded'),
         variant: "default",
       });
 
@@ -560,8 +562,8 @@ export const EditAppointmentDialog = ({
     },
     onError: (error) => {
       toast({
-        title: "Ошибка при записи оплаты",
-        description: `${error}`,
+        title: t('edit_appointment.error'),
+        description: t('edit_appointment.payment_failed'),
         variant: "destructive",
       });
     }
@@ -571,8 +573,8 @@ export const EditAppointmentDialog = ({
   const handlePayment = () => {
     if (!selectedPaymentMethod) {
       toast({
-        title: "Выберите способ оплаты",
-        description: "Необходимо выбрать способ оплаты",
+        title: t('edit_appointment.error'),
+        description: t('edit_appointment.select_payment_method'),
         variant: "destructive",
       });
       return;
@@ -580,8 +582,8 @@ export const EditAppointmentDialog = ({
 
     if (!selectedAdministrator) {
       toast({
-        title: "Выберите администратора",
-        description: "Необходимо выбрать администратора",
+        title: t('edit_appointment.error'),
+        description: t('edit_appointment.select_administrator'),
         variant: "destructive",
       });
       return;
@@ -594,7 +596,7 @@ export const EditAppointmentDialog = ({
   const updateTaskMutation = useMutation({
     mutationFn: async () => {
       if (!task || !formData.clientName) {
-        throw new Error("Данные задачи или имя клиента отсутствуют");
+        throw new Error(t('edit_appointment.task_data_missing'));
       }
 
       // Вспомогательные функции
@@ -665,8 +667,8 @@ export const EditAppointmentDialog = ({
     },
     onSuccess: () => {
       toast({
-        title: "Запись обновлена",
-        description: "Изменения успешно сохранены"
+        title: t('edit_appointment.success'),
+        description: t('edit_appointment.task_updated')
       });
       onTaskUpdated();
       onClose();
@@ -674,8 +676,8 @@ export const EditAppointmentDialog = ({
     onError: (error) => {
       console.error('Update task error:', error);
       toast({
-        title: "Ошибка",
-        description: `${error}`,
+        title: t('edit_appointment.error'),
+        description: t('edit_appointment.update_failed'),
         variant: "destructive"
       });
     }
@@ -694,9 +696,9 @@ export const EditAppointmentDialog = ({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto p-0" aria-describedby="edit-appointment-description">
           <DialogHeader className="sr-only">
-            <DialogTitle>Редактирование записи</DialogTitle>
+            <DialogTitle>{t('edit_appointment.title')}</DialogTitle>
             <DialogDescription id="edit-appointment-description">
-              Редактирование деталей записи клиента
+              {t('edit_appointment.title')}
             </DialogDescription>
           </DialogHeader>
           
@@ -705,7 +707,7 @@ export const EditAppointmentDialog = ({
             <div className="flex items-center justify-center gap-2">
               <div className={`w-3 h-3 rounded-full ${task?.paid === 'paid' ? 'bg-green-500' : 'bg-red-500'}`}></div>
               <span className={`font-semibold text-sm ${task?.paid === 'paid' ? 'text-green-700' : 'text-red-700'}`}>
-                {task?.paid === 'paid' ? 'ОПЛАЧЕНО' : 'НЕ ОПЛАЧЕНО'}
+                {task?.paid === 'paid' ? t('edit_appointment.paid').toUpperCase() : t('edit_appointment.not_paid').toUpperCase()}
               </span>
             </div>
           </div>
@@ -713,40 +715,40 @@ export const EditAppointmentDialog = ({
           <form onSubmit={handleSubmit} className="flex gap-5 p-4">
             {/* Левая колонка - Клиент */}
             <div className="flex-1 bg-white rounded-lg p-4">
-              <div className="text-center text-blue-600 font-semibold text-lg mb-4">Клиент</div>
+              <div className="text-center text-blue-600 font-semibold text-lg mb-4">{t('edit_appointment.client')}</div>
 
               <div className="space-y-3">
                 <div>
-                  <Label htmlFor="clientName" className="block font-semibold text-gray-700 text-sm mb-1">Имя клиента</Label>
+                  <Label htmlFor="clientName" className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.client_name')}</Label>
                   <Input
                     id="clientName"
                     className="w-full text-sm"
                     value={formData.clientName}
                     onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
-                    placeholder="Введите имя клиента"
+                    placeholder={t('edit_appointment.enter_client_name')}
                     required
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="phoneNumber" className="block font-semibold text-gray-700 text-sm mb-1">Телефон</Label>
+                  <Label htmlFor="phoneNumber" className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.phone')}</Label>
                   <Input
                     id="phoneNumber"
                     className="w-full text-sm"
                     value={formData.phoneNumber}
                     onChange={(e) => setFormData(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                    placeholder="Введите номер телефона"
+                    placeholder={t('edit_appointment.enter_phone')}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="notes" className="block font-semibold text-gray-700 text-sm mb-1">Примечания</Label>
+                  <Label htmlFor="notes" className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.notes')}</Label>
                   <Textarea
                     id="notes"
                     className="w-full text-sm min-h-[80px]"
                     value={formData.notes}
                     onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                    placeholder="Дополнительные заметки"
+                    placeholder={t('edit_appointment.enter_notes')}
                   />
                 </div>
               </div>
@@ -754,12 +756,12 @@ export const EditAppointmentDialog = ({
 
             {/* Правая колонка - Запись */}
             <div className="flex-1 bg-white rounded-lg p-4">
-              <div className="text-center text-blue-600 font-semibold text-lg mb-4">Запись</div>
+              <div className="text-center text-blue-600 font-semibold text-lg mb-4">{t('edit_appointment.appointment_details')}</div>
 
               <div className="space-y-3">
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <Label htmlFor="scheduleTime" className="block font-semibold text-gray-700 text-sm mb-1">Время</Label>
+                    <Label htmlFor="scheduleTime" className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.time')}</Label>
                     <Input
                       id="scheduleTime"
                       type="time"
@@ -771,19 +773,19 @@ export const EditAppointmentDialog = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="duration" className="block font-semibold text-gray-700 text-sm mb-1">Длительность</Label>
+                  <Label htmlFor="duration" className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.duration')}</Label>
                   <Select
                     value={selectedDuration?.toString() || ""}
                     onValueChange={(value) => setSelectedDuration(Number(value))}
                     disabled={!formData.serviceType}
                   >
                     <SelectTrigger className="w-full text-sm">
-                      <SelectValue placeholder="В минутах" />
+                      <SelectValue placeholder={t('edit_appointment.select_duration')} />
                     </SelectTrigger>
                     <SelectContent>
                       {serviceDurations?.availableDurations?.map((duration: DurationOption) => (
                         <SelectItem key={duration.duration} value={duration.duration.toString()}>
-                          {duration.duration} мин - {duration.price} сом
+                          {duration.duration} {t('common.minutes')} - {duration.price} {t('common.som')}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -791,13 +793,13 @@ export const EditAppointmentDialog = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="serviceType" className="block font-semibold text-gray-700 text-sm mb-1">Тип услуги</Label>
+                  <Label htmlFor="serviceType" className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.service')}</Label>
                   <Select
                     value={formData.serviceType}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, serviceType: value }))}
                   >
                     <SelectTrigger className="w-full text-sm">
-                      <SelectValue placeholder="Выберите тип услуги" />
+                      <SelectValue placeholder={t('edit_appointment.select_service')} />
                     </SelectTrigger>
                     <SelectContent>
                       {serviceServices?.map((service) => (
@@ -810,7 +812,7 @@ export const EditAppointmentDialog = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="masterName" className="block font-semibold text-gray-700 text-sm mb-1">Мастер</Label>
+                  <Label htmlFor="masterName" className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.master')}</Label>
                   <Select
                     value={formData.masterId?.toString() || ""}
                     onValueChange={(value) => {
@@ -825,7 +827,7 @@ export const EditAppointmentDialog = ({
                     }}
                   >
                     <SelectTrigger className="w-full text-sm">
-                      <SelectValue placeholder="Выберите мастера" />
+                      <SelectValue placeholder={t('edit_appointment.select_master')} />
                     </SelectTrigger>
                     <SelectContent>
                       {allMasters?.map((master) => (
@@ -838,7 +840,7 @@ export const EditAppointmentDialog = ({
                 </div>
 
                 <div>
-                  <Label className="block font-semibold text-gray-700 text-sm mb-3">Статус</Label>
+                  <Label className="block font-semibold text-gray-700 text-sm mb-3">{t('edit_appointment.status')}</Label>
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       type="button"
@@ -851,7 +853,7 @@ export const EditAppointmentDialog = ({
                       onClick={() => setFormData(prev => ({ ...prev, status: 'scheduled' }))}
                     >
                       <Clock className="h-5 w-5 mb-1" />
-                      <span className="text-xs">Записан</span>
+                      <span className="text-xs">{t('calendar.status_scheduled')}</span>
                     </Button>
                     
                     <Button
@@ -865,7 +867,7 @@ export const EditAppointmentDialog = ({
                       onClick={() => setFormData(prev => ({ ...prev, status: 'in_progress' }))}
                     >
                       <Scissors className="h-5 w-5 mb-1" />
-                      <span className="text-xs">В процессе</span>
+                      <span className="text-xs">{t('calendar.status_in_progress')}</span>
                     </Button>
                     
                     <Button
@@ -879,7 +881,7 @@ export const EditAppointmentDialog = ({
                       onClick={() => setFormData(prev => ({ ...prev, status: 'completed' }))}
                     >
                       <CheckCircle className="h-5 w-5 mb-1" />
-                      <span className="text-xs">Завершен</span>
+                      <span className="text-xs">{t('calendar.status_completed')}</span>
                     </Button>
                     
                     <Button
@@ -893,19 +895,19 @@ export const EditAppointmentDialog = ({
                       onClick={() => setFormData(prev => ({ ...prev, status: 'cancelled' }))}
                     >
                       <X className="h-5 w-5 mb-1" />
-                      <span className="text-xs">Отменен</span>
+                      <span className="text-xs">{t('calendar.status_cancelled')}</span>
                     </Button>
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="branchId" className="block font-semibold text-gray-700 text-sm mb-1">Филиал</Label>
+                  <Label htmlFor="branchId" className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.branch')}</Label>
                   <Select
                     value={formData.branchId}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, branchId: value }))}
                   >
                     <SelectTrigger className="w-full text-sm">
-                      <SelectValue placeholder="Выберите филиал" />
+                      <SelectValue placeholder={t('edit_appointment.select_branch')} />
                     </SelectTrigger>
                     <SelectContent>
                       {branches?.map((branch: any) => (
@@ -918,7 +920,7 @@ export const EditAppointmentDialog = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="scheduleDate" className="block font-semibold text-gray-700 text-sm mb-1">Дата</Label>
+                  <Label htmlFor="scheduleDate" className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.date')}</Label>
                   <Input
                     id="scheduleDate"
                     type="date"
@@ -931,7 +933,7 @@ export const EditAppointmentDialog = ({
                 {/* Длительность услуги */}
                 <div>
                   <Label className="block font-semibold text-gray-700 text-sm mb-1">
-                    Длительность основной услуги: {localMainDuration} мин
+                    {t('edit_appointment.duration')}: {localMainDuration} {t('common.minutes')}
                     {!isStandardDuration(localMainDuration) && (
                       <span className="text-amber-600 ml-2">(произвольная)</span>
                     )}
@@ -946,7 +948,7 @@ export const EditAppointmentDialog = ({
                       onChange={(e) => setLocalMainDuration(Number(e.target.value))}
                       className="w-24 text-sm"
                     />
-                    <span className="text-sm text-gray-500">минут</span>
+                    <span className="text-sm text-gray-500">{t('common.minutes')}</span>
                     {hasUnsavedDurationChanges() && (
                       <Button
                         type="button"
@@ -955,14 +957,14 @@ export const EditAppointmentDialog = ({
                         onClick={() => updateMainServiceDuration(localMainDuration)}
                         className="ml-2"
                       >
-                        Сохранить
+                        {t('common.save')}
                       </Button>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="discount" className="block font-semibold text-gray-700 text-sm mb-1">Скидка (%)</Label>
+                  <Label htmlFor="discount" className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.discount')}</Label>
                   <Input
                     id="discount"
                     type="number"
@@ -976,14 +978,14 @@ export const EditAppointmentDialog = ({
 
                 {formData.finalPrice > 0 && (
                   <div>
-                    <Label className="block font-semibold text-gray-700 text-sm mb-1">Итоговая цена</Label>
-                    <div className="text-lg font-bold text-green-600">{formData.finalPrice} сом</div>
+                    <Label className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.final_price')}</Label>
+                    <div className="text-lg font-bold text-green-600">{formData.finalPrice} {t('common.som')}</div>
                   </div>
                 )}
 
                 <div className="flex justify-between mt-4">
                   <Button type="button" variant="outline" onClick={onClose}>
-                    Отмена
+                    {t('common.cancel')}
                   </Button>
                   <div className="flex gap-2">
                     {task?.paid !== 'paid' && (
@@ -993,7 +995,7 @@ export const EditAppointmentDialog = ({
                         className="bg-amber-500 hover:bg-amber-600 text-white"
                       >
                         <CreditCard className="h-4 w-4 mr-2" />
-                        Оплатить
+                        {t('edit_appointment.mark_as_paid')}
                       </Button>
                     )}
                     <Button 
@@ -1004,7 +1006,7 @@ export const EditAppointmentDialog = ({
                       {updateTaskMutation.isPending && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       )}
-                      Сохранить
+                      {t('edit_appointment.save_changes')}
                     </Button>
                   </div>
                 </div>

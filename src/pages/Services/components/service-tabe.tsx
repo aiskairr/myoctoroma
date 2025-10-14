@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiGet, apiPut, apiDelete } from '@/lib/api';
 import { useBranch } from '@/contexts/BranchContext';
 import { getBranchIdWithFallback } from '@/utils/branch-utils';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const TIME_COLUMNS = [10, 15, 20, 30, 40, 50, 60, 75, 80, 90, 110, 120, 150, 220] as const;
 type TimeColumn = (typeof TIME_COLUMNS)[number];
@@ -20,6 +21,7 @@ const ServicesTable: React.FC = () => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const { branches, currentBranch } = useBranch();
+    const { t } = useLocale();
     const branchID = currentBranch?.id;
     const [editingServices, setEditingServices] = useState<Record<number, any>>({});
     const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -97,25 +99,25 @@ const ServicesTable: React.FC = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['crm-services'] });
-            toast({ title: 'Услуга обновлена успешно' });
+            toast({ title: t('services.service_updated') });
         },
         onError: (error: Error) => {
-            toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+            toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
         },
     });
 
     const deleteMutation = useMutation({
         mutationFn: async (serviceId: number) => {
             const response = await apiDelete(`/api/crm/services/${serviceId}`);
-            if (!response.ok) throw new Error('Ошибка удаления услуги');
+            if (!response.ok) throw new Error(t('services.error_deleting'));
             return response.json();
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['crm-services'] });
-            toast({ title: 'Услуга удалена успешно' });
+            toast({ title: t('services.service_deleted') });
         },
         onError: (error: Error) => {
-            toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+            toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
         },
     });
 
@@ -180,15 +182,15 @@ const ServicesTable: React.FC = () => {
 
     const getBranchName = (branchID: string | null) => {
         const branch = branchOptions.find((b) => b.id === branchID);
-        return branch ? branch.name : 'Не указан';
+        return branch ? branch.name : t('services.not_specified');
     };
 
     if (isLoading) {
-        return <div className="text-center py-8">Загрузка услуг...</div>;
+        return <div className="text-center py-8">{t('services.loading')}</div>;
     }
 
     if (error) {
-        return <div className="text-center py-8 text-red-500">Ошибка загрузки: {(error as Error).message}</div>;
+        return <div className="text-center py-8 text-red-500">{t('services.loading_error')}: {(error as Error).message}</div>;
     }
 
     return (
@@ -198,17 +200,17 @@ const ServicesTable: React.FC = () => {
                     <table className="w-full border-collapse rounded-xl">
                         <thead>
                             <tr className="bg-gray-50">
-                                <th className="min-w-[180px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">Название услуги</th>
-                                <th className="min-w-[140px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">Описание</th>
-                                <th className="min-w-[120px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">Филиал</th>
-                                <th className="min-w-[140px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">Длительность</th>
-                                <th className="min-w-[100px] text-center border border-gray-300 px-4 py-3 text-base font-semibold">Активна</th>
+                                <th className="min-w-[180px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">{t('services.name')}</th>
+                                <th className="min-w-[140px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">{t('services.description')}</th>
+                                <th className="min-w-[120px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">{t('services.branch')}</th>
+                                <th className="min-w-[140px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">{t('services.duration')}</th>
+                                <th className="min-w-[100px] text-center border border-gray-300 px-4 py-3 text-base font-semibold">{t('services.active')}</th>
                                 {TIME_COLUMNS.map((time) => (
                                     <th key={time} className="min-w-[90px] text-center border border-gray-300 px-4 py-3 text-base font-semibold">
-                                        {time} мин
+                                        {time} {t('services.minutes')}
                                     </th>
                                 ))}
-                                <th className="min-w-[140px] text-center border border-gray-300 px-4 py-3 text-base font-semibold">Действия</th>
+                                <th className="min-w-[140px] text-center border border-gray-300 px-4 py-3 text-base font-semibold">{t('services.actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -227,7 +229,7 @@ const ServicesTable: React.FC = () => {
                                             <Input
                                                 value={editingService.description || ''}
                                                 onChange={(e) => handleInputChange(service.id, 'description', e.target.value)}
-                                                placeholder="Описание"
+                                                placeholder={t('services.description')}
                                                 className="border-0 shadow-none p-2 text-base bg-transparent min-w-[150px] focus-visible:ring-1 focus-visible:ring-blue-500"
                                             />
                                         </td>
@@ -237,7 +239,7 @@ const ServicesTable: React.FC = () => {
                                                 onValueChange={(value) => handleInputChange(service.id, 'branchID', value)}
                                             >
                                                 <SelectTrigger className="border-0 shadow-none p-2 text-base bg-transparent focus:ring-1 focus:ring-blue-500 min-w-[150px]">
-                                                    <SelectValue placeholder="Выберите филиал" />
+                                                    <SelectValue placeholder={t('services.select_branch')} />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {branchOptions.map((branch) => (
@@ -259,7 +261,7 @@ const ServicesTable: React.FC = () => {
                                                 <SelectContent>
                                                     {TIME_COLUMNS.map((time) => (
                                                         <SelectItem key={time} value={time.toString()}>
-                                                            {time} мин
+                                                            {time} {t('services.minutes')}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -328,21 +330,21 @@ const ServicesTable: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
-                {services.length === 0 && <div className="text-center py-8 text-gray-500">Услуги не найдены. Добавьте новую услугу.</div>}
+                {services.length === 0 && <div className="text-center py-8 text-gray-500">{t('services.no_services')}</div>}
             </Card>
 
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Удалить услугу?</AlertDialogTitle>
+                        <AlertDialogTitle>{t('services.delete_service_title')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Вы уверены, что хотите удалить эту услугу? Это действие нельзя будет отменить.
+                            {t('services.confirm_delete')}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Отмена</AlertDialogCancel>
+                        <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                         <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-                            Удалить
+                            {t('common.delete')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -351,43 +353,43 @@ const ServicesTable: React.FC = () => {
             <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
                 <DialogContent className="sm:max-w-[600px]" aria-describedby="service-view-description">
                     <DialogHeader>
-                        <DialogTitle>Информация об услуге</DialogTitle>
+                        <DialogTitle>{t('services.service_info')}</DialogTitle>
                         <DialogDescription id="service-view-description">
-                            Просмотр подробной информации об услуге
+                            {t('services.view_detailed_info')}
                         </DialogDescription>
                     </DialogHeader>
                     {serviceToView && (
                         <div className="space-y-4">
                             <div>
-                                <p className="text-sm font-medium text-gray-500">Название</p>
+                                <p className="text-sm font-medium text-gray-500">{t('services.name')}</p>
                                 <p className="text-base font-semibold">{serviceToView.name}</p>
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-gray-500">Описание</p>
-                                <p className="text-base">{serviceToView.description || 'Описание отсутствует'}</p>
+                                <p className="text-sm font-medium text-gray-500">{t('services.description')}</p>
+                                <p className="text-base">{serviceToView.description || t('services.no_description')}</p>
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-gray-500">Филиал</p>
+                                <p className="text-sm font-medium text-gray-500">{t('services.branch')}</p>
                                 <p className="text-base">{getBranchName(serviceToView.branchID)}</p>
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-gray-500">Стандартная длительность</p>
-                                <p className="text-base">{serviceToView.defaultDuration} минут</p>
+                                <p className="text-sm font-medium text-gray-500">{t('services.default_duration')}</p>
+                                <p className="text-base">{serviceToView.defaultDuration} {t('common.minutes')}</p>
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-gray-500">Статус</p>
-                                <p className="text-base">{serviceToView.isActive ? 'Активна' : 'Неактивна'}</p>
+                                <p className="text-sm font-medium text-gray-500">{t('services.status')}</p>
+                                <p className="text-base">{serviceToView.isActive ? t('services.active') : t('services.inactive')}</p>
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-gray-500 mb-2">Цены по длительности</p>
+                                <p className="text-sm font-medium text-gray-500 mb-2">{t('services.prices_by_duration')}</p>
                                 <div className="grid grid-cols-2 gap-2 text-sm">
                                     {TIME_COLUMNS.map((time) => {
                                         const price = serviceToView[`duration${time}_price`];
                                         if (price && price > 0) {
                                             return (
                                                 <div key={time} className="flex justify-between border-b pb-1">
-                                                    <span>{time} минут:</span>
-                                                    <span className="font-medium">{price} с</span>
+                                                    <span>{time} {t('common.minutes')}:</span>
+                                                    <span className="font-medium">{price} {t('services.currency')}</span>
                                                 </div>
                                             );
                                         }

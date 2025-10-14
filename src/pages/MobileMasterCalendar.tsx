@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocale } from '@/contexts/LocaleContext';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,7 @@ interface MobileMasterCalendarProps {
 
 export const MobileMasterCalendar: React.FC<MobileMasterCalendarProps> = ({ masterId, masterName, onLogout }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const { t } = useLocale();
 
   // Получение пользователя для проверки роли
   const { data: user } = useQuery({
@@ -80,7 +82,7 @@ export const MobileMasterCalendar: React.FC<MobileMasterCalendarProps> = ({ mast
   const tasks: Task[] = tasksData.map((task: any) => ({
     id: task.id,
     clientName: task.client_name,
-    clientPhone: task.client?.phoneNumber || 'Не указан',
+    clientPhone: task.client?.phoneNumber || t('master_calendar.not_specified'),
     startTime: task.start_time,
     endTime: task.end_time,
     duration: task.duration,
@@ -117,14 +119,8 @@ export const MobileMasterCalendar: React.FC<MobileMasterCalendarProps> = ({ mast
   };
 
   const getStatusText = (status: string) => {
-    switch (status) {
-      case 'new': return 'Новая';
-      case 'scheduled': return 'Записан';
-      case 'in_progress': return 'В процессе';
-      case 'completed': return 'Завершено';
-      case 'cancelled': return 'Отменено';
-      default: return status;
-    }
+    const statusKey = `task_status.${status}` as const;
+    return t(statusKey) || status;
   };
 
   const getPaidStatusColor = (paid: string) => {
@@ -142,8 +138,8 @@ export const MobileMasterCalendar: React.FC<MobileMasterCalendarProps> = ({ mast
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-gray-500 mb-4">Проверка доступа...</div>
-          <p className="text-sm text-gray-400">Только для мастеров</p>
+          <div className="text-gray-500 mb-4">{t('master_calendar.checking_access')}</div>
+          <p className="text-sm text-gray-400">{t('master_calendar.masters_only')}</p>
         </div>
       </div>
     );
@@ -225,7 +221,7 @@ export const MobileMasterCalendar: React.FC<MobileMasterCalendarProps> = ({ mast
                         {getStatusText(task.status)}
                       </Badge>
                       <Badge className={getPaidStatusColor(task.paid)} variant="secondary">
-                        {task.paid === 'paid' ? 'Оплачено' : 'Не оплачено'}
+                        {task.paid === 'paid' ? t('master_calendar.paid') : t('master_calendar.unpaid')}
                       </Badge>
                     </div>
                   </div>
@@ -236,7 +232,7 @@ export const MobileMasterCalendar: React.FC<MobileMasterCalendarProps> = ({ mast
                     <div className="flex items-center space-x-2">
                       <User className="w-4 h-4 text-gray-500" />
                       <span className="text-sm text-gray-900">
-                        {task.clientName || 'Имя не указано'}
+                        {task.clientName || t('master_calendar.name_not_specified')}
                       </span>
                     </div>
                     
@@ -252,7 +248,7 @@ export const MobileMasterCalendar: React.FC<MobileMasterCalendarProps> = ({ mast
                     <div className="flex items-center space-x-2">
                       <MapPin className="w-4 h-4 text-gray-500" />
                       <span className="text-sm text-gray-600">
-                        {task.serviceType || 'Массаж'}
+                        {task.serviceType || t('master_calendar.default_service')}
                       </span>
                     </div>
                   </div>

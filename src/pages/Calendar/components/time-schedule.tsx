@@ -1024,7 +1024,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     const handleRemoveEmployee = useCallback((_employeeId: string) => {
         // This would need to call the API to deactivate a master
         // For now, we'll show a message that this should be done in the Masters page
-        alert('Удаление мастеров выполняется на странице "Мастера"');
+        alert(t('calendar.delete_masters_on_masters_page'));
     }, []);
 
     // Appointment management
@@ -1041,17 +1041,17 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         }
 
         if (!newAppointment.service) {
-            alert('Пожалуйста, выберите услугу');
+            alert(t('calendar.please_select_service'));
             return;
         }
 
         if (!selectedEmployeeId) {
-            alert('Пожалуйста, выберите мастера');
+            alert(t('calendar.please_select_master'));
             return;
         }
 
         if (!selectedTimeSlot) {
-            alert('Пожалуйста, выберите время');
+            alert(t('calendar.please_select_time'));
             return;
         }
 
@@ -1661,7 +1661,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                                     onClick={() => setIsAddEmployeeOpen(false)}
                                                     className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                                                 >
-                                                    Отмена
+                                                    {t('common.cancel')}
                                                 </button>
                                                 <button
                                                     onClick={handleAddEmployee}
@@ -2080,7 +2080,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                             onClick={() => setIsAddAppointmentOpen(false)}
                                             className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                                         >
-                                            Отмена
+                                            {t('common.cancel')}
                                         </button>
                                         <button
                                             onClick={handleAddAppointment}

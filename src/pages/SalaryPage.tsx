@@ -269,8 +269,8 @@ export default function SalaryPage() {
       if (!branchId) {
         console.warn('Не удается сохранить выплату: branchId не определен');
         toast({
-          title: "Ошибка",
-          description: "Не удается определить филиал для сохранения выплаты",
+          title: t('salary.error'),
+          description: t('salary.cannot_determine_branch'),
           variant: "destructive",
         });
         return;
@@ -281,7 +281,7 @@ export default function SalaryPage() {
       if (!employee) {
         toast({
           title: t('salary.error'),
-          description: "Данные сотрудника не найдены",
+          description: t('salary.employee_data_not_found'),
           variant: "destructive",
         });
         return;
@@ -316,8 +316,8 @@ export default function SalaryPage() {
         const responseData = await response.json();
         console.log('✅ Success response:', responseData);
         toast({
-          title: "Успех",
-          description: "Выплата сохранена",
+          title: t('salary.success'),
+          description: t('salary.payment_saved'),
         });
         fetchSalaryPayments();
         setEditedPayments(prev => {
@@ -344,8 +344,8 @@ export default function SalaryPage() {
     } catch (error) {
       console.error('Ошибка сохранения выплаты:', error);
       toast({
-        title: "Ошибка",
-        description: "Не удалось сохранить выплату",
+        title: t('salary.error'),
+        description: t('salary.failed_to_save_payment'),
         variant: "destructive",
       });
     }
@@ -372,23 +372,23 @@ export default function SalaryPage() {
 
       if (response?.ok) {
         toast({
-          title: "Успех",
-          description: `${record.employee_type === 'administrator' ? 'Администратор деактивирован' : 'Сотрудник удален'}`,
+          title: t('salary.success'),
+          description: record.employee_type === 'administrator' ? t('salary.admin_deactivated') : t('salary.employee_deleted'),
         });
         fetchSalaryData();
       } else {
         const errorData = await response?.json();
         toast({
-          title: "Ошибка",
-          description: errorData?.message || "Не удалось удалить сотрудника",
+          title: t('salary.error'),
+          description: errorData?.message || t('salary.failed_to_delete_employee'),
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error('Ошибка удаления сотрудника:', error);
       toast({
-        title: "Ошибка",
-        description: "Не удалось удалить сотрудника",
+        title: t('salary.error'),
+        description: t('salary.failed_to_delete_employee'),
         variant: "destructive",
       });
     }
@@ -415,8 +415,8 @@ export default function SalaryPage() {
     } catch (error) {
       console.error('Ошибка обновления данных:', error);
       toast({
-        title: "Ошибка",
-        description: "Не удалось обновить данные",
+        title: t('salary.error'),
+        description: t('salary.failed_to_update'),
         variant: "destructive",
       });
     }

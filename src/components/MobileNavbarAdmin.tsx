@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../contexts/SimpleAuthContext";
+import { useLocale } from "../contexts/LocaleContext";
 import {
   Settings as SettingsIcon,
   LogOut,
@@ -26,34 +27,35 @@ import LOGO from "./assets/PROM_logo_big_white.svg"
 export function MobileNavbarAdmin() {
   const [location] = useLocation();
   const { logout } = useAuth();
+  const { t } = useLocale();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
     toast({
-      title: "Выход из системы",
-      description: "Вы успешно вышли из системы.",
+      title: t('nav.logout_title'),
+      description: t('nav.logout_success'),
       variant: "default",
     });
     setOpen(false);
   };
 
   const navItems = [
-    { path: "/chats", label: "Чаты", icon: <MessageCircle className="h-5 w-5" /> },
+    { path: "/chats", label: t('nav.chats'), icon: <MessageCircle className="h-5 w-5" /> },
     {
-      label: "CRM",
+      label: t('nav.crm'),
       icon: <FileClock className="h-5 w-5" />,
       children: [
-        { path: "/crm/calendar", label: "Календарь", icon: <CalendarDays className="h-5 w-5" /> },
-        { path: "/services", label: "Услуги", icon: <Sparkles className="h-5 w-5" /> }
+        { path: "/crm/calendar", label: t('nav.calendar'), icon: <CalendarDays className="h-5 w-5" /> },
+        { path: "/services", label: t('nav.services'), icon: <Sparkles className="h-5 w-5" /> }
       ]
     },
-    { path: "/accounting", label: "Бухгалтерия", icon: <Calculator className="h-5 w-5" /> },
-    { path: "/salary", label: "Зарплаты", icon: <DollarSign className="h-5 w-5" /> },
-    { path: "/gift-certificates", label: "Сертификаты", icon: <Gift className="h-5 w-5" /> },
-    { path: "/how-to-use", label: "Как пользоваться?", icon: <HelpCircle className="h-5 w-5" /> },
-    { path: "/settings", label: "Настройки", icon: <SettingsIcon className="h-5 w-5" /> },
+    { path: "/accounting", label: t('nav.accounting'), icon: <Calculator className="h-5 w-5" /> },
+    { path: "/salary", label: t('nav.salary'), icon: <DollarSign className="h-5 w-5" /> },
+    { path: "/gift-certificates", label: t('nav.gift_certificates'), icon: <Gift className="h-5 w-5" /> },
+    { path: "/how-to-use", label: t('nav.how_to_use'), icon: <HelpCircle className="h-5 w-5" /> },
+    { path: "/settings", label: t('nav.settings'), icon: <SettingsIcon className="h-5 w-5" /> },
   ];
 
   return (
@@ -147,7 +149,7 @@ export function MobileNavbarAdmin() {
                   onClick={handleLogout}
                 >
                   <LogOut className="h-5 w-5" />
-                  <span className="ml-3">Выйти</span>
+                  <span className="ml-3">{t('nav.logout')}</span>
                 </Button>
               </div>
             </div>

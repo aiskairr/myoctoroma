@@ -111,7 +111,7 @@ const AccountingPage = () => {
     discount: '0%',
     duration: '60',
     comment: '',
-    paymentMethod: 'Наличные',
+    paymentMethod: t('accounting.payment_cash'),
     dailyReport: '',
     adminName: '',
     isGiftCertificateUsed: false,
@@ -339,7 +339,7 @@ const AccountingPage = () => {
 
     const recordToAdd = {
       ...newRecord,
-      isGiftCertificateUsed: newRecord.paymentMethod === 'Подарочный Сертификат',
+      isGiftCertificateUsed: newRecord.paymentMethod === t('accounting.payment_gift_certificate'),
       date: scheduleDate,
       schedule_date: scheduleDate, // Формат: YYYY-MM-DD (для совместимости с API)
       branchId: newRecordBranch,
@@ -358,7 +358,7 @@ const AccountingPage = () => {
           discount: '0%',
           duration: '60',
           comment: '',
-          paymentMethod: 'Наличные',
+          paymentMethod: t('accounting.payment_cash'),
           dailyReport: '',
           adminName: '',
           isGiftCertificateUsed: false,
@@ -368,21 +368,21 @@ const AccountingPage = () => {
         setNewRecordBranch('');
         setNewRecordDate(new Date());
         setIsAddRecordOpen(false);
-        alert('Запись успешно добавлена');
+        alert(t('accounting.record_added'));
       } else {
-        alert('Ошибка при добавлении записи: Не удалось сохранить данные');
+        alert(t('accounting.record_add_failed'));
       }
     } catch (error: any) {
       console.error('Error saving accounting record:', error);
-      let errorMessage = 'Ошибка при добавлении записи';
+      let errorMessage = t('accounting.record_add_error');
       
       if (error instanceof Error) {
         if (error.message.includes('HTML instead of JSON')) {
-          errorMessage = 'Ошибка сервера: получен HTML вместо JSON. Проверьте правильность API эндпоинта.';
+          errorMessage = t('accounting.server_error_html');
         } else if (error.message.includes('Server returned')) {
-          errorMessage = `Ошибка сервера: ${error.message}`;
+          errorMessage = t('accounting.server_error', { error: error.message });
         } else {
-          errorMessage = `Ошибка: ${error.message}`;
+          errorMessage = t('accounting.error_message', { error: error.message });
         }
       }
       
@@ -392,7 +392,7 @@ const AccountingPage = () => {
 
   const addExpense = async () => {
     if (!newExpense.name || !newExpense.amount) {
-      alert('Пожалуйста, заполните все поля для расхода');
+      alert(t('accounting.expense_fill_fields'));
       return;
     }
 
@@ -413,13 +413,13 @@ const AccountingPage = () => {
           date: '',
         });
         setIsAddExpenseOpen(false);
-        alert('Расход успешно добавлен');
+        alert(t('accounting.expense_added'));
       } else {
-        alert('Ошибка при добавлении расхода');
+        alert(t('accounting.expense_add_error'));
       }
     } catch (error) {
       console.error('Ошибка при добавлении расхода:', error);
-      alert('Ошибка при добавлении расхода');
+      alert(t('accounting.expense_add_error'));
     }
   };
 
@@ -430,13 +430,13 @@ const AccountingPage = () => {
     try {
       const success = await accountingService.updateRecord(recordToSave);
       if (success) {
-        alert('Запись успешно сохранена');
+        alert(t('accounting.record_saved'));
       } else {
-        alert('Ошибка при сохранении записи');
+        alert(t('accounting.record_save_error'));
       }
     } catch (error) {
       console.error('Ошибка при сохранении записи:', error);
-      alert('Ошибка при сохранении записи');
+      alert(t('accounting.record_save_error'));
     } finally {
       setSavingStates((prev) => ({ ...prev, [index]: false }));
     }
@@ -451,13 +451,13 @@ const AccountingPage = () => {
       if (success) {
         const updatedRecords = records.filter((_, i) => i !== index);
         setRecords(updatedRecords);
-        alert('Запись успешно удалена');
+        alert(t('accounting.record_deleted'));
       } else {
-        alert('Ошибка при удалении записи');
+        alert(t('accounting.record_delete_error'));
       }
     } catch (error) {
       console.error('Ошибка при удалении записи:', error);
-      alert('Ошибка при удалении записи');
+      alert(t('accounting.record_delete_error'));
     }
   };
 
@@ -466,25 +466,25 @@ const AccountingPage = () => {
       const success = await expenseService.deleteExpense(id);
       if (success) {
         setExpenses(expenses.filter(expense => expense.id !== id));
-        alert('Расход успешно удален');
+        alert(t('accounting.expense_deleted'));
       } else {
-        alert('Ошибка при удалении расхода');
+        alert(t('accounting.expense_delete_error'));
       }
     } catch (error) {
       console.error('Ошибка при удалении расхода:', error);
-      alert('Ошибка при удалении расхода');
+      alert(t('accounting.expense_delete_error'));
     }
   };
 
   const paymentOptions = [
-    'Наличные',
+    t('accounting.payment_cash'),
     'МБанк - Перевод', 'МБанк - POS',
     'МБизнес - Перевод', 'МБизнес - POS',
     'О!Банк - Перевод', 'О!Банк - POS',
     'Демир - Перевод', 'Демир - POS',
     'Bakai - Перевод', 'Bakai - POS',
     'Оптима - Перевод', 'Оптима - POS',
-    'Подарочный Сертификат',
+    t('accounting.payment_gift_certificate'),
   ];
 
   const calculateDailyTotal = () => {
@@ -511,7 +511,7 @@ const AccountingPage = () => {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center space-y-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="text-lg font-medium text-gray-600">Загрузка данных...</p>
+            <p className="text-lg font-medium text-gray-600">{t('accounting.loading_data')}</p>
           </div>
         </div>
       </div>
@@ -686,7 +686,7 @@ const AccountingPage = () => {
                             onValueChange={(value) => setNewRecord({ ...newRecord, master: value })}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Выберите мастера" />
+                              <SelectValue placeholder={t('accounting.select_master')} />
                             </SelectTrigger>
                             <SelectContent>
                               {masters.map((master) => (
@@ -704,7 +704,7 @@ const AccountingPage = () => {
                             name="client"
                             value={newRecord.client}
                             onChange={handleNewRecordChange}
-                            placeholder="Имя клиента"
+                            placeholder={t('accounting.client_name')}
                           />
                         </div>
                         <div className="space-y-2">

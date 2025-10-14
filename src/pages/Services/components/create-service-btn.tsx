@@ -12,6 +12,7 @@ import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useBranch } from '@/contexts/BranchContext';
 import { getBranchIdWithFallback } from '@/utils/branch-utils';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface ServiceFormData {
     name: string;
@@ -21,28 +22,29 @@ interface ServiceFormData {
     isActive: boolean;
 }
 
-const DURATIONS = [
-    { value: '10', label: '10 минут' },
-    { value: '15', label: '15 минут' },
-    { value: '20', label: '20 минут' },
-    { value: '30', label: '30 минут' },
-    { value: '40', label: '40 минут' },
-    { value: '50', label: '50 минут' },
-    { value: '60', label: '60 минут' },
-    { value: '75', label: '75 минут' },
-    { value: '80', label: '80 минут' },
-    { value: '90', label: '90 минут' },
-    { value: '110', label: '110 минут' },
-    { value: '120', label: '120 минут' },
-    { value: '150', label: '150 минут' },
-    { value: '220', label: '220 минут' },
-];
-
 const CreateServiceBtn = () => {
     const [isOpen, setIsOpen] = useState(false);
     const { branches, currentBranch } = useBranch();
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const { t } = useLocale();
+
+    const DURATIONS = [
+        { value: '10', label: `10 ${t('common.minutes')}` },
+        { value: '15', label: `15 ${t('common.minutes')}` },
+        { value: '20', label: `20 ${t('common.minutes')}` },
+        { value: '30', label: `30 ${t('common.minutes')}` },
+        { value: '40', label: `40 ${t('common.minutes')}` },
+        { value: '50', label: `50 ${t('common.minutes')}` },
+        { value: '60', label: `60 ${t('common.minutes')}` },
+        { value: '75', label: `75 ${t('common.minutes')}` },
+        { value: '80', label: `80 ${t('common.minutes')}` },
+        { value: '90', label: `90 ${t('common.minutes')}` },
+        { value: '110', label: `110 ${t('common.minutes')}` },
+        { value: '120', label: `120 ${t('common.minutes')}` },
+        { value: '150', label: `150 ${t('common.minutes')}` },
+        { value: '220', label: `220 ${t('common.minutes')}` },
+    ];
 
     const {
         register,
@@ -104,20 +106,20 @@ const CreateServiceBtn = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['crm-services'] });
-            toast({ title: 'Услуга создана успешно' });
+            toast({ title: t('services.service_created') });
             setIsOpen(false);
             reset();
         },
         onError: (error: Error) => {
-            toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+            toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
         },
     });
 
     const onSubmit = (data: ServiceFormData) => {
         if (!data.name.trim()) {
             toast({
-                title: 'Ошибка',
-                description: 'Название услуги обязательно для заполнения',
+                title: t('common.error'),
+                description: t('services.name_required'),
                 variant: 'destructive',
             });
             return;
@@ -142,53 +144,53 @@ const CreateServiceBtn = () => {
             <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
                     <Plus className="w-4 h-4" />
-                    Создать новую услугу
+                    {t('services.add_new_service')}
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px] p-6" aria-describedby="create-service-description">
                 <DialogHeader>
-                    <DialogTitle>Создать новую услугу</DialogTitle>
+                    <DialogTitle>{t('services.add_new_service')}</DialogTitle>
                     <DialogDescription id="create-service-description">
-                        Заполните форму для создания новой услуги
+                        {t('services.fill_form_to_create')}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     <div className="space-y-2">
                         <Label htmlFor="name" className="text-sm font-medium text-gray-700">
-                            Название
+                            {t('services.name')}
                         </Label>
                         <Input
                             id="name"
-                            placeholder="Введите название услуги"
+                            placeholder={t('services.enter_service_name')}
                             className={errors.name ? 'border-red-500' : ''}
                             {...register('name', {
-                                required: 'Название услуги обязательно',
-                                minLength: { value: 2, message: 'Название должно содержать минимум 2 символа' },
-                                maxLength: { value: 100, message: 'Название не должно превышать 100 символов' },
+                                required: t('services.name_required'),
+                                minLength: { value: 2, message: t('services.name_min_length') },
+                                maxLength: { value: 100, message: t('services.name_max_length') },
                             })}
                         />
                         {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="description" className="text-sm font-medium text-gray-700">
-                            Описание
+                            {t('services.description')}
                         </Label>
                         <Textarea
                             id="description"
-                            placeholder="Введите описание услуги"
+                            placeholder={t('services.enter_service_description')}
                             rows={4}
                             className="resize-none"
                             {...register('description')}
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Филиал</Label>
+                        <Label className="text-sm font-medium text-gray-700">{t('services.branch')}</Label>
                         <Select
                             value={watchedInstanceId}
                             onValueChange={(value) => setValue('instanceId', value)}
                         >
                             <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Выберите филиал" />
+                                <SelectValue placeholder={t('services.select_branch')} />
                             </SelectTrigger>
                             <SelectContent>
                                 {branches.map((branch) => (
@@ -200,7 +202,7 @@ const CreateServiceBtn = () => {
                         </Select>
                     </div>
                     <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">Стандартная длительность</Label>
+                        <Label className="text-sm font-medium text-gray-700">{t('services.default_duration')}</Label>
                         <Select
                             value={watchedDefaultDuration}
                             onValueChange={(value) => setValue('defaultDuration', value)}
@@ -218,7 +220,7 @@ const CreateServiceBtn = () => {
                         </Select>
                     </div>
                     <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium text-gray-700">Активна</Label>
+                        <Label className="text-sm font-medium text-gray-700">{t('services.active')}</Label>
                         <Switch
                             checked={watchedIsActive}
                             onCheckedChange={(checked) => setValue('isActive', checked)}
@@ -226,10 +228,10 @@ const CreateServiceBtn = () => {
                     </div>
                     <div className="flex justify-end gap-3">
                         <Button type="button" variant="outline" onClick={handleClose}>
-                            Отмена
+                            {t('common.cancel')}
                         </Button>
                         <Button type="submit" disabled={createMutation.isPending}>
-                            Создать услугу
+                            {t('services.create_service')}
                         </Button>
                     </div>
                 </form>

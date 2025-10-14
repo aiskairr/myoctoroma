@@ -1149,10 +1149,10 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     <div className="grid grid-cols-2 gap-4">
                         {/* Левая колонка - Клиент */}
                         <div className="space-y-4">
-                            <h3 className="text-blue-600 font-medium">Клиент</h3>
+                            <h3 className="text-blue-600 font-medium">{t('edit_appointment.client')}</h3>
 
                             <div>
-                                <Label className="text-sm text-gray-600">Имя клиента *</Label>
+                                <Label className="text-sm text-gray-600">{t('edit_appointment.client_name')} *</Label>
                                 <Controller
                                     name="clientName"
                                     control={control}
@@ -1160,7 +1160,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                         required: t('calendar.client_name_required_validation'),
                                         minLength: {
                                             value: 2,
-                                            message: "Имя должно содержать минимум 2 символа"
+                                            message: t('task_dialog.name_min_length')
                                         }
                                     }}
                                     render={({ field }) => (
@@ -1176,16 +1176,16 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                             </div>
 
                             <div>
-                                <Label className="text-sm text-gray-600">Телефон *</Label>
+                                <Label className="text-sm text-gray-600">{t('edit_appointment.phone')} *</Label>
                                 <Controller
                                     name="phone"
                                     control={control}
                                     rules={{
-                                        required: "Номер телефона обязателен",
+                                        required: t('task_dialog.phone_required'),
                                         validate: (value) => {
                                             const cleanPhone = value.replace(/\D/g, '');
                                             if (!cleanPhone.match(/^996\d{9}$/)) {
-                                                return "Номер должен быть кыргызским: +996 (XXX) XXX-XXX";
+                                                return t('task_dialog.phone_format_error');
                                             }
                                             return true;
                                         }
@@ -1295,10 +1295,10 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
                         {/* Правая колонка - Запись */}
                         <div className="space-y-4">
-                            <h3 className="text-blue-600 font-medium">Запись</h3>
+                            <h3 className="text-blue-600 font-medium">{t('task_dialog.appointment')}</h3>
 
                             <div>
-                                <Label className="text-sm text-gray-600">Время</Label>
+                                <Label className="text-sm text-gray-600">{t('task_dialog.time')}</Label>
                                 <Controller
                                     name="time"
                                     control={control}
@@ -1313,7 +1313,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                             <SelectTrigger className={`mt-1 ${errors.time ? 'border-red-500' : ''}`}>
                                                 <div className="flex items-center gap-2">
                                                     <Clock className="w-4 h-4 text-gray-400" />
-                                                    <SelectValue placeholder={t('calendar.select_time')} />
+                                                    <SelectValue placeholder={t('task_dialog.select_time')} />
                                                 </div>
                                             </SelectTrigger>
                                             <SelectContent className="max-h-60">

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
 import { useBranch } from "@/contexts/BranchContext";
+import { useLocale } from "@/contexts/LocaleContext";
 import { getBranchIdWithFallback } from "@/utils/branch-utils";
 // Интерфейс для расписания мастера
 export interface MasterSchedule {
@@ -16,39 +17,28 @@ export interface MasterSchedule {
   to: string;      // Время окончания "14:00"
 }
 
-// Перевод дней недели для отображения
-const WEEKDAYS_MAP: Record<string, string> = {
-  'Mon': 'Пн',
-  'Tue': 'Вт',
-  'Wed': 'Ср',
-  'Thu': 'Чт',
-  'Fri': 'Пт',
-  'Sat': 'Сб',
-  'Sun': 'Вс',
-};
-
 // Интерфейс для дня недели
 interface WeekDay {
   id: string;
   label: string;
 }
 
-// Список всех дней недели
-const WEEKDAYS: WeekDay[] = [
-  { id: 'Mon', label: 'Понедельник' },
-  { id: 'Tue', label: 'Вторник' },
-  { id: 'Wed', label: 'Среда' },
-  { id: 'Thu', label: 'Четверг' },
-  { id: 'Fri', label: 'Пятница' },
-  { id: 'Sat', label: 'Суббота' },
-  { id: 'Sun', label: 'Воскресенье' },
-];
-
-// Интерфейс для дня недели
-
 // Компонент для форматирования расписания в текстовый вид
-export const formatSchedule = (schedule: MasterSchedule, branches: import("@/contexts/BranchContext").Branch[]): string => {
-  const days = schedule.days.map(day => WEEKDAYS_MAP[day]).join(', ');
+export const formatSchedule = (
+  schedule: MasterSchedule, 
+  branches: import("@/contexts/BranchContext").Branch[],
+  t: (key: string) => string
+): string => {
+  const weekdaysMap: Record<string, string> = {
+    'Mon': t('schedule.day_mon'),
+    'Tue': t('schedule.day_tue'),
+    'Wed': t('schedule.day_wed'),
+    'Thu': t('schedule.day_thu'),
+    'Fri': t('schedule.day_fri'),
+    'Sat': t('schedule.day_sat'),
+    'Sun': t('schedule.day_sun'),
+  };
+  const days = schedule.days.map(day => weekdaysMap[day]).join(', ');
   return `${days} — ${branches.find(b => b.id.toString() === schedule.branch)?.branches.split(' ')[0]} ${schedule.from}–${schedule.to}`;
 };
 
@@ -66,7 +56,30 @@ interface MasterScheduleFormProps {
 }
 
 const MasterScheduleForm: React.FC<MasterScheduleFormProps> = ({ schedules, onChange }) => {
+  const { t } = useLocale();
   const { currentBranch, branches } = useBranch();
+  
+  // Список всех дней недели с переводами
+  const WEEKDAYS: WeekDay[] = [
+    { id: 'Mon', label: t('schedule.day_monday') },
+    { id: 'Tue', label: t('schedule.day_tuesday') },
+    { id: 'Wed', label: t('schedule.day_wednesday') },
+    { id: 'Thu', label: t('schedule.day_thursday') },
+    { id: 'Fri', label: t('schedule.day_friday') },
+    { id: 'Sat', label: t('schedule.day_saturday') },
+    { id: 'Sun', label: t('schedule.day_sunday') },
+  ];
+  
+  // Перевод дней недели для отображения
+  const WEEKDAYS_MAP: Record<string, string> = {
+    'Mon': t('schedule.day_mon'),
+    'Tue': t('schedule.day_tue'),
+    'Wed': t('schedule.day_wed'),
+    'Thu': t('schedule.day_thu'),
+    'Fri': t('schedule.day_fri'),
+    'Sat': t('schedule.day_sat'),
+    'Sun': t('schedule.day_sun'),
+  };
   
   // Создаем пустую схему с текущим филиалом
   const getEmptySchedule = (): MasterSchedule => ({
@@ -158,7 +171,7 @@ const MasterScheduleForm: React.FC<MasterScheduleFormProps> = ({ schedules, onCh
 
   return (
     <div className="space-y-4">
-      <Label className="text-base">График работы</Label>
+      <Label className="text-base">{t('schedule.work_schedule')}</Label>
       
       {editingSchedules.map((schedule, index) => (
         <Card key={index} className="shadow-sm">
@@ -167,7 +180,7 @@ const MasterScheduleForm: React.FC<MasterScheduleFormProps> = ({ schedules, onCh
               {/* Выбор филиала */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor={`branch-${index}`} className="col-span-1">
-                  Филиал
+                  {t('schedule.branch')}
                 </Label>
                 <div className="col-span-3">
                   <Select
@@ -175,7 +188,7 @@ const MasterScheduleForm: React.FC<MasterScheduleFormProps> = ({ schedules, onCh
                     onValueChange={(value) => handleBranchChange(value, index)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Выберите филиал" />
+                      <SelectValue placeholder={t('schedule.select_branch')} />
                     </SelectTrigger>
                     <SelectContent>
                       {branches.map((branch) => (
@@ -191,7 +204,7 @@ const MasterScheduleForm: React.FC<MasterScheduleFormProps> = ({ schedules, onCh
               {/* Выбор дней недели */}
               <div className="grid grid-cols-4 items-start gap-4">
                 <Label className="col-span-1 pt-2">
-                  Дни недели
+                  {t('schedule.select_days')}
                 </Label>
                 <div className="col-span-3 grid grid-cols-2 gap-2">
                   {WEEKDAYS.map((day) => (
@@ -212,7 +225,7 @@ const MasterScheduleForm: React.FC<MasterScheduleFormProps> = ({ schedules, onCh
               {/* Выбор времени работы */}
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor={`time-${index}`} className="col-span-1">
-                  Время работы
+                  {t('schedule.work_schedule')}
                 </Label>
                 <div className="col-span-3 flex items-center space-x-2">
                   <Input
@@ -222,7 +235,7 @@ const MasterScheduleForm: React.FC<MasterScheduleFormProps> = ({ schedules, onCh
                     onChange={(e) => handleTimeChange(e.target.value, 'from', index)}
                     className="w-24"
                   />
-                  <span>до</span>
+                  <span>{t('schedule.to').toLowerCase()}</span>
                   <Input
                     id={`time-to-${index}`}
                     type="time"
@@ -259,7 +272,7 @@ const MasterScheduleForm: React.FC<MasterScheduleFormProps> = ({ schedules, onCh
         className="w-full mt-2"
       >
         <Plus className="h-4 w-4 mr-2" />
-        Добавить график работы
+        {t('schedule.add_schedule')}
       </Button>
     </div>
   );
