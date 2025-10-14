@@ -241,7 +241,7 @@ export const useUpdateTask = () => {
       const url = `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${id}`;
       
       const response = await fetch(url, {
-        method: 'PUT',
+        method: 'PATCH',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',

@@ -295,7 +295,7 @@ function UserCalendar({ user, events, onAddEvent }: {
                 
                 try {
                     const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${updatedEvent.id}`, {
-                        method: 'PUT',
+                        method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
                         },
@@ -312,7 +312,7 @@ function UserCalendar({ user, events, onAddEvent }: {
                         return false
                     }
                     
-                    console.log(`✅ PUT /api/tasks/${updatedEvent.id} успешно отправлен!`)
+                    console.log(`✅ PATCH /api/tasks/${updatedEvent.id} успешно отправлен!`)
                 } catch (error) {
                     console.error('❌ Ошибка сети:', error)
                     alert(`Ошибка сети при обновлении события: ${error}`)

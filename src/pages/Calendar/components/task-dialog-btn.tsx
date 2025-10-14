@@ -485,7 +485,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         return total;
     }, [additionalServices, watch, taskData]);
 
-    const addAdditionalService = useCallback(() => {
+    const addAdditionalService = useCallback(async () => {
         if (!newAdditionalService.serviceId) return;
         
         const service = services?.find(s => s.id === parseInt(newAdditionalService.serviceId));
@@ -497,6 +497,56 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 duration: newAdditionalService.duration || service.duration,
                 price: service.price
             };
+            
+            // Если это редактирование существующей записи (есть taskId), 
+            // сразу отправляем POST запрос на создание дополнительной услуги
+            if (taskId) {
+                try {
+                    const additionalServicePayload = {
+                        id: generateTaskId(), // Генерируем уникальный ID для дополнительной услуги
+                        serviceType: newService.serviceName,
+                        serviceServiceId: newService.serviceId,
+                        duration: newService.duration
+                    };
+
+                    const additionalResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}/additional-services`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(additionalServicePayload),
+                        credentials: 'include'
+                    });
+
+                    if (!additionalResponse.ok) {
+                        const errorData = await additionalResponse.json();
+                        console.error('❌ Error creating additional service:', errorData);
+                        toast({
+                            title: "Ошибка",
+                            description: "Не удалось добавить дополнительную услугу",
+                            variant: "destructive",
+                        });
+                        return;
+                    } else {
+                        console.log('✅ Additional service created:', additionalServicePayload);
+                        toast({
+                            title: "Услуга добавлена",
+                            description: "Дополнительная услуга успешно добавлена",
+                            variant: "default",
+                        });
+                    }
+                } catch (error) {
+                    console.error('❌ Error creating additional service:', error);
+                    toast({
+                        title: "Ошибка",
+                        description: "Не удалось добавить дополнительную услугу",
+                        variant: "destructive",
+                    });
+                    return;
+                }
+            }
+            
+            // Добавляем в локальное состояние (для новых записей или для отображения)
             setAdditionalServices(prev => [...prev, newService]);
             setNewAdditionalService({
                 serviceId: '',
@@ -505,11 +555,51 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 price: 0
             });
         }
-    }, [services, newAdditionalService]);
+    }, [services, newAdditionalService, taskId, toast]);
 
-    const removeAdditionalService = useCallback((serviceId: number) => {
+    const removeAdditionalService = useCallback(async (serviceId: number) => {
+        // Если это редактирование существующей записи, отправляем DELETE запрос
+        if (taskId) {
+            try {
+                const additionalResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}/additional-services/${serviceId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include'
+                });
+
+                if (!additionalResponse.ok) {
+                    const errorData = await additionalResponse.json();
+                    console.error('❌ Error deleting additional service:', errorData);
+                    toast({
+                        title: "Ошибка",
+                        description: "Не удалось удалить дополнительную услугу",
+                        variant: "destructive",
+                    });
+                    return;
+                } else {
+                    console.log('✅ Additional service deleted:', serviceId);
+                    toast({
+                        title: "Услуга удалена",
+                        description: "Дополнительная услуга успешно удалена",
+                        variant: "default",
+                    });
+                }
+            } catch (error) {
+                console.error('❌ Error deleting additional service:', error);
+                toast({
+                    title: "Ошибка",
+                    description: "Не удалось удалить дополнительную услугу",
+                    variant: "destructive",
+                });
+                return;
+            }
+        }
+        
+        // Удаляем из локального состояния
         setAdditionalServices(prev => prev.filter(service => service.id !== serviceId));
-    }, []);
+    }, [taskId, toast]);
 
     // Функция для загрузки дополнительных услуг
     const loadAdditionalServices = useCallback(async (taskId: string) => {
@@ -671,12 +761,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     branchId: data.branch,
                     status: data.status,
                     endTime: calculateEndTime(data.time, serviceDuration), // Обязательное поле
-                    additionalServices: additionalServices.map(service => ({
-                        serviceId: service.serviceId,
-                        serviceName: service.serviceName,
-                        duration: service.duration,
-                        price: service.price
-                    }))
+                    // НЕ включаем additionalServices в основной PUT запрос
                 };
 
                 // scheduleDate только если дата заполнена
@@ -684,11 +769,11 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     updatePayload.scheduleDate = convertDateFormat(data.date); // Конвертируем в формат YYYY-MM-DD
                 }
 
-                console.log('🚀 Sending PUT request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`);
+                console.log('🚀 Sending PATCH request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`);
                 console.log('📦 Update payload:', updatePayload);
 
                 const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
-                    method: 'PUT',
+                    method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
                     },
@@ -707,37 +792,8 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 const result = await response.json();
                 console.log('✅ Task updated successfully:', result);
                 
-                // Создаем дополнительные услуги если они есть
-                if (additionalServices.length > 0) {
-                    for (const additionalService of additionalServices) {
-                        try {
-                            const additionalServicePayload = {
-                                id: generateTaskId(), // Генерируем уникальный ID для дополнительной услуги
-                                serviceType: additionalService.serviceName,
-                                serviceServiceId: additionalService.serviceId,
-                                duration: additionalService.duration
-                            };
-
-                            const additionalResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}/additional-services`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify(additionalServicePayload),
-                                credentials: 'include'
-                            });
-
-                            if (!additionalResponse.ok) {
-                                const errorData = await additionalResponse.json();
-                                console.error('❌ Error creating additional service:', errorData);
-                            } else {
-                                console.log('✅ Additional service created:', additionalServicePayload);
-                            }
-                        } catch (error) {
-                            console.error('❌ Error creating additional service:', error);
-                        }
-                    }
-                }
+                // НЕ создаем автоматически дополнительные услуги при обычном редактировании
+                // Дополнительные услуги управляются отдельно через специальные кнопки в интерфейсе
                 
                 // Показываем уведомление об успехе
                 toast({
@@ -989,7 +1045,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             console.log('💳 Updating task with payment info:', updatePayload);
 
             const updateResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatePayload),
             });

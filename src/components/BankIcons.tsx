@@ -1,4 +1,5 @@
 import React from 'react';
+import { Banknote, Gift } from 'lucide-react';
 
 interface BankIconProps {
   bank: string;
@@ -12,7 +13,7 @@ export const BankIcon: React.FC<BankIconProps> = ({ bank, className = "w-8 h-8" 
       case 'мбанк':
         return (
           <img 
-            src="/attached_assets/image_1755154671525.png" 
+            src="/mbanklogo.png" 
             alt="MBank" 
             className={`${className} object-contain`}
             style={{ 
@@ -28,7 +29,7 @@ export const BankIcon: React.FC<BankIconProps> = ({ bank, className = "w-8 h-8" 
       case 'мбизнес':
         return (
           <img 
-            src="/attached_assets/image_1755154803129.png" 
+            src="/mbusinesslogo.png" 
             alt="MBusiness" 
             className={`${className} object-contain`}
             style={{ 
@@ -44,7 +45,7 @@ export const BankIcon: React.FC<BankIconProps> = ({ bank, className = "w-8 h-8" 
       case 'о!банк':
         return (
           <img 
-            src="/attached_assets/image_1755154892998.png" 
+            src="/obanklogo.png" 
             alt="O!Bank" 
             className={`${className} object-contain`}
             style={{ 
@@ -122,37 +123,82 @@ export const PaymentMethodIcon: React.FC<{ paymentMethod: string; className?: st
   paymentMethod, 
   className = "w-8 h-8" 
 }) => {
-  if (paymentMethod.includes('Наличные')) {
-    return <span className="text-2xl">💰</span>;
+  // Наличные - иконка денег
+  if (paymentMethod.includes('cash') || paymentMethod.includes('Наличные')) {
+    return <Banknote className={`${className} text-green-600`} />;
   }
   
+  // Подарочный сертификат - иконка подарка
   if (paymentMethod.includes('Подарочный')) {
-    return <span className="text-2xl">🎁</span>;
+    return <Gift className={`${className} text-purple-600`} />;
   }
   
-  if (paymentMethod.includes('МБанк')) {
-    return <BankIcon bank="mbank" className={className} />;
+  // МБанк - обновленное изображение из public
+  if (paymentMethod.includes('mbank') || paymentMethod.includes('МБанк')) {
+    return (
+      <img 
+        src="/mbanklogo.png" 
+        alt="МБанк" 
+        className={`${className} object-contain rounded-lg`}
+      />
+    );
   }
   
-  if (paymentMethod.includes('МБизнес')) {
-    return <BankIcon bank="mbusiness" className={className} />;
-  }
-  
+  // О!Банк - обновленное изображение из public
   if (paymentMethod.includes('О!Банк')) {
-    return <BankIcon bank="obank" className={className} />;
+    return (
+      <img 
+        src="/obanklogo.png" 
+        alt="О!Банк" 
+        className={`${className} object-contain rounded-lg`}
+      />
+    );
   }
   
+  // Демир Банк - изображение из public
   if (paymentMethod.includes('Демир')) {
-    return <BankIcon bank="demir" className={className} />;
+    return (
+      <img 
+        src="/demirbanklogo.png" 
+        alt="Демир Банк" 
+        className={`${className} object-contain rounded-lg`}
+      />
+    );
   }
   
+  // Bakai Банк - изображение из public
   if (paymentMethod.includes('Bakai')) {
-    return <BankIcon bank="bakai" className={className} />;
+    return (
+      <img 
+        src="/bakaibanklogo.png" 
+        alt="Bakai Банк" 
+        className={`${className} object-contain rounded-lg`}
+      />
+    );
   }
   
+  // Оптима Банк - изображение из public
   if (paymentMethod.includes('Оптима')) {
-    return <BankIcon bank="optima" className={className} />;
+    return (
+      <img 
+        src="/optimabanklogo.png" 
+        alt="Оптима Банк" 
+        className={`${className} object-contain rounded-lg`}
+      />
+    );
   }
   
+  // МБизнес - отдельный логотип
+  if (paymentMethod.includes('МБизнес') || paymentMethod.includes('mbusiness')) {
+    return (
+      <img 
+        src="/mbusinesslogo.png" 
+        alt="МБизнес" 
+        className={`${className} object-contain rounded-lg`}
+      />
+    );
+  }
+  
+  // Дефолтная иконка карты для остальных способов оплаты
   return <span className="text-2xl">💳</span>;
 };

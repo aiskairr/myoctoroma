@@ -1228,7 +1228,7 @@ const EditAppointmentDialog = ({
       }
 
       await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatePayload),
       });
@@ -1265,7 +1265,7 @@ const EditAppointmentDialog = ({
           }
 
           return fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${childTask.id}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(childUpdatePayload),
           });
@@ -2518,11 +2518,11 @@ export default function DailyCalendar() {
         payload.scheduleDate = currentTask.scheduleDate;
       }
 
-      console.log('Sending PUT request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`);
+      console.log('Sending PATCH request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`);
       console.log('Payload:', payload);
 
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
         credentials: 'include'

@@ -636,12 +636,12 @@ export const EditAppointmentDialog = ({
         payload.scheduleDate = formData.scheduleDate;
       }
 
-      console.log('Sending PUT request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`);
+      console.log('Sending PATCH request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`);
       console.log('Payload:', payload);
 
       // Обновляем основную задачу
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task.id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
         credentials: 'include'

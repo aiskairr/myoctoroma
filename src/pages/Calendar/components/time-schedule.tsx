@@ -227,11 +227,11 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     // Мутация для обновления задач
     const updateTaskMutation = useMutation({
         mutationFn: async ({ taskId, updates }: { taskId: string, updates: any }) => {
-            console.log('🚀 Sending PUT request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`);
+            console.log('🚀 Sending PATCH request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`);
             console.log('📦 Payload:', updates);
 
             const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -694,7 +694,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 payload.masterName = currentTask.masterName || currentTask.master?.name;
             }
 
-            console.log('🚀 Sending PUT request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${appointmentId}`);
+            console.log('🚀 Sending PATCH request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${appointmentId}`);
             console.log('📦 Payload:', payload);
 
             // Используем мутацию вместо прямого fetch
