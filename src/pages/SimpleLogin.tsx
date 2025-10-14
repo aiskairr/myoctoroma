@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, LogIn, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/SimpleAuthContext";
+import Lottie from "lottie-react";
+import abstractionAnimation from "@/lotties/Abstraction.json";
 
 export default function SimpleLogin() {
   const [email, setEmail] = useState("");
@@ -68,19 +70,35 @@ export default function SimpleLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-            <LogIn className="h-6 w-6 text-white" />
-          </div>
-          <CardTitle className="text-2xl font-bold text-gray-800">
-            Вход в систему
-          </CardTitle>
-          <CardDescription className="text-gray-600">
-            Octō CRM - Система управления записями
-          </CardDescription>
-        </CardHeader>
+    <div className="min-h-screen relative bg-gradient-to-br from-blue-900 via-blue-950 to-green-950">
+      {/* Фоновая анимация */}
+      <div className="fixed inset-0 z-0 flex items-center justify-center overflow-hidden">
+        <Lottie 
+          animationData={abstractionAnimation}
+          loop={true}
+          autoplay={true}
+          className="w-full h-full object-cover opacity-50"
+        />
+      </div>
+
+      {/* Модуль авторизации поверх анимации */}
+      <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
+        <Card className="w-full max-w-md shadow-2xl bg-white/95 backdrop-blur-md border border-gray-200">
+          <CardHeader className="text-center space-y-4">
+            <div className="mx-auto w-20 h-20 flex items-center justify-center">
+              <img 
+                src="/PROM_logo_mid_blue.svg" 
+                alt="Logo" 
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <CardTitle className="text-2xl font-bold text-gray-800">
+              Вход в систему
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              Octō CRM - Система управления записями
+            </CardDescription>
+          </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} onKeyDown={handleKeyDown}>
             <div className="space-y-4">
@@ -140,17 +158,17 @@ export default function SimpleLogin() {
 
               <Button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 outline-none focus:outline-none"
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 outline-none focus:outline-none transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] group"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Вход...
                   </>
                 ) : (
                   <>
-                    <LogIn className="mr-2 h-4 w-4" />
+                    <LogIn className="mr-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                     Войти
                   </>
                 )}
@@ -161,6 +179,7 @@ export default function SimpleLogin() {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
