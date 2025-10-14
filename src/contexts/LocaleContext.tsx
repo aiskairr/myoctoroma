@@ -281,6 +281,21 @@ const translations = {
     'dashboard.currency': 'сом',
     'dashboard.access_denied': 'Доступ запрещен. Только для учредителей!',
     
+    // Login page
+    'login.title': 'Вход в систему',
+    'login.subtitle': 'Octō CRM - Система управления записями',
+    'login.email': 'Email адрес',
+    'login.email_placeholder': 'your@email.com',
+    'login.password': 'Пароль',
+    'login.password_placeholder': 'Введите пароль',
+    'login.button': 'Войти',
+    'login.loading': 'Вход...',
+    'login.error.empty': 'Пожалуйста, заполните все поля',
+    'login.error.invalid': 'Неверный email или пароль',
+    'login.error.server': 'Ошибка подключения к серверу',
+    'login.powered_by': 'Powered by',
+    'login.company': 'Prom.Consulting',
+    
     // Clients page
     'clients.page_title': 'Клиенты',
     'clients.no_clients': 'Клиенты не найдены',
@@ -1065,6 +1080,21 @@ const translations = {
     'dashboard.currency': 'сом',
     'dashboard.access_denied': 'Кирүүгө тыюу салынган. Башкаруучулар гана!',
     
+    // Login page
+    'login.title': 'Системага кирүү',
+    'login.subtitle': 'Octō CRM - Жазуулар менеджмент системасы',
+    'login.email': 'Email дарек',
+    'login.email_placeholder': 'your@email.com',
+    'login.password': 'Сырсөз',
+    'login.password_placeholder': 'Сырсөздү киргизиңиз',
+    'login.button': 'Кирүү',
+    'login.loading': 'Кирүү...',
+    'login.error.empty': 'Бардык талааларды толтуруңуз',
+    'login.error.invalid': 'Email же сырсөз туура эмес',
+    'login.error.server': 'Серверге туташууда ката',
+    'login.powered_by': 'Powered by',
+    'login.company': 'Prom.Consulting',
+    
     // Clients page  
     'clients.page_title': 'Кардарлар',
     'clients.no_clients': 'Кардарлар табылган жок',
@@ -1846,6 +1876,21 @@ const translations = {
     'dashboard.appointments_count': 'Appointments Count',
     'dashboard.currency': 'KGS',
     'dashboard.access_denied': 'Access denied. For founders only!',
+    
+    // Login page
+    'login.title': 'System Login',
+    'login.subtitle': 'Octō CRM - Appointment Management System',
+    'login.email': 'Email address',
+    'login.email_placeholder': 'your@email.com',
+    'login.password': 'Password',
+    'login.password_placeholder': 'Enter password',
+    'login.button': 'Login',
+    'login.loading': 'Logging in...',
+    'login.error.empty': 'Please fill in all fields',
+    'login.error.invalid': 'Invalid email or password',
+    'login.error.server': 'Server connection error',
+    'login.powered_by': 'Powered by',
+    'login.company': 'Prom.Consulting',
     
     // Clients page
     'clients.page_title': 'Clients',

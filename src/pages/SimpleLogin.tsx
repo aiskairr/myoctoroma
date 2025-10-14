@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, LogIn, Eye, EyeOff } from "lucide-react";
+import { Loader2, LogIn, Eye, EyeOff, Globe } from "lucide-react";
 import { useAuth } from "@/contexts/SimpleAuthContext";
+import { useLocale } from "@/contexts/LocaleContext";
+import type { Locale } from "@/contexts/LocaleContext";
 import Lottie from "lottie-react";
 import abstractionAnimation from "@/lotties/Abstraction.json";
 
@@ -16,6 +18,7 @@ export default function SimpleLogin() {
   const [error, setError] = useState("");
   
   const { login, isLoading, isAuthenticated, user } = useAuth();
+  const { t, locale, setLocale } = useLocale();
 
   // Если пользователь уже авторизован, перенаправляем его
   useEffect(() => {
@@ -36,7 +39,7 @@ export default function SimpleLogin() {
     e.preventDefault();
 
     if (!email || !password) {
-      setError("Пожалуйста, заполните все поля");
+      setError(t('login.error.empty'));
       return;
     }
 
@@ -54,11 +57,11 @@ export default function SimpleLogin() {
         }
       } else {
         // Обрабатываем ошибку
-        setError(result.message || "Неверный email или пароль");
+        setError(result.message || t('login.error.invalid'));
       }
     } catch (err) {
       console.error("Login error:", err);
-      setError("Ошибка подключения к серверу");
+      setError(t('login.error.server'));
     }
   };
 
@@ -77,26 +80,44 @@ export default function SimpleLogin() {
           animationData={abstractionAnimation}
           loop={true}
           autoplay={true}
-          className="w-full h-full object-cover opacity-50"
+          className="w-full h-full object-cover opacity-55 scale-110"
         />
       </div>
 
+      {/* Переключатель языка */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-1 sm:gap-2 bg-white/10 backdrop-blur-md rounded-lg p-1.5 sm:p-2">
+        <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-white/70" />
+        {(['ru', 'ky', 'en'] as Locale[]).map((lang) => (
+          <button
+            key={lang}
+            onClick={() => setLocale(lang)}
+            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 ${
+              locale === lang
+                ? 'bg-white text-blue-900 shadow-md'
+                : 'text-white/70 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            {lang.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
       {/* Модуль авторизации поверх анимации */}
-      <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 sm:p-6">
         <Card className="w-full max-w-md shadow-2xl bg-white/95 backdrop-blur-md border border-gray-200">
-          <CardHeader className="text-center space-y-4">
-            <div className="mx-auto w-20 h-20 flex items-center justify-center">
+          <CardHeader className="text-center space-y-3 sm:space-y-4 p-4 sm:p-6">
+            <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center">
               <img 
                 src="/PROM_logo_mid_blue.svg" 
                 alt="Logo" 
                 className="w-full h-full object-contain"
               />
             </div>
-            <CardTitle className="text-2xl font-bold text-gray-800">
-              Вход в систему
+            <CardTitle className="text-xl sm:text-2xl font-bold text-gray-800">
+              {t('login.title')}
             </CardTitle>
-            <CardDescription className="text-gray-600">
-              Octō CRM - Система управления записями
+            <CardDescription className="text-sm sm:text-base text-gray-600">
+              {t('login.subtitle')}
             </CardDescription>
           </CardHeader>
         <CardContent>
@@ -104,13 +125,13 @@ export default function SimpleLogin() {
             <div className="space-y-4">
               {error && (
                 <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription className="text-sm">{error}</AlertDescription>
                 </Alert>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-                  Email адрес
+                <Label htmlFor="email" className="text-xs sm:text-sm font-medium text-gray-700">
+                  {t('login.email')}
                 </Label>
                 <Input
                   id="email"
@@ -118,16 +139,16 @@ export default function SimpleLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="your@email.com"
+                  placeholder={t('login.email_placeholder')}
                   disabled={isLoading}
-                  className="w-full outline-none focus:outline-none"
+                  className="w-full outline-none focus:outline-none text-sm sm:text-base"
                   autoComplete="email"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-gray-700">
-                  Пароль
+                <Label htmlFor="password" className="text-xs sm:text-sm font-medium text-gray-700">
+                  {t('login.password')}
                 </Label>
                 <div className="relative">
                   <Input
@@ -136,9 +157,9 @@ export default function SimpleLogin() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Введите пароль"
+                    placeholder={t('login.password_placeholder')}
                     disabled={isLoading}
-                    className="w-full pr-10 outline-none focus:outline-none"
+                    className="w-full pr-10 outline-none focus:outline-none text-sm sm:text-base"
                     autoComplete="current-password"
                   />
                   <button
@@ -158,18 +179,18 @@ export default function SimpleLogin() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 outline-none focus:outline-none transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] group"
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-2.5 sm:py-3 outline-none focus:outline-none transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] group text-sm sm:text-base"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Вход...
+                    <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                    {t('login.loading')}
                   </>
                 ) : (
                   <>
-                    <LogIn className="mr-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                    Войти
+                    <LogIn className="mr-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform group-hover:translate-x-1" />
+                    {t('login.button')}
                   </>
                 )}
               </Button>
@@ -179,6 +200,16 @@ export default function SimpleLogin() {
           </form>
         </CardContent>
       </Card>
+      
+      {/* Footer брендинг */}
+      <div className="mt-6 sm:mt-8 text-center px-4">
+        <p className="text-white/70 text-xs sm:text-sm font-light tracking-wide">
+          {t('login.powered_by')}{" "}
+          <span className="font-semibold text-white/90 hover:text-white transition-colors duration-200">
+            {t('login.company')}
+          </span>
+        </p>
+      </div>
       </div>
     </div>
   );
