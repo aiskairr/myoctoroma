@@ -3,11 +3,11 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { useBranch } from '@/contexts/BranchContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, Phone, Calendar, Edit, Loader2, Save, X } from 'lucide-react';
+import { Search, Phone, Calendar, Edit, Loader2, Save, X, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiGetJson, apiRequest } from '@/lib/api';
 
@@ -68,6 +68,7 @@ export default function Clients() {
   const [todaysLoading, setTodaysLoading] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientTasks, setClientTasks] = useState<Task[]>([]);
+  const [totalTasks, setTotalTasks] = useState(0);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
@@ -126,9 +127,11 @@ export default function Clients() {
       // Новый эндпоинт для получения задач клиента
       const data: ClientTasksResponse = await apiGetJson(`/api/clients/${clientId}/tasks`);
       setClientTasks(data.tasks || []);
+      setTotalTasks(data.total || 0);
     } catch (error) {
       console.error('Error loading client tasks:', error);
       setClientTasks([]);
+      setTotalTasks(0);
     } finally {
       setTasksLoading(false);
     }
@@ -255,57 +258,66 @@ export default function Clients() {
   }, [currentBranch]);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex flex-col space-y-4">
-        <h1 className="text-3xl font-bold">{t('sidebar.clients')}</h1>
-        
-        {/* Инструкция */}
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">
-              {t('clients.searchInstructionNew')}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Поиск */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder={t('clients.searchPlaceholderNew')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="pl-10"
-            />
+    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
+      {/* Header */}
+      <Card className="rounded-xl shadow-lg mb-8">
+        <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-xl">
+          <CardTitle className="flex items-center gap-3 text-2xl">
+            <Users className="h-8 w-8" />
+            {t('sidebar.clients')}
+          </CardTitle>
+          <CardDescription className="text-indigo-100 mt-2">
+            {t('clients.searchInstructionNew')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6">
+          {/* Поиск */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder={t('clients.searchPlaceholderNew')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                className="pl-10 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              />
+            </div>
+            <Button 
+              onClick={handleSearch} 
+              disabled={loading || !searchQuery.trim()}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-6 transition-all duration-200"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
+              {t('search')}
+            </Button>
           </div>
-          <Button onClick={handleSearch} disabled={loading || !searchQuery.trim()}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            {t('search')}
-          </Button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Сегодняшние клиенты */}
-      <div className="space-y-4">
-        <h2 className="text-2xl font-semibold">{t('clients.todaysClients')}</h2>
-        {todaysLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        ) : todaysClients.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
+      <Card className="rounded-xl shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-t-xl">
+          <CardTitle className="flex items-center gap-3 text-xl">
+            <Calendar className="h-6 w-6" />
+            {t('clients.todaysClients')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          {todaysLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+            </div>
+          ) : todaysClients.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
               {t('clients.noTodaysClients')}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {todaysClients.map((client) => (
-              <Card 
-                key={client.id} 
-                className="cursor-pointer transition-colors hover:bg-accent hover:shadow-md"
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {todaysClients.map((client) => (
+                <Card 
+                  key={client.id} 
+                  className="cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-105 border border-gray-200 bg-white rounded-lg"
                 onClick={() => handleClientCardClick(client)}
               >
                 <CardContent className="p-4">
@@ -340,27 +352,32 @@ export default function Clients() {
                 </CardContent>
               </Card>
             ))}
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Результаты поиска */}
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-2xl font-semibold">{t('clients.searchResults')}</h2>
-          {loading && clients.length === 0 ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin" />
             </div>
-          ) : clients.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Результаты поиска */}
+      {(loading || clients.length > 0 || searchQuery) && (
+        <Card className="rounded-xl shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-xl">
+            <CardTitle className="flex items-center gap-3 text-xl">
+              <Search className="h-6 w-6" />
+              {t('clients.searchResults')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            {loading && clients.length === 0 ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+              </div>
+            ) : clients.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
                 {searchQuery ? t('clients.noResults') : t('clients.enterSearchNew')}
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              {clients.map((client) => (
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {clients.map((client) => (
                 <Card 
                   key={client.id} 
                   className={`cursor-pointer transition-colors hover:bg-accent ${
@@ -399,11 +416,12 @@ export default function Clients() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-            </>
-          )}
-        </div>
-      </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Диалоговое окно с подробной информацией о клиенте */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
@@ -439,10 +457,6 @@ export default function Clients() {
                       <label className="text-sm font-medium text-muted-foreground">{t('clients.phone')}</label>
                       <p className="text-base">{selectedClient.phoneNumber}</p>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium text-muted-foreground">Telegram ID</label>
-                      <p className="text-base font-mono text-sm">{selectedClient.telegramId}</p>
-                    </div>
                     {selectedClient.username && (
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">{t('clients.username')}</label>
@@ -459,7 +473,7 @@ export default function Clients() {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">{t('clients.tasksCount')}</label>
-                      <p className="text-base">{selectedClient.tasks_count}</p>
+                      <p className="text-base">{totalTasks > 0 ? totalTasks : selectedClient.tasks_count}</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">{t('clients.firstSeen')}</label>
