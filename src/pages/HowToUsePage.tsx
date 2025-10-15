@@ -1,61 +1,66 @@
-import { ExternalLink, Play, BookOpen, Star, Clock, Users, DollarSign, Calendar, BarChart3, Sparkles, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Play, BookOpen, Star, Clock, Users, DollarSign, Calendar, BarChart3, Sparkles, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useLocale } from "@/contexts/LocaleContext";
 
 export default function HowToUsePage() {
+  const { t } = useLocale();
+  
   const handleVideoClick = () => {
     window.open('https://youtu.be/NJv5GSxQ-UI', '_blank');
   };
 
-  const features = [
+    const features = [
     {
       icon: Calendar,
-      title: "Календарь и записи",
-      description: "Удобное планирование и управление записями клиентов"
+      title: t('how_to_use.feature_calendar'),
+      description: t('how_to_use.feature_calendar_desc'),
+      gradient: "from-blue-500 to-cyan-500"
     },
     {
       icon: Users,
-      title: "Управление мастерами",
-      description: "Контроль расписания и загрузки специалистов"
+      title: t('how_to_use.feature_masters'),
+      description: t('how_to_use.feature_masters_desc'),
+      gradient: "from-purple-500 to-pink-500"
     },
     {
       icon: DollarSign,
-      title: "Финансовый учет",
-      description: "Отслеживание доходов, расходов и зарплат"
+      title: t('how_to_use.feature_finance'),
+      description: t('how_to_use.feature_finance_desc'),
+      gradient: "from-emerald-500 to-teal-500"
     },
     {
       icon: BarChart3,
-      title: "Аналитика и отчеты",
-      description: "Детальная статистика и бизнес-аналитика"
+      title: t('how_to_use.feature_analytics'),
+      description: t('how_to_use.feature_analytics_desc'),
+      gradient: "from-orange-500 to-red-500"
     }
   ];
 
-  const benefits = [
-    "Экономия времени на рутинных задачах",
-    "Повышение качества обслуживания клиентов",
-    "Автоматизация расчетов и отчетности",
-    "Удобный интерфейс для всей команды"
+    const benefits = [
+    { icon: Clock, text: t('how_to_use.benefit_time') },
+    { icon: Star, text: t('how_to_use.benefit_quality') },
+    { icon: Sparkles, text: t('how_to_use.benefit_automation') },
+    { icon: BookOpen, text: t('how_to_use.benefit_interface') }
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-6 py-8 max-w-6xl">
         {/* Hero Section */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6">
-            <Sparkles className="h-4 w-4" />
-            Обучение и поддержка
-          </div>
-
-          <h1 className="text-5xl font-bold tracking-tight mb-4 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
-            Как использовать
-            <span className="text-primary"> CRM систему</span>
+                {/* Hero Section */}
+        <div className="text-center space-y-4 mb-12">
+          <Badge variant="secondary" className="mb-2">
+            {t('how_to_use.badge')}
+          </Badge>
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+            {t('how_to_use.title')} <br className="md:hidden" />
+            {t('how_to_use.title_crm')}
           </h1>
-
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Полное руководство по эффективному использованию всех возможностей системы
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            {t('how_to_use.subtitle')}
           </p>
         </div>
 
@@ -72,16 +77,16 @@ export default function HowToUsePage() {
                       <Play className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-2xl">Видео-инструкция</CardTitle>
+                      <CardTitle className="text-2xl">{t('how_to_use.video_title')}</CardTitle>
                       <CardDescription className="text-base">
-                        Пошаговое руководство по работе с системой
+                        {t('how_to_use.video_description')}
                       </CardDescription>
                     </div>
                   </div>
 
                   <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
                     <Star className="h-3 w-3 mr-1" />
-                    Рекомендуем
+                    {t('how_to_use.recommended')}
                   </Badge>
                 </div>
               </CardHeader>
@@ -108,7 +113,7 @@ export default function HowToUsePage() {
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Длительность: 15 минут</span>
+                    <span className="text-sm font-medium">{t('how_to_use.duration')}</span>
                   </div>
 
                   <Button
@@ -117,7 +122,7 @@ export default function HowToUsePage() {
                     className="w-full group shadow-lg hover:shadow-xl transition-all duration-300"
                   >
                     <Play className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
-                    Смотреть видео-инструкцию
+                    {t('how_to_use.watch_button')}
                     <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </div>
@@ -134,14 +139,14 @@ export default function HowToUsePage() {
                   <div className="p-1 bg-green-100 rounded">
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                   </div>
-                  Преимущества
+                  {t('how_to_use.benefits_title')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {benefits.map((benefit, index) => (
                   <div key={index} className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm leading-relaxed">{benefit}</span>
+                    <span className="text-sm leading-relaxed">{benefit.text}</span>
                   </div>
                 ))}
               </CardContent>
@@ -154,26 +159,26 @@ export default function HowToUsePage() {
                   <div className="p-1 bg-blue-100 rounded">
                     <BookOpen className="h-4 w-4 text-blue-600" />
                   </div>
-                  Быстрый старт
+                  {t('how_to_use.quick_start')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-medium">1</div>
-                    <span>Посмотрите обучающее видео</span>
+                    <span>{t('how_to_use.step_1')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-medium">2</div>
-                    <span>Создайте первую запись</span>
+                    <span>{t('how_to_use.step_2')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-medium">3</div>
-                    <span>Настройте мастеров</span>
+                    <span>{t('how_to_use.step_3')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 rounded-full bg-primary text-white text-xs flex items-center justify-center font-medium">4</div>
-                    <span>Начните работу</span>
+                    <span>{t('how_to_use.step_4')}</span>
                   </div>
                 </div>
               </CardContent>

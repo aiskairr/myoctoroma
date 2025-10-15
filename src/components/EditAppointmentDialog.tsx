@@ -719,7 +719,7 @@ export const EditAppointmentDialog = ({
 
               <div className="space-y-3">
                 <div>
-                  <Label htmlFor="clientName" className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.client_name')}</Label>
+                  <Label htmlFor="clientName" className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.client_name_required')}</Label>
                   <Input
                     id="clientName"
                     className="w-full text-sm"
@@ -731,7 +731,7 @@ export const EditAppointmentDialog = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="phoneNumber" className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.phone')}</Label>
+                  <Label htmlFor="phoneNumber" className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.phone_required')}</Label>
                   <Input
                     id="phoneNumber"
                     className="w-full text-sm"
@@ -935,7 +935,7 @@ export const EditAppointmentDialog = ({
                   <Label className="block font-semibold text-gray-700 text-sm mb-1">
                     {t('edit_appointment.duration')}: {localMainDuration} {t('common.minutes')}
                     {!isStandardDuration(localMainDuration) && (
-                      <span className="text-amber-600 ml-2">(произвольная)</span>
+                      <span className="text-amber-600 ml-2">{t('edit_appointment.custom_duration')}</span>
                     )}
                   </Label>
                   <div className="flex gap-2 items-center">
@@ -978,7 +978,7 @@ export const EditAppointmentDialog = ({
 
                 {formData.finalPrice > 0 && (
                   <div>
-                    <Label className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.final_price')}</Label>
+                    <Label className="block font-semibold text-gray-700 text-sm mb-1">{t('edit_appointment.cost_label')}</Label>
                     <div className="text-lg font-bold text-green-600">{formData.finalPrice} {t('common.som')}</div>
                   </div>
                 )}
@@ -1022,17 +1022,17 @@ export const EditAppointmentDialog = ({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-amber-600" />
-              Оплата услуг
+              {t('edit_appointment.payment_title')}
             </DialogTitle>
             <DialogDescription id="payment-dialog-description">
-              Выберите способ оплаты и подтвердите операцию
+              {t('edit_appointment.payment_description')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex gap-6">
             {/* Левая колонка - способы оплаты */}
             <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-4">Выберите способ оплаты</h3>
+              <h3 className="text-lg font-semibold mb-4">{t('edit_appointment.select_payment_method')}</h3>
               <div className="space-y-2">
                 {paymentMethods.map((method) => (
                   <Button
@@ -1050,32 +1050,32 @@ export const EditAppointmentDialog = ({
 
             {/* Правая колонка - детали оплаты */}
             <div className="w-64 bg-gray-50 rounded-lg p-4">
-              <h3 className="font-semibold text-lg mb-4">Детали оплаты</h3>
+              <h3 className="font-semibold text-lg mb-4">{t('edit_appointment.payment_details')}</h3>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span>Основная услуга:</span>
-                  <span>{calculateMainServicePrice()} сом</span>
+                  <span>{t('edit_appointment.main_service')}</span>
+                  <span>{calculateMainServicePrice()} {t('common.som')}</span>
                 </div>
                 {childTasks.length > 0 && (
                   <div className="flex justify-between">
-                    <span>Дополнительные услуги:</span>
-                    <span>{calculateAdditionalServicesPrice()} сом</span>
+                    <span>{t('edit_appointment.additional_services_label')}</span>
+                    <span>{calculateAdditionalServicesPrice()} {t('common.som')}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>Общее время:</span>
-                  <span>{calculateTotalDuration()} мин</span>
+                  <span>{t('edit_appointment.total_time')}</span>
+                  <span>{calculateTotalDuration()} {t('common.minutes')}</span>
                 </div>
                 {formData.discount > 0 && (
                   <div className="flex justify-between">
-                    <span>Скидка ({formData.discount}%):</span>
-                    <span>-{Math.round(calculateTotalPrice() * formData.discount / 100)} сом</span>
+                    <span>{t('edit_appointment.discount_label', { discount: formData.discount.toString() })}</span>
+                    <span>-{Math.round(calculateTotalPrice() * formData.discount / 100)} {t('common.som')}</span>
                   </div>
                 )}
                 <hr className="my-3" />
                 <div className="flex justify-between font-bold">
-                  <span>Итого:</span>
-                  <span>{calculateTotalPrice() - Math.round(calculateTotalPrice() * formData.discount / 100)} сом</span>
+                  <span>{t('edit_appointment.total_label')}</span>
+                  <span>{calculateTotalPrice() - Math.round(calculateTotalPrice() * formData.discount / 100)} {t('common.som')}</span>
                 </div>
               </div>
             </div>
@@ -1083,10 +1083,10 @@ export const EditAppointmentDialog = ({
 
           {/* Выбор администратора */}
           <div className="mt-4 border-t pt-4">
-            <Label className="text-sm font-semibold mb-2 block">Администратор</Label>
+            <Label className="text-sm font-semibold mb-2 block">{t('edit_appointment.administrator')}</Label>
             <Select value={selectedAdministrator} onValueChange={setSelectedAdministrator}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Выберите администратора" />
+                <SelectValue placeholder={t('edit_appointment.select_administrator')} />
               </SelectTrigger>
               <SelectContent>
                 {administrators.map((admin) => (
@@ -1098,12 +1098,12 @@ export const EditAppointmentDialog = ({
             </Select>
           </div>
 
-          <DialogFooter className="flex justify-between mt-4">
+                    <DialogFooter className="flex justify-between mt-4">
             <Button
               variant="outline"
               onClick={() => setShowPaymentDialog(false)}
             >
-              Отмена
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handlePayment}
@@ -1113,7 +1113,7 @@ export const EditAppointmentDialog = ({
               {createPaymentMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Зафиксировать оплату
+              {t('edit_appointment.confirm_payment')}
             </Button>
           </DialogFooter>
         </DialogContent>

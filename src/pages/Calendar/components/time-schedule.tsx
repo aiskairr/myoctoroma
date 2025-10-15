@@ -1901,40 +1901,40 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                 <DialogHeader>
                                     <DialogTitle className="flex items-center gap-2">
                                         <Calendar size={20} />
-                                        Новая запись на {selectedTimeSlot}
+                                        {t('calendar.new_appointment_at')} {selectedTimeSlot}
                                     </DialogTitle>
                                 </DialogHeader>
                                 <div className="space-y-6 py-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Имя клиента *
+                                            {t('calendar.client_name_label')} *
                                         </label>
                                         <input
                                             type="text"
                                             value={newAppointment.clientName}
                                             onChange={(e) => setNewAppointment(prev => ({ ...prev, clientName: e.target.value }))}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="Введите имя клиента"
+                                            placeholder={t('calendar.client_name_placeholder')}
                                         />
                                     </div>
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Телефон *
+                                            {t('calendar.phone_label')} *
                                         </label>
                                         <input
                                             type="tel"
                                             value={newAppointment.phone}
                                             onChange={(e) => setNewAppointment(prev => ({ ...prev, phone: e.target.value }))}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            placeholder="+996 500 123 456"
+                                            placeholder={t('calendar.phone_placeholder')}
                                             required
                                         />
                                     </div>
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Услуга *
+                                            {t('calendar.service_label')} *
                                         </label>
                                         <select
                                             value={newAppointment.service}
@@ -1967,14 +1967,14 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Примечания
+                                            {t('calendar.notes_label')}
                                         </label>
                                         <textarea
                                             value={newAppointment.notes}
                                             onChange={(e) => setNewAppointment(prev => ({ ...prev, notes: e.target.value }))}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                                             rows={3}
-                                            placeholder="Дополнительная информация..."
+                                            placeholder={t('calendar.notes_placeholder')}
                                         />
                                     </div>
 
@@ -2005,11 +2005,11 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                                                     className="w-16 h-6 text-xs text-center border border-amber-300 rounded"
                                                                     min="0"
                                                                 />
-                                                                <span className="text-xs text-gray-500">мин</span>
+                                                                <span className="text-xs text-gray-500">{t('calendar.min')}</span>
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-sm font-medium">{service.price} сом</span>
+                                                            <span className="text-sm font-medium">{service.price} {t('calendar.som')}</span>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => removeAdditionalService(service.id)}
@@ -2030,10 +2030,10 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                                 onChange={(e) => setSelectedAdditionalService(e.target.value)}
                                                 className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             >
-                                                <option value="">Добавить дополнительную услугу</option>
+                                                <option value="">{t('calendar.add_additional_service')}</option>
                                                 {services.filter(s => !additionalServices.some(as => as.serviceName === s.name)).map(service => (
                                                     <option key={service.name} value={service.name}>
-                                                        {service.name} ({service.duration} мин, {service.price} сом)
+                                                        {service.name} ({service.duration} {t('calendar.min')}, {service.price} {t('calendar.som')})
                                                     </option>
                                                 ))}
                                             </select>
@@ -2055,9 +2055,9 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                         {additionalServices.length > 0 && (
                                             <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
                                                 <div className="flex justify-between items-center">
-                                                    <span className="text-sm font-medium text-blue-800">Общая стоимость:</span>
+                                                    <span className="text-sm font-medium text-blue-800">{t('calendar.total_price_label')}</span>
                                                     <span className="text-lg font-bold text-blue-800">
-                                                        {calculateTotalPrice({ price: services.find(s => s.name === newAppointment.service)?.price || 0 })} сом
+                                                        {calculateTotalPrice({ price: services.find(s => s.name === newAppointment.service)?.price || 0 })} {t('calendar.som')}
                                                     </span>
                                                 </div>
                                             </div>
@@ -2070,7 +2070,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                                 {t('calendar.employee_label')} {employees.find(emp => emp.id === selectedEmployeeId)?.name}
                                             </div>
                                             <div className="text-sm text-gray-600">
-                                                Время: {selectedTimeSlot} - {minutesToTime(timeToMinutes(selectedTimeSlot) + newAppointment.duration)}
+                                                {t('calendar.time_label')} {selectedTimeSlot} - {minutesToTime(timeToMinutes(selectedTimeSlot) + newAppointment.duration)}
                                             </div>
                                         </div>
                                     )}

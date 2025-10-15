@@ -80,7 +80,7 @@ export default function SimpleLogin() {
           animationData={circularLinesAnimation}
           loop={true}
           autoplay={true}
-          className="w-full h-full object-cover opacity-55 scale-[130%]"
+          className="w-full h-full object-cover opacity-55 scale-[208%]"
         />
       </div>
 
