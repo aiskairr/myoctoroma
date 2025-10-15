@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/SimpleAuthContext";
 import { useLocale } from "@/contexts/LocaleContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import Lottie from "lottie-react";
-import abstractionAnimation from "@/lotties/Abstraction.json";
+import circularLinesAnimation from "@/lotties/Circular lines 01.json";
 
 export default function SimpleLogin() {
   const [email, setEmail] = useState("");
@@ -77,10 +77,10 @@ export default function SimpleLogin() {
       {/* Фоновая анимация */}
       <div className="fixed inset-0 z-0 flex items-center justify-center overflow-hidden">
         <Lottie 
-          animationData={abstractionAnimation}
+          animationData={circularLinesAnimation}
           loop={true}
           autoplay={true}
-          className="w-full h-full object-cover opacity-55 scale-110"
+          className="w-full h-full object-cover opacity-55 scale-[130%]"
         />
       </div>
 
@@ -91,7 +91,7 @@ export default function SimpleLogin() {
 
       {/* Модуль авторизации поверх анимации */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 sm:p-6">
-        <Card className="w-full max-w-md shadow-2xl bg-white/95 backdrop-blur-md border border-gray-200">
+        <Card className="w-full max-w-md shadow-2xl bg-white/95 backdrop-blur-md border border-gray-200 rounded-[48px]">
           <CardHeader className="text-center space-y-3 sm:space-y-4 p-4 sm:p-6">
             <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center">
               <img 
@@ -166,7 +166,7 @@ export default function SimpleLogin() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-2.5 sm:py-3 outline-none focus:outline-none transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] group text-sm sm:text-base"
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-2.5 sm:py-3 outline-none focus:outline-none transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] group text-sm sm:text-base rounded-2xl"
                 disabled={isLoading}
               >
                 {isLoading ? (
