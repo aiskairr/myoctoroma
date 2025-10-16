@@ -203,6 +203,14 @@ const translations = {
     'clients.firstSeen': 'Первое обращение',
     'clients.noName': 'Без имени',
 
+    // Chats & Messages
+    'chats.load_more': 'Загрузить еще сообщения',
+    'chats.loading_messages': 'Загрузка сообщений...',
+    'chats.no_more_messages': 'Больше сообщений нет',
+    'chats.loading_older': 'Загрузка старых сообщений...',
+    'chats.messages_loaded': 'Сообщения загружены',
+    'chats.error_loading': 'Ошибка загрузки сообщений',
+
     // Общие
     'save': 'Сохранить',
     'cancel': 'Отмена',
@@ -1642,6 +1650,14 @@ const translations = {
     'clients.firstSeen': 'Биринчи кайрылуу',
     'clients.noName': 'Аты жок',
 
+    // Чаттар жана билдирүүлөр
+    'chats.load_more': 'Дагы билдирүүлөрдү жүктөө',
+    'chats.loading_messages': 'Билдирүүлөр жүктөлүүдө...',
+    'chats.no_more_messages': 'Дагы билдирүүлөр жок',
+    'chats.loading_older': 'Эски билдирүүлөр жүктөлүүдө...',
+    'chats.messages_loaded': 'Билдирүүлөр жүктөлдү',
+    'chats.error_loading': 'Билдирүүлөрдү жүктөөдө ката',
+
     // Жалпы
     'success': 'Ийгилик',
     'save': 'Сактоо',
@@ -3080,6 +3096,14 @@ const translations = {
     'clients.quickActions': 'Quick Actions',
     'clients.firstSeen': 'First seen',
     'clients.noName': 'No name',
+
+    // Chats & Messages
+    'chats.load_more': 'Load more messages',
+    'chats.loading_messages': 'Loading messages...',
+    'chats.no_more_messages': 'No more messages',
+    'chats.loading_older': 'Loading older messages...',
+    'chats.messages_loaded': 'Messages loaded',
+    'chats.error_loading': 'Error loading messages',
 
     // General
     'save': 'Save',
