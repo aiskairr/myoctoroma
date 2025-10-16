@@ -573,8 +573,8 @@ export default function Settings() {
       return (
         <div className="p-6">
           <div className="text-destructive">
-            <h2 className="text-lg font-semibold mb-2">Ошибка загрузки настроек</h2>
-            <p className="text-sm">{errorMessage || 'Произошла ошибка при загрузке настроек'}</p>
+            <h2 className="text-lg font-semibold mb-2">{t('settings.loading_error_title')}</h2>
+            <p className="text-sm">{errorMessage || t('settings.loading_error_occurred')}</p>
             <p className="text-xs text-muted-foreground mt-2">
               URL: {import.meta.env.VITE_BACKEND_URL}/api/settings/{currentBranch?.id || '[branchId]'}
             </p>
@@ -701,7 +701,7 @@ export default function Settings() {
                   <Input
                     id="whatsapp-api-token"
                     type="password"
-                    placeholder="Введите API токен"
+                    placeholder={t('settings.api_token_placeholder')}
                     value={whatsappConfig.apiToken}
                     onChange={(e) => handleWhatsappInputChange('apiToken', e.target.value)}
                   />
@@ -717,10 +717,10 @@ export default function Settings() {
                   {saveWhatsappConfigMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Сохранение...
+                      {t('settings.saving_button')}
                     </>
                   ) : (
-                    'Сохранить конфигурацию'
+                    t('settings.save_config_button')
                   )}
                 </Button>
                 
@@ -732,10 +732,10 @@ export default function Settings() {
                   {(isTestingConnection || testWhatsappConnectionMutation.isPending) ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Тестирование...
+                      {t('settings.testing_button')}
                     </>
                   ) : (
-                    'Тест соединения'
+                    t('settings.test_connection_button')
                   )}
                 </Button>
               </div>
@@ -794,10 +794,10 @@ export default function Settings() {
               {importMutation.isPending ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Загрузка...
+                  {t('settings.loading_text')}
                 </>
               ) : (
-                'Импортировать данные'
+                t('settings.import_data_button')
               )}
             </Button>
 
@@ -853,19 +853,19 @@ export default function Settings() {
                         </div>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Файл:</span>
+                        <span className="text-muted-foreground">{t('settings.file')}</span>
                         <div className="font-medium truncate">
-                          {(importStatus as any).job.fileName || 'Неизвестно'}
+                          {(importStatus as any).job.fileName || t('settings.unknown')}
                         </div>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Клиенты:</span>
+                        <span className="text-muted-foreground">{t('settings.clients')}</span>
                         <div className="font-medium">
                           {(importStatus as any).job.clientsImported || 0}
                         </div>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Задачи:</span>
+                        <span className="text-muted-foreground">{t('settings.tasks')}</span>
                         <div className="font-medium">
                           {(importStatus as any).job.tasksImported || 0}
                         </div>
