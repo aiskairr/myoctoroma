@@ -5,6 +5,7 @@ import { CalendarDays, Loader2 } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { useBranch } from "@/contexts/BranchContext";
 import { getBranchIdWithFallback } from "@/utils/branch-utils";
+import { useLocale } from "@/contexts/LocaleContext";
 
 interface WorkingDate {
   date?: string; // ISO date string
@@ -32,6 +33,14 @@ const MasterWorkingDatesDisplay: React.FC<MasterWorkingDatesDisplayProps> = ({
   masterId
 }) => {
   const { branches, currentBranch } = useBranch();
+  const { t } = useLocale();
+
+  // Функция для склонения слова "дни"
+  const getDaysWord = (count: number) => {
+    if (count === 1) return t('masters.days_count_1');
+    if (count >= 2 && count <= 4) return t('masters.days_count_2_4');
+    return t('masters.days_count_5_plus');
+  };
 
   // Загружаем данные из API, если передан masterId
   const { data: apiWorkingDates, isLoading } = useQuery({
@@ -106,7 +115,7 @@ const MasterWorkingDatesDisplay: React.FC<MasterWorkingDatesDisplayProps> = ({
       <div className="space-y-2">
         <div className="flex items-center">
           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          <span className="text-sm text-muted-foreground">Загрузка рабочих дней...</span>
+          <span className="text-sm text-muted-foreground">{t('masters.loading_working_days')}</span>
         </div>
       </div>
     );
@@ -118,11 +127,14 @@ const MasterWorkingDatesDisplay: React.FC<MasterWorkingDatesDisplayProps> = ({
         <CalendarDays className="h-4 w-4 mr-2 mt-0.5" />
         <div className="flex-1">
           <span className="font-medium text-sm">
-            {masterName && `${masterName}: `}{workingDatesInMonth.length} рабочих дней в {format(currentMonth, 'LLLL')}
+            {masterName && `${masterName}: `}{t('masters.working_days_in_month', { 
+              count: workingDatesInMonth.length.toString(), 
+              month: format(currentMonth, 'LLLL') 
+            })}
           </span>
           {workingDatesInMonth.length === 0 ? (
             <div className="mt-1 text-sm text-gray-500">
-              Нет запланированных рабочих дней
+              {t('masters.no_scheduled_days')}
             </div>
           ) : (
             <div className="mt-1 space-y-2">
@@ -133,7 +145,7 @@ const MasterWorkingDatesDisplay: React.FC<MasterWorkingDatesDisplayProps> = ({
                       {branchMap[branchId] || branchId}
                     </Badge>
                     <span className="text-gray-600">
-                      {dates.length} {dates.length === 1 ? 'день' : dates.length < 5 ? 'дня' : 'дней'}
+                      {dates.length} {getDaysWord(dates.length)}
                     </span>
                   </div>
                   <div className="text-xs text-gray-500 ml-2">
@@ -142,7 +154,7 @@ const MasterWorkingDatesDisplay: React.FC<MasterWorkingDatesDisplayProps> = ({
                       .slice(0, 3)
                       .map(wd => format(new Date(wd.date), 'dd MMM'))
                       .join(', ')}
-                    {dates.length > 3 && ` и ещё ${dates.length - 3}`}
+                    {dates.length > 3 && ` ${t('masters.and_more_days', { count: (dates.length - 3).toString() })}`}
                   </div>
                 </div>
               ))}

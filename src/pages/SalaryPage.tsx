@@ -551,7 +551,7 @@ export default function SalaryPage() {
             <Calendar className="h-5 w-5 text-gray-600" />
             <label className="text-sm font-medium">{t('salary.period')}:</label>
             <div className="flex items-center gap-2">
-              <label className="text-sm">С:</label>
+              <label className="text-sm">{t('salary.from')}:</label>
               <input
                 type="date"
                 value={startDate}
@@ -560,7 +560,7 @@ export default function SalaryPage() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-sm">По:</label>
+              <label className="text-sm">{t('salary.to')}:</label>
               <input
                 type="date"
                 value={endDate}
@@ -579,7 +579,7 @@ export default function SalaryPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Calculator className="h-5 w-5" />
-            Расчет зарплат с {startDate} по {endDate}
+            {t('salary.salary_calculation', { startDate, endDate })}
           </CardTitle>
         </CardHeader>
         <CardContent>

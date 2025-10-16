@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Gift, CreditCard, User, Calendar, CheckCircle, Search, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useBranch } from '@/contexts/BranchContext';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface GiftCertificate {
   id: number;
@@ -31,6 +32,7 @@ interface GiftCertificate {
 const GiftCertificatesPage = () => {
   const { currentBranch } = useBranch();
   const { toast } = useToast();
+  const { t } = useLocale();
   const [activeCertificates, setActiveCertificates] = useState<GiftCertificate[]>([]);
   const [usedCertificates, setUsedCertificates] = useState<GiftCertificate[]>([]);
   const [newCertificate, setNewCertificate] = useState({
@@ -204,8 +206,8 @@ const GiftCertificatesPage = () => {
       } catch (error) {
         console.error('Error loading data:', error);
         toast({
-          title: "Ошибка загрузки",
-          description: "Не удалось загрузить данные. Проверьте подключение к интернету.",
+          title: t('gift_certificates.loading_error'),
+          description: t('gift_certificates.loading_failed'),
           variant: "destructive"
         });
       } finally {
@@ -229,8 +231,8 @@ const GiftCertificatesPage = () => {
   const addCertificate = async () => {
     if (!newCertificate.certificate_number || !newCertificate.amount || !newCertificate.payment_method || !newCertificate.expiry_date) {
       toast({
-        title: "Ошибка валидации",
-        description: "Заполните все обязательные поля: номер сертификата, сумма, способ оплаты, срок действия",
+        title: t('gift_certificates.validation_error'),
+        description: t('gift_certificates.fill_all_fields'),
         variant: "destructive"
       });
       return;
@@ -257,8 +259,8 @@ const GiftCertificatesPage = () => {
         const savedCertificate = await response.json();
         setActiveCertificates([...activeCertificates, savedCertificate]);
         toast({
-          title: "Успех",
-          description: "Сертификат успешно добавлен"
+          title: t('gift_certificates.success'),
+          description: t('gift_certificates.added_success')
         });
 
         setNewCertificate({
@@ -270,15 +272,15 @@ const GiftCertificatesPage = () => {
       } else {
         const errorData = await response.json();
         toast({
-          title: "Ошибка",
-          description: errorData.message || "Не удалось добавить сертификат",
+          title: t('gift_certificates.error'),
+          description: errorData.message || t('gift_certificates.add_failed'),
           variant: "destructive"
         });
       }
     } catch (error) {
       toast({
-        title: "Ошибка",
-        description: "Не удалось добавить сертификат",
+        title: t('gift_certificates.error'),
+        description: t('gift_certificates.add_failed'),
         variant: "destructive"
       });
     }
@@ -287,8 +289,8 @@ const GiftCertificatesPage = () => {
   const markAsUsed = async (certificate: GiftCertificate) => {
     if (!usageData.client_name || !usageData.service_type || !usageData.duration || !usageData.master_name || !usageData.admin_name) {
       toast({
-        title: "Ошибка",
-        description: "Заполните все поля для использования сертификата",
+        title: t('gift_certificates.error'),
+        description: t('gift_certificates.fill_usage_fields'),
         variant: "destructive"
       });
       return;
@@ -325,8 +327,8 @@ const GiftCertificatesPage = () => {
             amount: certificate.amount,
             discount: certificate.discount || '0%',
             duration: usageData.duration,
-            comment: `Использован подарочный сертификат №${certificate.certificate_number}`,
-            payment_method: 'Подарочный сертификат',
+            comment: t('gift_certificates.used_certificate_comment', { number: certificate.certificate_number }),
+            payment_method: t('gift_certificates.payment_gift_cert'),
             admin_name: usageData.admin_name,
             is_gift_certificate_used: true,
             branch_id: currentBranch?.id
@@ -350,21 +352,21 @@ const GiftCertificatesPage = () => {
           admin_name: ''
         });
         toast({
-          title: "Успешно",
-          description: "Сертификат отмечен как использованный и добавлен в бухгалтерию"
+          title: t('gift_certificates.used_success'),
+          description: t('gift_certificates.used_and_recorded')
         });
       } else {
         const errorData = await response.json();
         toast({
-          title: "Ошибка",
-          description: errorData.message || "Не удалось отметить сертификат как использованный",
+          title: t('gift_certificates.error'),
+          description: errorData.message || t('gift_certificates.mark_failed'),
           variant: "destructive"
         });
       }
     } catch (error) {
       toast({
-        title: "Ошибка",
-        description: "Не удалось отметить сертификат как использованный",
+        title: t('gift_certificates.error'),
+        description: t('gift_certificates.mark_failed'),
         variant: "destructive"
       });
     }
@@ -373,8 +375,8 @@ const GiftCertificatesPage = () => {
   const searchCertificate = async () => {
     if (!searchNumber.trim()) {
       toast({
-        title: "Ошибка",
-        description: "Введите номер сертификата для поиска",
+        title: t('gift_certificates.error'),
+        description: t('gift_certificates.enter_number'),
         variant: "destructive"
       });
       return;
@@ -385,20 +387,20 @@ const GiftCertificatesPage = () => {
       if (response.ok) {
         const certificate = await response.json();
         toast({
-          title: "Сертификат найден",
-          description: `Сертификат ${certificate.certificate_number} на сумму ${certificate.amount} сом`
+          title: t('gift_certificates.found'),
+          description: t('gift_certificates.found_details', { number: certificate.certificate_number, amount: certificate.amount })
         });
       } else {
         toast({
-          title: "Сертификат не найден",
-          description: "Проверьте правильность введенного номера",
+          title: t('gift_certificates.not_found_title'),
+          description: t('gift_certificates.check_number'),
           variant: "destructive"
         });
       }
     } catch (error) {
       toast({
-        title: "Ошибка поиска",
-        description: "Не удалось найти сертификат",
+        title: t('gift_certificates.search_error'),
+        description: t('gift_certificates.not_found'),
         variant: "destructive"
       });
     }
@@ -424,7 +426,7 @@ const GiftCertificatesPage = () => {
   if (isLoading) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
-        <div className="text-center">Загрузка...</div>
+        <div className="text-center">{t('gift_certificates.loading')}</div>
       </div>
     );
   }
@@ -433,8 +435,8 @@ const GiftCertificatesPage = () => {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Подарочные сертификаты</h1>
-          <p className="text-gray-600 mt-2">Управление подарочными сертификатами</p>
+          <h1 className="text-3xl font-bold">{t('gift_certificates.page_title')}</h1>
+          <p className="text-gray-600 mt-2">{t('gift_certificates.management')}</p>
         </div>
       </div>
 
@@ -445,12 +447,12 @@ const GiftCertificatesPage = () => {
             <Input
               value={searchNumber}
               onChange={(e) => setSearchNumber(e.target.value)}
-              placeholder="Введите номер сертификата для поиска"
+              placeholder={t('gift_certificates.search_placeholder')}
               className="rounded-lg"
             />
             <Button onClick={searchCertificate} className="rounded-lg">
               <Search className="h-4 w-4 mr-2" />
-              Найти
+              {t('gift_certificates.search_button')}
             </Button>
           </div>
         </CardContent>
@@ -458,8 +460,8 @@ const GiftCertificatesPage = () => {
 
       <Tabs defaultValue="active" className="w-full">
         <TabsList className="grid w-full grid-cols-2 rounded-lg">
-          <TabsTrigger value="active">Активные сертификаты ({activeCertificates.length})</TabsTrigger>
-          <TabsTrigger value="used">Использованные сертификаты ({usedCertificates.length})</TabsTrigger>
+          <TabsTrigger value="active">{t('gift_certificates.active_tab')} ({activeCertificates.length})</TabsTrigger>
+          <TabsTrigger value="used">{t('gift_certificates.used_tab')} ({usedCertificates.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="active" className="space-y-6">
@@ -468,7 +470,7 @@ const GiftCertificatesPage = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plus className="h-5 w-5" />
-                Добавить новый сертификат
+                {t('gift_certificates.add_new')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -477,7 +479,7 @@ const GiftCertificatesPage = () => {
                   name="certificate_number"
                   value={newCertificate.certificate_number}
                   onChange={handleInputChange}
-                  placeholder="Номер сертификата*"
+                  placeholder={`${t('gift_certificates.certificate_number')}*`}
                   className="rounded-lg"
                 />
                 <Input
@@ -485,7 +487,7 @@ const GiftCertificatesPage = () => {
                   name="amount"
                   value={newCertificate.amount}
                   onChange={handleInputChange}
-                  placeholder="Сумма*"
+                  placeholder={`${t('gift_certificates.amount')}*`}
                   className="rounded-lg"
                 />
 
@@ -494,7 +496,7 @@ const GiftCertificatesPage = () => {
                   onValueChange={(value) => setNewCertificate({ ...newCertificate, payment_method: value })}
                 >
                   <SelectTrigger className="rounded-lg">
-                    <SelectValue placeholder="Способ оплаты*" />
+                    <SelectValue placeholder={`${t('gift_certificates.payment_method')}*`} />
                   </SelectTrigger>
                   <SelectContent>
                     {paymentOptions.map(option => (
@@ -513,7 +515,7 @@ const GiftCertificatesPage = () => {
               </div>
               <Button onClick={addCertificate} className="w-full rounded-lg">
                 <Plus className="h-4 w-4 mr-2" />
-                Добавить сертификат
+                {t('gift_certificates.add_button')}
               </Button>
             </CardContent>
           </Card>
@@ -524,7 +526,7 @@ const GiftCertificatesPage = () => {
               <Card className="rounded-xl">
                 <CardContent className="pt-6">
                   <div className="text-center text-gray-500">
-                    Нет активных сертификатов
+                    {t('gift_certificates.no_active')}
                   </div>
                 </CardContent>
               </Card>
@@ -535,28 +537,28 @@ const GiftCertificatesPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                       <div className="flex items-center gap-2">
                         <Gift className="h-4 w-4 text-pink-600" />
-                        <span className="font-medium">Номер:</span>
+                        <span className="font-medium">{t('gift_certificates.number_label')}:</span>
                         <span>{cert.certificate_number}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CreditCard className="h-4 w-4 text-green-600" />
-                        <span className="font-medium">Сумма:</span>
+                        <span className="font-medium">{t('gift_certificates.amount_label')}:</span>
                         <span>{cert.amount.toLocaleString()} сом</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CreditCard className="h-4 w-4 text-purple-600" />
-                        <span className="font-medium">Оплата:</span>
+                        <span className="font-medium">{t('gift_certificates.payment_label')}:</span>
                         <span>{cert.payment_method}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">Скидка:</span>
+                        <span className="font-medium">{t('gift_certificates.discount_label')}:</span>
                         <Badge variant="secondary" className="rounded-full">
                           {cert.discount || '0%'}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-orange-600" />
-                        <span className="font-medium">Срок действия:</span>
+                        <span className="font-medium">{t('gift_certificates.expiry_label')}:</span>
                         <span>{new Date(cert.expiry_date).toLocaleDateString()}</span>
                       </div>
                     </div>
@@ -571,12 +573,12 @@ const GiftCertificatesPage = () => {
                           }}
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
-                          Отметить как использованный
+                          {t('gift_certificates.mark_as_used')}
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="rounded-xl max-w-md">
                         <DialogHeader>
-                          <DialogTitle>Использование сертификата</DialogTitle>
+                          <DialogTitle>{t('gift_certificates.usage_title')}</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4">
                           <Select
@@ -584,7 +586,7 @@ const GiftCertificatesPage = () => {
                             onValueChange={(value) => setUsageData({ ...usageData, admin_name: value })}
                           >
                             <SelectTrigger className="rounded-lg">
-                              <SelectValue placeholder="Выберите администратора*" />
+                              <SelectValue placeholder={`${t('gift_certificates.select_admin')}*`} />
                             </SelectTrigger>
                             <SelectContent>
                               {administrators.map(admin => (
@@ -596,14 +598,14 @@ const GiftCertificatesPage = () => {
                             name="client_name"
                             value={usageData.client_name}
                             onChange={handleUsageInputChange}
-                            placeholder="Имя клиента*"
+                            placeholder={`${t('gift_certificates.client_name')}*`}
                             className="rounded-lg"
                           />
                           <Input
                             name="phone_number"
                             value={usageData.phone_number}
                             onChange={handleUsageInputChange}
-                            placeholder="Номер телефона"
+                            placeholder={t('gift_certificates.phone_number')}
                             className="rounded-lg"
                           />
                           <Select
@@ -611,7 +613,7 @@ const GiftCertificatesPage = () => {
                             onValueChange={handleServiceTypeChange}
                           >
                             <SelectTrigger className="rounded-lg">
-                              <SelectValue placeholder="Выберите тип массажа*" />
+                              <SelectValue placeholder={t('gift_certificates.select_service_type')} />
                             </SelectTrigger>
                             <SelectContent>
                               {serviceTypes.map(type => (
@@ -627,10 +629,10 @@ const GiftCertificatesPage = () => {
                             <SelectTrigger className="rounded-lg">
                               <SelectValue placeholder={
                                 !usageData.service_type 
-                                  ? "Сначала выберите услугу" 
+                                  ? t('gift_certificates.select_service_first')
                                   : durationOptions.length === 0 
-                                    ? "Нет доступных длительностей" 
-                                    : "Выберите длительность*"
+                                    ? t('gift_certificates.no_durations')
+                                    : t('gift_certificates.select_duration')
                               } />
                             </SelectTrigger>
                             <SelectContent>
@@ -644,7 +646,7 @@ const GiftCertificatesPage = () => {
                             onValueChange={(value) => setUsageData({ ...usageData, master_name: value })}
                           >
                             <SelectTrigger className="rounded-lg">
-                              <SelectValue placeholder="Выберите мастера*" />
+                              <SelectValue placeholder={t('gift_certificates.select_master')} />
                             </SelectTrigger>
                             <SelectContent>
                               {masters.map(master => (
@@ -686,40 +688,40 @@ const GiftCertificatesPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="flex items-center gap-2">
                         <Gift className="h-4 w-4 text-pink-600" />
-                        <span className="font-medium">Номер:</span>
+                        <span className="font-medium">{t('gift_certificates.number_label')}:</span>
                         <span>{cert.certificate_number}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CreditCard className="h-4 w-4 text-green-600" />
-                        <span className="font-medium">Сумма:</span>
+                        <span className="font-medium">{t('gift_certificates.amount_label')}:</span>
                         <span>{cert.amount.toLocaleString()} сом</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-blue-600" />
-                        <span className="font-medium">Клиент:</span>
-                        <span>{cert.client_name || 'Не указан'}</span>
+                        <span className="font-medium">{t('gift_certificates.client_label')}:</span>
+                        <span>{cert.client_name || t('gift_certificates.not_specified')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-purple-600" />
-                        <span className="font-medium">Телефон:</span>
-                        <span>{cert.phone_number || 'Не указан'}</span>
+                        <span className="font-medium">{t('gift_certificates.phone_label')}:</span>
+                        <span>{cert.phone_number || t('gift_certificates.not_specified')}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">Тип массажа:</span>
-                        <span>{cert.service_type || 'Не указан'}</span>
+                        <span className="font-medium">{t('gift_certificates.service_type_label')}:</span>
+                        <span>{cert.service_type || t('gift_certificates.not_specified')}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">Длительность:</span>
-                        <span>{cert.duration || 'Не указана'}</span>
+                        <span className="font-medium">{t('gift_certificates.duration_label')}:</span>
+                        <span>{cert.duration || t('gift_certificates.not_specified_f')}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">Мастер:</span>
-                        <span>{cert.master_name || 'Не указан'}</span>
+                        <span className="font-medium">{t('gift_certificates.master_label')}:</span>
+                        <span>{cert.master_name || t('gift_certificates.not_specified')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-orange-600" />
-                        <span className="font-medium">Администратор:</span>
-                        <span>{cert.admin_name || 'Не указан'}</span>
+                        <span className="font-medium">{t('gift_certificates.admin_label')}:</span>
+                        <span>{cert.admin_name || t('gift_certificates.not_specified')}</span>
                       </div>
                     </div>
                   </CardContent>

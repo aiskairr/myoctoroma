@@ -325,12 +325,12 @@ const AccountingPage = () => {
     }
 
     if (!newRecordBranch) {
-      alert('Пожалуйста, выберите филиал для записи');
+      alert(t('accounting.please_select_branch'));
       return;
     }
 
     if (!newRecordDate) {
-      alert('Пожалуйста, выберите дату для записи');
+      alert(t('accounting.please_select_date'));
       return;
     }
 
@@ -548,14 +548,14 @@ const AccountingPage = () => {
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2">
                 <Calendar className="h-4 w-4" />
-                Выбрать дату
+                {t('accounting.select_date_button')}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[400px]" aria-describedby="date-picker-description">
               <DialogHeader>
-                <DialogTitle>Выберите дату</DialogTitle>
+                <DialogTitle>{t('accounting.select_date_title')}</DialogTitle>
                 <DialogDescription id="date-picker-description">
-                  Выберите дату для просмотра отчетов
+                  {t('accounting.select_date_description')}
                 </DialogDescription>
               </DialogHeader>
               <div className="flex justify-center p-4">
@@ -580,7 +580,7 @@ const AccountingPage = () => {
                 <DollarSign className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-sm font-medium text-blue-600">Доходы за день</p>
+                <p className="text-sm font-medium text-blue-600">{t('dashboard.daily_income')}</p>
                 <p className="text-2xl font-bold text-blue-800">{(dailyCashData?.dailyIncome || 0).toLocaleString()}</p>
               </div>
             </div>
@@ -594,7 +594,7 @@ const AccountingPage = () => {
                 <TrendingUp className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-sm font-medium text-red-600">Расходы за день</p>
+                <p className="text-sm font-medium text-red-600">{t('dashboard.daily_expenses')}</p>
                 <p className="text-2xl font-bold text-red-800">{(dailyCashData?.dailyExpenses || 0).toLocaleString()}</p>
               </div>
             </div>
@@ -608,7 +608,7 @@ const AccountingPage = () => {
                 <Users className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-sm font-medium text-green-600">Записей за день</p>
+                <p className="text-sm font-medium text-green-600">{t('dashboard.daily_records')}</p>
                 <p className="text-2xl font-bold text-green-800">{dailyStats.recordsCount}</p>
               </div>
             </div>
@@ -622,7 +622,7 @@ const AccountingPage = () => {
                 <FileText className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-sm font-medium text-purple-600">Чистая прибыль</p>
+                <p className="text-sm font-medium text-purple-600">{t('accounting.net_profit')}</p>
                 <p className="text-2xl font-bold text-purple-800">
                   {(dailyCashData?.netProfit || 0).toLocaleString()}
                 </p>
@@ -658,7 +658,7 @@ const AccountingPage = () => {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
-                      placeholder="Поиск по записям..."
+                      placeholder={t('accounting.search_records')}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 w-64"
@@ -668,19 +668,19 @@ const AccountingPage = () => {
                     <DialogTrigger asChild>
                       <Button className="gap-2">
                         <Plus className="h-4 w-4" />
-                        Добавить запись
+                        {t('accounting.add_record')}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto" aria-describedby="add-record-description">
                       <DialogHeader>
-                        <DialogTitle>Добавить новую запись</DialogTitle>
+                        <DialogTitle>{t('accounting.add_new_record')}</DialogTitle>
                         <DialogDescription id="add-record-description">
-                          Заполните данные для новой записи о доходах
+                          {t('accounting.fill_record_data')}
                         </DialogDescription>
                       </DialogHeader>
                       <div className="grid grid-cols-2 gap-4 py-4">
                         <div className="space-y-2">
-                          <Label htmlFor="master">Мастер *</Label>
+                          <Label htmlFor="master">{t('accounting.master')} *</Label>
                           <Select
                             value={newRecord.master}
                             onValueChange={(value) => setNewRecord({ ...newRecord, master: value })}
@@ -698,7 +698,7 @@ const AccountingPage = () => {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="client">Клиент *</Label>
+                          <Label htmlFor="client">{t('accounting.client')} *</Label>
                           <Input
                             id="client"
                             name="client"
@@ -708,13 +708,13 @@ const AccountingPage = () => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="serviceType">Услуга *</Label>
+                          <Label htmlFor="serviceType">{t('accounting.service')} *</Label>
                           <Select
                             value={newRecord.serviceType}
                             onValueChange={(value) => setNewRecord({ ...newRecord, serviceType: value })}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Выберите услугу" />
+                              <SelectValue placeholder={t('accounting.select_service')} />
                             </SelectTrigger>
                             <SelectContent>
                               {services.map((service) => (
@@ -726,17 +726,17 @@ const AccountingPage = () => {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="phoneNumber">Телефон</Label>
+                          <Label htmlFor="phoneNumber">{t('accounting.phone')}</Label>
                           <Input
                             id="phoneNumber"
                             name="phoneNumber"
                             value={newRecord.phoneNumber}
                             onChange={handleNewRecordChange}
-                            placeholder="+996 XXX XXX XXX"
+                            placeholder={t('accounting.phone_placeholder')}
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="amount">Сумма *</Label>
+                          <Label htmlFor="amount">{t('accounting.amount')} *</Label>
                           <Input
                             id="amount"
                             name="amount"
@@ -747,7 +747,7 @@ const AccountingPage = () => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="discount">Скидка</Label>
+                          <Label htmlFor="discount">{t('accounting.discount')}</Label>
                           <Input
                             id="discount"
                             name="discount"
@@ -757,7 +757,7 @@ const AccountingPage = () => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="duration">Длительность (мин)</Label>
+                          <Label htmlFor="duration">{t('accounting.duration_minutes')}</Label>
                           <Input
                             id="duration"
                             name="duration"
@@ -767,7 +767,7 @@ const AccountingPage = () => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="paymentMethod">Способ оплаты</Label>
+                          <Label htmlFor="paymentMethod">{t('accounting.payment_method')}</Label>
                           <Select
                             value={newRecord.paymentMethod}
                             onValueChange={(value) => setNewRecord({ ...newRecord, paymentMethod: value })}
@@ -785,7 +785,7 @@ const AccountingPage = () => {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="dailyReport">Дневной отчет</Label>
+                          <Label htmlFor="dailyReport">{t('accounting.daily_report')}</Label>
                           <Input
                             id="dailyReport"
                             name="dailyReport"
@@ -796,13 +796,13 @@ const AccountingPage = () => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="adminName">Администратор *</Label>
+                          <Label htmlFor="adminName">{t('accounting.administrator')} *</Label>
                           <Select
                             value={newRecord.adminName}
                             onValueChange={(value) => setNewRecord({ ...newRecord, adminName: value })}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Выберите администратора" />
+                              <SelectValue placeholder={t('accounting.select_administrator')} />
                             </SelectTrigger>
                             <SelectContent>
                               {administrators.map((admin) => (
@@ -814,13 +814,13 @@ const AccountingPage = () => {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="branch">Филиал *</Label>
+                          <Label htmlFor="branch">{t('accounting.branch')} *</Label>
                           <Select
                             value={newRecordBranch}
                             onValueChange={setNewRecordBranch}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Выберите филиал" />
+                              <SelectValue placeholder={t('accounting.select_branch')} />
                             </SelectTrigger>
                             <SelectContent>
                               {branchesData.map((branch) => (
@@ -832,34 +832,34 @@ const AccountingPage = () => {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="date">Дата *</Label>
+                          <Label htmlFor="date">{t('accounting.date')} *</Label>
                           <DatePicker
                             selected={newRecordDate}
                             onChange={(date: Date | null) => date && setNewRecordDate(date)}
                             dateFormat="dd.MM.yyyy"
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            placeholderText="Выберите дату"
+                            placeholderText={t('dashboard.select_date')}
                           />
                         </div>
                         <div className="col-span-2 space-y-2">
-                          <Label htmlFor="comment">Комментарий</Label>
+                          <Label htmlFor="comment">{t('accounting.comment')}</Label>
                           <Textarea
                             id="comment"
                             name="comment"
                             value={newRecord.comment}
                             onChange={(e) => setNewRecord({ ...newRecord, comment: e.target.value })}
-                            placeholder="Дополнительная информация..."
+                            placeholder={t('accounting.additional_info')}
                             rows={3}
                           />
                         </div>
                       </div>
                       <div className="flex justify-end gap-3">
                         <Button variant="outline" onClick={() => setIsAddRecordOpen(false)}>
-                          Отмена
+                          {t('accounting.cancel')}
                         </Button>
                         <Button onClick={addRecord} className="gap-2">
                           <Plus className="h-4 w-4" />
-                          Добавить запись
+                          {t('accounting.add_record')}
                         </Button>
                       </div>
                     </DialogContent>
@@ -871,14 +871,14 @@ const AccountingPage = () => {
               {filteredRecords.length === 0 ? (
                 <div className="text-center py-12">
                   <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Нет записей</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">{t('accounting.no_records')}</h3>
                   <p className="text-gray-500 mb-4">
-                    {searchTerm ? 'По вашему запросу ничего не найдено' : 'На выбранную дату записи отсутствуют'}
+                    {searchTerm ? t('accounting.no_results_found') : t('accounting.no_records_for_date')}
                   </p>
                   {!searchTerm && (
                     <Button onClick={() => setIsAddRecordOpen(true)} className="gap-2">
                       <Plus className="h-4 w-4" />
-                      Добавить первую запись
+                      {t('accounting.add_first_record')}
                     </Button>
                   )}
                 </div>
@@ -924,7 +924,7 @@ const AccountingPage = () => {
                             {record.discount !== '0%' && (
                               <div className="flex items-center gap-2 text-sm">
                                 <Badge variant="outline" className="text-orange-600 border-orange-200">
-                                  Скидка: {record.discount}
+                                  {t('accounting.discount')}: {record.discount}
                                 </Badge>
                               </div>
                             )}
@@ -941,10 +941,10 @@ const AccountingPage = () => {
                               <span>{record.duration} мин</span>
                             </div>
                             <div className="text-sm text-gray-600">
-                              <span>Администратор: {record.adminName}</span>
+                              <span>{t('accounting.administrator')}: {record.adminName}</span>
                             </div>
                             <div className="text-sm text-gray-600">
-                              <span>Дневной отчет: {record.dailyReport || 0} с</span>
+                              <span>{t('accounting.daily_report')}: {record.dailyReport || 0} с</span>
                             </div>
                             {record.comment && (
                               <div className="text-sm text-gray-500 italic">
@@ -967,19 +967,19 @@ const AccountingPage = () => {
                               ) : (
                                 <Save className="h-4 w-4" />
                               )}
-                              {savingStates[index] ? 'Сохранение...' : 'Сохранить'}
+                              {savingStates[index] ? 'Сохранение...' : t('accounting.save')}
                             </Button>
 
                             <Dialog>
                               <DialogTrigger asChild>
                                 <Button size="sm" variant="outline" className="gap-2">
                                   <Eye className="h-4 w-4" />
-                                  Подробнее
+                                  {t('accounting.more_details')}
                                 </Button>
                               </DialogTrigger>
                               <DialogContent className="sm:max-w-[500px]">
                                 <DialogHeader>
-                                  <DialogTitle>Детали записи</DialogTitle>
+                                  <DialogTitle>{t('accounting.record_details')}</DialogTitle>
                                 </DialogHeader>
                                 <div className="space-y-4 max-h-[400px] overflow-y-auto" style={{ 
                                   scrollbarWidth: 'auto',
@@ -987,25 +987,25 @@ const AccountingPage = () => {
                                 }}>
                                   <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div className="space-y-2">
-                                      <p><strong>ID:</strong> {record.id || 'Не указан'}</p>
-                                      <p><strong>Мастер:</strong> {record.master}</p>
-                                      <p><strong>Клиент:</strong> {record.client}</p>
-                                      <p><strong>Услуга:</strong> {record.serviceType}</p>
-                                      <p><strong>Телефон:</strong> {record.phoneNumber || 'Не указан'}</p>
-                                      <p><strong>Сумма:</strong> {record.amount} с</p>
+                                      <p><strong>ID:</strong> {record.id || t('accounting.not_specified')}</p>
+                                      <p><strong>{t('accounting.master')}:</strong> {record.master}</p>
+                                      <p><strong>{t('accounting.client')}:</strong> {record.client}</p>
+                                      <p><strong>{t('accounting.service')}:</strong> {record.serviceType}</p>
+                                      <p><strong>{t('accounting.phone')}:</strong> {record.phoneNumber || t('accounting.not_specified')}</p>
+                                      <p><strong>{t('accounting.amount')}:</strong> {record.amount} с</p>
                                     </div>
                                     <div className="space-y-2">
-                                      <p><strong>Скидка:</strong> {record.discount}</p>
-                                      <p><strong>Длительность:</strong> {record.duration} мин</p>
-                                      <p><strong>Оплата:</strong> {record.paymentMethod}</p>
-                                      <p><strong>Дневной отчет:</strong> {record.dailyReport || 0} с</p>
-                                      <p><strong>Администратор:</strong> {record.adminName}</p>
-                                      <p><strong>Дата:</strong> {record.date}</p>
+                                      <p><strong>{t('accounting.discount')}:</strong> {record.discount}</p>
+                                      <p><strong>{t('accounting.duration')}:</strong> {record.duration} мин</p>
+                                      <p><strong>{t('accounting.payment')}:</strong> {record.paymentMethod}</p>
+                                      <p><strong>{t('accounting.daily_report')}:</strong> {record.dailyReport || 0} с</p>
+                                      <p><strong>{t('accounting.administrator')}:</strong> {record.adminName}</p>
+                                      <p><strong>{t('accounting.date')}:</strong> {record.date}</p>
                                     </div>
                                   </div>
                                   {record.comment && (
                                     <div className="pt-4 border-t">
-                                      <p><strong>Комментарий:</strong></p>
+                                      <p><strong>{t('accounting.comment')}:</strong></p>
                                       <p className="text-gray-600 mt-1">{record.comment}</p>
                                     </div>
                                   )}
@@ -1020,7 +1020,7 @@ const AccountingPage = () => {
                               className="gap-2"
                             >
                               <Trash2 className="h-4 w-4" />
-                              Удалить
+                              {t('accounting.delete')}
                             </Button>
                           </div>
                         </div>
@@ -1041,8 +1041,8 @@ const AccountingPage = () => {
                             <DollarSign className="h-5 w-5 text-white" />
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-green-600">Итого за день</p>
-                            <p className="text-xs text-green-500">Без подарочных сертификатов</p>
+                            <p className="text-sm font-medium text-green-600">{t('accounting.daily_total')}</p>
+                            <p className="text-xs text-green-500">{t('accounting.without_gift_certs')}</p>
                           </div>
                         </div>
                         <p className="text-2xl font-bold text-green-800">{calculateDailyTotal()} с</p>
@@ -1059,34 +1059,34 @@ const AccountingPage = () => {
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle className="text-xl">Расходы за день</CardTitle>
+                <CardTitle className="text-xl">{t('accounting.expenses_for_day')}</CardTitle>
                 <Dialog open={isAddExpenseOpen} onOpenChange={setIsAddExpenseOpen}>
                   <DialogTrigger asChild>
                     <Button className="gap-2">
                       <Plus className="h-4 w-4" />
-                      Добавить расход
+                      {t('accounting.add_expense')}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[400px]" aria-describedby="add-expense-description">
                     <DialogHeader>
-                      <DialogTitle>Добавить расход</DialogTitle>
+                      <DialogTitle>{t('accounting.add_expense')}</DialogTitle>
                       <DialogDescription id="add-expense-description">
-                        Заполните данные для новой записи о расходах
+                        {t('accounting.fill_expense_data')}
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
-                        <Label htmlFor="expense-name">Наименование *</Label>
+                        <Label htmlFor="expense-name">{t('accounting.expense_name')} *</Label>
                         <Input
                           id="expense-name"
                           name="name"
                           value={newExpense.name}
                           onChange={handleNewExpenseChange}
-                          placeholder="Название расхода"
+                          placeholder={t('accounting.expense_name_placeholder')}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="expense-amount">Сумма *</Label>
+                        <Label htmlFor="expense-amount">{t('accounting.amount')} *</Label>
                         <Input
                           id="expense-amount"
                           name="amount"
@@ -1099,11 +1099,11 @@ const AccountingPage = () => {
                     </div>
                     <div className="flex justify-end gap-3">
                       <Button variant="outline" onClick={() => setIsAddExpenseOpen(false)}>
-                        Отмена
+                        {t('accounting.cancel')}
                       </Button>
                       <Button onClick={addExpense} className="gap-2">
                         <Plus className="h-4 w-4" />
-                        Добавить
+                        {t('accounting.add_expense')}
                       </Button>
                     </div>
                   </DialogContent>
@@ -1114,11 +1114,11 @@ const AccountingPage = () => {
               {expenses.length === 0 ? (
                 <div className="text-center py-12">
                   <TrendingUp className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Нет расходов</h3>
-                  <p className="text-gray-500 mb-4">На выбранную дату расходы отсутствуют</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">{t('accounting.no_expenses')}</h3>
+                  <p className="text-gray-500 mb-4">{t('accounting.no_expenses_date')}</p>
                   <Button onClick={() => setIsAddExpenseOpen(true)} className="gap-2">
                     <Plus className="h-4 w-4" />
-                    Добавить первый расход
+                    {t('accounting.add_first_expense')}
                   </Button>
                 </div>
               ) : (
@@ -1133,7 +1133,7 @@ const AccountingPage = () => {
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">{expense.name}</p>
-                              <p className="text-sm text-gray-500">Расход #{index + 1}</p>
+                              <p className="text-sm text-gray-500">{t('accounting.expense_number', { number: index + 1 })}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -1145,7 +1145,7 @@ const AccountingPage = () => {
                               className="gap-2"
                             >
                               <Trash2 className="h-4 w-4" />
-                              Удалить
+                              {t('accounting.delete')}
                             </Button>
                           </div>
                         </div>
@@ -1166,8 +1166,8 @@ const AccountingPage = () => {
                             <TrendingUp className="h-5 w-5 text-white" />
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-red-600">Общие расходы за день</p>
-                            <p className="text-xs text-red-500">Всего позиций: {expenses.length}</p>
+                            <p className="text-sm font-medium text-red-600">{t('accounting.total_expenses_for_day')}</p>
+                            <p className="text-xs text-red-500">{t('accounting.total_items')}: {expenses.length}</p>
                           </div>
                         </div>
                         <p className="text-2xl font-bold text-red-800">{(dailyCashData?.dailyExpenses || 0).toLocaleString()}</p>

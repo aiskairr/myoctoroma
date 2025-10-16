@@ -12,6 +12,7 @@ import { useBranch } from "@/contexts/BranchContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface WorkingDate {
   date: string; // ISO date string
@@ -43,6 +44,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
   const { branches } = useBranch();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t } = useLocale();
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<string>('');
   const [startTime, setStartTime] = useState('07:00');
@@ -242,9 +244,9 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Управление рабочими днями</CardTitle>
+          <CardTitle>{t('masters.manage_working_days')}</CardTitle>
           <CardDescription>
-            Добавьте или удалите рабочие дни для мастера
+            {t('masters.add_remove_days_description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -252,13 +254,13 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
               <div>
-                <Label htmlFor="branch">Филиал</Label>
+                <Label htmlFor="branch">{t('masters.branch_field')}</Label>
                 <Select 
                   value={selectedBranch} 
                   onValueChange={setSelectedBranch}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Выберите филиал" />
+                    <SelectValue placeholder={t('masters.branch_placeholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     {branches.map((branch) => (
@@ -272,7 +274,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
               
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label htmlFor="startTime">Начало</Label>
+                  <Label htmlFor="startTime">{t('masters.start_time_field')}</Label>
                   <Input
                     id="startTime"
                     type="time"
@@ -281,7 +283,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="endTime">Конец</Label>
+                  <Label htmlFor="endTime">{t('masters.end_time_field')}</Label>
                   <Input
                     id="endTime"
                     type="time"
@@ -301,12 +303,12 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                   {createWorkingDateMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Сохранение...
+                      {t('masters.saving_status')}
                     </>
                   ) : (
                     <>
                       <Plus className="h-4 w-4 mr-2" />
-                      Добавить рабочие дни ({selectedDates.length})
+                      {t('masters.add_days_button', { count: selectedDates.length })}
                     </>
                   )}
                 </Button>
@@ -318,14 +320,14 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                     onClick={() => setSelectedDates([])}
                     disabled={createWorkingDateMutation.isPending}
                   >
-                    Очистить
+                    {t('masters.clear_button')}
                   </Button>
                 )}
               </div>
             </div>
 
             <div>
-              <Label>Выберите даты (можно выбрать несколько)</Label>
+              <Label>{t('masters.select_dates_instruction')}</Label>
               <Calendar
                 mode="multiple"
                 selected={selectedDates}
@@ -350,7 +352,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
               />
               {selectedDates.length > 0 && (
                 <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
-                  <p className="font-medium">Выбрано дат: {selectedDates.length}</p>
+                  <p className="font-medium">{t('masters.dates_selected', { count: selectedDates.length })}</p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {selectedDates.map((date, index) => (
                       <span key={index} className="px-2 py-1 bg-blue-100 rounded text-xs">
@@ -369,14 +371,14 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
       <Card>
         <CardHeader>
           <CardTitle>
-            Рабочие дни в {format(viewMonth, 'LLLL yyyy')}
+            {t('masters.working_days_month', { month: format(viewMonth, 'LLLL yyyy') })}
           </CardTitle>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={goToPreviousMonth}>
-              ← Предыдущий месяц
+              {t('masters.prev_month_button')}
             </Button>
             <Button variant="outline" size="sm" onClick={goToNextMonth}>
-              Следующий месяц →
+              {t('masters.next_month_button')}
             </Button>
           </div>
         </CardHeader>
@@ -384,16 +386,16 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
           {isLoadingServerDates && masterId ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin mr-2" />
-              <span className="text-muted-foreground">Загрузка рабочих дней...</span>
+              <span className="text-muted-foreground">{t('masters.loading_working_days')}</span>
             </div>
           ) : workingDatesInMonth.length === 0 ? (
             <div className="space-y-4">
               <p className="text-muted-foreground text-center py-4">
-                Нет рабочих дней в этом месяце
+                {t('masters.no_days_this_month')}
               </p>
               {masterId && serverWorkingDates && (
                 <div className="border rounded-lg p-4 bg-gray-50">
-                  <h4 className="font-medium mb-3">Данные с сервера для мастера #{masterId}:</h4>
+                  <h4 className="font-medium mb-3">{t('masters.server_data_title', { masterId: masterId?.toString() || '' })}</h4>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {serverWorkingDates.map((date, index) => (
                       <div key={index} className="flex items-center justify-between p-2 bg-white rounded border text-sm">
@@ -405,10 +407,10 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                             {date.start_time} - {date.end_time}
                           </span>
                           <Badge variant={date.is_active ? "default" : "secondary"} className="text-xs">
-                            Филиал {date.branch_id}
+                            {t('masters.branch_badge', { branchId: date.branch_id })}
                           </Badge>
                           <Badge variant={date.is_active ? "default" : "destructive"} className="text-xs">
-                            {date.is_active ? "Активен" : "Неактивен"}
+                            {date.is_active ? t('masters.active') : t('masters.inactive')}
                           </Badge>
                         </div>
                       </div>

@@ -6,6 +6,7 @@ import { AlertTriangle, Send } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/SimpleAuthContext';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface AccountingRecord {
   id?: number;
@@ -70,6 +71,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
 }) => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { t } = useLocale();
 
   const [reportData, setReportData] = useState<DailyCashReportData>({
     startBalance: 0,
@@ -362,22 +364,22 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
 
       if (response.ok) {
         toast({
-          title: "Успешно",
-          description: "Отчет кассы отправлен в бухгалтерию",
+          title: t('accounting.success'),
+          description: t('accounting.report_sent_success'),
         });
         setIsConfirmDialogOpen(false);
       } else {
         const errorData = await response.json();
         toast({
-          title: "Ошибка",
-          description: errorData.message || "Не удалось отправить отчет",
+          title: t('accounting.error'),
+          description: errorData.message || t('accounting.report_send_error'),
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: "Ошибка",
-        description: "Произошла ошибка при отправке отчета",
+        title: t('accounting.error'),
+        description: t('accounting.report_send_error_description'),
         variant: "destructive",
       });
     }
@@ -388,7 +390,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <AlertTriangle className="h-5 w-5" />
-          Касса за день - {selectedDate.toLocaleDateString('ru-RU')}
+          {t('accounting.cash_register_for_day')} - {selectedDate.toLocaleDateString('ru-RU')}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -396,12 +398,12 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
           <table className="w-full border-collapse border border-gray-300">
             <thead>
               <tr className="bg-gray-50">
-                <th className="border border-gray-300 p-3 text-left">Остаток на начало смены</th>
-                <th className="border border-gray-300 p-3 text-left">Общая выручка</th>
-                <th className="border border-gray-300 p-3 text-left">Мелкие расходы</th>
-                <th className="border border-gray-300 p-3 text-left">Общий доход</th>
-                <th className="border border-gray-300 p-3 text-left">Остаток на конец смены</th>
-                <th className="border border-gray-300 p-3 text-left">Инкассация</th>
+                <th className="border border-gray-300 p-3 text-left">{t('accounting.start_balance')}</th>
+                <th className="border border-gray-300 p-3 text-left">{t('accounting.total_revenue')}</th>
+                <th className="border border-gray-300 p-3 text-left">{t('accounting.petty_expenses')}</th>
+                <th className="border border-gray-300 p-3 text-left">{t('accounting.total_income')}</th>
+                <th className="border border-gray-300 p-3 text-left">{t('accounting.end_balance')}</th>
+                <th className="border border-gray-300 p-3 text-left">{t('accounting.cash_collection')}</th>
               </tr>
             </thead>
             <tbody>
@@ -434,7 +436,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
                     value={cashCollection}
                     onChange={(e: any) => setCashCollection(e.target.value)}
                     className="w-full"
-                    placeholder="Введите сумму инкассации"
+                    placeholder={t('accounting.enter_collection_amount')}
                   />
                 </td>
               </tr>
@@ -444,22 +446,22 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
 
         {/* Таблица способов оплаты */}
         <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-3">Разбивка по способам оплаты</h3>
+          <h3 className="text-lg font-semibold mb-3">{t('accounting.payment_method_breakdown')}</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-blue-50 p-3 rounded-lg">
-              <div className="text-sm text-gray-600">Наличные</div>
+              <div className="text-sm text-gray-600">{t('accounting.cash')}</div>
               <div className="text-lg font-semibold">{reportData.cashPayments.toLocaleString()} сом</div>
             </div>
             <div className="bg-green-50 p-3 rounded-lg">
-              <div className="text-sm text-gray-600">Карта</div>
+              <div className="text-sm text-gray-600">{t('accounting.card')}</div>
               <div className="text-lg font-semibold">{reportData.cardPayments.toLocaleString()} сом</div>
             </div>
             <div className="bg-purple-50 p-3 rounded-lg">
-              <div className="text-sm text-gray-600">Переводы</div>
+              <div className="text-sm text-gray-600">{t('accounting.transfers')}</div>
               <div className="text-lg font-semibold">{reportData.transferPayments.toLocaleString()} сом</div>
             </div>
             <div className="bg-orange-50 p-3 rounded-lg">
-              <div className="text-sm text-gray-600">Сертификаты</div>
+              <div className="text-sm text-gray-600">{t('accounting.certificates')}</div>
               <div className="text-lg font-semibold">{reportData.giftCertificatePayments.toLocaleString()} сом</div>
             </div>
           </div>
@@ -467,7 +469,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
 
         {/* Разбивка по банкам */}
         <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-3">Разбивка по банкам</h3>
+          <h3 className="text-lg font-semibold mb-3">{t('accounting.bank_breakdown')}</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {reportData.optimaPayments > 0 && (
               <div className="bg-gray-50 p-3 rounded-lg">
@@ -512,7 +514,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
             className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
           >
             <Send className="h-4 w-4 mr-2" />
-            Отправить в бухгалтерию
+            {t('accounting.send_to_accounting')}
           </Button>
         </div>
 
@@ -520,18 +522,18 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
         <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Подтверждение отправки</DialogTitle>
+              <DialogTitle>{t('accounting.confirm_submit')}</DialogTitle>
               <DialogDescription>
-                Подтвердите отправку отчета в бухгалтерию
+                {t('accounting.confirm_submit_description')}
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
               <p className="text-gray-600">
-                Вы точно хотите отправить отчет в бухгалтерию?
+                {t('accounting.confirm_submit_question')}
               </p>
               <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                 <p className="text-sm text-yellow-800">
-                  После отправки отчет будет сохранен в системе и использован для генерации отчетов.
+                  {t('accounting.submit_warning')}
                 </p>
               </div>
             </div>
@@ -540,13 +542,13 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
                 variant="outline"
                 onClick={() => setIsConfirmDialogOpen(false)}
               >
-                Нет
+                {t('accounting.no')}
               </Button>
               <Button
                 onClick={handleSubmitReport}
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
-                Да
+                {t('accounting.yes')}
               </Button>
             </DialogFooter>
           </DialogContent>

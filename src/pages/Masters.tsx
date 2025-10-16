@@ -203,9 +203,9 @@ const MasterForm: React.FC<{
       {/* Основная информация */}
       <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-gray-900">Основная информация</h3>
+          <h3 className="text-xl font-semibold text-gray-900">{t('masters.main_information')}</h3>
           <Badge variant="outline" className="text-indigo-600 border-indigo-200">
-            {master ? 'Редактирование' : 'Создание'}
+            {master ? t('masters.editing') : t('masters.creation')}
           </Badge>
         </div>
         <Separator />
@@ -233,7 +233,7 @@ const MasterForm: React.FC<{
               value={formData.specialty}
               onChange={handleChange}
               className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              placeholder="Массажист, тренер и т.д."
+              placeholder={t('masters.specialty_placeholder')}
             />
           </div>
           <div className="grid grid-cols-4 items-start gap-4">
@@ -246,7 +246,7 @@ const MasterForm: React.FC<{
               value={formData.description}
               onChange={handleChange}
               className="col-span-3 min-h-[120px] rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              placeholder="Дополнительная информация о мастере"
+              placeholder={t('masters.additional_info_placeholder')}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -262,7 +262,7 @@ const MasterForm: React.FC<{
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="workHours" className="col-span-1 text-sm font-medium text-gray-700">
-              Время работы
+              {t('masters.work_time')}
             </Label>
             <div className="col-span-3 flex items-center space-x-3">
               <Input
@@ -273,7 +273,7 @@ const MasterForm: React.FC<{
                 onChange={handleChange}
                 className="w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
               />
-              <span className="text-gray-500">до</span>
+              <span className="text-gray-500">{t('masters.until')}</span>
               <Input
                 id="endWorkHour"
                 name="endWorkHour"
@@ -283,7 +283,7 @@ const MasterForm: React.FC<{
                 className="w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
               />
               <span className="text-xs text-gray-500 ml-2">
-                (по умолчанию)
+                {t('masters.by_default')}
               </span>
             </div>
           </div>
@@ -294,7 +294,7 @@ const MasterForm: React.FC<{
       <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-semibold text-gray-900">
-            {master && userAccountData ? 'Редактировать аккаунт' : t('masters.create_account')}
+            {master && userAccountData ? t('masters.edit_account') : t('masters.create_account')}
           </h3>
           <Switch
             checked={accountData.createAccount}
@@ -364,7 +364,7 @@ const MasterForm: React.FC<{
 
       {/* Рабочие даты */}
       <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-        <h3 className="text-xl font-semibold text-gray-900">Рабочие дни и часы</h3>
+        <h3 className="text-xl font-semibold text-gray-900">{t('masters.working_days_hours')}</h3>
         <Separator />
         <MasterWorkingDatesManager
           workingDates={workingDates}
@@ -403,6 +403,7 @@ const MasterCard: React.FC<{
   onImageUpload: (masterId: number, event: React.ChangeEvent<HTMLInputElement>) => void;
   isUploading: boolean;
 }> = ({ master, onEditClick, onDeleteClick, onScheduleClick, onImageUpload, isUploading }) => {
+  const { t } = useLocale();
   return (
     <Card
       className={`relative overflow-hidden transition-all duration-300 ${!master.isActive ? 'opacity-80 bg-gray-50' : 'bg-white'
@@ -446,7 +447,7 @@ const MasterCard: React.FC<{
                     variant="secondary"
                     className="ml-2 bg-gray-200 text-gray-700 hover:bg-gray-300"
                   >
-                    Неактивен
+                    {t('masters.inactive')}
                   </Badge>
                 )}
               </CardTitle>
@@ -484,7 +485,7 @@ const MasterCard: React.FC<{
             className="text-gray-600 border-gray-200 hover:bg-gray-50 min-w-[100px] text-sm"
           >
             <EditIcon className="h-4 w-4 mr-2" />
-            Настроить
+            {t('masters.configure')}
           </Button>
           <Button
             variant="destructive"
@@ -493,7 +494,7 @@ const MasterCard: React.FC<{
             className="bg-red-600 hover:bg-red-700 min-w-[100px] text-sm"
           >
             <X className="h-4 w-4 mr-2" />
-            Удалить
+            {t('masters.delete_action')}
           </Button>
         </div>
       </CardFooter>
@@ -605,9 +606,9 @@ const AdministratorForm: React.FC<{
       {/* Основная информация */}
       <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-gray-900">Основная информация</h3>
+          <h3 className="text-xl font-semibold text-gray-900">{t('masters.basic_info')}</h3>
           <Badge variant="outline" className="text-indigo-600 border-indigo-200">
-            {administrator ? 'Редактирование' : 'Создание'}
+            {administrator ? t('masters.editing') : t('masters.creating')}
           </Badge>
         </div>
         <Separator />
@@ -627,7 +628,7 @@ const AdministratorForm: React.FC<{
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="admin-role" className="col-span-1 text-sm font-medium text-gray-700">
-              Роль
+              {t('masters.role')}
             </Label>
             <Input
               id="admin-role"
@@ -635,12 +636,12 @@ const AdministratorForm: React.FC<{
               value={formData.role}
               onChange={handleChange}
               className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              placeholder="администратор"
+              placeholder={t('masters.role_placeholder')}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="admin-phone" className="col-span-1 text-sm font-medium text-gray-700">
-              Телефон
+              {t('masters.phone')}
             </Label>
             <Input
               id="admin-phone"
@@ -648,12 +649,12 @@ const AdministratorForm: React.FC<{
               value={formData.phoneNumber}
               onChange={handleChange}
               className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              placeholder="+7-777-123-4567"
+              placeholder={t('masters.phone_placeholder')}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="admin-email" className="col-span-1 text-sm font-medium text-gray-700">
-              Email
+              {t('masters.email')}
             </Label>
             <Input
               id="admin-email"
@@ -662,12 +663,12 @@ const AdministratorForm: React.FC<{
               value={formData.email}
               onChange={handleChange}
               className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              placeholder="admin@tamgaspa.com"
+              placeholder={t('masters.email_placeholder')}
             />
           </div>
           <div className="grid grid-cols-4 items-start gap-4">
             <Label htmlFor="admin-notes" className="col-span-1 pt-2 text-sm font-medium text-gray-700">
-              Заметки
+              {t('masters.notes')}
             </Label>
             <Textarea
               id="admin-notes"
@@ -675,12 +676,12 @@ const AdministratorForm: React.FC<{
               value={formData.notes}
               onChange={handleChange}
               className="col-span-3 min-h-[120px] rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              placeholder="Дополнительная информация об администраторе"
+              placeholder={t('masters.notes_placeholder')}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="admin-isActive" className="col-span-1 text-sm font-medium text-gray-700">
-              Активный
+              {t('masters.is_active')}
             </Label>
             <Switch
               id="admin-isActive"
@@ -696,7 +697,7 @@ const AdministratorForm: React.FC<{
       <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-semibold text-gray-900">
-            {administrator && userAccountData ? 'Редактировать аккаунт' : 'Создать аккаунт'}
+            {administrator && userAccountData ? t('masters.edit_account') : t('masters.create_account')}
           </h3>
           <Switch
             checked={accountData.createAccount}
@@ -708,13 +709,13 @@ const AdministratorForm: React.FC<{
 
         {administrator && userAccountData && !accountData.createAccount && (
           <div className="p-4 bg-green-50 rounded-lg border border-green-200 transition-all duration-200">
-            <p className="text-sm font-medium text-green-800 mb-2">Аккаунт существует (новый эндпоинт):</p>
+            <p className="text-sm font-medium text-green-800 mb-2">{t('masters.account_exists')}</p>
             <div className="space-y-1 text-sm text-gray-600">
-              <p><strong>Логин:</strong> {userAccountData.username}</p>
-              <p><strong>Email:</strong> {userAccountData.email}</p>
-              <p><strong>Роль:</strong> {userAccountData.role}</p>
+              <p><strong>{t('masters.login')}:</strong> {userAccountData.username}</p>
+              <p><strong>{t('masters.email')}:</strong> {userAccountData.email}</p>
+              <p><strong>{t('masters.role_label')}:</strong> {userAccountData.role}</p>
               <p><strong>ID:</strong> {userAccountData.id}</p>
-              <p><strong>Филиал:</strong> {userAccountData.branchId}</p>
+              <p><strong>{t('masters.branch')}:</strong> {userAccountData.branchId}</p>
             </div>
           </div>
         )}
@@ -722,7 +723,7 @@ const AdministratorForm: React.FC<{
           <div className="space-y-5 p-4 bg-blue-50 rounded-lg border border-blue-200 transition-all duration-200">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="admin-accountEmail" className="col-span-1 text-sm font-medium text-gray-700">
-                Email
+                {t('masters.email')}
               </Label>
               <Input
                 id="admin-accountEmail"
@@ -731,13 +732,13 @@ const AdministratorForm: React.FC<{
                 value={accountData.email}
                 onChange={handleAccountDataChange}
                 className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                placeholder="email@example.com"
+                placeholder={t('masters.account_email_placeholder')}
                 required={accountData.createAccount}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="admin-accountPassword" className="col-span-1 text-sm font-medium text-gray-700">
-                Пароль
+                {t('masters.password')}
               </Label>
               <Input
                 id="admin-accountPassword"
@@ -746,17 +747,17 @@ const AdministratorForm: React.FC<{
                 value={accountData.password}
                 onChange={handleAccountDataChange}
                 className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                placeholder={userAccountData ? "Введите новый пароль" : "Введите пароль"}
+                placeholder={userAccountData ? t('masters.enter_new_password') : t('masters.enter_password')}
                 required={accountData.createAccount}
               />
             </div>
             <div className="p-3 bg-white rounded-lg border border-blue-200">
               <div className="space-y-1 text-sm text-gray-600">
-                <p><strong>Логин:</strong> {userAccountData ? userAccountData.username : formData.name}</p>
-                <p><strong>Роль:</strong> reception</p>
-                <p><strong>Филиал:</strong> {administrator?.id ? `ID: ${administrator.id}` : 'Будет установлен после создания'}</p>
+                <p><strong>{t('masters.login')}:</strong> {userAccountData ? userAccountData.username : formData.name}</p>
+                <p><strong>{t('masters.role_label')}:</strong> reception</p>
+                <p><strong>{t('masters.branch')}:</strong> {administrator?.id ? `ID: ${administrator.id}` : t('masters.branch_set_after_creation')}</p>
                 {userAccountData && (
-                  <p className="text-green-600 mt-2">✓ Аккаунт уже существует, редактируете данные</p>
+                  <p className="text-green-600 mt-2">{t('masters.account_exists_editing')}</p>
                 )}
               </div>
             </div>
@@ -770,7 +771,7 @@ const AdministratorForm: React.FC<{
           onClick={() => window.dispatchEvent(new Event('close-dialog'))}
           className="border-gray-300 text-gray-700 hover:bg-gray-50"
         >
-          Отмена
+          {t('masters.cancel')}
         </Button>
         <Button
           type="submit"
@@ -778,7 +779,7 @@ const AdministratorForm: React.FC<{
           className="bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200"
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-          {administrator ? 'Сохранить изменения' : 'Добавить администратора'}
+          {administrator ? t('masters.save_changes') : t('masters.add_administrator')}
         </Button>
       </DialogFooter>
     </form>
@@ -791,6 +792,7 @@ const AdministratorCard: React.FC<{
   onEditClick: () => void;
   onDeleteClick: () => void;
 }> = ({ administrator, onEditClick, onDeleteClick }) => {
+  const { t } = useLocale();
   return (
     <Card className={`w-full relative overflow-hidden transition-all duration-300  hover:shadow-lg border-none shadow-sm`}>
       <CardHeader className="pb-3">
@@ -811,7 +813,7 @@ const AdministratorCard: React.FC<{
             </div>
           </div>
           <Badge variant={administrator.isActive ? "default" : "destructive"} className={administrator.isActive ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-red-100 text-red-800"}>
-            {administrator.isActive ? 'Активен' : 'Неактивен'}
+            {administrator.isActive ? t('masters.active_status') : t('masters.inactive')}
           </Badge>
         </div>
       </CardHeader>
@@ -846,7 +848,7 @@ const AdministratorCard: React.FC<{
           className="text-gray-600 border-gray-200 hover:bg-gray-50"
         >
           <EditIcon className="h-4 w-4 mr-2" />
-          Изменить
+          {t('masters.change')}
         </Button>
         <Button
           variant="destructive"
@@ -855,7 +857,7 @@ const AdministratorCard: React.FC<{
           className="bg-red-600 hover:bg-red-700"
         >
           <X className="h-4 w-4 mr-2" />
-          Удалить
+          {t('masters.delete_action')}
         </Button>
       </CardFooter>
     </Card>
@@ -1387,9 +1389,9 @@ const Masters: React.FC = () => {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px] bg-white rounded-xl">
                   <DialogHeader>
-                    <DialogTitle className="text-xl font-semibold text-gray-900">Добавить администратора</DialogTitle>
+                    <DialogTitle className="text-xl font-semibold text-gray-900">{t('masters.add_administrator')}</DialogTitle>
                     <DialogDescription className="text-gray-500">
-                      Заполните данные нового администратора.
+                      {t('masters.fill_admin_data')}
                     </DialogDescription>
                   </DialogHeader>
                   <AdministratorForm
