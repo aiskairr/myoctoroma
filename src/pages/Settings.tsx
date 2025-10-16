@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, getQueryFn } from "@/lib/queryClient";
 import { useBranch } from '@/contexts/BranchContext';
 import { useLocale } from '@/contexts/LocaleContext';
+import { useAuth } from '@/contexts/SimpleAuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,8 +17,16 @@ export default function Settings() {
   const { t } = useLocale();
   const { toast } = useToast();
   const { currentBranch } = useBranch();
+  const { user } = useAuth();
   const [settings, setSettings] = useState<Record<string, string>>({
     systemPrompt: "",
+  });
+  
+  // User profile state
+  const [userProfile, setUserProfile] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
   });
   
   // File upload state
@@ -275,6 +284,49 @@ export default function Settings() {
     },
   });
 
+  // Mutation for updating user profile
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: { email?: string; password?: string }) => {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${document.cookie.split('token=')[1]?.split(';')[0] || ''}`,
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        if (response.status === 409) {
+          throw new Error(t('settings.email_already_exists'));
+        }
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: t('settings.profile_updated'),
+        description: t('settings.profile_updated_description'),
+      });
+      // Reset profile form
+      setUserProfile({
+        email: "",
+        password: "",
+        confirmPassword: "",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: t('settings.profile_update_error'),
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     if (data && typeof data === 'object') {
       // Новая структура API - возвращает объект с полями id, key, value, branchId
@@ -373,6 +425,43 @@ export default function Settings() {
       await testWhatsappConnectionMutation.mutateAsync();
     } finally {
       setIsTestingConnection(false);
+    }
+  };
+
+  // User profile handlers
+  const handleProfileInputChange = (key: keyof typeof userProfile, value: string) => {
+    setUserProfile((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleUpdateProfile = async () => {
+    // Validation
+    if (!userProfile.email && !userProfile.password) {
+      toast({
+        title: t('error'),
+        description: t('settings.at_least_one_field'),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (userProfile.password && userProfile.password !== userProfile.confirmPassword) {
+      toast({
+        title: t('error'),
+        description: t('settings.passwords_not_match'),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Prepare data
+    const updateData: { email?: string; password?: string } = {};
+    if (userProfile.email) updateData.email = userProfile.email;
+    if (userProfile.password) updateData.password = userProfile.password;
+
+    try {
+      await updateProfileMutation.mutateAsync(updateData);
+    } catch (error) {
+      console.error('Error updating profile:', error);
     }
   };
   
@@ -591,6 +680,82 @@ export default function Settings() {
         <h1 className="text-2xl font-medium mb-1">Настройки</h1>
         <p className="text-muted-foreground">Импорт данных и настройка промптов</p>
       </div>
+
+      {/* User Profile Settings */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle>{t('settings.profile_title')}</CardTitle>
+          <CardDescription>
+            {t('settings.profile_description')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleUpdateProfile(); }}>
+            {/* Current Email Display */}
+            {user?.email && (
+              <div className="bg-muted/50 p-3 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  {t('settings.current_email')} <span className="font-medium text-foreground">{user.email}</span>
+                </p>
+              </div>
+            )}
+
+            {/* New Email */}
+            <div className="space-y-2">
+              <Label htmlFor="new-email">{t('settings.new_email_label')}</Label>
+              <Input
+                id="new-email"
+                type="email"
+                value={userProfile.email}
+                onChange={(e) => handleProfileInputChange("email", e.target.value)}
+                placeholder={t('settings.new_email_placeholder')}
+              />
+            </div>
+            
+            {/* New Password */}
+            <div className="space-y-2">
+              <Label htmlFor="new-password">{t('settings.new_password_label')}</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={userProfile.password}
+                onChange={(e) => handleProfileInputChange("password", e.target.value)}
+                placeholder={t('settings.new_password_placeholder')}
+              />
+            </div>
+
+            {/* Confirm Password */}
+            {userProfile.password && (
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">{t('settings.confirm_password_label')}</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={userProfile.confirmPassword}
+                  onChange={(e) => handleProfileInputChange("confirmPassword", e.target.value)}
+                  placeholder={t('settings.confirm_password_placeholder')}
+                />
+              </div>
+            )}
+            
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                disabled={updateProfileMutation.isPending}
+              >
+                {updateProfileMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t('settings.updating_button')}
+                  </>
+                ) : (
+                  t('settings.update_profile_button')
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
       
       {/* Booking Link Copy */}
       <div className="mb-6">
