@@ -89,7 +89,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     // Fetch masters, services, and branches data
     const { data: mastersData = [] } = useMasters();
     const { data: servicesData = [] } = useServices();
-    const { branches } = useBranch();
+    const { branches, currentBranch } = useBranch();
     const { user } = useAuth();
 
     // Fetch administrators
@@ -100,9 +100,9 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     };
 
     const { data: administrators = [] } = useQuery<{ id: number, name: string }[]>({
-        queryKey: ['administrators', getBranchIdWithFallback(null, branches)],
+        queryKey: ['administrators', getBranchIdWithFallback(currentBranch, branches)],
         queryFn: async () => {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchID=${getBranchIdWithFallback(null, branches)}`);
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchID=${getBranchIdWithFallback(currentBranch, branches)}`);
             return res.json();
         },
     });
