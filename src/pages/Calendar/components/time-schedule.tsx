@@ -256,8 +256,12 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         },
         onSuccess: () => {
             console.log('✅ Task updated successfully');
-            // Инвалидируем кэш календарных задач
+            // Инвалидируем ВСЕ кэши связанные с задачами
+            // Это обновит данные во всех диалогах редактирования
             queryClient.invalidateQueries({ queryKey: ['calendar-tasks'] });
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/tasks'] }); // Для useTask hook
+            console.log('🔄 All task caches invalidated - dialogs will reload fresh data');
         },
         onError: (error: any) => {
             console.error('❌ Error updating task:', error);

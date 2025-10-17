@@ -112,7 +112,7 @@ class TaskParserService {
     }
   }
 
-  // Запуск парсера с интервалом в 1 минуту
+  // Запуск парсера с интервалом в 3 секунды
   public start(customParams: Record<string, string> = {}): void {
     if (this.isRunning) {
       console.log('[TaskParser] Parser is already running');
@@ -125,10 +125,10 @@ class TaskParserService {
     // Немедленный первый запрос
     this.performRequest(customParams);
 
-    // Запуск интервала каждые 6 секунд (6000 мс)
+    // Запуск интервала каждые 3 секунды (3000 мс) - ускорение на 50%
     this.intervalId = setInterval(() => {
       this.performRequest(customParams);
-    }, 600);
+    }, 3000);
 
     console.log('[TaskParser] Parser started successfully');
   }

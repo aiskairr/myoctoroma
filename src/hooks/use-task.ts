@@ -77,8 +77,10 @@ export const useTask = (taskId: number | null) => {
       }
     },
     enabled: !!taskId && taskId > 0,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 1000 * 2, // 2 seconds - данные быстро устаревают
+    refetchInterval: 1000 * 3, // 3 seconds - автообновление каждые 3 секунды
+    refetchIntervalInBackground: true, // Обновлять даже когда диалог не в фокусе
+    refetchOnWindowFocus: true, // Обновлять при возврате фокуса
   });
 };
 

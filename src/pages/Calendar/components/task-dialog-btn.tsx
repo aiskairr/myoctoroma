@@ -49,7 +49,6 @@ interface FormData {
     serviceType: string;
     master: string;
     status: string;
-    branch: string;
     date: string;
     discount: string;
     cost: string;
@@ -215,7 +214,6 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             serviceType: '',
             master: '',
             status: '',
-            branch: '',
             date: '',
             discount: '0',
             cost: '0'
@@ -277,25 +275,10 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         if (taskData && !taskLoading && servicesData.length > 0) {
             console.log('🔄 Loading task data into form:', taskData);
             console.log('🔄 Available masters:', mastersData);
-            console.log('🔄 Available branches:', branches);
-            console.log('🔍 taskData.branchId:', taskData.branchId);
+            console.log(' taskData.branchId:', taskData.branchId);
             
             const formData = formatTaskForForm(taskData);
             console.log('📝 Formatted form data:', formData);
-            console.log('🔍 formData.branch after formatTaskForForm:', formData.branch);
-            
-            // Дополнительная проверка для критических полей
-            if (!formData.branch) {
-                if (taskData.branchId) {
-                    formData.branch = taskData.branchId.toString();
-                    console.log('🔧 Set branch from taskData.branchId:', formData.branch);
-                } else if (branches?.length > 0) {
-                    formData.branch = branches[0].id.toString();
-                    console.log('🔧 Set default branch:', formData.branch);
-                }
-            } else {
-                console.log('🔧 Branch already set:', formData.branch);
-            }
             
             if (!formData.time && taskData.scheduleTime) {
                 formData.time = taskData.scheduleTime;
@@ -1544,35 +1527,6 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                 />
                                 {errors.master && (
                                     <p className="text-red-500 text-xs mt-1">{errors.master.message}</p>
-                                )}
-                            </div>
-
-                            <div>
-                                <Label className="text-sm text-gray-600">{t('task_dialog.branch')}</Label>
-                                <Controller
-                                    name="branch"
-                                    control={control}
-                                    rules={{ required: t('task_dialog.branch_required') }}
-                                    render={({ field }) => (
-                                        <Select
-                                            value={field.value}
-                                            onValueChange={field.onChange}
-                                        >
-                                            <SelectTrigger className={`mt-1 ${errors.branch ? 'border-red-500' : ''}`}>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {branches.map(branch => (
-                                                    <SelectItem key={branch.id} value={branch.id.toString()}>
-                                                        {branch.branches}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    )}
-                                />
-                                {errors.branch && (
-                                    <p className="text-red-500 text-xs mt-1">{errors.branch.message}</p>
                                 )}
                             </div>
 

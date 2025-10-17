@@ -129,8 +129,8 @@ export function useTasks(params: TasksQueryParams = {}) {
       return [];
     },
     enabled: !!branchId && isAuthenticated && !!user && !authLoading && !mastersLoading,
-    staleTime: 1000 * 3, // 3 seconds - данные считаются устаревшими через 3 секунды
-    refetchInterval: 1000 * 6, // 6 seconds - автоматическое обновление каждые 6 секунд
+    staleTime: 1000 * 2, // 2 seconds - данные считаются устаревшими через 2 секунды
+    refetchInterval: 1000 * 3, // 3 seconds - автоматическое обновление каждые 3 секунды (синхронизировано с парсером)
     refetchIntervalInBackground: true, // Обновлять даже когда вкладка неактивна
   });
 
