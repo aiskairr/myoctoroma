@@ -957,6 +957,11 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             console.log('  taskData.client?.firstName:', taskData?.client?.firstName);
             console.log('  Final clientName:', clientName);
             
+            // Используем branchId из задачи, если он есть, иначе текущий выбранный филиал
+            const correctBranchId = taskData?.branchId 
+                ? (typeof taskData.branchId === 'number' ? taskData.branchId : parseInt(taskData.branchId)) 
+                : getBranchIdWithFallback(currentBranch, branches);
+            
             const paymentData = {
                 master: masterName,
                 client: clientName,
@@ -970,11 +975,12 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 dailyReport: calculateTotalPrice() - Math.round(calculateTotalPrice() * ((taskData?.discount || 0) / 100)),
                 adminName: selectedAdministrator,
                 isGiftCertificateUsed: selectedPaymentMethod === 'Подарочный Сертификат',
-                branchId: getBranchIdWithFallback(null, branches),
+                branchId: correctBranchId,
                 date: taskData?.scheduleDate || new Date().toISOString().split('T')[0]
             };
             
             console.log('💰 Sending payment data:', paymentData);
+            console.log('🏢 Using branchId:', correctBranchId, 'from task:', taskData?.branchId, 'or currentBranch:', currentBranch?.id);
             
             const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting`, {
                 method: 'POST',

@@ -14,6 +14,7 @@ import { useBranch } from '@/contexts/BranchContext';
 import { useAuth } from '@/contexts/SimpleAuthContext';
 import { useMasterWorkingDates } from '@/hooks/use-master-working-dates';
 import { useLocale } from '@/contexts/LocaleContext';
+import { getBranchIdWithFallback } from '@/utils/branch-utils';
 import type { Master } from '@/hooks/use-masters';
 
 // Types
@@ -144,7 +145,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     }, [currentDate]);
 
     // Context
-    const { currentBranch } = useBranch();
+    const { currentBranch, branches } = useBranch();
     const { user } = useAuth();
     const { t } = useLocale();
 
@@ -620,7 +621,8 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 const discount = currentTask.discount || 0;
                 payload.finalPrice = calculateFinalPrice(servicePrice, discount);
                 payload.discount = discount;
-                payload.branchId = currentTask.branchId || '1';
+                // Используем branchId из задачи, если он есть, иначе текущий выбранный филиал
+                payload.branchId = currentTask.branchId || getBranchIdWithFallback(currentBranch, branches);
                 payload.status = currentTask.status || currentAppointment.status;
             } else {
                 // Fallback to appointment data if task fetch failed
@@ -631,7 +633,8 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 // НЕ добавляем scheduleDate если данных нет
                 payload.finalPrice = 0;
                 payload.discount = 0;
-                payload.branchId = '1';
+                // Используем текущий выбранный филиал
+                payload.branchId = getBranchIdWithFallback(currentBranch, branches);
                 payload.status = currentAppointment.status;
             }
             
@@ -1072,7 +1075,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
             // Generate unique task ID
             const organisationId = user?.organisationId || user?.organization_id || user?.orgId || '1';
-            const branchId = currentBranch?.id?.toString() || '1';
+            const branchId = getBranchIdWithFallback(currentBranch, branches);
             const taskId = generateTaskId(organisationId, branchId);
 
             // Prepare data for API

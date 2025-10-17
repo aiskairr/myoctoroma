@@ -1157,6 +1157,9 @@ const EditAppointmentDialog = ({
         throw new Error('Не выбран администратор');
       }
 
+      // Используем branchId из задачи, если он есть, иначе текущий выбранный филиал
+      const correctBranchId = task.branchId || getBranchIdWithFallback(currentBranch, branches);
+
       // Создаем основную запись об оплате
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting`, {
         method: 'POST',
@@ -1174,7 +1177,7 @@ const EditAppointmentDialog = ({
           dailyReport: calculateTotalPrice() - Math.round(calculateTotalPrice() * formData.discount / 100),
           adminName: selectedAdministrator,
           isGiftCertificateUsed: selectedPaymentMethod === 'Подарочный Сертификат',
-          branchId: getBranchIdWithFallback(currentBranch, branches),
+          branchId: correctBranchId,
           date: task.scheduleDate || new Date().toISOString().split('T')[0]
         }),
       });

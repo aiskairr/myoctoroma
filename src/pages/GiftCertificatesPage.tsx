@@ -315,6 +315,9 @@ const GiftCertificatesPage = () => {
       if (response.ok) {
         const updatedCert = await response.json();
 
+        // Используем branch_id из сертификата, если он есть, иначе текущий филиал
+        const correctBranchId = certificate.branch_id || currentBranch?.id;
+
         // Создаем запись в бухгалтерии для использованного сертификата
         const accountingResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/accounting`, {
           method: 'POST',
@@ -331,7 +334,7 @@ const GiftCertificatesPage = () => {
             payment_method: t('gift_certificates.payment_gift_cert'),
             admin_name: usageData.admin_name,
             is_gift_certificate_used: true,
-            branch_id: currentBranch?.id
+            branch_id: correctBranchId
           })
         });
 
