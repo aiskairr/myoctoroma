@@ -691,10 +691,24 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                     console.warn('⚠️ Employee not found for employeeId:', updates.employeeId);
                     console.log('Available employee IDs:', employees.map(e => e.id));
                 }
-            } else if (currentTask) {
+            } else {
                 // Сохраняем текущего мастера если он не изменяется
-                payload.masterId = currentTask.masterId;
-                payload.masterName = currentTask.masterName || currentTask.master?.name;
+                // Приоритет: currentTask > currentAppointment
+                if (currentTask) {
+                    payload.masterId = currentTask.masterId;
+                    payload.masterName = currentTask.masterName || currentTask.master?.name;
+                    console.log('📋 Using master from currentTask:', { masterId: payload.masterId, masterName: payload.masterName });
+                } else if (currentAppointment) {
+                    // Fallback на данные из appointment, если currentTask не загружен
+                    const appointmentMaster = mastersData.find(m => m.id.toString() === currentAppointment.employeeId);
+                    if (appointmentMaster) {
+                        payload.masterId = appointmentMaster.id;
+                        payload.masterName = appointmentMaster.name;
+                        console.log('📋 Using master from currentAppointment:', { masterId: payload.masterId, masterName: payload.masterName });
+                    } else {
+                        console.warn('⚠️ Could not find master for currentAppointment.employeeId:', currentAppointment.employeeId);
+                    }
+                }
             }
 
             console.log('🚀 Sending PATCH request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${appointmentId}`);
@@ -710,7 +724,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 String(apt.id) === String(appointmentId) ? apt : apt
             ));
         }
-    }, [employees, mastersData, updateTaskMutation]);
+    }, [employees, mastersData, updateTaskMutation, appointments, currentBranch, branches]);
 
     // Validation functions
     const isWithinWorkingHours = useCallback((employeeId: string, timeSlot: string): boolean => {
