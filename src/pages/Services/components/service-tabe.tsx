@@ -196,21 +196,22 @@ const ServicesTable: React.FC = () => {
     return (
         <>
             <Card className="w-full p-4">
-                <div className="overflow-x-auto">
-                    <table className="w-full border-collapse rounded-xl">
+                <div className="overflow-x-auto max-h-[calc(100vh-200px)]">
+                    <table className="w-full border-collapse rounded-xl relative">
                         <thead>
                             <tr className="bg-gray-50">
-                                <th className="min-w-[180px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">{t('services.name')}</th>
-                                <th className="min-w-[140px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">{t('services.description')}</th>
-                                <th className="min-w-[120px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">{t('services.branch')}</th>
-                                <th className="min-w-[140px] border border-gray-300 px-4 py-3 text-left text-base font-semibold">{t('services.duration')}</th>
-                                <th className="min-w-[100px] text-center border border-gray-300 px-4 py-3 text-base font-semibold">{t('services.active')}</th>
+                                {/* Закрепленная угловая ячейка - название услуги */}
+                                <th className="min-w-[180px] border border-gray-300 px-4 py-3 text-left text-base font-semibold sticky left-0 top-0 z-40 bg-gray-50 shadow-sm">{t('services.name')}</th>
+                                <th className="min-w-[140px] border border-gray-300 px-4 py-3 text-left text-base font-semibold sticky top-0 z-10 bg-gray-50">{t('services.description')}</th>
+                                <th className="min-w-[120px] border border-gray-300 px-4 py-3 text-left text-base font-semibold sticky top-0 z-10 bg-gray-50">{t('services.branch')}</th>
+                                <th className="min-w-[140px] border border-gray-300 px-4 py-3 text-left text-base font-semibold sticky top-0 z-10 bg-gray-50">{t('services.duration')}</th>
+                                <th className="min-w-[100px] text-center border border-gray-300 px-4 py-3 text-base font-semibold sticky top-0 z-10 bg-gray-50">{t('services.active')}</th>
                                 {TIME_COLUMNS.map((time) => (
-                                    <th key={time} className="min-w-[90px] text-center border border-gray-300 px-4 py-3 text-base font-semibold">
+                                    <th key={time} className="min-w-[90px] text-center border border-gray-300 px-4 py-3 text-base font-semibold sticky top-0 z-10 bg-gray-50">
                                         {time} {t('services.minutes')}
                                     </th>
                                 ))}
-                                <th className="min-w-[140px] text-center border border-gray-300 px-4 py-3 text-base font-semibold">{t('services.actions')}</th>
+                                <th className="min-w-[140px] text-center border border-gray-300 px-4 py-3 text-base font-semibold sticky top-0 z-10 bg-gray-50">{t('services.actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -218,7 +219,8 @@ const ServicesTable: React.FC = () => {
                                 const editingService = editingServices[service.id] || service;
                                 return (
                                     <tr key={service.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                        <td className="border border-gray-300 px-4 py-3">
+                                        {/* Закрепленный левый столбец - название услуги */}
+                                        <td className="border border-gray-300 px-4 py-3 sticky left-0 z-20 bg-white shadow-sm">
                                             <Input
                                                 value={editingService.name}
                                                 onChange={(e) => handleInputChange(service.id, 'name', e.target.value)}
