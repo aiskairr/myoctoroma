@@ -127,7 +127,7 @@ class TaskParserService {
     // Запуск интервала каждые 6 секунд (6000 мс)
     this.intervalId = setInterval(() => {
       this.performRequest(customParams);
-    }, 6000);
+    }, 600);
 
     console.log('[TaskParser] Parser started successfully');
   }
