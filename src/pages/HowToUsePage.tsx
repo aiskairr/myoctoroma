@@ -9,7 +9,7 @@ export default function HowToUsePage() {
   const { t } = useLocale();
   
   const handleVideoClick = () => {
-    window.open('https://youtu.be/NJv5GSxQ-UI', '_blank');
+    window.open('https://youtu.be/JKGyNsZeqww', '_blank');
   };
 
     const features = [
