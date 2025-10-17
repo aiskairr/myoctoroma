@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/SimpleAuthContext';
 import { useMasterWorkingDates } from '@/hooks/use-master-working-dates';
 import { useLocale } from '@/contexts/LocaleContext';
 import { getBranchIdWithFallback } from '@/utils/branch-utils';
+import { taskParserService } from '@/services/task-parser';
 import type { Master } from '@/hooks/use-masters';
 
 // Types
@@ -492,6 +493,25 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         }, 60000);
         return () => clearInterval(interval);
     }, []);
+
+    // Настройка парсера для автоматической инвалидации кэша
+    useEffect(() => {
+        console.log('[Calendar] Setting up task parser with query invalidation');
+        
+        // Устанавливаем функцию инвалидации кэша
+        taskParserService.setQueryInvalidator(() => {
+            // Инвалидируем кэш tasks для текущей даты
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+            queryClient.invalidateQueries({ queryKey: ['calendar-tasks'] });
+            console.log('[Calendar] Task cache invalidated by parser');
+        });
+
+        // Cleanup при размонтировании
+        return () => {
+            taskParserService.clearQueryInvalidator();
+            console.log('[Calendar] Task parser query invalidator cleared');
+        };
+    }, [queryClient]);
 
     // Handle window resize for responsive column width
     useEffect(() => {

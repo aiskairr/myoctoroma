@@ -129,8 +129,9 @@ export function useTasks(params: TasksQueryParams = {}) {
       return [];
     },
     enabled: !!branchId && isAuthenticated && !!user && !authLoading && !mastersLoading,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchInterval: 1000 * 60, // 1 minute
+    staleTime: 1000 * 3, // 3 seconds - данные считаются устаревшими через 3 секунды
+    refetchInterval: 1000 * 6, // 6 seconds - автоматическое обновление каждые 6 секунд
+    refetchIntervalInBackground: true, // Обновлять даже когда вкладка неактивна
   });
 
   // Объединяем данные задач с информацией о мастерах

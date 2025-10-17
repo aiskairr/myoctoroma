@@ -41,6 +41,7 @@ class TaskParserService {
   private isRunning = false;
   private intervalId: NodeJS.Timeout | null = null;
   private subscribers: ((data: TaskParserResponse) => void)[] = [];
+  private queryClientInvalidator: (() => void) | null = null;
   
   // URL для парсинга
   private readonly API_URL = 'https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app/api/tasks';
@@ -154,6 +155,16 @@ class TaskParserService {
   private async performRequest(customParams: Record<string, string> = {}): Promise<void> {
     const result = await this.fetchTasks(customParams);
     
+    // Инвалидируем кэш React Query если установлен инвалидатор
+    if (this.queryClientInvalidator && result.success) {
+      try {
+        this.queryClientInvalidator();
+        console.log('[TaskParser] Query cache invalidated');
+      } catch (error) {
+        console.error('[TaskParser] Error invalidating query cache:', error);
+      }
+    }
+    
     // Уведомляем всех подписчиков
     this.subscribers.forEach(callback => {
       try {
@@ -162,6 +173,18 @@ class TaskParserService {
         console.error('[TaskParser] Error in subscriber callback:', error);
       }
     });
+  }
+
+  // Установка функции для инвалидации кэша React Query
+  public setQueryInvalidator(invalidator: () => void): void {
+    this.queryClientInvalidator = invalidator;
+    console.log('[TaskParser] Query invalidator set');
+  }
+
+  // Удаление функции инвалидации
+  public clearQueryInvalidator(): void {
+    this.queryClientInvalidator = null;
+    console.log('[TaskParser] Query invalidator cleared');
   }
 
   // Подписка на обновления
