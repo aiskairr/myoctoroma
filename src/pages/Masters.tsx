@@ -950,6 +950,7 @@ const Masters: React.FC = () => {
             email: accountEmail,
             password: accountPassword,
             role: 'master',
+            master_id: newMaster.id,
             branchId: currentBranch?.id?.toString(),
             organisationId: currentBranch?.organisationId?.toString()
           })
@@ -1022,6 +1023,7 @@ const Masters: React.FC = () => {
             email: accountEmail,
             password: accountPassword,
             role: 'master',
+            master_id: id,
             branchId: currentBranch?.id?.toString(),
             organisationId: currentBranch?.organisationId?.toString()
           })
@@ -1134,6 +1136,7 @@ const Masters: React.FC = () => {
             email: accountEmail,
             password: accountPassword,
             role: 'reception',
+            administrator_id: newAdmin.id,
             branchId: currentBranch?.id?.toString(),
             organisationId: currentBranch?.organisationId?.toString()
           })
@@ -1191,6 +1194,7 @@ const Masters: React.FC = () => {
             email: accountEmail,
             password: accountPassword,
             role: 'reception',
+            administrator_id: id,
             branchId: currentBranch?.id?.toString(),
             organisationId: currentBranch?.organisationId?.toString()
           })

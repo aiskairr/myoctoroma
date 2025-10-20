@@ -59,5 +59,23 @@ export function SimpleProtectedRoute({ children, requiredRole }: SimpleProtected
     );
   }
 
+  // Для мастеров ограничиваем доступ только к календарю мастера
+  if (user?.role === 'master') {
+    const currentPath = window.location.pathname;
+    const allowedPaths = ['/master/calendar', '/settings'];
+    
+    if (!allowedPaths.includes(currentPath)) {
+      window.location.href = "/master/calendar";
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+            <p className="text-gray-600">Перенаправление на календарь...</p>
+          </div>
+        </div>
+      );
+    }
+  }
+
   return <>{children}</>;
 }

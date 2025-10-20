@@ -14,8 +14,6 @@ import Clients from "@/pages/Clients";
 import Chats from "@/pages/Chats";
 import Settings from "@/pages/Settings";
 import CRMTasks from "./pages/CRMTasks";
-import DailyCalendar from "./pages/DailyCalendar";
-import MasterCalendar from "./pages/MasterCalendar";
 import Masters from "./pages/Masters";
 import Booking from "./pages/Booking";
 import BookingPage from "./pages/BookingPage";
@@ -34,6 +32,7 @@ import { MobileNavbarMaster } from "@/components/MobileNavbarMaster";
 import { MobileNavbarAdmin } from "@/components/MobileNavbarAdmin";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import CalendarScreen from "./pages/Calendar";
+import MasterCalendarView from "./pages/Calendar/MasterCalendarView";
 import ServicesPage from "./pages/Services";
 
 // Компонент для защищенных маршрутов с layout
@@ -143,25 +142,12 @@ function App() {
             </ProtectedLayout>
           </Route>
 
-          <Route path={'/crm/calendarscreen'}>
-            <ProtectedLayout>
-              <DailyCalendar />
-            </ProtectedLayout>
-          </Route>
-
+          {/* Роут для мастеров - использует отдельный компонент */}
           <Route path="/master/calendar">
             <ProtectedLayout>
-              <MasterCalendar />
+              <MasterCalendarView />
             </ProtectedLayout>
           </Route>
-
-          <Route path="/master-calendar">
-            <ProtectedLayout>
-              <MasterCalendar />
-            </ProtectedLayout>
-          </Route>
-
-
 
           <Route path="/crm/masters">
             <ProtectedLayout>

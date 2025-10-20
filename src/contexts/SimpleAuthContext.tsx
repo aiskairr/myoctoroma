@@ -20,11 +20,15 @@ interface User {
   email: string;
   username: string;
   role: string;
+  branchId?: string | null;
   instanceId?: string | null;
-  master_id?: number | null;
+  masterId?: number | null;
+  administratorId?: number | null;
+  master_id?: number | null; // deprecated, use masterId
   organisationId?: number | null;
   organization_id?: number | null;
   orgId?: number | null;
+  isActive?: boolean;
 }
 
 interface AuthContextType {
@@ -81,20 +85,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (response.ok) {
             const userData = await response.json();
-            console.log("Token valid, user data:", userData);
+            console.log("✅ Token valid, user data from API:", userData);
+            console.log("🔍 masterId from API:", userData.masterId);
+            console.log("🔍 administratorId from API:", userData.administratorId);
             
-            setIsAuthenticated(true);
-            setUser({
+            const userObject = {
               id: userData.id,
               email: userData.email || '',
               username: userData.username || '',
               role: userData.role || '',
+              branchId: userData.branchId || null,
               instanceId: userData.instanceId || null,
-              master_id: userData.master_id || null,
+              masterId: userData.masterId || null,
+              administratorId: userData.administratorId || null,
+              master_id: userData.master_id || null, // deprecated, but keep for compatibility
               organisationId: userData.organisationId || null,
               organization_id: userData.organization_id || null,
               orgId: userData.orgId || null,
-            });
+              isActive: userData.isActive ?? true,
+            };
+            
+            console.log("📦 Setting user object:", userObject);
+            setIsAuthenticated(true);
+            setUser(userObject);
             
             // Обновляем cookie с актуальными данными
             Cookies.set('user', JSON.stringify(userData));
@@ -148,11 +161,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: userData.email || '',
               username: userData.username || '',
               role: userData.role || '',
+              branchId: userData.branchId || null,
               instanceId: userData.instanceId || null,
-              master_id: userData.master_id || null,
+              masterId: userData.masterId || null,
+              administratorId: userData.administratorId || null,
+              master_id: userData.master_id || null, // deprecated, but keep for compatibility
               organisationId: userData.organisationId || null,
               organization_id: userData.organization_id || null,
               orgId: userData.orgId || null,
+              isActive: userData.isActive ?? true,
             });
           } catch (parseError) {
             console.error("Error parsing user cookie:", parseError);
@@ -197,6 +214,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result: any = response.data;
 
       if (result.success) {
+        console.log("✅ Login successful, user data from login API:", result.user);
+        console.log("🔍 masterId from login:", result.user?.masterId);
+        console.log("🔍 administratorId from login:", result.user?.administratorId);
+        
         // Сохраняем данные в localStorage
         localStorage.setItem('uuid', JSON.stringify(result));
         
@@ -208,6 +229,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Обновляем состояние
         setIsAuthenticated(true);
         setUser(result.user);
+        
+        console.log("📦 User state set to:", result.user);
         
         return { success: true, user: result.user };
       } else {

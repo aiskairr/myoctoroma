@@ -95,8 +95,10 @@ export function useTasks(params: TasksQueryParams = {}) {
   if (params.userRole || user?.role) {
     queryParams.append('userRole', params.userRole || user?.role || '');
   }
-  if (params.userMasterId || user?.master_id) {
-    queryParams.append('userMasterId', (params.userMasterId || user?.master_id || '').toString());
+  // Используем masterId (новое поле) с fallback на master_id (deprecated)
+  const userMasterId = user?.masterId || user?.master_id;
+  if (params.userMasterId || userMasterId) {
+    queryParams.append('userMasterId', (params.userMasterId || userMasterId || '').toString());
   }
   
   const endpoint = `/api/tasks?${queryParams.toString()}`;
@@ -260,7 +262,10 @@ export function useTasksForDateRange(startDate: Date, endDate: Date, additionalP
 export function useMyTasks(selectedDate?: Date) {
   const { user } = useAuth();
   
-  if (!user?.master_id) {
+  // Используем masterId (новое поле) с fallback на master_id (deprecated)
+  const userMasterId = user?.masterId || user?.master_id;
+  
+  if (!userMasterId) {
     return {
       data: [],
       isLoading: false,
@@ -271,7 +276,7 @@ export function useMyTasks(selectedDate?: Date) {
   }
 
   const params: TasksQueryParams = {
-    userMasterId: user.master_id,
+    userMasterId: userMasterId,
     userRole: 'master'
   };
 

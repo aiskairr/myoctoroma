@@ -69,10 +69,12 @@ export default function CancelledAppointments({ trigger, selectedDate }: Cancell
     queryParams.append('sortBy', 'scheduleDate');
     queryParams.append('sortOrder', 'desc');
     if (user?.role) queryParams.append('userRole', user.role);
-    if (user?.master_id) queryParams.append('userMasterId', user.master_id.toString());
+    // Используем masterId (новое поле) с fallback на master_id (deprecated)
+    const userMasterId = user?.masterId || user?.master_id;
+    if (userMasterId) queryParams.append('userMasterId', userMasterId.toString());
     
     return `/api/tasks?${queryParams.toString()}`;
-  }, [branchId, dateRange.scheduledAfter, dateRange.scheduledBefore, user?.role, user?.master_id]);
+  }, [branchId, dateRange.scheduledAfter, dateRange.scheduledBefore, user?.role, user?.masterId, user?.master_id]);
 
   const { data: allTasksRaw = [], isLoading, refetch } = useQuery({
     queryKey: ['cancelled-tasks', endpoint],

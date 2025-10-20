@@ -1,58 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { MobileMasterLogin } from './MobileMasterLogin';
-import { MobileMasterCalendar } from './MobileMasterCalendar';
 import { useIsMobile } from '@/hooks/use-mobile';
-
-interface MasterAuth {
-  isAuthenticated: boolean;
-  masterId: number | null;
-  masterName: string | null;
-}
+import { useAuth } from '@/contexts/SimpleAuthContext';
 
 export function MobileApp() {
   const isMobile = useIsMobile();
-  const [masterAuth, setMasterAuth] = useState<MasterAuth>({
-    isAuthenticated: false,
-    masterId: null,
-    masterName: null
-  });
+  const { isAuthenticated, user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
 
-  // Проверяем сохраненные данные авторизации мастера при загрузке
+  // Если пользователь уже авторизован через основную систему и является мастером,
+  // перенаправляем на календарь мастера
   useEffect(() => {
-    const savedAuth = localStorage.getItem('masterAuth');
-    if (savedAuth) {
-      try {
-        const parsedAuth = JSON.parse(savedAuth);
-        setMasterAuth(parsedAuth);
-      } catch (error) {
-        console.error('Error parsing saved master auth:', error);
-        localStorage.removeItem('masterAuth');
-      }
+    if (isAuthenticated && user?.role === 'master') {
+      window.location.href = '/master/calendar';
+      return;
     }
     setIsLoading(false);
-  }, []);
+  }, [isAuthenticated, user]);
 
-  // Функция для входа мастера
-  const handleMasterLogin = (masterId: number, masterName: string) => {
-    const authData = {
-      isAuthenticated: true,
-      masterId,
-      masterName
-    };
-    setMasterAuth(authData);
-    localStorage.setItem('masterAuth', JSON.stringify(authData));
-  };
-
-  // Функция для выхода мастера
-  const handleMasterLogout = () => {
-    const authData = {
-      isAuthenticated: false,
-      masterId: null,
-      masterName: null
-    };
-    setMasterAuth(authData);
-    localStorage.removeItem('masterAuth');
+  // Функция для входа мастера - после успешного логина перенаправляем на календарь мастера
+  const handleMasterLogin = () => {
+    window.location.href = '/master/calendar';
   };
 
   if (isLoading) {
@@ -63,17 +31,6 @@ export function MobileApp() {
           <p className="text-muted-foreground">Загрузка...</p>
         </div>
       </div>
-    );
-  }
-
-  // Отображаем календарь, если мастер авторизован
-  if (masterAuth.isAuthenticated && masterAuth.masterId) {
-    return (
-      <MobileMasterCalendar 
-        masterId={masterAuth.masterId}
-        masterName={masterAuth.masterName || ""}
-        onLogout={handleMasterLogout}
-      />
     );
   }
 
