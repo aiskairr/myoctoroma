@@ -929,6 +929,23 @@ export default function Settings() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {/* Important notice about administrator-only import */}
+            <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+              <div className="flex gap-2">
+                <span className="text-amber-600 dark:text-amber-400 text-xl">⚠️</span>
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                    Важно: Импорт только для администраторов
+                  </p>
+                  <p className="text-xs text-amber-800 dark:text-amber-200">
+                    Импортировать данные может только администратор со своего аккаунта. 
+                    Хозяин (owner) не должен импортировать данные, так как это может привести 
+                    к сохранению записей и мастеров в неправильном филиале.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
             <div className="space-y-2">
               <Label htmlFor="excel-file">Выберите Excel файл</Label>
               <Input
