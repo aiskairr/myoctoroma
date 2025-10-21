@@ -254,19 +254,6 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   return (
     <NotificationContext.Provider value={value}>
       {children}
-      
-      {/* Индикатор подключения (опционально, для отладки) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 left-4 z-50">
-          <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-            isConnected 
-              ? 'bg-green-100 text-green-800 border border-green-300' 
-              : 'bg-gray-100 text-gray-600 border border-gray-300'
-          }`}>
-            {isConnected ? '🟢 WebSocket Connected' : '🔴 WebSocket Disconnected'}
-          </div>
-        </div>
-      )}
     </NotificationContext.Provider>
   );
 }
