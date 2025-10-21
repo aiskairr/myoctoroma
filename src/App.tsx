@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "./contexts/SimpleAuthContext";
 import { BranchProvider } from "./contexts/BranchContext";
 import { LocaleProvider } from "./contexts/LocaleContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useIsMaster } from "@/hooks/use-master-role";
 import { useIsAdmin } from "@/hooks/use-admin-role";
@@ -73,8 +74,9 @@ function App() {
   return (
     <LocaleProvider>
       <AuthProvider>
-        <div className="min-h-screen">
-        <Switch>
+        <NotificationProvider>
+          <div className="min-h-screen">
+          <Switch>
           {/* Публичные маршруты */}
           <Route path="/login" component={SimpleLogin} />
           <Route path="/public/booking" component={BookingPage} />
@@ -207,6 +209,7 @@ function App() {
         </Switch>
       </div>
         <Toaster />
+        </NotificationProvider>
       </AuthProvider>
     </LocaleProvider>
   );
