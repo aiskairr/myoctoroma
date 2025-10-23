@@ -195,15 +195,15 @@ const AdvancedScheduleComponent: React.FC = () => {
         switch (status.toLowerCase()) {
             case 'scheduled':
             case 'new':
-                return { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200' };
+                return { bg: 'bg-gradient-to-br from-blue-100 to-white', text: 'text-blue-800', border: 'border-blue-200' };
             case 'in_progress':
-                return { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-200' };
+                return { bg: 'bg-gradient-to-br from-orange-100 to-white', text: 'text-orange-800', border: 'border-orange-200' };
             case 'completed':
-                return { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-200' };
+                return { bg: 'bg-gradient-to-br from-green-100 to-white', text: 'text-green-800', border: 'border-green-200' };
             case 'cancelled':
-                return { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-200' };
+                return { bg: 'bg-gradient-to-br from-red-100 to-white', text: 'text-red-800', border: 'border-red-200' };
             default:
-                return { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-200' };
+                return { bg: 'bg-gradient-to-br from-gray-100 to-white', text: 'text-gray-800', border: 'border-gray-200' };
         }
     }, []);
 

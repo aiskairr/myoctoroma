@@ -1349,14 +1349,14 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         });
 
         const statusColors = {
-            'scheduled': 'bg-green-50 text-green-900',        // Зеленый - записан
-            'in_progress': 'bg-blue-50 text-blue-900',        // Синий - в процессе  
-            'completed': 'bg-yellow-50 text-yellow-900',      // Желтый - завершен
-            'cancelled': 'bg-red-50 text-red-900',            // Красный - отменен
+            'scheduled': 'bg-gradient-to-br from-green-100 to-white text-green-900',        // Зеленый градиент - записан
+            'in_progress': 'bg-gradient-to-br from-blue-100 to-white text-blue-900',        // Синий градиент - в процессе  
+            'completed': 'bg-gradient-to-br from-yellow-100 to-white text-yellow-900',      // Желтый градиент - завершен
+            'cancelled': 'bg-gradient-to-br from-red-100 to-white text-red-900',            // Красный градиент - отменен
             // Fallback для пустых/null значений
-            '': 'bg-green-50 text-green-900',
-            'null': 'bg-green-50 text-green-900',
-            'undefined': 'bg-green-50 text-green-900'
+            '': 'bg-gradient-to-br from-green-100 to-white text-green-900',
+            'null': 'bg-gradient-to-br from-green-100 to-white text-green-900',
+            'undefined': 'bg-gradient-to-br from-green-100 to-white text-green-900'
         };
 
         const statusLabels = {
@@ -1371,14 +1371,14 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         };
 
         const statusColorsTooltip = {
-            'scheduled': 'text-green-700 bg-green-100',       // Зеленый - записан
-            'in_progress': 'text-blue-700 bg-blue-100',       // Синий - в процессе
-            'completed': 'text-yellow-700 bg-yellow-100',     // Желтый - завершен
-            'cancelled': 'text-red-700 bg-red-100',           // Красный - отменен
+            'scheduled': 'text-green-700 bg-gradient-to-br from-green-100 to-gray-50',       // Зеленый градиент - записан
+            'in_progress': 'text-blue-700 bg-gradient-to-br from-blue-100 to-gray-50',       // Синий градиент - в процессе
+            'completed': 'text-yellow-700 bg-gradient-to-br from-yellow-100 to-gray-50',     // Желтый градиент - завершен
+            'cancelled': 'text-red-700 bg-gradient-to-br from-red-100 to-gray-50',           // Красный градиент - отменен
             // Fallback для пустых/null значений
-            '': 'text-green-700 bg-green-100',
-            'null': 'text-green-700 bg-green-100',
-            'undefined': 'text-green-700 bg-green-100'
+            '': 'text-green-700 bg-gradient-to-br from-green-100 to-gray-50',
+            'null': 'text-green-700 bg-gradient-to-br from-green-100 to-gray-50',
+            'undefined': 'text-green-700 bg-gradient-to-br from-green-100 to-gray-50'
         };
 
         const isDragging = dragState.isDragging && dragState.draggedAppointment?.id === appointment.id;

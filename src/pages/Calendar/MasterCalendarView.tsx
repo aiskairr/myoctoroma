@@ -55,12 +55,12 @@ interface MasterTask {
 }
 
 const statusColors: Record<string, string> = {
-  new: 'bg-orange-100 text-orange-800 border-orange-300',
-  scheduled: 'bg-blue-100 text-blue-800 border-blue-300',
-  in_progress: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  completed: 'bg-green-100 text-green-800 border-green-300',
-  cancelled: 'bg-red-100 text-red-800 border-red-300',
-  no_show: 'bg-gray-100 text-gray-800 border-gray-300',
+  new: 'bg-gradient-to-br from-orange-100 to-white text-orange-800 border-orange-300',
+  scheduled: 'bg-gradient-to-br from-blue-100 to-white text-blue-800 border-blue-300',
+  in_progress: 'bg-gradient-to-br from-yellow-100 to-white text-yellow-800 border-yellow-300',
+  completed: 'bg-gradient-to-br from-green-100 to-white text-green-800 border-green-300',
+  cancelled: 'bg-gradient-to-br from-red-100 to-white text-red-800 border-red-300',
+  no_show: 'bg-gradient-to-br from-gray-100 to-white text-gray-800 border-gray-300',
 };
 
 const statusLabels: Record<string, string> = {
