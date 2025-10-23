@@ -14,6 +14,7 @@ import Dashboard from "@/pages/Dashboard";
 import Clients from "@/pages/Clients";
 import Chats from "@/pages/Chats";
 import Settings from "@/pages/Settings";
+import SettingsMasters from "@/pages/SettingsMasters";
 import CRMTasks from "./pages/CRMTasks";
 import Masters from "./pages/Masters";
 import Booking from "./pages/Booking";
@@ -114,6 +115,12 @@ function App() {
             </ProtectedLayout>
           </Route>
 
+          <Route path="/master/settings">
+            <ProtectedLayout>
+              <SettingsMasters />
+            </ProtectedLayout>
+          </Route>
+
           <Route path="/settings">
             <ProtectedLayout>
               <Settings />
@@ -138,16 +145,16 @@ function App() {
             </ProtectedLayout>
           </Route>
 
-          <Route path="/crm/calendar">
-            <ProtectedLayout>
-              <CalendarScreen />
-            </ProtectedLayout>
-          </Route>
-
           {/* Роут для мастеров - использует отдельный компонент */}
           <Route path="/master/calendar">
             <ProtectedLayout>
               <MasterCalendarView />
+            </ProtectedLayout>
+          </Route>
+
+          <Route path="/crm/calendar">
+            <ProtectedLayout>
+              <CalendarScreen />
             </ProtectedLayout>
           </Route>
 

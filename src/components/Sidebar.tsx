@@ -223,6 +223,20 @@ function MasterSidebar() {
               <CalendarIcon className="h-5 w-5 shrink-0" />
               <span className="ml-3 font-medium">{t('sidebar.calendar')}</span>
             </Button>
+            <Button
+              variant={location === "/master/settings" ? "secondary" : "ghost"}
+              size="sm"
+              className={cn(
+                "w-full justify-start h-11 transition-all duration-200",
+                location === "/master/settings"
+                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/10"
+                  : "text-slate-300 hover:text-white hover:bg-slate-700/50"
+              )}
+              onClick={() => setLocation("/master/settings")}
+            >
+              <SettingsIcon className="h-5 w-5 shrink-0" />
+              <span className="ml-3 font-medium">{t('sidebar.settings')}</span>
+            </Button>
           </nav>
         </ScrollArea>
 

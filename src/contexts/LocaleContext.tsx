@@ -451,6 +451,12 @@ const translations = {
     'settings.save_config_button': 'Сохранить конфигурацию',
     'settings.testing_button': 'Тестирование...',
     
+    // Settings page titles and descriptions
+    'settings.title': 'Настройки',
+    'settings.success_title': 'Успешно',
+    'settings.error_title': 'Ошибка',
+    'settings.master_description': 'Управление профилем пользователя',
+    
     // User profile settings
     'settings.profile_title': 'Профиль пользователя',
     'settings.profile_description': 'Обновление email и пароля',
@@ -464,9 +470,11 @@ const translations = {
     'settings.update_profile_button': 'Обновить профиль',
     'settings.updating_button': 'Обновление...',
     'settings.profile_updated': 'Профиль обновлен',
+    'settings.profile_updated_successfully': 'Профиль успешно обновлен',
     'settings.profile_updated_description': 'Данные профиля успешно обновлены',
     'settings.profile_update_error': 'Ошибка обновления профиля',
-    'settings.passwords_not_match': 'Пароли не совпадают',
+    'settings.password_mismatch': 'Пароли не совпадают',
+    'settings.no_changes': 'Пожалуйста, укажите новый email или пароль',
     'settings.at_least_one_field': 'Заполните хотя бы одно поле (email или пароль)',
     'settings.email_already_exists': 'Email уже используется',
     
@@ -1946,6 +1954,12 @@ const translations = {
     'settings.save_config_button': 'Конфигурацияны сактоо',
     'settings.testing_button': 'Текшерилүүдө...',
     
+    // Settings page titles and descriptions
+    'settings.title': 'Жөндөөлөр',
+    'settings.success_title': 'Ийгиликтүү',
+    'settings.error_title': 'Ката',
+    'settings.master_description': 'Колдонуучу профилин башкаруу',
+    
     // User profile settings
     'settings.profile_title': 'Колдонуучунун профили',
     'settings.profile_description': 'Email жана сырсөздү жаңыртуу',
@@ -1959,8 +1973,11 @@ const translations = {
     'settings.update_profile_button': 'Профилди жаңыртуу',
     'settings.updating_button': 'Жаңыртылууда...',
     'settings.profile_updated': 'Профиль жаңыртылды',
+    'settings.profile_updated_successfully': 'Профиль ийгиликтүү жаңыртылды',
     'settings.profile_updated_description': 'Профиль маалыматтары ийгиликтүү жаңыртылды',
     'settings.profile_update_error': 'Профилди жаңыртуу катасы',
+    'settings.password_mismatch': 'Сырсөздөр дал келбейт',
+    'settings.no_changes': 'Сураныч, жаңы email же сырсөздү белгилеңиз',
     'settings.passwords_not_match': 'Сырсөздөр дал келбейт',
     'settings.at_least_one_field': 'Жок дегенде бир талааны толтуруңуз (email же сырсөз)',
     'settings.email_already_exists': 'Email эле колдонулууда',
@@ -3439,6 +3456,12 @@ const translations = {
     'settings.save_config_button': 'Save Configuration',
     'settings.testing_button': 'Testing...',
     
+    // Settings page titles and descriptions
+    'settings.title': 'Settings',
+    'settings.success_title': 'Success',
+    'settings.error_title': 'Error',
+    'settings.master_description': 'Manage your user profile',
+    
     // User profile settings
     'settings.profile_title': 'User Profile',
     'settings.profile_description': 'Update email and password',
@@ -3452,8 +3475,11 @@ const translations = {
     'settings.update_profile_button': 'Update Profile',
     'settings.updating_button': 'Updating...',
     'settings.profile_updated': 'Profile updated',
+    'settings.profile_updated_successfully': 'Profile successfully updated',
     'settings.profile_updated_description': 'Profile data successfully updated',
     'settings.profile_update_error': 'Profile update error',
+    'settings.password_mismatch': 'Passwords do not match',
+    'settings.no_changes': 'Please specify a new email or password',
     'settings.passwords_not_match': 'Passwords do not match',
     'settings.at_least_one_field': 'Fill in at least one field (email or password)',
     'settings.email_already_exists': 'Email already in use',

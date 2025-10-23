@@ -674,6 +674,24 @@ export default function Settings() {
     // Если systemPrompt не найден, продолжаем отображение страницы с пустым полем
   }
   
+  // Проверка доступа: мастера не должны иметь доступ к классической странице settings
+  if (user?.role === 'master') {
+    return (
+      <div className="p-6">
+        <Card className="border-red-200 bg-red-50">
+          <CardHeader>
+            <CardTitle className="text-red-700">Доступ ограничен</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-red-600">
+              Эта страница недоступна для мастеров. Используйте раздел "Настройки" в главном меню.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
   return (
     <div className="p-6">
       <div className="mb-6">

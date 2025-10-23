@@ -62,7 +62,7 @@ export function SimpleProtectedRoute({ children, requiredRole }: SimpleProtected
   // Для мастеров ограничиваем доступ только к календарю мастера
   if (user?.role === 'master') {
     const currentPath = window.location.pathname;
-    const allowedPaths = ['/master/calendar', '/settings'];
+    const allowedPaths = ['/master/calendar', '/master/settings', '/settings'];
     
     if (!allowedPaths.includes(currentPath)) {
       window.location.href = "/master/calendar";
