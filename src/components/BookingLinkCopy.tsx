@@ -252,13 +252,16 @@ export const BookingLinkCopy: React.FC = () => {
         </div>
 
         {/* Ссылка мессенджера с organisationId */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-purple-200 shadow-sm">
+        <div className="bg-gray-100 backdrop-blur-sm rounded-xl p-4 border border-gray-300 shadow-sm opacity-60 relative">
+          <div className="absolute top-2 right-2 bg-gray-500 text-white text-xs px-2 py-1 rounded-md font-semibold">
+            Демо
+          </div>
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="bg-purple-100 p-1.5 rounded-lg">
-                <Share2 className="h-4 w-4 text-purple-600" />
+              <div className="bg-gray-200 p-1.5 rounded-lg">
+                <Share2 className="h-4 w-4 text-gray-500" />
               </div>
-              <span className="text-sm font-medium text-purple-700">
+              <span className="text-sm font-medium text-gray-600">
                 {t('booking_links.messenger_org_link')}
               </span>
             </div>
@@ -266,52 +269,39 @@ export const BookingLinkCopy: React.FC = () => {
             <Input
               value={messengerOrgUrl}
               readOnly
-              className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-300 focus:border-purple-500 focus:ring-purple-200 text-sm font-mono text-gray-700 cursor-pointer"
-              onClick={() => copyToClipboard(messengerOrgUrl, 'messenger-org')}
+              disabled
+              className="bg-gray-200 border-gray-300 text-sm font-mono text-gray-500 cursor-not-allowed"
             />
             
-            <div className="text-xs text-purple-600 mb-2 bg-purple-50 p-2 rounded">
+            <div className="text-xs text-gray-500 mb-2 bg-gray-100 p-2 rounded">
               {t('booking_links.messenger_org_hint')}
             </div>
             
             <div className="flex gap-2 flex-wrap">
               <Button
-                onClick={() => copyToClipboard(messengerOrgUrl, 'messenger-org')}
+                disabled
                 size="sm"
-                className={`transition-all duration-300 transform hover:scale-105 ${
-                  isCopied === 'messenger-org'
-                    ? 'bg-green-500 hover:bg-green-600 text-white shadow-green-200' 
-                    : 'bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-purple-200'
-                } shadow-lg`}
+                className="bg-gray-400 text-white cursor-not-allowed opacity-50"
               >
-                {isCopied === 'messenger-org' ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    {t('booking_links.copied')}
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-4 w-4 mr-2" />
-                    {t('booking_links.copy')}
-                  </>
-                )}
+                <Copy className="h-4 w-4 mr-2" />
+                {t('booking_links.copy')}
               </Button>
               
               <Button
-                onClick={() => openBookingPage(messengerOrgUrl)}
+                disabled
                 variant="outline"
                 size="sm"
-                className="border-purple-300 text-purple-700 hover:bg-purple-50 hover:border-purple-400 transition-all duration-200 hover:scale-105"
+                className="border-gray-300 text-gray-500 cursor-not-allowed opacity-50"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 {t('booking_links.open')}
               </Button>
 
               <Button
-                onClick={() => generateQRCode(messengerOrgUrl)}
+                disabled
                 variant="outline"
                 size="sm"
-                className="border-purple-300 text-purple-700 hover:bg-purple-50 hover:border-purple-400 transition-all duration-200 hover:scale-105"
+                className="border-gray-300 text-gray-500 cursor-not-allowed opacity-50"
               >
                 <QrCode className="h-4 w-4 mr-2" />
                 {t('booking_links.qr_code')}
@@ -321,13 +311,16 @@ export const BookingLinkCopy: React.FC = () => {
         </div>
 
         {/* Ссылка мессенджера с organisationId + branchId */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-indigo-200 shadow-sm">
+        <div className="bg-gray-100 backdrop-blur-sm rounded-xl p-4 border border-gray-300 shadow-sm opacity-60 relative">
+          <div className="absolute top-2 right-2 bg-gray-500 text-white text-xs px-2 py-1 rounded-md font-semibold">
+            Демо
+          </div>
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="bg-indigo-100 p-1.5 rounded-lg">
-                <Share2 className="h-4 w-4 text-indigo-600" />
+              <div className="bg-gray-200 p-1.5 rounded-lg">
+                <Share2 className="h-4 w-4 text-gray-500" />
               </div>
-              <span className="text-sm font-medium text-indigo-700">
+              <span className="text-sm font-medium text-gray-600">
                 {t('booking_links.messenger_branch_link')}
               </span>
             </div>
@@ -335,52 +328,39 @@ export const BookingLinkCopy: React.FC = () => {
             <Input
               value={messengerOrgBranchUrl}
               readOnly
-              className="bg-gradient-to-r from-indigo-50 to-indigo-100 border-indigo-300 focus:border-indigo-500 focus:ring-indigo-200 text-sm font-mono text-gray-700 cursor-pointer"
-              onClick={() => copyToClipboard(messengerOrgBranchUrl, 'messenger-org-branch')}
+              disabled
+              className="bg-gray-200 border-gray-300 text-sm font-mono text-gray-500 cursor-not-allowed"
             />
             
-            <div className="text-xs text-indigo-600 mb-2 bg-indigo-50 p-2 rounded">
+            <div className="text-xs text-gray-500 mb-2 bg-gray-100 p-2 rounded">
               {t('booking_links.messenger_branch_hint')}
             </div>
             
             <div className="flex gap-2 flex-wrap">
               <Button
-                onClick={() => copyToClipboard(messengerOrgBranchUrl, 'messenger-org-branch')}
+                disabled
                 size="sm"
-                className={`transition-all duration-300 transform hover:scale-105 ${
-                  isCopied === 'messenger-org-branch'
-                    ? 'bg-green-500 hover:bg-green-600 text-white shadow-green-200' 
-                    : 'bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white shadow-indigo-200'
-                } shadow-lg`}
+                className="bg-gray-400 text-white cursor-not-allowed opacity-50"
               >
-                {isCopied === 'messenger-org-branch' ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    {t('booking_links.copied')}
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-4 w-4 mr-2" />
-                    {t('booking_links.copy')}
-                  </>
-                )}
+                <Copy className="h-4 w-4 mr-2" />
+                {t('booking_links.copy')}
               </Button>
               
               <Button
-                onClick={() => openBookingPage(messengerOrgBranchUrl)}
+                disabled
                 variant="outline"
                 size="sm"
-                className="border-indigo-300 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-400 transition-all duration-200 hover:scale-105"
+                className="border-gray-300 text-gray-500 cursor-not-allowed opacity-50"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
                 {t('booking_links.open')}
               </Button>
 
               <Button
-                onClick={() => generateQRCode(messengerOrgBranchUrl)}
+                disabled
                 variant="outline"
                 size="sm"
-                className="border-indigo-300 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-400 transition-all duration-200 hover:scale-105"
+                className="border-gray-300 text-gray-500 cursor-not-allowed opacity-50"
               >
                 <QrCode className="h-4 w-4 mr-2" />
                 {t('booking_links.qr_code')}

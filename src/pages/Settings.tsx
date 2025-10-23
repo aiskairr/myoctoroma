@@ -763,11 +763,14 @@ export default function Settings() {
       </div>
       
       {/* System Prompt Settings */}
-      <Card className="mb-6">
+      <Card className="mb-6 bg-gray-100 border-gray-300 opacity-60 relative">
+        <div className="absolute top-4 right-4 bg-gray-500 text-white text-xs px-2 py-1 rounded-md font-semibold z-10">
+          Демо
+        </div>
         <CardHeader className="pb-3">
-          <CardTitle>{t('settings.system_prompt_title')}</CardTitle>
+          <CardTitle className="text-gray-600">{t('settings.system_prompt_title')}</CardTitle>
           {error && error instanceof Error && error.message.includes('SystemPrompt not found for branch') && (
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-sm text-gray-500 mt-2">
               {t('settings.system_prompt_not_found')}
             </p>
           )}
@@ -775,34 +778,35 @@ export default function Settings() {
         <CardContent>
           <form className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="system-prompt">{t('settings.system_prompt_label')}</Label>
+              <Label htmlFor="system-prompt" className="text-gray-600">{t('settings.system_prompt_label')}</Label>
               <Textarea
                 id="system-prompt"
                 rows={8}
+                disabled
                 value={settings.systemPrompt}
-                onChange={(e) => handleInputChange("systemPrompt", e.target.value)}
+                className="bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed"
                 placeholder={
                   error && error instanceof Error && error.message.includes('SystemPrompt not found for branch')
                     ? t('settings.system_prompt_placeholder_not_found')
                     : t('settings.system_prompt_placeholder')
                 }
               />
-              <p className="text-xs text-muted-foreground">{t('settings.system_prompt_description')}</p>
+              <p className="text-xs text-gray-500">{t('settings.system_prompt_description')}</p>
             </div>
             
             <div className="flex justify-end">
               <Button
                 type="button"
                 variant="secondary"
-                onClick={resetSystemPrompt}
-                className="mr-2"
+                disabled
+                className="mr-2 bg-gray-400 text-white cursor-not-allowed opacity-50"
               >
                 {t('settings.reset_to_default')}
               </Button>
               <Button
                 type="button"
-                onClick={() => handleSave("systemPrompt")}
-                disabled={updateSettingMutation.isPending}
+                disabled
+                className="bg-gray-400 text-white cursor-not-allowed opacity-50"
               >
                 {updateSettingMutation.isPending ? t('settings.saving') : t('settings.save_prompt')}
               </Button>
@@ -812,102 +816,94 @@ export default function Settings() {
       </Card>
 
       {/* WhatsApp Configuration Section */}
-      <Card>
+      <Card className="bg-gray-100 border-gray-300 opacity-60 relative">
+        <div className="absolute top-4 right-4 bg-gray-500 text-white text-xs px-2 py-1 rounded-md font-semibold z-10">
+          Демо
+        </div>
         <CardHeader>
-          <CardTitle>{t('settings.whatsapp_api')}</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-gray-600">{t('settings.whatsapp_api')}</CardTitle>
+          <CardDescription className="text-gray-500">
             Конфигурация подключения к WhatsApp API
           </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoadingWhatsapp ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <span className="ml-2">Загрузка конфигурации...</span>
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              <span className="ml-2 text-gray-500">Загрузка конфигурации...</span>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="whatsapp-api-url">API URL</Label>
+                  <Label htmlFor="whatsapp-api-url" className="text-gray-600">API URL</Label>
                   <Input
                     id="whatsapp-api-url"
                     type="url"
+                    disabled
                     placeholder="https://xxxx.api.greenapi.com"
                     value={whatsappConfig.apiUrl}
-                    onChange={(e) => handleWhatsappInputChange('apiUrl', e.target.value)}
+                    className="bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="whatsapp-media-url">Media URL</Label>
+                  <Label htmlFor="whatsapp-media-url" className="text-gray-600">Media URL</Label>
                   <Input
                     id="whatsapp-media-url"
                     type="url"
+                    disabled
                     placeholder="https://xxxx.media.greenapi.com"
                     value={whatsappConfig.mediaUrl}
-                    onChange={(e) => handleWhatsappInputChange('mediaUrl', e.target.value)}
+                    className="bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="whatsapp-branch-id">Branch ID</Label>
+                  <Label htmlFor="whatsapp-branch-id" className="text-gray-600">Branch ID</Label>
                   <Input
                     id="whatsapp-branch-id"
                     type="text"
+                    disabled
                     placeholder="7105292833"
                     value={whatsappConfig.branchId}
-                    onChange={(e) => handleWhatsappInputChange('branchId', e.target.value)}
+                    className="bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="whatsapp-api-token">API Token</Label>
+                  <Label htmlFor="whatsapp-api-token" className="text-gray-600">API Token</Label>
                   <Input
                     id="whatsapp-api-token"
                     type="password"
+                    disabled
                     placeholder={t('settings.api_token_placeholder')}
                     value={whatsappConfig.apiToken}
-                    onChange={(e) => handleWhatsappInputChange('apiToken', e.target.value)}
+                    className="bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed"
                   />
                 </div>
               </div>
 
               <div className="flex gap-3 pt-4">
                 <Button
-                  onClick={handleSaveWhatsappConfig}
-                  disabled={saveWhatsappConfigMutation.isPending}
-                  className="flex-1"
+                  disabled
+                  className="flex-1 bg-gray-400 text-white cursor-not-allowed opacity-50"
                 >
-                  {saveWhatsappConfigMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      {t('settings.saving_button')}
-                    </>
-                  ) : (
-                    t('settings.save_config_button')
-                  )}
+                  {t('settings.save_config_button')}
                 </Button>
                 
                 <Button
                   variant="outline"
-                  onClick={handleTestConnection}
-                  disabled={isTestingConnection || testWhatsappConnectionMutation.isPending}
+                  disabled
+                  className="border-gray-300 text-gray-500 cursor-not-allowed opacity-50"
                 >
-                  {(isTestingConnection || testWhatsappConnectionMutation.isPending) ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      {t('settings.testing_button')}
-                    </>
-                  ) : (
-                    t('settings.test_connection_button')
-                  )}
+                  {t('settings.test_connection_button')}
                 </Button>
               </div>
 
-              <div className="bg-muted p-4 rounded-md">
-                <h3 className="text-sm font-medium mb-2">Информация о настройке</h3>
-                <ul className="text-xs text-muted-foreground space-y-1">
+              <div className="bg-gray-200 p-4 rounded-md">
+                <h3 className="text-sm font-medium mb-2 text-gray-600">Информация о настройке</h3>
+                <ul className="text-xs text-gray-500 space-y-1">
                   <li>• API URL и Media URL получаются от провайдера WhatsApp API</li>
                   <li>• Branch ID - идентификатор вашего инстанса</li>
                   <li>• API Token - секретный ключ для авторизации</li>
