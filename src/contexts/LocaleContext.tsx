@@ -536,6 +536,24 @@ const translations = {
     'booking_links.usage_3': 'Печатная реклама с QR',
     'booking_links.usage_4': 'Партнерские сайты',
     
+    // Сквозная аналитика
+    'analytics.title': '📊 Сквозная аналитика',
+    'analytics.subtitle': 'Отслеживание эффективности маркетинговых каналов',
+    'analytics.description': 'Создавайте уникальные ссылки для каждого рекламного канала и отслеживайте, откуда приходят ваши Пациенты. Это поможет понять, какие каналы работают лучше всего.',
+    'analytics.how_to_create': '💡 Как создать отслеживаемую ссылку:',
+    'analytics.step_1': '1. Нажмите "Создать отслеживаемую ссылку"',
+    'analytics.step_2': '2. Укажите источник (например: "Instagram Stories - Акция 20%")',
+    'analytics.step_3': '3. Получите уникальную ссылку для этого канала',
+    'analytics.step_4': '4. Используйте её в рекламе и отслеживайте результаты',
+    'analytics.where_to_use': '🎯 Где можно применять:',
+    'analytics.use_case_1': 'В социальных сетях (Instagram, Facebook, TikTok)',
+    'analytics.use_case_2': 'В контекстной рекламе (Google Ads, Yandex Direct)',
+    'analytics.use_case_3': 'В email-рассылках и SMS-кампаниях',
+    'analytics.use_case_4': 'На печатных материалах (флаеры, визитки) через QR-код',
+    'analytics.use_case_5': 'На партнерских сайтах и в блогах',
+    'analytics.toggle': 'Показать статистику',
+    'analytics.hide': 'Скрыть статистику',
+    
     // Masters page
     'masters.page_title': 'Мастера',
     'masters.add_master': 'Добавить мастера',
@@ -2013,6 +2031,24 @@ const translations = {
     'booking_links.usage_3': 'QR коду менен басма жарнама',
     'booking_links.usage_4': 'Өнөктөш сайттар',
     
+    // Сквозная аналитика
+    'analytics.title': '📊 Сквозной аналитика',
+    'analytics.subtitle': 'Маркетинг каналдарынын эффективдүүлүгүн көзөмөлдөө',
+    'analytics.description': 'Ар бир жарнама каналы үчүн уникалдуу шилтемелерди түзүңүз жана кардарларыңыз кайдан келгенин көзөмөлдөңүз. Бул кайсы каналдар эң жакшы иштеерин түшүнүүгө жардам берет.',
+    'analytics.how_to_create': '💡 Көзөмөлдөө шилтемесин кантип түзүү керек:',
+    'analytics.step_1': '1. "Көзөмөлдөө шилтемесин түзүү" баскычын басыңыз',
+    'analytics.step_2': '2. Булакты көрсөтүңүз (мисалы: "Instagram Stories - 20% акция")',
+    'analytics.step_3': '3. Бул канал үчүн уникалдуу шилтемени алыңыз',
+    'analytics.step_4': '4. Аны жарнамада колдонуп, натыйжаларды көзөмөлдөңүз',
+    'analytics.where_to_use': '🎯 Кайда колдонсо болот:',
+    'analytics.use_case_1': 'Социалдык тармактарда (Instagram, Facebook, TikTok)',
+    'analytics.use_case_2': 'Контексттик жарнамада (Google Ads, Yandex Direct)',
+    'analytics.use_case_3': 'Email жана SMS кампанияларында',
+    'analytics.use_case_4': 'Басма материалдарда (флаерлер, визиткалар) QR-код аркылуу',
+    'analytics.use_case_5': 'Өнөктөш сайттарда жана блогдорда',
+    'analytics.toggle': 'Статистиканы көрсөтүү',
+    'analytics.hide': 'Статистиканы жашыруу',
+    
     // Masters page
     'masters.page_title': 'Мастерлер',
     'masters.add_master': 'Мастер кошуу',
@@ -3487,6 +3523,24 @@ const translations = {
     'booking_links.usage_2': 'Google Ads campaigns',
     'booking_links.usage_3': 'Print advertising with QR',
     'booking_links.usage_4': 'Partner websites',
+    
+    // End-to-end analytics
+    'analytics.title': '📊 End-to-End Analytics',
+    'analytics.subtitle': 'Track marketing channel effectiveness',
+    'analytics.description': 'Create unique links for each advertising channel and track where your clients come from. This helps understand which channels work best.',
+    'analytics.how_to_create': '💡 How to create a tracked link:',
+    'analytics.step_1': '1. Click "Create tracked link"',
+    'analytics.step_2': '2. Specify the source (e.g., "Instagram Stories - 20% Promotion")',
+    'analytics.step_3': '3. Get a unique link for this channel',
+    'analytics.step_4': '4. Use it in advertising and track results',
+    'analytics.where_to_use': '🎯 Where to use:',
+    'analytics.use_case_1': 'On social media (Instagram, Facebook, TikTok)',
+    'analytics.use_case_2': 'In contextual advertising (Google Ads, Yandex Direct)',
+    'analytics.use_case_3': 'In email newsletters and SMS campaigns',
+    'analytics.use_case_4': 'On printed materials (flyers, business cards) via QR code',
+    'analytics.use_case_5': 'On partner websites and blogs',
+    'analytics.toggle': 'Show statistics',
+    'analytics.hide': 'Hide statistics',
     
     // Masters page
     'masters.page_title': 'Masters',

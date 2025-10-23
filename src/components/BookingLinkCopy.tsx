@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Copy, ExternalLink, Share2, CheckCircle2, QrCode, Smartphone, Plus, Trash2, BarChart3, TrendingUp, Eye, EyeOff } from "lucide-react";
+import { Copy, ExternalLink, Share2, CheckCircle2, QrCode, Smartphone, Plus, Trash2, BarChart3, TrendingUp, ChevronDown } from "lucide-react";
 import { useBranch } from '@/contexts/BranchContext';
 import { useLocale } from '@/contexts/LocaleContext';
 import { createApiUrl } from "@/utils/api-url";
@@ -19,7 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface BookingLink {
   id: number;
@@ -390,226 +389,276 @@ export const BookingLinkCopy: React.FC = () => {
           </div>
         </div>
 
-        {/* Управление отслеживаемыми ссылками */}
-        <Collapsible open={showLinksManager} onOpenChange={setShowLinksManager}>
-          <CollapsibleTrigger asChild>
+        {/* Сквозная аналитика */}
+        <Card className="bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 border border-indigo-200 shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-3 text-indigo-800">
+              <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-3 rounded-xl shadow-md">
+                <BarChart3 className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">{t('analytics.title')}</h3>
+                <p className="text-sm text-indigo-600 font-normal">
+                  {t('analytics.subtitle')}
+                </p>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Описание */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-indigo-200">
+              <p className="text-sm text-indigo-700 leading-relaxed">
+                {t('analytics.description')}
+              </p>
+            </div>
+
+            {/* Как создать */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-blue-200">
+              <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                {t('analytics.how_to_create')}
+              </h4>
+              <div className="space-y-2">
+                <p className="text-sm text-blue-700">{t('analytics.step_1')}</p>
+                <p className="text-sm text-blue-700">{t('analytics.step_2')}</p>
+                <p className="text-sm text-blue-700">{t('analytics.step_3')}</p>
+                <p className="text-sm text-blue-700">{t('analytics.step_4')}</p>
+              </div>
+            </div>
+
+            {/* Где применять */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-purple-200">
+              <h4 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
+                {t('analytics.where_to_use')}
+              </h4>
+              <div className="space-y-2">
+                <p className="text-sm text-purple-700">{t('analytics.use_case_1')}</p>
+                <p className="text-sm text-purple-700">{t('analytics.use_case_2')}</p>
+                <p className="text-sm text-purple-700">{t('analytics.use_case_3')}</p>
+                <p className="text-sm text-purple-700">{t('analytics.use_case_4')}</p>
+                <p className="text-sm text-purple-700">{t('analytics.use_case_5')}</p>
+              </div>
+            </div>
+
+            {/* Кнопка показать статистику */}
             <Button 
+              onClick={() => setShowLinksManager(!showLinksManager)}
               variant="outline" 
-              className="w-full justify-between border-blue-300 text-blue-700 hover:bg-blue-50"
+              className="w-full justify-between border-indigo-300 text-indigo-700 hover:bg-indigo-50 transition-all duration-200"
             >
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
-                {t('booking_links.tracked_links_stats')}
-                {totalBookings > 0 && (
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                <span>{showLinksManager ? t('analytics.hide') : t('analytics.toggle')}</span>
+                {totalBookings > 0 && !showLinksManager && (
+                  <Badge variant="secondary" className="bg-indigo-100 text-indigo-700">
                     {totalBookings} {t('booking_links.bookings_count')}
                   </Badge>
                 )}
               </div>
-              {showLinksManager ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showLinksManager ? 'rotate-180' : ''}`} />
             </Button>
-          </CollapsibleTrigger>
-          
-          <CollapsibleContent className="space-y-4 mt-4">
-            {/* Форма создания новой ссылки */}
-            <div className="bg-blue-50/50 border border-blue-200 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-blue-800 flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  {t('booking_links.create_tracked_link')}
-                </h4>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowCreateForm(!showCreateForm)}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  {showCreateForm ? t('booking_links.hide') : t('booking_links.show')}
-                </Button>
-              </div>
-              
-              {showCreateForm && (
-                <div className="space-y-3">
-                  <Textarea
-                    placeholder={t('booking_links.source_placeholder')}
-                    value={newLinkContent}
-                    onChange={(e) => setNewLinkContent(e.target.value)}
-                    className="border-blue-300 focus:border-blue-500"
-                    rows={2}
-                  />
-                  <Button
-                    onClick={handleCreateLink}
-                    disabled={!newLinkContent.trim() || createLinkMutation.isPending}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    {createLinkMutation.isPending ? t('booking_links.creating') : t('booking_links.create_link')}
-                  </Button>
-                </div>
-              )}
-            </div>
 
-            {/* Статистика */}
-            {linkStats?.stats && linkStats.stats.length > 0 && (
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4">
-                <h4 className="font-medium text-purple-800 mb-4 flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  {t('booking_links.usage_stats')}
-                </h4>
-                
-                {/* Общая статистика */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div className="bg-white/70 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-purple-600">{linkStats.stats.length}</div>
-                    <div className="text-xs text-purple-700">{t('booking_links.stats_active_links')}</div>
+            {/* Контент статистики */}
+            {showLinksManager && (
+              <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
+                {/* Форма создания новой ссылки */}
+                <div className="bg-blue-50/50 border border-blue-200 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium text-blue-800 flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      {t('booking_links.create_tracked_link')}
+                    </h4>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowCreateForm(!showCreateForm)}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      {showCreateForm ? t('booking_links.hide') : t('booking_links.show')}
+                    </Button>
                   </div>
-                  <div className="bg-white/70 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-blue-600">{totalBookings}</div>
-                    <div className="text-xs text-blue-700">{t('booking_links.stats_total_bookings')}</div>
-                  </div>
-                  <div className="bg-white/70 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      {linkStats.stats.filter(s => s.bookingCount > 0).length}
+                  
+                  {showCreateForm && (
+                    <div className="space-y-3">
+                      <Textarea
+                        placeholder={t('booking_links.source_placeholder')}
+                        value={newLinkContent}
+                        onChange={(e) => setNewLinkContent(e.target.value)}
+                        className="border-blue-300 focus:border-blue-500"
+                        rows={2}
+                      />
+                      <Button
+                        onClick={handleCreateLink}
+                        disabled={!newLinkContent.trim() || createLinkMutation.isPending}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {createLinkMutation.isPending ? t('booking_links.creating') : t('booking_links.create_link')}
+                      </Button>
                     </div>
-                    <div className="text-xs text-green-700">{t('booking_links.stats_used_links')}</div>
-                  </div>
-                  <div className="bg-white/70 rounded-lg p-3 text-center">
-                    <div className="text-2xl font-bold text-orange-600">
-                      {totalBookings > 0 ? Math.round(totalBookings / linkStats.stats.length) : 0}
-                    </div>
-                    <div className="text-xs text-orange-700">{t('booking_links.stats_avg_per_link')}</div>
-                  </div>
+                  )}
                 </div>
 
-                {/* Детальная статистика */}
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs">{t('booking_links.table_source')}</TableHead>
-                        <TableHead className="text-xs text-center">{t('booking_links.table_bookings')}</TableHead>
-                        <TableHead className="text-xs text-center">{t('booking_links.table_last_used')}</TableHead>
-                        <TableHead className="text-xs text-center">{t('booking_links.table_actions')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {linkStats.stats.map((stat) => (
-                        <TableRow key={stat.linkKey}>
-                          <TableCell className="text-xs">
-                            <div className="max-w-40 truncate" title={stat.content}>
-                              {stat.content}
+                {/* Статистика */}
+                {linkStats?.stats && linkStats.stats.length > 0 && (
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4">
+                    <h4 className="font-medium text-purple-800 mb-4 flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      {t('booking_links.usage_stats')}
+                    </h4>
+                    
+                    {/* Общая статистика */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      <div className="bg-white/70 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-purple-600">{linkStats.stats.length}</div>
+                        <div className="text-xs text-purple-700">{t('booking_links.stats_active_links')}</div>
+                      </div>
+                      <div className="bg-white/70 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-blue-600">{totalBookings}</div>
+                        <div className="text-xs text-blue-700">{t('booking_links.stats_total_bookings')}</div>
+                      </div>
+                      <div className="bg-white/70 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {linkStats.stats.filter(s => s.bookingCount > 0).length}
+                        </div>
+                        <div className="text-xs text-green-700">{t('booking_links.stats_used_links')}</div>
+                      </div>
+                      <div className="bg-white/70 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-orange-600">
+                          {totalBookings > 0 ? Math.round(totalBookings / linkStats.stats.length) : 0}
+                        </div>
+                        <div className="text-xs text-orange-700">{t('booking_links.stats_avg_per_link')}</div>
+                      </div>
+                    </div>
+
+                    {/* Детальная статистика */}
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs">{t('booking_links.table_source')}</TableHead>
+                            <TableHead className="text-xs text-center">{t('booking_links.table_bookings')}</TableHead>
+                            <TableHead className="text-xs text-center">{t('booking_links.table_last_used')}</TableHead>
+                            <TableHead className="text-xs text-center">{t('booking_links.table_actions')}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {linkStats.stats.map((stat) => (
+                            <TableRow key={stat.linkKey}>
+                              <TableCell className="text-xs">
+                                <div className="max-w-40 truncate" title={stat.content}>
+                                  {stat.content}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Badge 
+                                  variant={stat.bookingCount > 0 ? "default" : "secondary"}
+                                  className="text-xs"
+                                >
+                                  {stat.bookingCount}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-center text-xs">
+                                {stat.lastUsed 
+                                  ? format(new Date(stat.lastUsed), 'dd.MM.yyyy HH:mm')
+                                  : t('booking_links.not_used')
+                                }
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <div className="flex gap-1 justify-center">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => copyToClipboard(stat.generatedLink, stat.linkKey)}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    {isCopied === stat.linkKey ? (
+                                      <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                    ) : (
+                                      <Copy className="h-3 w-3" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => openBookingPage(stat.generatedLink)}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Список всех созданных ссылок */}
+                {bookingLinks?.links && bookingLinks.links.length > 0 && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                    <h4 className="font-medium text-gray-800 mb-3">{t('booking_links.all_links')}</h4>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {bookingLinks.links.map((link) => (
+                        <div key={link.id} className="bg-white rounded-lg p-3 border border-gray-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {link.content}
+                              </p>
+                              <p className="text-xs text-gray-500 font-mono truncate">
+                                {link.generatedLink}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {link.usageCount} {t('booking_links.uses')}
+                                </Badge>
+                                <span className="text-xs text-gray-400">
+                                  {format(new Date(link.createdAt), 'dd.MM.yyyy')}
+                                </span>
+                              </div>
                             </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge 
-                              variant={stat.bookingCount > 0 ? "default" : "secondary"}
-                              className="text-xs"
-                            >
-                              {stat.bookingCount}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center text-xs">
-                            {stat.lastUsed 
-                              ? format(new Date(stat.lastUsed), 'dd.MM.yyyy HH:mm')
-                              : t('booking_links.not_used')
-                            }
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex gap-1 justify-center">
+                            <div className="flex gap-1 ml-2">
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => copyToClipboard(stat.generatedLink, stat.linkKey)}
-                                className="h-6 w-6 p-0"
+                                onClick={() => copyToClipboard(link.generatedLink, link.linkKey)}
+                                className="h-8 w-8 p-0"
                               >
-                                {isCopied === stat.linkKey ? (
-                                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                {isCopied === link.linkKey ? (
+                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
                                 ) : (
-                                  <Copy className="h-3 w-3" />
+                                  <Copy className="h-4 w-4" />
                                 )}
                               </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => openBookingPage(stat.generatedLink)}
-                                className="h-6 w-6 p-0"
+                                onClick={() => generateQRCode(link.generatedLink)}
+                                className="h-8 w-8 p-0"
                               >
-                                <ExternalLink className="h-3 w-3" />
+                                <QrCode className="h-4 w-4" />
                               </Button>
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            )}
-
-            {/* Список всех созданных ссылок */}
-            {bookingLinks?.links && bookingLinks.links.length > 0 && (
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                <h4 className="font-medium text-gray-800 mb-3">{t('booking_links.all_links')}</h4>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {bookingLinks.links.map((link) => (
-                    <div key={link.id} className="bg-white rounded-lg p-3 border border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {link.content}
-                          </p>
-                          <p className="text-xs text-gray-500 font-mono truncate">
-                            {link.generatedLink}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="outline" className="text-xs">
-                              {link.usageCount} {t('booking_links.uses')}
-                            </Badge>
-                            <span className="text-xs text-gray-400">
-                              {format(new Date(link.createdAt), 'dd.MM.yyyy')}
-                            </span>
                           </div>
                         </div>
-                        <div className="flex gap-1 ml-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => copyToClipboard(link.generatedLink, link.linkKey)}
-                            className="h-8 w-8 p-0"
-                          >
-                            {isCopied === link.linkKey ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => generateQRCode(link.generatedLink)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <QrCode className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+
+                {/* Пустое состояние */}
+                {(!linkStats?.stats || linkStats.stats.length === 0) && !statsLoading && (
+                  <div className="text-center py-8 text-gray-500">
+                    <BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>{t('booking_links.no_links')}</p>
+                    <p className="text-sm">{t('booking_links.create_first_link')}</p>
+                  </div>
+                )}
               </div>
             )}
-
-            {/* Пустое состояние */}
-            {(!linkStats?.stats || linkStats.stats.length === 0) && !statsLoading && (
-              <div className="text-center py-8 text-gray-500">
-                <BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>{t('booking_links.no_links')}</p>
-                <p className="text-sm">{t('booking_links.create_first_link')}</p>
-              </div>
-            )}
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* Info Section для Messenger */}
+          </CardContent>
+        </Card>        {/* Info Section для Messenger */}
         <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-4 shadow-sm">
           <div className="flex items-start gap-3">
             <div className="bg-purple-500 rounded-full p-2 mt-0.5 shadow-md">
