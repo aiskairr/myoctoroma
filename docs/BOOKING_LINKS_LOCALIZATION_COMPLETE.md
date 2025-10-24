@@ -36,7 +36,7 @@
 ### 3. Информация о Internal Messenger
 
 #### Русский (RU)
-- `booking_links.messenger_feature_1`: "Поддержка Пациентов онлайн"
+- `booking_links.messenger_feature_1`: "Поддержка клиентов онлайн"
 - `booking_links.messenger_feature_2`: "Консультации перед записью"
 - `booking_links.messenger_feature_3`: "Размещение на сайте/соцсетях"
 - `booking_links.messenger_feature_4`: "Отправка файлов и документов"
