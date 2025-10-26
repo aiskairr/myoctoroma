@@ -80,7 +80,9 @@ const MasterForm: React.FC<{
   onSubmit: (data: Partial<Master>) => void;
   isPending: boolean;
   branchUsers?: BranchUser[];
-}> = ({ master, onSubmit, isPending, branchUsers }) => {
+  onDelete?: (masterId: number) => void;
+  isDeleting?: boolean;
+}> = ({ master, onSubmit, isPending, branchUsers, onDelete, isDeleting }) => {
   const { t } = useLocale();
   const [formData, setFormData] = useState({
     name: master?.name || '',
@@ -396,22 +398,42 @@ const MasterForm: React.FC<{
         />
       </div>
 
-      <DialogFooter className="mt-8 flex justify-between">
-        <Button
-          variant="outline"
-          onClick={() => window.dispatchEvent(new Event('close-dialog'))}
-          className="border-gray-300 text-gray-700 hover:bg-gray-50"
-        >
-          {t('masters.cancel')}
-        </Button>
-        <Button
-          type="submit"
-          disabled={isPending || !formData.name.trim()}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200"
-        >
-          {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-          {master ? t('masters.save') : t('masters.add_master')}
-        </Button>
+      <DialogFooter className="mt-8 flex justify-between items-center">
+        <div>
+          {master && onDelete && (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (window.confirm(`Вы уверены, что хотите удалить мастера "${master.name}"? Это действие удалит также его аккаунт в системе.`)) {
+                  onDelete(master.id);
+                }
+              }}
+              disabled={isDeleting || isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <X className="h-4 w-4 mr-2" />}
+              {t('masters.delete_action')}
+            </Button>
+          )}
+        </div>
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => window.dispatchEvent(new Event('close-dialog'))}
+            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            {t('masters.cancel')}
+          </Button>
+          <Button
+            type="submit"
+            disabled={isPending || isDeleting || !formData.name.trim()}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200"
+          >
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            {master ? t('masters.save') : t('masters.add_master')}
+          </Button>
+        </div>
       </DialogFooter>
     </form>
   );
@@ -694,7 +716,9 @@ const AdministratorForm: React.FC<{
   onSubmit: (data: Partial<Administrator>) => void;
   isPending: boolean;
   branchUsers?: BranchUser[];
-}> = ({ administrator, onSubmit, isPending, branchUsers }) => {
+  onDelete?: (administratorId: number) => void;
+  isDeleting?: boolean;
+}> = ({ administrator, onSubmit, isPending, branchUsers, onDelete, isDeleting }) => {
   const { t } = useLocale();
   const { currentBranch } = useBranch();
   const [formData, setFormData] = useState({
@@ -974,22 +998,42 @@ const AdministratorForm: React.FC<{
         )}
       </div>
 
-      <DialogFooter className="mt-8 flex justify-between">
-        <Button
-          variant="outline"
-          onClick={() => window.dispatchEvent(new Event('close-dialog'))}
-          className="border-gray-300 text-gray-700 hover:bg-gray-50"
-        >
-          {t('masters.cancel')}
-        </Button>
-        <Button
-          type="submit"
-          disabled={isPending || !formData.name.trim()}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200"
-        >
-          {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-          {administrator ? t('masters.save_changes') : t('masters.add_administrator')}
-        </Button>
+      <DialogFooter className="mt-8 flex justify-between items-center">
+        <div>
+          {administrator && onDelete && (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (window.confirm(`Вы уверены, что хотите удалить администратора "${administrator.name}"? Это действие удалит также его аккаунт в системе.`)) {
+                  onDelete(administrator.id);
+                }
+              }}
+              disabled={isDeleting || isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <X className="h-4 w-4 mr-2" />}
+              {t('masters.delete_action')}
+            </Button>
+          )}
+        </div>
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => window.dispatchEvent(new Event('close-dialog'))}
+            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            {t('masters.cancel')}
+          </Button>
+          <Button
+            type="submit"
+            disabled={isPending || isDeleting || !formData.name.trim()}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200"
+          >
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            {administrator ? t('masters.save_changes') : t('masters.add_administrator')}
+          </Button>
+        </div>
       </DialogFooter>
     </form>
   );
@@ -1459,26 +1503,47 @@ const Masters: React.FC = () => {
 
   const deleteMasterMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${id}`, {
+      // Сначала удаляем мастера из основной таблицы
+      const deleteRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${id}`, {
         method: 'DELETE'
       });
-      if (!res.ok) {
+      if (!deleteRes.ok) {
         throw new Error('Failed to delete master');
       }
-      return res.json();
+      const deletedMaster = await deleteRes.json();
+
+      // Затем удаляем пользователя из таблицы users (если существует)
+      if (deletedMaster?.id) {
+        try {
+          const userDeleteRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          // Не выбрасываем ошибку, если удаление пользователя не удалось
+          if (!userDeleteRes.ok) {
+            console.warn('Warning: Could not delete master user account');
+          }
+        } catch (err) {
+          console.warn('Warning: Failed to delete master user account', err);
+        }
+      }
+
+      return deletedMaster;
     },
-    onSuccess: () => {
+    onSuccess: (deletedMaster) => {
       toast({
         title: t('masters.master_deleted'),
-        description: t('masters.master_deleted'),
+        description: `Мастер "${deletedMaster?.name || ''}" и его аккаунт успешно удалены`,
         variant: 'default',
       });
       refetch();
+      setIsEditDialogOpen(false);
+      setEditMaster(null);
     },
     onError: (error) => {
       toast({
         title: 'Ошибка',
-        description: `${error}`,
+        description: `Не удалось удалить мастера: ${error}`,
         variant: 'destructive',
       });
     }
@@ -1604,21 +1669,42 @@ const Masters: React.FC = () => {
 
   const deleteAdministratorMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators/${id}`, {
+      // Сначала удаляем администратора из основной таблицы
+      const deleteRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators/${id}`, {
         method: 'DELETE',
       });
-      if (!res.ok) {
+      if (!deleteRes.ok) {
         throw new Error('Failed to delete administrator');
       }
-      return res.json();
+      const deletedAdmin = await deleteRes.json();
+
+      // Затем удаляем пользователя из таблицы users (если существует)
+      if (deletedAdmin?.id) {
+        try {
+          const userDeleteRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reception/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          // Не выбрасываем ошибку, если удаление пользователя не удалось
+          if (!userDeleteRes.ok) {
+            console.warn('Warning: Could not delete administrator user account');
+          }
+        } catch (err) {
+          console.warn('Warning: Failed to delete administrator user account', err);
+        }
+      }
+
+      return deletedAdmin;
     },
-    onSuccess: () => {
+    onSuccess: (deletedAdmin) => {
       toast({
         title: 'Администратор удален',
-        description: 'Администратор успешно удален из системы',
+        description: `Администратор "${deletedAdmin?.name || ''}" и его аккаунт успешно удалены из системы`,
         variant: 'default',
       });
       refetchAdministrators();
+      setIsEditAdministratorDialogOpen(false);
+      setEditAdministrator(null);
     },
     onError: (error) => {
       toast({
@@ -1894,6 +1980,8 @@ const Masters: React.FC = () => {
               onSubmit={handleUpdateMaster}
               isPending={updateMasterMutation.isPending}
               branchUsers={branchUsers}
+              onDelete={handleDeleteClick}
+              isDeleting={deleteMasterMutation.isPending}
             />
           )}
         </DialogContent>
@@ -1917,7 +2005,7 @@ const Masters: React.FC = () => {
       </Dialog>
 
       <Dialog open={isEditAdministratorDialogOpen} onOpenChange={setIsEditAdministratorDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
+        <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-gray-900">Редактировать администратора</DialogTitle>
             <DialogDescription className="text-gray-500">
@@ -1930,6 +2018,8 @@ const Masters: React.FC = () => {
               onSubmit={handleUpdateAdministrator}
               isPending={updateAdministratorMutation.isPending}
               branchUsers={branchUsers}
+              onDelete={handleDeleteAdministrator}
+              isDeleting={deleteAdministratorMutation.isPending}
             />
           )}
         </DialogContent>
