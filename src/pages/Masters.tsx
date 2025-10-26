@@ -110,6 +110,17 @@ const MasterForm: React.FC<{
     return findUserByName(branchUsers, master.name);
   }, [master?.name, branchUsers]);
 
+  // Автоматическое заполнение accountData если пользователь существует
+  useEffect(() => {
+    if (userAccountData) {
+      setAccountData({
+        createAccount: true,
+        email: userAccountData.email || '',
+        password: '' // Пароль не приходит из API для безопасности
+      });
+    }
+  }, [userAccountData]);
+
   // Загрузка рабочих дат при редактировании, если они не предоставлены
   const { data: fetchedWorkingDates, isLoading: isLoadingDates } = useQuery({
     queryKey: ['working-dates', master?.id],
@@ -745,6 +756,17 @@ const AdministratorForm: React.FC<{
     if (!administrator?.name || !branchUsers) return null;
     return findUserByName(branchUsers, administrator.name);
   }, [administrator?.name, branchUsers]);
+
+  // Автоматическое заполнение accountData если пользователь существует
+  useEffect(() => {
+    if (userAccountData) {
+      setAccountData({
+        createAccount: true,
+        email: userAccountData.email || '',
+        password: '' // Пароль не приходит из API для безопасности
+      });
+    }
+  }, [userAccountData]);
 
   // Обновление прогресса заполнения формы
   useEffect(() => {
