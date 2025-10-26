@@ -84,6 +84,7 @@ const MasterForm: React.FC<{
   isDeleting?: boolean;
 }> = ({ master, onSubmit, isPending, branchUsers, onDelete, isDeleting }) => {
   const { t } = useLocale();
+  const { currentBranch } = useBranch();
   const [formData, setFormData] = useState({
     name: master?.name || '',
     specialty: master?.specialty || '',
@@ -103,30 +104,6 @@ const MasterForm: React.FC<{
 
   // Прогресс заполнения формы
   const [formProgress, setFormProgress] = useState(0);
-
-  // State для хранения данных пользователя из API
-  const [userAccountData, setUserAccountData] = useState<BranchUser | null>(null);
-
-  // Поиск пользователя в данных из нового эндпоинта при изменении данных
-  useEffect(() => {
-    if (!master?.name || !branchUsers) {
-      setUserAccountData(null);
-      return;
-    }
-    const foundUser = findUserByName(branchUsers, master.name);
-    setUserAccountData(foundUser || null);
-  }, [master?.name, branchUsers]);
-
-  // Автоматическое заполнение accountData если пользователь существует
-  useEffect(() => {
-    if (userAccountData) {
-      setAccountData({
-        createAccount: true,
-        email: userAccountData.email || '',
-        password: '' // Пароль не приходит из API для безопасности
-      });
-    }
-  }, [userAccountData]);
 
   // Загрузка рабочих дат при редактировании, если они не предоставлены
   const { data: fetchedWorkingDates, isLoading: isLoadingDates } = useQuery({
@@ -174,22 +151,38 @@ const MasterForm: React.FC<{
     setAccountData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCreateAccountToggle = (checked: boolean) => {
+  const handleCreateAccountToggle = async (checked: boolean) => {
     if (checked) {
-      if (userAccountData) {
-        // При редактировании: если пользователь существует в БД, заполняем email
-        setAccountData({
-          createAccount: true,
-          email: userAccountData.email || '',
-          password: '' // Пароль не приходит из API для безопасности
-        });
-      } else {
-        // При создании нового мастера: оставляем текущие значения
-        setAccountData((prev) => ({
-          ...prev,
-          createAccount: true
-        }));
+      // При включении toggle: отправляем запрос на получение данных пользователя
+      if (currentBranch?.id) {
+        try {
+          const result = await apiGetJson(`/api/crm/reception-master/user/${currentBranch.id}`);
+          if (result && result.data && Array.isArray(result.data)) {
+            // Ищем пользователя по имени мастера
+            const foundUser = result.data.find((user: BranchUser) => 
+              user.username.toLowerCase().trim() === formData.name.toLowerCase().trim()
+            );
+            
+            if (foundUser) {
+              // Если найден пользователь, заполняем поля
+              setAccountData({
+                createAccount: true,
+                email: foundUser.email || '',
+                password: ''
+              });
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Ошибка при загрузке данных пользователя:', error);
+        }
       }
+      
+      // Если пользователь не найден или запрос не выполнен, просто включаем toggle
+      setAccountData((prev) => ({
+        ...prev,
+        createAccount: true
+      }));
     } else {
       // При отключении toggle: очищаем поля
       setAccountData((prev) => ({
@@ -322,7 +315,7 @@ const MasterForm: React.FC<{
       <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-semibold text-gray-900">
-            {master && userAccountData ? t('masters.edit_account') : t('masters.create_account')}
+            {t('masters.create_account')}
           </h3>
           <Switch
             checked={accountData.createAccount}
@@ -332,19 +325,6 @@ const MasterForm: React.FC<{
         </div>
         <Separator />
 
-        {master && userAccountData && !accountData.createAccount && (
-          <div className="p-4 bg-green-50 rounded-lg border border-green-200 transition-all duration-200">
-            <p className="text-sm font-medium text-green-800 mb-2">✓ Аккаунт существует в системе:</p>
-            <div className="space-y-1 text-sm text-gray-600">
-              <p><strong>Логин:</strong> {userAccountData.username}</p>
-              <p><strong>Email:</strong> {userAccountData.email}</p>
-              <p><strong>Роль:</strong> {userAccountData.role}</p>
-              <p><strong>ID:</strong> {userAccountData.id}</p>
-              <p><strong>Филиал:</strong> {userAccountData.branchId}</p>
-            </div>
-            <p className="text-xs text-green-700 mt-3">Включите переключатель выше, чтобы отредактировать данные аккаунта</p>
-          </div>
-        )}
         {accountData.createAccount && (
           <div className="space-y-5 p-4 bg-blue-50 rounded-lg border border-blue-200 transition-all duration-200">
             <div className="grid grid-cols-4 items-center gap-4">
@@ -362,9 +342,9 @@ const MasterForm: React.FC<{
                   placeholder="email@example.com"
                   required={accountData.createAccount}
                 />
-                {userAccountData && (
+                {accountData.email && (
                   <p className="text-xs text-blue-600">
-                    Текущее значение из системы: <strong>{userAccountData.email}</strong>
+                    Заполнено: <strong>{accountData.email}</strong>
                   </p>
                 )}
               </div>
@@ -381,24 +361,19 @@ const MasterForm: React.FC<{
                   value={accountData.password}
                   onChange={handleAccountDataChange}
                   className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                  placeholder={userAccountData ? "Оставить пустым для сохранения текущего пароля, или введите новый" : "Введите пароль"}
-                  required={accountData.createAccount && !userAccountData}
+                  placeholder="Введите пароль"
+                  required={accountData.createAccount}
                 />
-                {userAccountData && (
-                  <p className="text-xs text-blue-600">
-                    Пароль из системы не отображается в целях безопасности. Оставьте это поле пустым, чтобы сохранить текущий пароль.
-                  </p>
-                )}
+                <p className="text-xs text-blue-600">
+                  Пароль из системы не отображается в целях безопасности. Введите пароль для аккаунта.
+                </p>
               </div>
             </div>
             <div className="p-3 bg-white rounded-lg border border-blue-200">
               <div className="space-y-1 text-sm text-gray-600">
-                <p><strong>Логин:</strong> {userAccountData ? userAccountData.username : formData.name || 'Заполните имя мастера выше'}</p>
+                <p><strong>Логин:</strong> {formData.name || 'Заполните имя мастера выше'}</p>
                 <p><strong>Роль:</strong> master</p>
-                <p><strong>Филиал:</strong> {master?.id ? `ID: ${master.id}` : 'Будет установлен после создания'}</p>
-                {userAccountData && (
-                  <p className="text-green-600 mt-2">✓ Вы редактируете существующий аккаунт</p>
-                )}
+                <p><strong>Филиал:</strong> {currentBranch?.id ? `ID: ${currentBranch.id}` : 'Филиал не выбран'}</p>
               </div>
             </div>
           </div>
@@ -758,30 +733,6 @@ const AdministratorForm: React.FC<{
   // Прогресс заполнения формы
   const [formProgress, setFormProgress] = useState(0);
 
-  // State для хранения данных пользователя из API
-  const [userAccountData, setUserAccountData] = useState<BranchUser | null>(null);
-
-  // Поиск пользователя в данных из нового эндпоинта при изменении данных
-  useEffect(() => {
-    if (!administrator?.name || !branchUsers) {
-      setUserAccountData(null);
-      return;
-    }
-    const foundUser = findUserByName(branchUsers, administrator.name);
-    setUserAccountData(foundUser || null);
-  }, [administrator?.name, branchUsers]);
-
-  // Автоматическое заполнение accountData если пользователь существует
-  useEffect(() => {
-    if (userAccountData) {
-      setAccountData({
-        createAccount: true,
-        email: userAccountData.email || '',
-        password: '' // Пароль не приходит из API для безопасности
-      });
-    }
-  }, [userAccountData]);
-
   // Обновление прогресса заполнения формы
   useEffect(() => {
     const fields = [
@@ -812,28 +763,36 @@ const AdministratorForm: React.FC<{
     setAccountData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCreateAccountToggle = (checked: boolean) => {
+  const handleCreateAccountToggle = async (checked: boolean) => {
     if (checked) {
-      if (userAccountData) {
-        // При редактировании: если пользователь существует в БД, заполняем email
-        setAccountData({
-          createAccount: true,
-          email: userAccountData.email || '',
-          password: '' // Пароль не приходит из API для безопасности
-        });
-      } else {
-        // При создании нового администратора: оставляем текущие значения
-        setAccountData((prev) => ({
-          ...prev,
-          createAccount: true
-        }));
+      // При включении toggle: отправляем запрос на получение данных пользователя
+      if (currentBranch?.id) {
+        try {
+          const result = await apiGetJson(`/api/crm/reception-master/user/${currentBranch.id}`);
+          if (result && result.data && Array.isArray(result.data)) {
+            // Ищем пользователя по имени администратора
+            const foundUser = result.data.find((user: BranchUser) => 
+              user.username.toLowerCase().trim() === formData.name.toLowerCase().trim()
+            );
+            
+            if (foundUser) {
+              // Если найден пользователь, заполняем поля
+              setAccountData({
+                createAccount: true,
+                email: foundUser.email || '',
+                password: ''
+              });
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Ошибка при загрузке данных пользователя:', error);
+        }
       }
+      // Если пользователь не найден или произошла ошибка, просто включаем toggle
+      setAccountData((prev) => ({...prev, createAccount: true}));
     } else {
-      // При отключении toggle: очищаем поля
-      setAccountData((prev) => ({
-        ...prev,
-        createAccount: false
-      }));
+      setAccountData((prev) => ({...prev, createAccount: false}));
     }
   };
 
@@ -951,7 +910,7 @@ const AdministratorForm: React.FC<{
       <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-semibold text-gray-900">
-            {administrator && userAccountData ? t('masters.edit_account') : t('masters.create_account')}
+            {t('masters.create_account')}
           </h3>
           <Switch
             checked={accountData.createAccount}
@@ -961,19 +920,6 @@ const AdministratorForm: React.FC<{
         </div>
         <Separator />
 
-        {administrator && userAccountData && !accountData.createAccount && (
-          <div className="p-4 bg-green-50 rounded-lg border border-green-200 transition-all duration-200">
-            <p className="text-sm font-medium text-green-800 mb-2">✓ Аккаунт существует в системе:</p>
-            <div className="space-y-1 text-sm text-gray-600">
-              <p><strong>Логин:</strong> {userAccountData.username}</p>
-              <p><strong>Email:</strong> {userAccountData.email}</p>
-              <p><strong>Роль:</strong> {userAccountData.role}</p>
-              <p><strong>ID:</strong> {userAccountData.id}</p>
-              <p><strong>Филиал:</strong> {userAccountData.branchId}</p>
-            </div>
-            <p className="text-xs text-green-700 mt-3">Включите переключатель выше, чтобы отредактировать данные аккаунта</p>
-          </div>
-        )}
         {accountData.createAccount && (
           <div className="space-y-5 p-4 bg-blue-50 rounded-lg border border-blue-200 transition-all duration-200">
             <div className="grid grid-cols-4 items-center gap-4">
@@ -991,9 +937,9 @@ const AdministratorForm: React.FC<{
                   placeholder="email@example.com"
                   required={accountData.createAccount}
                 />
-                {userAccountData && (
+                {accountData.email && (
                   <p className="text-xs text-blue-600">
-                    Текущее значение из системы: <strong>{userAccountData.email}</strong>
+                    Заполнено: <strong>{accountData.email}</strong>
                   </p>
                 )}
               </div>
@@ -1010,24 +956,19 @@ const AdministratorForm: React.FC<{
                   value={accountData.password}
                   onChange={handleAccountDataChange}
                   className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                  placeholder={userAccountData ? "Оставить пустым для сохранения текущего пароля, или введите новый" : "Введите пароль"}
-                  required={accountData.createAccount && !userAccountData}
+                  placeholder="Введите пароль"
+                  required={accountData.createAccount}
                 />
-                {userAccountData && (
-                  <p className="text-xs text-blue-600">
-                    Пароль из системы не отображается в целях безопасности. Оставьте это поле пустым, чтобы сохранить текущий пароль.
-                  </p>
-                )}
+                <p className="text-xs text-blue-600">
+                  Пароль из системы не отображается в целях безопасности. Введите пароль для аккаунта.
+                </p>
               </div>
             </div>
             <div className="p-3 bg-white rounded-lg border border-blue-200">
               <div className="space-y-1 text-sm text-gray-600">
-                <p><strong>Логин:</strong> {userAccountData ? userAccountData.username : formData.name || 'Заполните имя администратора выше'}</p>
+                <p><strong>Логин:</strong> {formData.name || 'Заполните имя администратора выше'}</p>
                 <p><strong>Роль:</strong> reception</p>
-                <p><strong>Филиал:</strong> {administrator?.id ? `ID: ${administrator.id}` : 'Будет установлен после создания'}</p>
-                {userAccountData && (
-                  <p className="text-green-600 mt-2">✓ Вы редактируете существующий аккаунт</p>
-                )}
+                <p><strong>Филиал:</strong> {currentBranch?.id ? `ID: ${currentBranch.id}` : 'Филиал не выбран'}</p>
               </div>
             </div>
           </div>
@@ -1319,11 +1260,6 @@ const AdministratorCard: React.FC<{
 };
 
 // Функция для поиска связанного пользователя по имени
-const findUserByName = (users: BranchUser[] | undefined, name: string): BranchUser | undefined => {
-  if (!users || !Array.isArray(users) || !name) return undefined;
-  return users.find(user => user.username.toLowerCase().trim() === name.toLowerCase().trim());
-};
-
 // Основной компонент страницы мастеров
 const Masters: React.FC = () => {
   const { t } = useLocale();
@@ -1380,6 +1316,10 @@ const Masters: React.FC = () => {
 
   const createMasterMutation = useMutation({
     mutationFn: async (data: Partial<Master>) => {
+      if (!currentBranch?.id) {
+        throw new Error('Branch not selected');
+      }
+
       const { workingDates, createAccount, accountEmail, accountPassword, ...masterData } = data;
 
       // Создаем мастера
