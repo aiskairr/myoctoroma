@@ -155,18 +155,26 @@ const MasterForm: React.FC<{
   };
 
   const handleCreateAccountToggle = (checked: boolean) => {
-    if (checked && userAccountData) {
-      setAccountData({
-        createAccount: true,
-        email: userAccountData.email || '',
-        password: '' // Пароль не приходит из API для безопасности
-      });
+    if (checked) {
+      if (userAccountData) {
+        // При редактировании: если пользователь существует в БД, заполняем email
+        setAccountData({
+          createAccount: true,
+          email: userAccountData.email || '',
+          password: '' // Пароль не приходит из API для безопасности
+        });
+      } else {
+        // При создании нового мастера: оставляем текущие значения
+        setAccountData((prev) => ({
+          ...prev,
+          createAccount: true
+        }));
+      }
     } else {
+      // При отключении toggle: очищаем поля
       setAccountData((prev) => ({
         ...prev,
-        createAccount: checked,
-        email: checked ? prev.email : '',
-        password: checked ? prev.password : ''
+        createAccount: false
       }));
     }
   };
@@ -306,7 +314,7 @@ const MasterForm: React.FC<{
 
         {master && userAccountData && !accountData.createAccount && (
           <div className="p-4 bg-green-50 rounded-lg border border-green-200 transition-all duration-200">
-            <p className="text-sm font-medium text-green-800 mb-2">Аккаунт существует (новый эндпоинт):</p>
+            <p className="text-sm font-medium text-green-800 mb-2">✓ Аккаунт существует в системе:</p>
             <div className="space-y-1 text-sm text-gray-600">
               <p><strong>Логин:</strong> {userAccountData.username}</p>
               <p><strong>Email:</strong> {userAccountData.email}</p>
@@ -314,6 +322,7 @@ const MasterForm: React.FC<{
               <p><strong>ID:</strong> {userAccountData.id}</p>
               <p><strong>Филиал:</strong> {userAccountData.branchId}</p>
             </div>
+            <p className="text-xs text-green-700 mt-3">Включите переключатель выше, чтобы отредактировать данные аккаунта</p>
           </div>
         )}
         {accountData.createAccount && (
@@ -322,39 +331,53 @@ const MasterForm: React.FC<{
               <Label htmlFor="accountEmail" className="col-span-1 text-sm font-medium text-gray-700">
                 {t('masters.email')}
               </Label>
-              <Input
-                id="accountEmail"
-                name="email"
-                type="email"
-                value={accountData.email}
-                onChange={handleAccountDataChange}
-                className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                placeholder="email@example.com"
-                required={accountData.createAccount}
-              />
+              <div className="col-span-3 space-y-2">
+                <Input
+                  id="accountEmail"
+                  name="email"
+                  type="email"
+                  value={accountData.email}
+                  onChange={handleAccountDataChange}
+                  className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                  placeholder="email@example.com"
+                  required={accountData.createAccount}
+                />
+                {userAccountData && (
+                  <p className="text-xs text-blue-600">
+                    Текущее значение из системы: <strong>{userAccountData.email}</strong>
+                  </p>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="accountPassword" className="col-span-1 text-sm font-medium text-gray-700">
                 {t('masters.password')}
               </Label>
-              <Input
-                id="accountPassword"
-                name="password"
-                type="password"
-                value={accountData.password}
-                onChange={handleAccountDataChange}
-                className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                placeholder={userAccountData ? "Введите новый пароль" : "Введите пароль"}
-                required={accountData.createAccount}
-              />
+              <div className="col-span-3 space-y-2">
+                <Input
+                  id="accountPassword"
+                  name="password"
+                  type="password"
+                  value={accountData.password}
+                  onChange={handleAccountDataChange}
+                  className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                  placeholder={userAccountData ? "Оставить пустым для сохранения текущего пароля, или введите новый" : "Введите пароль"}
+                  required={accountData.createAccount && !userAccountData}
+                />
+                {userAccountData && (
+                  <p className="text-xs text-blue-600">
+                    Пароль из системы не отображается в целях безопасности. Оставьте это поле пустым, чтобы сохранить текущий пароль.
+                  </p>
+                )}
+              </div>
             </div>
             <div className="p-3 bg-white rounded-lg border border-blue-200">
               <div className="space-y-1 text-sm text-gray-600">
-                <p><strong>Логин:</strong> {userAccountData ? userAccountData.username : formData.name}</p>
+                <p><strong>Логин:</strong> {userAccountData ? userAccountData.username : formData.name || 'Заполните имя мастера выше'}</p>
                 <p><strong>Роль:</strong> master</p>
                 <p><strong>Филиал:</strong> {master?.id ? `ID: ${master.id}` : 'Будет установлен после создания'}</p>
                 {userAccountData && (
-                  <p className="text-green-600 mt-2">✓ Аккаунт уже существует, редактируете данные</p>
+                  <p className="text-green-600 mt-2">✓ Вы редактируете существующий аккаунт</p>
                 )}
               </div>
             </div>
@@ -567,18 +590,26 @@ const AdministratorForm: React.FC<{
   };
 
   const handleCreateAccountToggle = (checked: boolean) => {
-    if (checked && userAccountData) {
-      setAccountData({
-        createAccount: true,
-        email: userAccountData.email || '',
-        password: '' // Пароль не приходит из API для безопасности
-      });
+    if (checked) {
+      if (userAccountData) {
+        // При редактировании: если пользователь существует в БД, заполняем email
+        setAccountData({
+          createAccount: true,
+          email: userAccountData.email || '',
+          password: '' // Пароль не приходит из API для безопасности
+        });
+      } else {
+        // При создании нового администратора: оставляем текущие значения
+        setAccountData((prev) => ({
+          ...prev,
+          createAccount: true
+        }));
+      }
     } else {
+      // При отключении toggle: очищаем поля
       setAccountData((prev) => ({
         ...prev,
-        createAccount: checked,
-        email: checked ? prev.email : '',
-        password: checked ? prev.password : ''
+        createAccount: false
       }));
     }
   };
@@ -709,14 +740,15 @@ const AdministratorForm: React.FC<{
 
         {administrator && userAccountData && !accountData.createAccount && (
           <div className="p-4 bg-green-50 rounded-lg border border-green-200 transition-all duration-200">
-            <p className="text-sm font-medium text-green-800 mb-2">{t('masters.account_exists')}</p>
+            <p className="text-sm font-medium text-green-800 mb-2">✓ Аккаунт существует в системе:</p>
             <div className="space-y-1 text-sm text-gray-600">
-              <p><strong>{t('masters.login')}:</strong> {userAccountData.username}</p>
-              <p><strong>{t('masters.email')}:</strong> {userAccountData.email}</p>
-              <p><strong>{t('masters.role_label')}:</strong> {userAccountData.role}</p>
+              <p><strong>Логин:</strong> {userAccountData.username}</p>
+              <p><strong>Email:</strong> {userAccountData.email}</p>
+              <p><strong>Роль:</strong> {userAccountData.role}</p>
               <p><strong>ID:</strong> {userAccountData.id}</p>
-              <p><strong>{t('masters.branch')}:</strong> {userAccountData.branchId}</p>
+              <p><strong>Филиал:</strong> {userAccountData.branchId}</p>
             </div>
+            <p className="text-xs text-green-700 mt-3">Включите переключатель выше, чтобы отредактировать данные аккаунта</p>
           </div>
         )}
         {accountData.createAccount && (
@@ -725,39 +757,53 @@ const AdministratorForm: React.FC<{
               <Label htmlFor="admin-accountEmail" className="col-span-1 text-sm font-medium text-gray-700">
                 {t('masters.email')}
               </Label>
-              <Input
-                id="admin-accountEmail"
-                name="email"
-                type="email"
-                value={accountData.email}
-                onChange={handleAccountDataChange}
-                className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                placeholder={t('masters.account_email_placeholder')}
-                required={accountData.createAccount}
-              />
+              <div className="col-span-3 space-y-2">
+                <Input
+                  id="admin-accountEmail"
+                  name="email"
+                  type="email"
+                  value={accountData.email}
+                  onChange={handleAccountDataChange}
+                  className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                  placeholder="email@example.com"
+                  required={accountData.createAccount}
+                />
+                {userAccountData && (
+                  <p className="text-xs text-blue-600">
+                    Текущее значение из системы: <strong>{userAccountData.email}</strong>
+                  </p>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="admin-accountPassword" className="col-span-1 text-sm font-medium text-gray-700">
                 {t('masters.password')}
               </Label>
-              <Input
-                id="admin-accountPassword"
-                name="password"
-                type="password"
-                value={accountData.password}
-                onChange={handleAccountDataChange}
-                className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                placeholder={userAccountData ? t('masters.enter_new_password') : t('masters.enter_password')}
-                required={accountData.createAccount}
-              />
+              <div className="col-span-3 space-y-2">
+                <Input
+                  id="admin-accountPassword"
+                  name="password"
+                  type="password"
+                  value={accountData.password}
+                  onChange={handleAccountDataChange}
+                  className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                  placeholder={userAccountData ? "Оставить пустым для сохранения текущего пароля, или введите новый" : "Введите пароль"}
+                  required={accountData.createAccount && !userAccountData}
+                />
+                {userAccountData && (
+                  <p className="text-xs text-blue-600">
+                    Пароль из системы не отображается в целях безопасности. Оставьте это поле пустым, чтобы сохранить текущий пароль.
+                  </p>
+                )}
+              </div>
             </div>
             <div className="p-3 bg-white rounded-lg border border-blue-200">
               <div className="space-y-1 text-sm text-gray-600">
-                <p><strong>{t('masters.login')}:</strong> {userAccountData ? userAccountData.username : formData.name}</p>
-                <p><strong>{t('masters.role_label')}:</strong> reception</p>
-                <p><strong>{t('masters.branch')}:</strong> {administrator?.id ? `ID: ${administrator.id}` : t('masters.branch_set_after_creation')}</p>
+                <p><strong>Логин:</strong> {userAccountData ? userAccountData.username : formData.name || 'Заполните имя администратора выше'}</p>
+                <p><strong>Роль:</strong> reception</p>
+                <p><strong>Филиал:</strong> {administrator?.id ? `ID: ${administrator.id}` : 'Будет установлен после создания'}</p>
                 {userAccountData && (
-                  <p className="text-green-600 mt-2">{t('masters.account_exists_editing')}</p>
+                  <p className="text-green-600 mt-2">✓ Вы редактируете существующий аккаунт</p>
                 )}
               </div>
             </div>
