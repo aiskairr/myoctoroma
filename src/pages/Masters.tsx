@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiGetJson } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -104,10 +104,17 @@ const MasterForm: React.FC<{
   // Прогресс заполнения формы
   const [formProgress, setFormProgress] = useState(0);
 
-  // Поиск пользователя в данных из нового эндпоинта
-  const userAccountData = useMemo(() => {
-    if (!master?.name || !branchUsers) return null;
-    return findUserByName(branchUsers, master.name);
+  // State для хранения данных пользователя из API
+  const [userAccountData, setUserAccountData] = useState<BranchUser | null>(null);
+
+  // Поиск пользователя в данных из нового эндпоинта при изменении данных
+  useEffect(() => {
+    if (!master?.name || !branchUsers) {
+      setUserAccountData(null);
+      return;
+    }
+    const foundUser = findUserByName(branchUsers, master.name);
+    setUserAccountData(foundUser || null);
   }, [master?.name, branchUsers]);
 
   // Автоматическое заполнение accountData если пользователь существует
@@ -751,10 +758,17 @@ const AdministratorForm: React.FC<{
   // Прогресс заполнения формы
   const [formProgress, setFormProgress] = useState(0);
 
-  // Поиск пользователя в данных из нового эндпоинта
-  const userAccountData = useMemo(() => {
-    if (!administrator?.name || !branchUsers) return null;
-    return findUserByName(branchUsers, administrator.name);
+  // State для хранения данных пользователя из API
+  const [userAccountData, setUserAccountData] = useState<BranchUser | null>(null);
+
+  // Поиск пользователя в данных из нового эндпоинта при изменении данных
+  useEffect(() => {
+    if (!administrator?.name || !branchUsers) {
+      setUserAccountData(null);
+      return;
+    }
+    const foundUser = findUserByName(branchUsers, administrator.name);
+    setUserAccountData(foundUser || null);
   }, [administrator?.name, branchUsers]);
 
   // Автоматическое заполнение accountData если пользователь существует
