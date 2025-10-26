@@ -417,6 +417,169 @@ const MasterForm: React.FC<{
   );
 };
 
+// Упрощённая форма мастера для добавления (без аккаунта и рабочих дат)
+const MasterFormSimple: React.FC<{
+  onSubmit: (data: Partial<Master>) => void;
+  isPending: boolean;
+}> = ({ onSubmit, isPending }) => {
+  const { t } = useLocale();
+  const [formData, setFormData] = useState({
+    name: '',
+    specialty: '',
+    description: '',
+    isActive: true,
+    startWorkHour: '09:00',
+    endWorkHour: '20:00',
+  });
+
+  const [formProgress, setFormProgress] = useState(0);
+
+  // Обновление прогресса заполнения формы
+  useEffect(() => {
+    const fields = [
+      formData.name,
+      formData.specialty,
+      formData.description,
+      formData.startWorkHour,
+      formData.endWorkHour,
+    ];
+    const filledFields = fields.filter(field => field && typeof field === 'string' ? field.trim() !== '' : true).length;
+    const progress = Math.round((filledFields / fields.length) * 100);
+    setFormProgress(progress);
+  }, [formData]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSwitchChange = (checked: boolean) => {
+    setFormData((prev) => ({ ...prev, isActive: checked }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Прогресс заполнения формы */}
+      <div className="relative">
+        <Progress value={formProgress} className="h-2 bg-gray-100" />
+      </div>
+
+      {/* Основная информация */}
+      <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-gray-900">{t('masters.main_information')}</h3>
+          <Badge variant="outline" className="text-indigo-600 border-indigo-200">
+            {t('masters.creation')}
+          </Badge>
+        </div>
+        <Separator />
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="name-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.name')} <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="name-simple"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="specialty-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.specialty')}
+            </Label>
+            <Input
+              id="specialty-simple"
+              name="specialty"
+              value={formData.specialty}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              placeholder={t('masters.specialty_placeholder')}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label htmlFor="description-simple" className="col-span-1 pt-2 text-sm font-medium text-gray-700">
+              {t('masters.description')}
+            </Label>
+            <Textarea
+              id="description-simple"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              className="col-span-3 min-h-[120px] rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              placeholder={t('masters.additional_info_placeholder')}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="isActive-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.active')}
+            </Label>
+            <Switch
+              id="isActive-simple"
+              checked={formData.isActive}
+              onCheckedChange={handleSwitchChange}
+              className="col-span-3"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="workHours-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.work_time')}
+            </Label>
+            <div className="col-span-3 flex items-center space-x-3">
+              <Input
+                id="startWorkHour-simple"
+                name="startWorkHour"
+                type="time"
+                value={formData.startWorkHour}
+                onChange={handleChange}
+                className="w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              />
+              <span className="text-gray-500">{t('masters.until')}</span>
+              <Input
+                id="endWorkHour-simple"
+                name="endWorkHour"
+                type="time"
+                value={formData.endWorkHour}
+                onChange={handleChange}
+                className="w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              />
+              <span className="text-xs text-gray-500 ml-2">
+                {t('masters.by_default')}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <DialogFooter className="mt-8 flex justify-between">
+        <Button
+          variant="outline"
+          onClick={() => window.dispatchEvent(new Event('close-dialog'))}
+          className="border-gray-300 text-gray-700 hover:bg-gray-50"
+        >
+          {t('masters.cancel')}
+        </Button>
+        <Button
+          type="submit"
+          disabled={isPending || !formData.name.trim()}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200"
+        >
+          {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+          {t('masters.add_master')}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+};
+
 // Компонент карточки мастера
 const MasterCard: React.FC<{
   master: Master;
@@ -826,6 +989,171 @@ const AdministratorForm: React.FC<{
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
           {administrator ? t('masters.save_changes') : t('masters.add_administrator')}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+};
+
+// Упрощённая форма администратора для добавления (без аккаунта)
+const AdministratorFormSimple: React.FC<{
+  onSubmit: (data: Partial<Administrator>) => void;
+  isPending: boolean;
+}> = ({ onSubmit, isPending }) => {
+  const { t } = useLocale();
+  const { currentBranch } = useBranch();
+  const [formData, setFormData] = useState({
+    name: '',
+    role: 'администратор',
+    branchId: currentBranch?.id?.toString() || '',
+    phoneNumber: '',
+    email: '',
+    notes: '',
+    isActive: true
+  });
+
+  const [formProgress, setFormProgress] = useState(0);
+
+  // Обновление прогресса заполнения формы
+  useEffect(() => {
+    const fields = [
+      formData.name,
+      formData.role,
+      formData.phoneNumber,
+      formData.email,
+      formData.notes,
+    ];
+    const filledFields = fields.filter(field => field && typeof field === 'string' ? field.trim() !== '' : true).length;
+    const progress = Math.round((filledFields / fields.length) * 100);
+    setFormProgress(progress);
+  }, [formData]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSwitchChange = (checked: boolean) => {
+    setFormData((prev) => ({ ...prev, isActive: checked }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Прогресс заполнения формы */}
+      <div className="relative">
+        <Progress value={formProgress} className="h-2 bg-gray-100" />
+      </div>
+
+      {/* Основная информация */}
+      <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-gray-900">{t('masters.basic_info')}</h3>
+          <Badge variant="outline" className="text-indigo-600 border-indigo-200">
+            {t('masters.creating')}
+          </Badge>
+        </div>
+        <Separator />
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-name-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.name')} <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="admin-name-simple"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-role-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.role')}
+            </Label>
+            <Input
+              id="admin-role-simple"
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              placeholder={t('masters.role_placeholder')}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-phone-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.phone')}
+            </Label>
+            <Input
+              id="admin-phone-simple"
+              name="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              placeholder={t('masters.phone_placeholder')}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-email-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.email')}
+            </Label>
+            <Input
+              id="admin-email-simple"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              placeholder={t('masters.email_placeholder')}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label htmlFor="admin-notes-simple" className="col-span-1 pt-2 text-sm font-medium text-gray-700">
+              {t('masters.notes')}
+            </Label>
+            <Textarea
+              id="admin-notes-simple"
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              className="col-span-3 min-h-[120px] rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              placeholder={t('masters.notes_placeholder')}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-isActive-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.is_active')}
+            </Label>
+            <Switch
+              id="admin-isActive-simple"
+              checked={formData.isActive}
+              onCheckedChange={handleSwitchChange}
+              className="col-span-3"
+            />
+          </div>
+        </div>
+      </div>
+
+      <DialogFooter className="mt-8 flex justify-between">
+        <Button
+          variant="outline"
+          onClick={() => window.dispatchEvent(new Event('close-dialog'))}
+          className="border-gray-300 text-gray-700 hover:bg-gray-50"
+        >
+          {t('masters.cancel')}
+        </Button>
+        <Button
+          type="submit"
+          disabled={isPending || !formData.name.trim()}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200"
+        >
+          {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+          {t('masters.add_administrator')}
         </Button>
       </DialogFooter>
     </form>
@@ -1437,17 +1765,16 @@ const Masters: React.FC = () => {
                     {t('masters.add_administrator')}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] bg-white rounded-xl">
+                <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
                   <DialogHeader>
                     <DialogTitle className="text-xl font-semibold text-gray-900">{t('masters.add_administrator')}</DialogTitle>
                     <DialogDescription className="text-gray-500">
                       {t('masters.fill_admin_data')}
                     </DialogDescription>
                   </DialogHeader>
-                  <AdministratorForm
+                  <AdministratorFormSimple
                     onSubmit={handleAddAdministrator}
                     isPending={createAdministratorMutation.isPending}
-                    branchUsers={branchUsers}
                   />
                 </DialogContent>
               </Dialog>
@@ -1539,17 +1866,16 @@ const Masters: React.FC = () => {
       </div>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
+        <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-gray-900">{t('masters.add_new_master')}</DialogTitle>
             <DialogDescription className="text-gray-500">
               {t('masters.add_master_description')}
             </DialogDescription>
           </DialogHeader>
-          <MasterForm
+          <MasterFormSimple
             onSubmit={handleAddMaster}
             isPending={createMasterMutation.isPending}
-            branchUsers={branchUsers}
           />
         </DialogContent>
       </Dialog>
