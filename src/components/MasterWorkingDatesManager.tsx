@@ -81,7 +81,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
       const convertedDates = convertServerToLocalFormat(serverWorkingDates);
       onWorkingDatesChange(convertedDates);
     }
-  }, [serverWorkingDates, masterId, onWorkingDatesChange]);
+  }, [serverWorkingDates, masterId]);
 
   // Мутация для создания/обновления рабочего дня
   const createWorkingDateMutation = useMutation({
