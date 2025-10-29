@@ -194,9 +194,11 @@ const MasterForm: React.FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // При редактировании мастера НЕ отправляем рабочие даты - они управляются отдельно через MasterWorkingDatesManager
+    // При создании нового мастера отправляем рабочие даты (если есть)
     const combinedData = {
       ...formData,
-      workingDates: workingDates,
+      ...(master?.id ? {} : { workingDates }),
       ...(accountData.createAccount && {
         createAccount: true,
         accountEmail: accountData.email,
@@ -1435,32 +1437,9 @@ const Masters: React.FC = () => {
         }
       }
 
-      // Обновляем рабочие даты: удаляем все существующие и добавляем новые
-      if (workingDates) {
-        const allWorkingDatesRes = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/masters/${id}/working-dates`
-        );
-        if (allWorkingDatesRes.ok) {
-          const allWorkingDates = await allWorkingDatesRes.json();
-          await Promise.all(allWorkingDates.map(async (cwd: any) => {
-            await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${id}/working-dates/${cwd.work_date}?branchId=${cwd.branch_id}`, {
-              method: 'DELETE'
-            });
-          }));
-        }
-        await Promise.all(workingDates.map(async (wd) => {
-          await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${id}/working-dates`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              workDate: wd.date,
-              startTime: wd.startTime,
-              endTime: wd.endTime,
-              branchId: wd.branchId
-            })
-          });
-        }));
-      }
+      // ВАЖНО: рабочие даты больше НЕ обновляются здесь - они управляются отдельно через MasterWorkingDatesManager компонент
+      // Пользователь может удалять/добавлять рабочие даты через интерфейс компонента MasterWorkingDatesManager
+      
       return updatedMaster;
     },
     onSuccess: () => {
