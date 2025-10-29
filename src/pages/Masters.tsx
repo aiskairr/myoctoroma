@@ -230,6 +230,11 @@ const MasterForm: React.FC<{
           </Badge>
         </div>
         <Separator />
+        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 mb-4">
+          <div className="text-sm font-medium text-blue-900">
+            Филиал: <strong>{currentBranch?.branches || 'Не выбран'}</strong>
+          </div>
+        </div>
         <div className="space-y-5">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="col-span-1 text-sm font-medium text-gray-700">

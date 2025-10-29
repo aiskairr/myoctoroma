@@ -9,7 +9,6 @@ import { Trash2, Plus, Loader2 } from "lucide-react";
 import { format, addMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ru } from "date-fns/locale";
 import { useBranch } from "@/contexts/BranchContext";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocale } from '@/contexts/LocaleContext';
@@ -41,12 +40,11 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
   onWorkingDatesChange,
   masterId
 }) => {
-  const { branches } = useBranch();
+  const { branches, currentBranch } = useBranch();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { t } = useLocale();
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  const [selectedBranch, setSelectedBranch] = useState<string>('');
   const [startTime, setStartTime] = useState('07:00');
   const [endTime, setEndTime] = useState('23:59');
   const [viewMonth, setViewMonth] = useState(new Date());
@@ -170,10 +168,10 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
       e.stopPropagation();
     }
     
-    if (selectedDates.length === 0 || !selectedBranch || !masterId) {
+    if (selectedDates.length === 0 || !masterId || !currentBranch?.id) {
       toast({
-        title: "Заполните все поля",
-        description: "Выберите даты, филиал и убедитесь что выбран мастер",
+        title: "Не удалось добавить рабочие дни",
+        description: "Выберите даты и убедитесь что выбран филиал",
         variant: "destructive",
       });
       return;
@@ -186,7 +184,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
         workDate: dateStr,
         startTime: startTime,
         endTime: endTime,
-        branchId: selectedBranch
+        branchId: currentBranch.id.toString()
       });
     });
 
@@ -253,23 +251,10 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
           {/* Форма добавления рабочего дня */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="branch">{t('masters.branch_field')}</Label>
-                <Select 
-                  value={selectedBranch} 
-                  onValueChange={setSelectedBranch}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('masters.branch_placeholder')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((branch) => (
-                      <SelectItem key={branch.id} value={branch.id.toString()}>
-                        {branch.branches}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="text-sm font-medium text-blue-900">
+                  Филиал: <strong>{currentBranch?.branches || 'Не выбран'}</strong>
+                </div>
               </div>
               
               <div className="grid grid-cols-2 gap-2">
@@ -297,7 +282,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                 <Button 
                   type="button"
                   onClick={handleAddWorkingDate}
-                  disabled={selectedDates.length === 0 || !selectedBranch || !masterId || createWorkingDateMutation.isPending}
+                  disabled={selectedDates.length === 0 || !masterId || createWorkingDateMutation.isPending}
                   className="flex-1"
                 >
                   {createWorkingDateMutation.isPending ? (
@@ -308,7 +293,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                   ) : (
                     <>
                       <Plus className="h-4 w-4 mr-2" />
-                      {t('masters.add_days_button', { count: selectedDates.length })}
+                      Добавить {selectedDates.length} {selectedDates.length === 1 ? 'дней' : 'дней'}
                     </>
                   )}
                 </Button>
@@ -352,7 +337,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
               />
               {selectedDates.length > 0 && (
                 <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
-                  <p className="font-medium">{t('masters.dates_selected', { count: selectedDates.length })}</p>
+                  <p className="font-medium">Выбрано дат: {selectedDates.length}</p>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {selectedDates.map((date, index) => (
                       <span key={index} className="px-2 py-1 bg-blue-100 rounded text-xs">
