@@ -398,6 +398,19 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                             {date.is_active ? t('masters.active') : t('masters.inactive')}
                           </Badge>
                         </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRemoveWorkingDate(date.work_date, date.branch_id)}
+                          disabled={deleteWorkingDateMutation.isPending}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          {deleteWorkingDateMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
                     ))}
                   </div>
