@@ -139,8 +139,19 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
         record.paymentMethod !== 'Расход'
       );
 
-      // Анализируем платежи используя новый сервис
-      const analysis = analyzePayments(dayRecords);
+      // Получаем данные о подарочных сертификатах за день
+      let giftCertificatesData: any[] = [];
+      try {
+        const giftCertResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?date=${selectedDateStr}&branchId=${branchId}&isUsed=false&isExpired=false`);
+        if (giftCertResponse.ok) {
+          giftCertificatesData = await giftCertResponse.json();
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки данных сертификатов для анализа:', error);
+      }
+
+      // Анализируем платежи используя новый сервис, включая сертификаты
+      const analysis = analyzePayments(dayRecords, giftCertificatesData);
       setPaymentAnalysis(analysis);
 
       // Фильтруем расходы за выбранный день
@@ -148,7 +159,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
         expense.date.startsWith(selectedDateStr)
       );
 
-      // Получаем данные о подарочных сертификатах за день
+      // Используем уже полученные данные сертификатов для расчетов выручки
       let giftCertificatesRevenue = 0;
       let giftCertificatesByPaymentMethod = {
         cash: 0,
@@ -162,72 +173,62 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
         obank: 0
       };
 
-      try {
-        const giftCertResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?date=${selectedDateStr}&branchId=${branchId}&isUsed=false&isExpired=false`);
-        if (giftCertResponse.ok) {
-          const giftCerts = await giftCertResponse.json();
-          const todayGiftCerts = giftCerts; // Сервер уже отфильтровал по дате и филиалу
+      if (giftCertificatesData.length > 0) {
+        giftCertificatesRevenue = giftCertificatesData.reduce((sum: number, cert: any) =>
+          sum + Number(cert.amount), 0
+        );
 
-          giftCertificatesRevenue = todayGiftCerts.reduce((sum: number, cert: any) =>
-            sum + Number(cert.amount), 0
-          );
+        console.log('Gift Certificates Debug:', {
+          selectedDateStr,
+          branchId,
+          totalCerts: giftCertificatesData.length,
+          giftCertificatesRevenue,
+          sampleCert: giftCertificatesData[0],
+          allCerts: giftCertificatesData.map((c: any) => ({ id: c.id, amount: c.amount, payment_method: c.payment_method, branch_id: c.branch_id, created_at: c.created_at })),
+          paymentMethodBreakdown: {
+            cash: giftCertificatesByPaymentMethod.cash,
+            mbank: giftCertificatesByPaymentMethod.mbank,
+            transfers: giftCertificatesByPaymentMethod.transfers
+          }
+        });
 
-          console.log('Gift Certificates Debug:', {
-            selectedDateStr,
-            branchId,
-            totalCerts: giftCerts.length,
-            todayGiftCerts: todayGiftCerts.length,
-            giftCertificatesRevenue,
-            sampleCert: todayGiftCerts[0],
-            allCerts: giftCerts.map((c: any) => ({ id: c.id, amount: c.amount, payment_method: c.payment_method, branch_id: c.branch_id, createdAt: c.createdAt })),
-            filteredTodayCerts: todayGiftCerts.map((c: any) => ({ id: c.id, amount: c.amount, payment_method: c.payment_method })),
-            paymentMethodBreakdown: {
-              cash: giftCertificatesByPaymentMethod.cash,
-              mbank: giftCertificatesByPaymentMethod.mbank,
-              transfers: giftCertificatesByPaymentMethod.transfers
-            }
-          });
+        // Разбиваем по способам оплаты сертификатов
+        giftCertificatesByPaymentMethod.cash = giftCertificatesData
+          .filter((cert: any) => cert.payment_method === 'Наличные')
+          .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
 
-          // Разбиваем по способам оплаты сертификатов
-          giftCertificatesByPaymentMethod.cash = todayGiftCerts
-            .filter((cert: any) => cert.payment_method === 'Наличные')
-            .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
+        giftCertificatesByPaymentMethod.card = giftCertificatesData
+          .filter((cert: any) => cert.payment_method?.includes('POS') || cert.payment_method === 'Карта')
+          .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
 
-          giftCertificatesByPaymentMethod.card = todayGiftCerts
-            .filter((cert: any) => cert.payment_method?.includes('POS') || cert.payment_method === 'Карта')
-            .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
+        giftCertificatesByPaymentMethod.transfers = giftCertificatesData
+          .filter((cert: any) => cert.payment_method?.includes('Перевод'))
+          .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
 
-          giftCertificatesByPaymentMethod.transfers = todayGiftCerts
-            .filter((cert: any) => cert.payment_method?.includes('Перевод'))
-            .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
+        // Разбиваем по банкам
+        giftCertificatesByPaymentMethod.optima = giftCertificatesData
+          .filter((cert: any) => cert.payment_method?.includes('Оптима'))
+          .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
 
-          // Разбиваем по банкам
-          giftCertificatesByPaymentMethod.optima = todayGiftCerts
-            .filter((cert: any) => cert.payment_method?.includes('Оптима'))
-            .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
+        giftCertificatesByPaymentMethod.mbank = giftCertificatesData
+          .filter((cert: any) => cert.payment_method?.includes('М-Банк') || cert.payment_method?.includes('МБанк') || cert.payment_method?.includes('МБизнес'))
+          .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
 
-          giftCertificatesByPaymentMethod.mbank = todayGiftCerts
-            .filter((cert: any) => cert.payment_method?.includes('М-Банк') || cert.payment_method?.includes('МБанк') || cert.payment_method?.includes('МБизнес'))
-            .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
+        giftCertificatesByPaymentMethod.mbusiness = giftCertificatesData
+          .filter((cert: any) => cert.payment_method?.includes('М-Бизнес'))
+          .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
 
-          giftCertificatesByPaymentMethod.mbusiness = todayGiftCerts
-            .filter((cert: any) => cert.payment_method?.includes('М-Бизнес'))
-            .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
+        giftCertificatesByPaymentMethod.demir = giftCertificatesData
+          .filter((cert: any) => cert.payment_method?.includes('Демир'))
+          .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
 
-          giftCertificatesByPaymentMethod.demir = todayGiftCerts
-            .filter((cert: any) => cert.payment_method?.includes('Демир'))
-            .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
+        giftCertificatesByPaymentMethod.bakai = giftCertificatesData
+          .filter((cert: any) => cert.payment_method?.includes('Бакай'))
+          .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
 
-          giftCertificatesByPaymentMethod.bakai = todayGiftCerts
-            .filter((cert: any) => cert.payment_method?.includes('Бакай'))
-            .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
-
-          giftCertificatesByPaymentMethod.obank = todayGiftCerts
-            .filter((cert: any) => cert.payment_method?.includes('O!Банк'))
-            .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
-        }
-      } catch (error) {
-        console.error('Ошибка загрузки данных сертификатов:', error);
+        giftCertificatesByPaymentMethod.obank = giftCertificatesData
+          .filter((cert: any) => cert.payment_method?.includes('O!Банк'))
+          .reduce((sum: number, cert: any) => sum + Number(cert.amount), 0);
       }
 
       // Сертификаты = сумма (daily_report) где payment_method содержит "Подарочный Сертификат"

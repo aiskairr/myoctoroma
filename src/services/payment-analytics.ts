@@ -86,9 +86,10 @@ function getBank(paymentMethod: string): keyof BankBreakdown | null {
 /**
  * Анализирует ответ от API и группирует платежи
  * @param records - Массив записей из API accounting endpoint
+ * @param giftCertificates - Массив подарочных сертификатов из API gift-certificates endpoint
  * @returns Объект с анализом платежей
  */
-export function analyzePayments(records: any[]): PaymentAnalysis {
+export function analyzePayments(records: any[], giftCertificates: any[] = []): PaymentAnalysis {
   const byPaymentMethod: PaymentMethodBreakdown = {
     cash: 0,
     card: 0,
@@ -148,6 +149,34 @@ export function analyzePayments(records: any[]): PaymentAnalysis {
       }
       paymentMethodDetails[paymentMethod].amount += amount;
       paymentMethodDetails[paymentMethod].count += 1;
+    }
+  });
+
+  // Анализируем подарочные сертификаты
+  giftCertificates.forEach((cert: any) => {
+    const amount = Number(cert.amount || 0);
+    const paymentMethod = cert.payment_method || '';
+
+    if (amount > 0) {
+      // Суммируем в общий итог
+      total += amount;
+
+      // Группируем по типу платежа (сертификаты обычно считаются отдельно)
+      byPaymentMethod.giftCertificates += amount;
+
+      // Группируем по банкам на основе payment_method сертификата
+      const bank = getBank(paymentMethod);
+      if (bank) {
+        byBank[bank] += amount;
+      }
+
+      // Подсчитываем детали по методам оплаты
+      const certMethodLabel = `Подарочный сертификат - ${paymentMethod}`;
+      if (!paymentMethodDetails[certMethodLabel]) {
+        paymentMethodDetails[certMethodLabel] = { amount: 0, count: 0 };
+      }
+      paymentMethodDetails[certMethodLabel].amount += amount;
+      paymentMethodDetails[certMethodLabel].count += 1;
     }
   });
 
