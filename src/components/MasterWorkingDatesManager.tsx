@@ -5,14 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trash2, Plus, Loader2, Check } from "lucide-react";
+import { Trash2, Plus, Loader2 } from "lucide-react";
 import { format, addMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ru } from "date-fns/locale";
 import { useBranch } from "@/contexts/BranchContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocale } from '@/contexts/LocaleContext';
-import { Checkbox } from "@/components/ui/checkbox";
 
 interface WorkingDate {
   date: string; // ISO date string
@@ -263,10 +262,6 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
     // Отправляем DELETE запросы для всех выбранных дней подряд
     try {
       for (const key of Array.from(selectedWorkingDatesToDelete)) {
-        const [date, branchId] = key.split('-').slice(0, 2).join('-').split('-').length > 1 
-          ? key.split('-') 
-          : [key.split('-').slice(0, -1).join('-'), key.split('-').pop()];
-        
         // Парсим правильно: key имеет формат "YYYY-MM-DD-branchId"
         const lastDashIndex = key.lastIndexOf('-');
         const dateStr = key.substring(0, lastDashIndex);
