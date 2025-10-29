@@ -5,13 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trash2, Plus, Loader2 } from "lucide-react";
+import { Trash2, Plus, Loader2, Check } from "lucide-react";
 import { format, addMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ru } from "date-fns/locale";
 import { useBranch } from "@/contexts/BranchContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useLocale } from '@/contexts/LocaleContext';
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface WorkingDate {
   date: string; // ISO date string
@@ -45,6 +46,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
   const queryClient = useQueryClient();
   const { t } = useLocale();
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [selectedWorkingDatesToDelete, setSelectedWorkingDatesToDelete] = useState<Set<string>>(new Set());
   const [startTime, setStartTime] = useState('07:00');
   const [endTime, setEndTime] = useState('23:59');
   const [viewMonth, setViewMonth] = useState(new Date());
@@ -228,6 +230,68 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
       workDate: dateToRemove,
       branchId: branchId
     });
+  };
+
+  const toggleWorkingDateSelection = (date: string, branchId: string) => {
+    const key = `${date}-${branchId}`;
+    setSelectedWorkingDatesToDelete(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  };
+
+  const handleDeleteSelectedWorkingDates = async () => {
+    if (selectedWorkingDatesToDelete.size === 0) {
+      toast({
+        title: "Ошибка",
+        description: "Выберите хотя бы один рабочий день для удаления",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Подтверждение перед удалением
+    if (!window.confirm(`Вы уверены, что хотите удалить ${selectedWorkingDatesToDelete.size} рабочих дней?`)) {
+      return;
+    }
+
+    // Отправляем DELETE запросы для всех выбранных дней подряд
+    try {
+      for (const key of Array.from(selectedWorkingDatesToDelete)) {
+        const [date, branchId] = key.split('-').slice(0, 2).join('-').split('-').length > 1 
+          ? key.split('-') 
+          : [key.split('-').slice(0, -1).join('-'), key.split('-').pop()];
+        
+        // Парсим правильно: key имеет формат "YYYY-MM-DD-branchId"
+        const lastDashIndex = key.lastIndexOf('-');
+        const dateStr = key.substring(0, lastDashIndex);
+        const branchIdStr = key.substring(lastDashIndex + 1);
+        
+        await deleteWorkingDateMutation.mutateAsync({
+          workDate: dateStr,
+          branchId: branchIdStr
+        });
+      }
+      
+      toast({
+        title: "Успех",
+        description: `Удалено ${selectedWorkingDatesToDelete.size} рабочих дней`,
+        variant: "default",
+      });
+      
+      setSelectedWorkingDatesToDelete(new Set());
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: `Ошибка при удалении рабочих дней: ${error}`,
+        variant: "destructive",
+      });
+    }
   };
 
   const goToPreviousMonth = () => {
@@ -418,43 +482,90 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
               )}
             </div>
           ) : (
-            <div className="space-y-2">
-              {workingDatesInMonth
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                .map((wd, index) => {
-                  const branch = branches.find(b => b.id.toString() === wd.branchId);
-                  return (
-                    <div
-                      key={`${wd.date}-${wd.branchId}-${index}`}
-                      className="flex items-center justify-between p-3 border rounded-lg"
+            <div className="space-y-4">
+              {selectedWorkingDatesToDelete.size > 0 && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+                  <span className="text-sm font-medium text-red-900">
+                    Выбрано {selectedWorkingDatesToDelete.size} рабочих дней
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedWorkingDatesToDelete(new Set())}
+                      className="text-gray-600"
                     >
-                      <div className="flex items-center space-x-3">
-                        <Badge variant="outline">
-                          {format(new Date(wd.date), 'dd MMM yyyy')}
-                        </Badge>
-                        <Badge variant="secondary">
-                          {branch ? branch.branches : wd.branchId}
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {wd.startTime} - {wd.endTime}
-                        </span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRemoveWorkingDate(wd.date, wd.branchId)}
-                        disabled={deleteWorkingDateMutation.isPending}
-                        className="text-destructive hover:text-destructive"
+                      Отменить выбор
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDeleteSelectedWorkingDates}
+                      disabled={deleteWorkingDateMutation.isPending}
+                    >
+                      {deleteWorkingDateMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Удаление...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Удалить выбранные
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              <div className="space-y-2">
+                {workingDatesInMonth
+                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                  .map((wd, index) => {
+                    const branch = branches.find(b => b.id.toString() === wd.branchId);
+                    const key = `${wd.date}-${wd.branchId}`;
+                    const isSelected = selectedWorkingDatesToDelete.has(key);
+                    return (
+                      <div
+                        key={`${wd.date}-${wd.branchId}-${index}`}
+                        className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
+                          isSelected ? 'bg-red-50 border-red-300' : ''
+                        }`}
                       >
-                        {deleteWorkingDateMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  );
-                })}
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleWorkingDateSelection(wd.date, wd.branchId)}
+                            className="w-4 h-4 rounded cursor-pointer"
+                          />
+                          <Badge variant="outline">
+                            {format(new Date(wd.date), 'dd MMM yyyy')}
+                          </Badge>
+                          <Badge variant="secondary">
+                            {branch ? branch.branches : wd.branchId}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {wd.startTime} - {wd.endTime}
+                          </span>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRemoveWorkingDate(wd.date, wd.branchId)}
+                          disabled={deleteWorkingDateMutation.isPending}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          {deleteWorkingDateMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  })}
+              </div>
             </div>
           )}
         </CardContent>
