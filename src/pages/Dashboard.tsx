@@ -42,6 +42,10 @@ import { useBranch } from "@/contexts/BranchContext";
 import { useLocale } from "@/contexts/LocaleContext";
 import { useIsMaster } from "@/hooks/use-master-role";
 import { BookingLinksStats } from "@/components/BookingLinksStats";
+import { compareDayMetrics } from "@/services/trend-comparison";
+import MetricCardWithTrend from "@/components/MetricCardWithTrend";
+import type { DashboardMetricsWithTrends } from "@/services/trend-comparison";
+import { fetch30DayAnalytics, convertToChartData, fillMissingDays, type DailyAnalyticsData, type ChartDataPoint } from "@/services/daily-analytics";
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
 
@@ -99,6 +103,23 @@ export default function Dashboard() {
     dailyExpenses: 0,
     netProfit: 0
   });
+  const [previousDailyAccountingStats, setPreviousDailyAccountingStats] = useState({
+    recordsCount: 0
+  });
+  const [previousDailyCashData, setPreviousDailyCashData] = useState({
+    dailyIncome: 0,
+    dailyExpenses: 0,
+    netProfit: 0
+  });
+  const [metricsWithTrends, setMetricsWithTrends] = useState<DashboardMetricsWithTrends | null>(null);
+
+  // Состояния для 30-дневных данных
+  const [analyticsData, setAnalyticsData] = useState<DailyAnalyticsData | null>(null);
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [is30DayLoading, setIs30DayLoading] = useState(false);
+  const [is30DayError, setIs30DayError] = useState<string | null>(null);
+  const [selectedPaymentChart, setSelectedPaymentChart] = useState<'payments' | 'banks'>('payments');
+  const [selectedMetricChart, setSelectedMetricChart] = useState<'revenue' | 'expenses' | 'income'>('revenue');
 
   // Состояния для выбора типов графиков
   const [servicesChartType, setServicesChartType] = useState<ChartType>('pie');
@@ -205,6 +226,29 @@ export default function Dashboard() {
     }
   });
 
+  const previousDayAccountingStatsQuery = useQuery({
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/statistics/accounting-previous`, currentBranch?.id],
+    refetchInterval: 60000,
+    enabled: !!currentBranch?.id,
+    queryFn: async () => {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayDate = yesterday.toISOString().split('T')[0];
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/statistics/accounting/${yesterdayDate}/${yesterdayDate}?branchId=${currentBranch?.id}`, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    }
+  });
+
   useEffect(() => {
     if (data && typeof data === 'object') {
       const apiData = data as any;
@@ -268,6 +312,84 @@ export default function Dashboard() {
       }
     }
   }, [accountingStatsQuery.data]);
+
+  useEffect(() => {
+    if (previousDayAccountingStatsQuery.data && typeof previousDayAccountingStatsQuery.data === 'object') {
+      const apiData = previousDayAccountingStatsQuery.data as any;
+      
+      // Новый формат данных: data = [доходы, расходы, записей, прибыль]
+      if (apiData.success && Array.isArray(apiData.data) && apiData.data.length >= 4) {
+        const [dailyIncome, dailyExpenses, recordsCount, netProfit] = apiData.data;
+        
+        setPreviousDailyAccountingStats({
+          recordsCount: recordsCount || 0
+        });
+        
+        setPreviousDailyCashData({
+          dailyIncome: dailyIncome || 0,
+          dailyExpenses: dailyExpenses || 0,
+          netProfit: netProfit || 0
+        });
+      }
+    }
+  }, [previousDayAccountingStatsQuery.data]);
+
+  useEffect(() => {
+    // Calculate trends when both current and previous day data are available
+    if (dailyCashData && previousDailyCashData) {
+      const trends = compareDayMetrics(
+        {
+          dailyIncome: dailyCashData.dailyIncome,
+          dailyExpenses: dailyCashData.dailyExpenses,
+          recordsCount: dailyAccountingStats.recordsCount,
+          netProfit: dailyCashData.netProfit
+        },
+        {
+          dailyIncome: previousDailyCashData.dailyIncome,
+          dailyExpenses: previousDailyCashData.dailyExpenses,
+          recordsCount: previousDailyAccountingStats.recordsCount,
+          netProfit: previousDailyCashData.netProfit
+        }
+      );
+      setMetricsWithTrends(trends);
+    }
+  }, [dailyCashData, previousDailyCashData, dailyAccountingStats.recordsCount, previousDailyAccountingStats.recordsCount]);
+
+  // Загрузка данных за последние 30 дней
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      if (!currentBranch?.id) return;
+      
+      setIs30DayLoading(true);
+      setIs30DayError(null);
+      
+      try {
+        const data = await fetch30DayAnalytics(
+          currentBranch.id.toString(),
+          import.meta.env.VITE_BACKEND_URL
+        );
+        
+        // Заполняем пропущенные дни нулевыми значениями
+        const filledMetrics = fillMissingDays(data.metrics, 30);
+        
+        setAnalyticsData({
+          ...data,
+          metrics: filledMetrics
+        });
+        
+        // Преобразуем в формат для графиков
+        const chartPoints = convertToChartData(filledMetrics);
+        setChartData(chartPoints);
+      } catch (error) {
+        console.error('Error fetching 30-day analytics:', error);
+        setIs30DayError(error instanceof Error ? error.message : 'Failed to fetch analytics');
+      } finally {
+        setIs30DayLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, [currentBranch?.id]);
 
   const formatActivityTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -706,63 +828,418 @@ export default function Dashboard() {
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+        <div className="grid grid-cols-4 gap-3 w-full">
          
 
           {/* Accounting Stats Cards */}
-          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
-            <CardContent className="p-4">
+          {metricsWithTrends && (
+            <>
+              <MetricCardWithTrend
+                title={t('dashboard.daily_income')}
+                value={dailyCashData?.dailyIncome || 0}
+                metric={metricsWithTrends.dailyIncome}
+                icon={<DollarSign className="h-6 w-6 text-blue-600" />}
+                bgGradient="bg-gradient-to-br from-blue-50 to-blue-100"
+                borderColor="border-blue-200"
+                isPositiveGood={true}
+                format="currency"
+              />
+
+              <MetricCardWithTrend
+                title={t('dashboard.daily_expenses')}
+                value={dailyCashData?.dailyExpenses || 0}
+                metric={metricsWithTrends.dailyExpenses}
+                icon={<TrendingUp className="h-6 w-6 text-red-600" />}
+                bgGradient="bg-gradient-to-br from-red-50 to-red-100"
+                borderColor="border-red-200"
+                isPositiveGood={false}
+                format="currency"
+              />
+
+              <MetricCardWithTrend
+                title={t('dashboard.daily_records')}
+                value={dailyAccountingStats.recordsCount}
+                metric={metricsWithTrends.recordsCount}
+                icon={<Activity className="h-6 w-6 text-green-600" />}
+                bgGradient="bg-gradient-to-br from-green-50 to-green-100"
+                borderColor="border-green-200"
+                isPositiveGood={true}
+                format="count"
+              />
+
+              <MetricCardWithTrend
+                title={t('dashboard.daily_profit')}
+                value={dailyCashData?.netProfit || 0}
+                metric={metricsWithTrends.netProfit}
+                icon={<TrendingUp className="h-6 w-6 text-purple-600" />}
+                bgGradient="bg-gradient-to-br from-purple-50 to-purple-100"
+                borderColor="border-purple-200"
+                isPositiveGood={true}
+                format="currency"
+              />
+            </>
+          )}
+        </div>
+
+        {/* 30-Day Analytics Charts - Combined Metrics Chart */}
+        <div className="grid grid-cols-1 gap-3">
+          {/* Metrics Selector Chart */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">{t('dashboard.daily_income')}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{(dailyCashData?.dailyIncome || 0).toLocaleString()}</p>
+                  <CardTitle className="flex items-center text-gray-900">
+                    <DollarSign className="h-5 w-5 mr-2 text-blue-600" />
+                    {selectedMetricChart === 'revenue' ? 'Выручка за 30 дней' : selectedMetricChart === 'expenses' ? 'Расходы за 30 дней' : 'Доход за 30 дней'}
+                  </CardTitle>
+                  <p className="text-sm text-gray-500">
+                    {selectedMetricChart === 'revenue' ? 'Тренд общей выручки' : selectedMetricChart === 'expenses' ? 'Тренд мелких расходов' : 'Тренд чистого дохода'}
+                  </p>
                 </div>
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-blue-600" />
-                </div>
+                <Select 
+                  value={selectedMetricChart} 
+                  onValueChange={(value) => setSelectedMetricChart(value as 'revenue' | 'expenses' | 'income')}
+                >
+                  <SelectTrigger className="w-[160px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="revenue">Выручка</SelectItem>
+                    <SelectItem value="expenses">Расходы</SelectItem>
+                    <SelectItem value="income">Доход</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {is30DayLoading ? (
+                <div className="h-80 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-2"></div>
+                    <p className="text-gray-500">Загрузка...</p>
+                  </div>
+                </div>
+              ) : is30DayError ? (
+                <div className="h-80 flex items-center justify-center">
+                  <div className="text-center text-red-600">
+                    <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                    <p>{is30DayError}</p>
+                  </div>
+                </div>
+              ) : chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={400}>
+                  {selectedMetricChart === 'revenue' ? (
+                    <LineChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis 
+                        dataKey="date" 
+                        stroke="#9ca3af"
+                        style={{ fontSize: '12px' }}
+                        tick={{ fill: '#6b7280' }}
+                      />
+                      <YAxis 
+                        stroke="#9ca3af"
+                        style={{ fontSize: '12px' }}
+                        tick={{ fill: '#6b7280' }}
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                        }}
+                        formatter={(value: any) => [`${Number(value).toLocaleString()} сом`, 'Выручка']}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="totalRevenue" 
+                        stroke="#3b82f6" 
+                        dot={{ fill: '#3b82f6', r: 3 }}
+                        activeDot={{ r: 5 }}
+                        strokeWidth={2}
+                        isAnimationActive={true}
+                      />
+                    </LineChart>
+                  ) : selectedMetricChart === 'expenses' ? (
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis 
+                        dataKey="date" 
+                        stroke="#9ca3af"
+                        style={{ fontSize: '12px' }}
+                        tick={{ fill: '#6b7280' }}
+                      />
+                      <YAxis 
+                        stroke="#9ca3af"
+                        style={{ fontSize: '12px' }}
+                        tick={{ fill: '#6b7280' }}
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                        }}
+                        formatter={(value: any) => [`${Number(value).toLocaleString()} сом`, 'Расходы']}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="pettyExpenses" 
+                        stroke="#ef4444" 
+                        fillOpacity={1} 
+                        fill="url(#colorExpenses)"
+                        isAnimationActive={true}
+                      />
+                    </AreaChart>
+                  ) : (
+                    <AreaChart data={chartData}>
+                      <defs>
+                        <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis 
+                        dataKey="date" 
+                        stroke="#9ca3af"
+                        style={{ fontSize: '12px' }}
+                        tick={{ fill: '#6b7280' }}
+                      />
+                      <YAxis 
+                        stroke="#9ca3af"
+                        style={{ fontSize: '12px' }}
+                        tick={{ fill: '#6b7280' }}
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                        }}
+                        formatter={(value: any) => [`${Number(value).toLocaleString()} сом`, 'Доход']}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="totalIncome" 
+                        stroke="#8b5cf6" 
+                        fillOpacity={1} 
+                        fill="url(#colorIncome)"
+                        isAnimationActive={true}
+                      />
+                    </AreaChart>
+                  )}
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-80 flex items-center justify-center text-gray-500">
+                  Нет данных для отображения
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
-            <CardContent className="p-4">
+          {/* Payment Methods / Banks Chart */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">{t('dashboard.daily_expenses')}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{(dailyCashData?.dailyExpenses || 0).toLocaleString()}</p>
+                  <CardTitle className="flex items-center text-gray-900">
+                    <Activity className="h-5 w-5 mr-2 text-green-600" />
+                    {selectedPaymentChart === 'payments' ? 'Способы оплаты' : 'Платежи по банкам'}
+                  </CardTitle>
+                  <p className="text-sm text-gray-500">
+                    {selectedPaymentChart === 'payments' ? 'Распределение по способам оплаты' : 'Распределение по банкам'}
+                  </p>
                 </div>
-                <div className="p-2 bg-red-50 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-red-600" />
-                </div>
+                <Select 
+                  value={selectedPaymentChart} 
+                  onValueChange={(value) => setSelectedPaymentChart(value as 'payments' | 'banks')}
+                >
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="payments">Способы оплаты</SelectItem>
+                    <SelectItem value="banks">Банки</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{t('dashboard.daily_records')}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{dailyAccountingStats.recordsCount}</p>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {is30DayLoading ? (
+                <div className="h-80 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full mx-auto mb-2"></div>
+                    <p className="text-gray-500">Загрузка...</p>
+                  </div>
                 </div>
-                <div className="p-2 bg-green-50 rounded-lg">
-                  <Activity className="h-6 w-6 text-green-600" />
+              ) : is30DayError ? (
+                <div className="h-80 flex items-center justify-center">
+                  <div className="text-center text-red-600">
+                    <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                    <p>{is30DayError}</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{t('dashboard.daily_profit')}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{(dailyCashData?.netProfit || 0).toLocaleString()}</p>
+              ) : chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorPayments" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#9ca3af"
+                      style={{ fontSize: '12px' }}
+                      tick={{ fill: '#6b7280' }}
+                    />
+                    <YAxis 
+                      stroke="#9ca3af"
+                      style={{ fontSize: '12px' }}
+                      tick={{ fill: '#6b7280' }}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                      }}
+                      formatter={(value: any) => [`${Number(value).toLocaleString()} сом`, '']}
+                    />
+                    {selectedPaymentChart === 'payments' ? (
+                      <>
+                        <Area 
+                          type="monotone" 
+                          dataKey="cashPayments" 
+                          stackId="1"
+                          stroke="#3b82f6" 
+                          fillOpacity={0.7}
+                          fill="#3b82f6"
+                          name="Наличные"
+                          isAnimationActive={true}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="cardPayments" 
+                          stackId="1"
+                          stroke="#ef4444" 
+                          fillOpacity={0.7}
+                          fill="#ef4444"
+                          name="Карта"
+                          isAnimationActive={true}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="transferPayments" 
+                          stackId="1"
+                          stroke="#8b5cf6" 
+                          fillOpacity={0.7}
+                          fill="#8b5cf6"
+                          name="Перевод"
+                          isAnimationActive={true}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="giftCertificatePayments" 
+                          stackId="1"
+                          stroke="#f59e0b" 
+                          fillOpacity={0.7}
+                          fill="#f59e0b"
+                          name="Подарок"
+                          isAnimationActive={true}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <Area 
+                          type="monotone" 
+                          dataKey="optimaPayments" 
+                          stackId="1"
+                          stroke="#3b82f6" 
+                          fillOpacity={0.7}
+                          fill="#3b82f6"
+                          name="Optima"
+                          isAnimationActive={true}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="mbankPayments" 
+                          stackId="1"
+                          stroke="#ef4444" 
+                          fillOpacity={0.7}
+                          fill="#ef4444"
+                          name="M-Bank"
+                          isAnimationActive={true}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="mbusinessPayments" 
+                          stackId="1"
+                          stroke="#8b5cf6" 
+                          fillOpacity={0.7}
+                          fill="#8b5cf6"
+                          name="M-Business"
+                          isAnimationActive={true}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="demirPayments" 
+                          stackId="1"
+                          stroke="#f59e0b" 
+                          fillOpacity={0.7}
+                          fill="#f59e0b"
+                          name="Demir"
+                          isAnimationActive={true}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="bakaiPayments" 
+                          stackId="1"
+                          stroke="#06b6d4" 
+                          fillOpacity={0.7}
+                          fill="#06b6d4"
+                          name="Bakai"
+                          isAnimationActive={true}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="obankPayments" 
+                          stackId="1"
+                          stroke="#10b981" 
+                          fillOpacity={0.7}
+                          fill="#10b981"
+                          name="O!Bank"
+                          isAnimationActive={true}
+                        />
+                      </>
+                    )}
+                    <Legend />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-80 flex items-center justify-center text-gray-500">
+                  Нет данных для отображения
                 </div>
-                <div className="p-2 bg-purple-50 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-purple-600" />
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>

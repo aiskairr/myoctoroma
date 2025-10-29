@@ -42,6 +42,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import DailyCashReport from '@/components/DailyCashReport';
+import { compareDayMetrics } from '@/services/trend-comparison';
+import MetricCardWithTrend from '@/components/MetricCardWithTrend';
+import type { DashboardMetricsWithTrends } from '@/services/trend-comparison';
 
 interface AccountingRecord {
   id?: number;
@@ -102,6 +105,18 @@ const AccountingPage = () => {
     dailyExpenses: 0,
     netProfit: 0
   });
+  const [previousDailyStats, setPreviousDailyStats] = useState({
+    dailyIncome: 0,
+    dailyExpenses: 0,
+    recordsCount: 0,
+    netProfit: 0
+  });
+  const [previousDailyCashData, setPreviousDailyCashData] = useState({
+    dailyIncome: 0,
+    dailyExpenses: 0,
+    netProfit: 0
+  });
+  const [metricsWithTrends, setMetricsWithTrends] = useState<DashboardMetricsWithTrends | null>(null);
   const [newRecord, setNewRecord] = useState<AccountingRecord>({
     master: '',
     client: '',
@@ -228,6 +243,49 @@ const AccountingPage = () => {
     }
   };
 
+  const fetchPreviousDayAccountingStatistics = async (date?: Date) => {
+    try {
+      const targetDate = date || selectedDate;
+      const yesterday = new Date(targetDate);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const dateString = new Date(yesterday.getTime() - (yesterday.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+      
+      const branchId = getBranchIdWithFallback(currentBranch, branches);
+      const url = `${import.meta.env.VITE_BACKEND_URL}/api/statistics/accounting/${dateString}/${dateString}?branchId=${branchId}`;
+      console.log('Fetching previous day accounting statistics with URL:', url);
+      
+      const response = await fetch(url);
+      if (response.ok) {
+        const apiData = await response.json();
+        console.log('Previous day accounting statistics response:', apiData);
+        
+        // Новый формат данных: data = [доходы, расходы, записей, прибыль]
+        if (apiData.success && Array.isArray(apiData.data) && apiData.data.length >= 4) {
+          const [dailyIncome, dailyExpenses, recordsCount, netProfit] = apiData.data;
+          
+          setPreviousDailyStats({
+            dailyIncome,
+            dailyExpenses, 
+            recordsCount,
+            netProfit
+          });
+          
+          setPreviousDailyCashData({
+            dailyIncome,
+            dailyExpenses,
+            netProfit
+          });
+        } else {
+          console.error('Invalid data format from previous day accounting statistics API');
+        }
+      } else {
+        console.error('Failed to fetch previous day accounting statistics:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching previous day accounting statistics:', error);
+    }
+  };
+
   const fetchData = async (date?: Date) => {
     setIsLoading(true);
     const targetDate = date || selectedDate;
@@ -245,7 +303,8 @@ const AccountingPage = () => {
           const expenseRecords = await expenseService.getExpensesForDate(dateString, branchId);
           setExpenses(expenseRecords as ExpenseRecord[]);
         })(),
-        fetchAccountingStatistics(targetDate)
+        fetchAccountingStatistics(targetDate),
+        fetchPreviousDayAccountingStatistics(targetDate)
       ]);
     } catch (error) {
       console.error('Ошибка загрузки данных:', error);
@@ -259,6 +318,27 @@ const AccountingPage = () => {
     loadMastersAndAdministrators();
     loadServicesAndBranches();
   }, [currentBranch, branches, selectedDate]);
+
+  useEffect(() => {
+    // Calculate trends when both current and previous day data are available
+    if (dailyCashData && previousDailyCashData) {
+      const trends = compareDayMetrics(
+        {
+          dailyIncome: dailyCashData.dailyIncome,
+          dailyExpenses: dailyCashData.dailyExpenses,
+          recordsCount: dailyStats.recordsCount,
+          netProfit: dailyCashData.netProfit
+        },
+        {
+          dailyIncome: previousDailyCashData.dailyIncome,
+          dailyExpenses: previousDailyCashData.dailyExpenses,
+          recordsCount: previousDailyStats.recordsCount,
+          netProfit: previousDailyCashData.netProfit
+        }
+      );
+      setMetricsWithTrends(trends);
+    }
+  }, [dailyCashData, previousDailyCashData, dailyStats.recordsCount, previousDailyStats.recordsCount]);
 
   const loadMastersAndAdministrators = async () => {
     try {
@@ -573,63 +653,53 @@ const AccountingPage = () => {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-600 rounded-lg">
-                <DollarSign className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-blue-600">{t('dashboard.daily_income')}</p>
-                <p className="text-2xl font-bold text-blue-800">{(dailyCashData?.dailyIncome || 0).toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {metricsWithTrends && (
+          <>
+            <MetricCardWithTrend
+              title={t('dashboard.daily_income')}
+              value={dailyCashData?.dailyIncome || 0}
+              metric={metricsWithTrends.dailyIncome}
+              icon={<DollarSign className="h-6 w-6 text-blue-600" />}
+              bgGradient="bg-gradient-to-br from-blue-50 to-blue-100"
+              borderColor="border-blue-200"
+              isPositiveGood={true}
+              format="currency"
+            />
 
-        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-red-600 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-red-600">{t('dashboard.daily_expenses')}</p>
-                <p className="text-2xl font-bold text-red-800">{(dailyCashData?.dailyExpenses || 0).toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <MetricCardWithTrend
+              title={t('dashboard.daily_expenses')}
+              value={dailyCashData?.dailyExpenses || 0}
+              metric={metricsWithTrends.dailyExpenses}
+              icon={<TrendingUp className="h-6 w-6 text-red-600" />}
+              bgGradient="bg-gradient-to-br from-red-50 to-red-100"
+              borderColor="border-red-200"
+              isPositiveGood={false}
+              format="currency"
+            />
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-600 rounded-lg">
-                <Users className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-green-600">{t('dashboard.daily_records')}</p>
-                <p className="text-2xl font-bold text-green-800">{dailyStats.recordsCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <MetricCardWithTrend
+              title={t('dashboard.daily_records')}
+              value={dailyStats.recordsCount}
+              metric={metricsWithTrends.recordsCount}
+              icon={<Users className="h-6 w-6 text-green-600" />}
+              bgGradient="bg-gradient-to-br from-green-50 to-green-100"
+              borderColor="border-green-200"
+              isPositiveGood={true}
+              format="count"
+            />
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-600 rounded-lg">
-                <FileText className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-purple-600">{t('accounting.net_profit')}</p>
-                <p className="text-2xl font-bold text-purple-800">
-                  {(dailyCashData?.netProfit || 0).toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <MetricCardWithTrend
+              title={t('accounting.net_profit')}
+              value={dailyCashData?.netProfit || 0}
+              metric={metricsWithTrends.netProfit}
+              icon={<FileText className="h-6 w-6 text-purple-600" />}
+              bgGradient="bg-gradient-to-br from-purple-50 to-purple-100"
+              borderColor="border-purple-200"
+              isPositiveGood={true}
+              format="currency"
+            />
+          </>
+        )}
       </div>
 
       {/* Main Content */}
