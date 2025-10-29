@@ -443,40 +443,90 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                 {t('masters.no_days_this_month')}
               </p>
               {masterId && serverWorkingDates && (
-                <div className="border rounded-lg p-4 bg-gray-50">
-                  <h4 className="font-medium mb-3">{t('masters.server_data_title', { masterId: masterId?.toString() || '' })}</h4>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {serverWorkingDates.map((date, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-white rounded border text-sm">
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="outline" className="text-xs">
-                            {format(new Date(date.work_date), 'dd MMM yyyy')}
-                          </Badge>
-                          <span className="text-muted-foreground">
-                            {date.start_time} - {date.end_time}
-                          </span>
-                          <Badge variant={date.is_active ? "default" : "secondary"} className="text-xs">
-                            {t('masters.branch_badge', { branchId: date.branch_id })}
-                          </Badge>
-                          <Badge variant={date.is_active ? "default" : "destructive"} className="text-xs">
-                            {date.is_active ? t('masters.active') : t('masters.inactive')}
-                          </Badge>
-                        </div>
+                <div className="border rounded-lg p-4 bg-gray-50 space-y-3">
+                  {selectedWorkingDatesToDelete.size > 0 && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+                      <span className="text-sm font-medium text-red-900">
+                        Выбрано {selectedWorkingDatesToDelete.size} рабочих дней
+                      </span>
+                      <div className="flex gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleRemoveWorkingDate(date.work_date, date.branch_id)}
+                          onClick={() => setSelectedWorkingDatesToDelete(new Set())}
+                          className="text-gray-600"
+                        >
+                          Отменить выбор
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={handleDeleteSelectedWorkingDates}
                           disabled={deleteWorkingDateMutation.isPending}
-                          className="text-destructive hover:text-destructive"
                         >
                           {deleteWorkingDateMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Удаление...
+                            </>
                           ) : (
-                            <Trash2 className="h-4 w-4" />
+                            <>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Удалить выбранные
+                            </>
                           )}
                         </Button>
                       </div>
-                    ))}
+                    </div>
+                  )}
+                  <h4 className="font-medium mb-3">{t('masters.server_data_title', { masterId: masterId?.toString() || '' })}</h4>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {serverWorkingDates.map((date, index) => {
+                      const key = `${date.work_date}-${date.branch_id}`;
+                      const isSelected = selectedWorkingDatesToDelete.has(key);
+                      return (
+                        <div 
+                          key={index} 
+                          className={`flex items-center justify-between p-2 bg-white rounded border text-sm transition-colors ${
+                            isSelected ? 'bg-red-50 border-red-300' : ''
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleWorkingDateSelection(date.work_date, date.branch_id)}
+                              className="w-4 h-4 rounded cursor-pointer"
+                            />
+                            <Badge variant="outline" className="text-xs">
+                              {format(new Date(date.work_date), 'dd MMM yyyy')}
+                            </Badge>
+                            <span className="text-muted-foreground">
+                              {date.start_time} - {date.end_time}
+                            </span>
+                            <Badge variant={date.is_active ? "default" : "secondary"} className="text-xs">
+                              {t('masters.branch_badge', { branchId: date.branch_id })}
+                            </Badge>
+                            <Badge variant={date.is_active ? "default" : "destructive"} className="text-xs">
+                              {date.is_active ? t('masters.active') : t('masters.inactive')}
+                            </Badge>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRemoveWorkingDate(date.work_date, date.branch_id)}
+                            disabled={deleteWorkingDateMutation.isPending}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            {deleteWorkingDateMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
