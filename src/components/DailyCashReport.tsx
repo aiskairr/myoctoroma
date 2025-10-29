@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/SimpleAuthContext';
 import { useLocale } from '@/contexts/LocaleContext';
+import { analyzePayments, type PaymentAnalysis } from '@/services/payment-analytics';
 
 interface AccountingRecord {
   id?: number;
@@ -92,6 +93,7 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
     obankPayments: 0,
   });
 
+  const [paymentAnalysis, setPaymentAnalysis] = useState<PaymentAnalysis | null>(null);
   const [cashCollection, setCashCollection] = useState<number>(0);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
@@ -137,7 +139,9 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
         record.paymentMethod !== 'Расход'
       );
 
-
+      // Анализируем платежи используя новый сервис
+      const analysis = analyzePayments(dayRecords);
+      setPaymentAnalysis(analysis);
 
       // Фильтруем расходы за выбранный день
       const dayExpenses = expenses.filter(expense =>
@@ -329,6 +333,16 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
 
   const handleSubmitReport = async () => {
     try {
+      // Используем данные из анализа платежей если они доступны, иначе используем reportData
+      const bankData = paymentAnalysis ? paymentAnalysis.byBank : {
+        optima: reportData.optimaPayments,
+        mbank: reportData.mbankPayments,
+        mbusiness: reportData.mbusinessPayments,
+        demir: reportData.demirPayments,
+        bakai: reportData.bakaiPayments,
+        obank: reportData.obankPayments,
+      };
+
       const reportPayload = {
         // Конвертируем дату в формат YYYY-MM-DD для API
         date: new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0],
@@ -344,12 +358,12 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
         cardPayments: reportData.cardPayments,
         transferPayments: reportData.transferPayments,
         giftCertificatePayments: reportData.giftCertificatePayments,
-        optimaPayments: reportData.optimaPayments,
-        mbankPayments: reportData.mbankPayments,
-        mbusinessPayments: reportData.mbusinessPayments,
-        demirPayments: reportData.demirPayments,
-        bakaiPayments: reportData.bakaiPayments,
-        obankPayments: reportData.obankPayments,
+        optimaPayments: bankData.optima,
+        mbankPayments: bankData.mbank,
+        mbusinessPayments: bankData.mbusiness,
+        demirPayments: bankData.demir,
+        bakaiPayments: bankData.bakai,
+        obankPayments: bankData.obank,
       };
 
       console.log('Sending daily cash report payload:', reportPayload);
@@ -470,42 +484,62 @@ const DailyCashReport: React.FC<DailyCashReportProps> = ({
         {/* Разбивка по банкам */}
         <div className="mt-6">
           <h3 className="text-lg font-semibold mb-3">{t('accounting.bank_breakdown')}</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {reportData.optimaPayments > 0 && (
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="text-sm text-gray-600">Оптима</div>
-                <div className="text-lg font-semibold">{reportData.optimaPayments.toLocaleString()} сом</div>
-              </div>
-            )}
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <div className="text-sm text-gray-600">М-Банк</div>
-              <div className="text-lg font-semibold">{reportData.mbankPayments.toLocaleString()} сом</div>
+          {paymentAnalysis && Object.values(paymentAnalysis.byBank).some(v => v > 0) ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {paymentAnalysis.byBank.optima > 0 && (
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <div className="text-sm text-gray-600 flex items-center gap-2">
+                    <span>Оптима</span>
+                  </div>
+                  <div className="text-lg font-semibold text-gray-900">{paymentAnalysis.byBank.optima.toLocaleString()} сом</div>
+                </div>
+              )}
+              {paymentAnalysis.byBank.mbank > 0 && (
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <div className="text-sm text-gray-600 flex items-center gap-2">
+                    <span>М-Банк</span>
+                  </div>
+                  <div className="text-lg font-semibold text-gray-900">{paymentAnalysis.byBank.mbank.toLocaleString()} сом</div>
+                </div>
+              )}
+              {paymentAnalysis.byBank.mbusiness > 0 && (
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <div className="text-sm text-gray-600 flex items-center gap-2">
+                    <span>М-Бизнес</span>
+                  </div>
+                  <div className="text-lg font-semibold text-gray-900">{paymentAnalysis.byBank.mbusiness.toLocaleString()} сом</div>
+                </div>
+              )}
+              {paymentAnalysis.byBank.demir > 0 && (
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <div className="text-sm text-gray-600 flex items-center gap-2">
+                    <span>Демир</span>
+                  </div>
+                  <div className="text-lg font-semibold text-gray-900">{paymentAnalysis.byBank.demir.toLocaleString()} сом</div>
+                </div>
+              )}
+              {paymentAnalysis.byBank.bakai > 0 && (
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <div className="text-sm text-gray-600 flex items-center gap-2">
+                    <span>Бакай</span>
+                  </div>
+                  <div className="text-lg font-semibold text-gray-900">{paymentAnalysis.byBank.bakai.toLocaleString()} сом</div>
+                </div>
+              )}
+              {paymentAnalysis.byBank.obank > 0 && (
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <div className="text-sm text-gray-600 flex items-center gap-2">
+                    <span>О!Банк</span>
+                  </div>
+                  <div className="text-lg font-semibold text-gray-900">{paymentAnalysis.byBank.obank.toLocaleString()} сом</div>
+                </div>
+              )}
             </div>
-            {reportData.mbusinessPayments > 0 && (
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="text-sm text-gray-600">М-Бизнес</div>
-                <div className="text-lg font-semibold">{reportData.mbusinessPayments.toLocaleString()} сом</div>
-              </div>
-            )}
-            {reportData.demirPayments > 0 && (
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="text-sm text-gray-600">Демир</div>
-                <div className="text-lg font-semibold">{reportData.demirPayments.toLocaleString()} сом</div>
-              </div>
-            )}
-            {reportData.bakaiPayments > 0 && (
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="text-sm text-gray-600">Бакай</div>
-                <div className="text-lg font-semibold">{reportData.bakaiPayments.toLocaleString()} сом</div>
-              </div>
-            )}
-            {reportData.obankPayments > 0 && (
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="text-sm text-gray-600">О!Банк</div>
-                <div className="text-lg font-semibold">{reportData.obankPayments.toLocaleString()} сом</div>
-              </div>
-            )}
-          </div>
+          ) : (
+            <div className="text-center py-4 text-gray-500">
+              {t('accounting.no_bank_payments')}
+            </div>
+          )}
         </div>
 
         <div className="mt-6 flex justify-center">
