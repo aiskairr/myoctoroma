@@ -1070,6 +1070,23 @@ const translations = {
     'how_to_use.calendar_duration': 'Длительность: 10 минут',
     'how_to_use.watch_calendar_button': 'Смотреть обучение по Календарю',
     
+    // Gift certificates and subscriptions tutorial video
+    'how_to_use.gift_certificate_video_title': 'Подарочные Сертификаты и Абонименты',
+    'how_to_use.gift_certificate_video_description': 'Как правильно использовать подарочные сертификаты и абонименты',
+    'how_to_use.gift_certificate_feature_1': 'Подарочные сертификаты',
+    'how_to_use.gift_certificate_feature_1_desc': 'Создание и управление подарочными сертификатами',
+    'how_to_use.gift_certificate_feature_2': 'Абонименты',
+    'how_to_use.gift_certificate_feature_2_desc': 'Настройка и использование абонементов',
+    'how_to_use.gift_certificate_duration': 'Длительность: 8 минут',
+    'how_to_use.watch_gift_certificate_button': 'Смотреть обучение по Сертификатам',
+    
+    // Contact card
+    'how_to_use.contact_title': 'Свяжитесь с нами',
+    'how_to_use.contact_description': 'Есть вопросы? Напишите нам или позвоните',
+    'how_to_use.email_button': 'info@promconsult.pro',
+    'how_to_use.phone_button': '+996 505 96 37 82',
+    'how_to_use.new_feature': 'Новое',
+    
     // Common translations
     'success': 'Успешно',
     'error': 'Ошибка', 
@@ -2574,6 +2591,23 @@ const translations = {
     'how_to_use.calendar_duration': 'Узактыгы: 10 мүнөт',
     'how_to_use.watch_calendar_button': 'Календарь боюнча окууну көрүү',
     
+    // Gift certificates and subscriptions tutorial video
+    'how_to_use.gift_certificate_video_title': 'Белекке арналган Сертификаттар жана Абонименттер',
+    'how_to_use.gift_certificate_video_description': 'Белекке арналган сертификаттарды жана абонименттерди туура колдонуу',
+    'how_to_use.gift_certificate_feature_1': 'Белекке арналган сертификаттар',
+    'how_to_use.gift_certificate_feature_1_desc': 'Белекке арналган сертификаттарды түзүү жана башкаруу',
+    'how_to_use.gift_certificate_feature_2': 'Абонименттер',
+    'how_to_use.gift_certificate_feature_2_desc': 'Абонименттерди жөндөө жана колдонуу',
+    'how_to_use.gift_certificate_duration': 'Узактыгы: 8 мүнөт',
+    'how_to_use.watch_gift_certificate_button': 'Сертификаттар боюнча окууну көрүү',
+    
+    // Contact card
+    'how_to_use.contact_title': 'Бизге байланыш',
+    'how_to_use.contact_description': 'Сурооңуз барби? Бизге жазыңыз же чалыңыз',
+    'how_to_use.email_button': 'info@promconsult.pro',
+    'how_to_use.phone_button': '+996 505 96 37 82',
+    'how_to_use.new_feature': 'Жаңы',
+    
     // Common translations  
     'error': 'Ката',
     'sent': 'Жөнөтүлдү',
@@ -4075,6 +4109,23 @@ const translations = {
     'how_to_use.calendar_feature_4_desc': 'Additional services, discounts and payment methods',
     'how_to_use.calendar_duration': 'Duration: 10 minutes',
     'how_to_use.watch_calendar_button': 'Watch Calendar Training',
+    
+    // Gift certificates and subscriptions tutorial video
+    'how_to_use.gift_certificate_video_title': 'Gift Certificates and Subscriptions',
+    'how_to_use.gift_certificate_video_description': 'How to properly use gift certificates and subscriptions',
+    'how_to_use.gift_certificate_feature_1': 'Gift Certificates',
+    'how_to_use.gift_certificate_feature_1_desc': 'Creating and managing gift certificates',
+    'how_to_use.gift_certificate_feature_2': 'Subscriptions',
+    'how_to_use.gift_certificate_feature_2_desc': 'Setting up and using subscriptions',
+    'how_to_use.gift_certificate_duration': 'Duration: 8 minutes',
+    'how_to_use.watch_gift_certificate_button': 'Watch Certificate Training',
+    
+    // Contact card
+    'how_to_use.contact_title': 'Contact Us',
+    'how_to_use.contact_description': 'Have questions? Write to us or call',
+    'how_to_use.email_button': 'info@promconsult.pro',
+    'how_to_use.phone_button': '+996 505 96 37 82',
+    'how_to_use.new_feature': 'New',
     
     // Common translations
     'success': 'Success',

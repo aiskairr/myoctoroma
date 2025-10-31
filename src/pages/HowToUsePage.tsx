@@ -1,4 +1,4 @@
-import { Play, BookOpen, Star, Clock, Users, DollarSign, Calendar, BarChart3, Sparkles, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Play, BookOpen, Star, Clock, Users, DollarSign, Calendar, BarChart3, Sparkles, ArrowRight, CheckCircle2, Mail, Phone } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,18 @@ export default function HowToUsePage() {
 
   const handleCalendarVideoClick = () => {
     window.open('https://youtu.be/GBOer1QM3Nc', '_blank');
+  };
+
+  const handleGiftCertificateVideoClick = () => {
+    window.open('https://youtu.be/FFjsGbOPScY', '_blank');
+  };
+
+  const handleEmailClick = () => {
+    window.location.href = 'mailto:info@promconsult.pro';
+  };
+
+  const handlePhoneClick = () => {
+    window.location.href = 'tel:+996505963782';
   };
 
     const features = [
@@ -230,6 +242,80 @@ export default function HowToUsePage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Gift Certificate & Subscriptions Tutorial Video Card */}
+            <Card className="relative overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-card to-card/80 mt-8">
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent" />
+
+              <CardHeader className="relative">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-amber-500/10 rounded-lg">
+                      <Sparkles className="h-6 w-6 text-amber-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl">{t('how_to_use.gift_certificate_video_title')}</CardTitle>
+                      <CardDescription className="text-base">
+                        {t('how_to_use.gift_certificate_video_description')}
+                      </CardDescription>
+                    </div>
+                  </div>
+
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-200">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    {t('how_to_use.new_feature')}
+                  </Badge>
+                </div>
+              </CardHeader>
+
+              <CardContent className="relative space-y-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-100/50 dark:hover:bg-amber-950/30 transition-colors">
+                    <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-md flex-shrink-0">
+                      <Sparkles className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm mb-1">{t('how_to_use.gift_certificate_feature_1')}</h4>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {t('how_to_use.gift_certificate_feature_1_desc')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-rose-50/50 dark:bg-rose-950/20 hover:bg-rose-100/50 dark:hover:bg-rose-950/30 transition-colors">
+                    <div className="p-2 bg-rose-100 dark:bg-rose-900/50 rounded-md flex-shrink-0">
+                      <Star className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm mb-1">{t('how_to_use.gift_certificate_feature_2')}</h4>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {t('how_to_use.gift_certificate_feature_2_desc')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">{t('how_to_use.gift_certificate_duration')}</span>
+                  </div>
+
+                  <Button
+                    onClick={handleGiftCertificateVideoClick}
+                    size="lg"
+                    variant="default"
+                    className="w-full group shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800"
+                  >
+                    <Play className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
+                    {t('how_to_use.watch_gift_certificate_button')}
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}
@@ -283,6 +369,41 @@ export default function HowToUsePage() {
                     <span>{t('how_to_use.step_4')}</span>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Contact Card */}
+            <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <div className="p-1 bg-purple-100 rounded">
+                    <Users className="h-4 w-4 text-purple-600" />
+                  </div>
+                  {t('how_to_use.contact_title')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="text-sm text-muted-foreground mb-4">
+                  {t('how_to_use.contact_description')}
+                </div>
+                
+                <Button
+                  onClick={handleEmailClick}
+                  variant="outline"
+                  className="w-full justify-center text-purple-600 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/30"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  {t('how_to_use.email_button')}
+                </Button>
+
+                <Button
+                  onClick={handlePhoneClick}
+                  variant="outline"
+                  className="w-full justify-center text-purple-600 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/30"
+                >
+                  <Phone className="h-4 w-4 mr-2" />
+                  {t('how_to_use.phone_button')}
+                </Button>
               </CardContent>
             </Card>
           </div>
