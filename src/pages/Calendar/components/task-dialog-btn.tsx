@@ -1385,12 +1385,12 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                                                 </SelectItem>
                                                                 {/* Fallback options */}
                                                                 {!watchedServiceType && (
-                                                                    <SelectItem value="" disabled>
+                                                                    <SelectItem value="__select_service_first__" disabled>
                                                                         {t('task_dialog.select_service_for_durations')}
                                                                     </SelectItem>
                                                                 )}
                                                                 {watchedServiceType && availableDurations.length === 0 && (
-                                                                    <SelectItem value="" disabled>
+                                                                    <SelectItem value="__no_durations_available__" disabled>
                                                                         {t('task_dialog.no_durations_available')}
                                                                     </SelectItem>
                                                                 )}

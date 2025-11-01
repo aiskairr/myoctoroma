@@ -21,6 +21,8 @@ export default defineConfig({
         target: 'https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app',
         changeOrigin: true,
         secure: true,
+        timeout: 60000, // Увеличиваем timeout до 60 секунд для холодного старта
+        proxyTimeout: 60000, // Timeout для прокси запросов
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('proxy error', err);
@@ -38,6 +40,7 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
         ws: true,
+        timeout: 60000, // Увеличиваем timeout для WebSocket
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('WebSocket proxy error', err);

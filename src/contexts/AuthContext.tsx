@@ -1,7 +1,10 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import Cookies from "js-cookie";
+
+// Получаем URL бэкенда из переменной окружения
+// В dev режиме используем проксированные пути, в production - полный URL
+const BACKEND_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_BACKEND_URL || '');
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -28,14 +31,14 @@ export function AuthProvider({ children }: { children: any }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<{ id: number; email: string; username: string; role: string } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [_, setLocation] = useLocation();
+  useLocation();
 
   // Упрощенная функция для проверки статуса аутентификации
   const checkAuthStatus = async (): Promise<boolean> => {
     try {
       console.log("Checking authentication status...");
       const token = Cookies.get('token');
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user`, {
+      const res = await fetch(`${BACKEND_URL}/api/user`, {
         method: "GET",
         credentials: "include",
         headers: {
@@ -108,8 +111,8 @@ export function AuthProvider({ children }: { children: any }) {
       console.log("Attempting login with:", username);
 
       try {
-        // Используем правильный endpoint ${import.meta.env.VITE_BACKEND_URL}/api/auth/login
-        const res = await fetch("${import.meta.env.VITE_BACKEND_URL}/api/login", {
+        // Используем правильный endpoint для логина
+        const res = await fetch(`${BACKEND_URL}/api/login`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -186,7 +189,7 @@ export function AuthProvider({ children }: { children: any }) {
       setIsLoading(true);
       console.log("Attempting to logout...");
 
-      const res = await fetch("${import.meta.env.VITE_BACKEND_URL}/api/logout", {
+      const res = await fetch(`${BACKEND_URL}/api/logout`, {
         method: "POST",
         credentials: "include",
         headers: {

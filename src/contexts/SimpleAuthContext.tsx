@@ -5,7 +5,8 @@ import Cookies from "js-cookie";
 
 // Получаем URL бэкенда из переменной окружения
 // В dev режиме используем проксированные пути, в production - полный URL
-const BACKEND_URL = import.meta.env.DEV ? '' : import.meta.env.VITE_BACKEND_URL;
+// ВАЖНО: В dev режиме BACKEND_URL должна быть пуста для работы Vite прокси
+const BACKEND_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_BACKEND_URL || '');
 
 // Проверяем, что URL существует в production режиме
 if (!import.meta.env.DEV && !import.meta.env.VITE_BACKEND_URL) {
