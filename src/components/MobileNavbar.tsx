@@ -63,72 +63,72 @@ export function MobileNavbar() {
   ];
 
   return (
-    <div className="bg-gradient-to-r from-slate-900 to-slate-800 border-b border-slate-700/50 shadow-lg px-3 py-2.5 flex items-center justify-between sticky top-0 z-50">
-      <div className="flex items-center gap-2">
-        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-1.5 rounded-lg shadow-md">
-          <img width={16} height={8} src={LOGO} alt="logo" />
+    <div className="bg-gradient-to-r from-slate-900 to-slate-800 border-b border-slate-700/50 shadow-lg px-2 py-1.5 flex items-center justify-between sticky top-0 z-50">
+      <div className="flex items-center gap-1.5">
+        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-1 rounded-md shadow-md">
+          <img width={12} height={6} src={LOGO} alt="logo" />
         </div>
-        <h1 className="font-bold text-base bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Octō CRM</h1>
+        <h1 className="font-bold text-sm bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Octō CRM</h1>
         <LocaleToggle />
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         <BranchIndicator compact />
 
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-slate-300 hover:text-white hover:bg-slate-700/50">
-              <Menu className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="text-slate-300 hover:text-white hover:bg-slate-700/50 h-7 w-7">
+              <Menu className="h-4 w-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[390px] p-0 bg-gradient-to-b from-slate-900 to-slate-800 border-slate-700/50">
+          <SheetContent side="left" className="w-[293px] p-0 bg-gradient-to-b from-slate-900 to-slate-800 border-slate-700/50">
             <div className="flex flex-col h-full">
               {/* Header */}
-              <div className="p-4 flex items-center justify-between border-b border-slate-700/50">
-                <div className="flex items-center gap-2">
-                  <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-lg">
-                    <img width={20} height={10} src={LOGO} alt="Octō CRM Logo" />
+              <div className="p-3 flex items-center justify-between border-b border-slate-700/50">
+                <div className="flex items-center gap-1.5">
+                  <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-1.5 rounded-lg shadow-lg">
+                    <img width={14} height={7} src={LOGO} alt="Octō CRM Logo" />
                   </div>
                   <div>
-                    <h1 className="font-bold text-lg bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Octō CRM</h1>
-                    <p className="text-slate-400 text-xs">{t('sidebar.admin_panel')}</p>
+                    <h1 className="font-bold text-sm bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Octō CRM</h1>
+                    <p className="text-slate-400 text-[9px]">{t('sidebar.admin_panel')}</p>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" className="text-slate-300 hover:text-white hover:bg-slate-700/50" onClick={() => setOpen(false)}>
-                  <X className="h-5 w-5" />
+                <Button variant="ghost" size="icon" className="text-slate-300 hover:text-white hover:bg-slate-700/50 h-7 w-7" onClick={() => setOpen(false)}>
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
 
               {/* Branch Selector */}
-              <div className="px-3 py-2 border-b border-slate-700/50">
+              <div className="px-2 py-1.5 border-b border-slate-700/50">
                 <BranchSelectorDialog />
               </div>
 
               {/* Navigation */}
-              <nav className="flex-grow py-3 px-2 overflow-y-auto">
-                <ul className="space-y-1.5">
+              <nav className="flex-grow py-2 px-1.5 overflow-y-auto">
+                <ul className="space-y-1">
                   {navItems.map((item, index) => (
                     <li key={item.path || `group-${index}`}>
                       {item.children ? (
-                        <div className="mb-2">
-                          <div className="flex items-center px-3 py-2 text-sm font-medium text-slate-300">
-                            <span className="mr-2.5">{item.icon}</span>
+                        <div className="mb-1.5">
+                          <div className="flex items-center px-2 py-1.5 text-xs font-medium text-slate-300">
+                            <span className="mr-2 scale-75">{item.icon}</span>
                             <span>{item.label}</span>
                           </div>
-                          <ul className="mt-1 space-y-1">
+                          <ul className="mt-0.5 space-y-0.5">
                             {item.children.map((child) => (
                               <li key={child.path}>
                                 <Link href={child.path || ""}>
                                   <a
                                     className={cn(
-                                      "flex items-center px-3 py-2 ml-4 rounded-lg text-sm transition-all duration-200",
+                                      "flex items-center px-2 py-1.5 ml-3 rounded-md text-xs transition-all duration-200",
                                       location === child.path
                                         ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/10"
                                         : "text-slate-400 hover:text-white hover:bg-slate-700/50"
                                     )}
                                     onClick={() => setOpen(false)}
                                   >
-                                    <span className="mr-2.5">{child.icon}</span>
+                                    <span className="mr-2 scale-75">{child.icon}</span>
                                     <span>{child.label}</span>
                                   </a>
                                 </Link>
@@ -140,14 +140,14 @@ export function MobileNavbar() {
                         <Link href={item.path || ""}>
                           <a
                             className={cn(
-                              "flex items-center px-3 py-2.5 rounded-lg text-sm transition-all duration-200",
+                              "flex items-center px-2 py-2 rounded-md text-xs transition-all duration-200",
                               location === item.path
                                 ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/10"
                                 : "text-slate-300 hover:text-white hover:bg-slate-700/50"
                             )}
                             onClick={() => setOpen(false)}
                           >
-                            <span className="mr-2.5">{item.icon}</span>
+                            <span className="mr-2 scale-75">{item.icon}</span>
                             <span>{item.label}</span>
                           </a>
                         </Link>
@@ -158,13 +158,14 @@ export function MobileNavbar() {
               </nav>
 
               {/* Footer */}
-              <div className="p-3 border-t border-slate-700/50">
+              <div className="p-2 border-t border-slate-700/50">
                 <Button
                   variant="ghost"
-                  className="flex items-center w-full justify-start text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
+                  size="sm"
+                  className="flex items-center w-full justify-start text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 h-8 text-xs"
                   onClick={handleLogout}
                 >
-                  <LogOut className="h-5 w-5 mr-2.5" />
+                  <LogOut className="h-4 w-4 mr-2 scale-75" />
                   <span>{t('sidebar.logout')}</span>
                 </Button>
               </div>

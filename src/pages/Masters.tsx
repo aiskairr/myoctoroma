@@ -1791,39 +1791,39 @@ const Masters: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto py-6 px-3 sm:py-10 sm:px-4 lg:px-8">
+    <div className="container mx-auto py-4 px-2 sm:py-8 sm:px-3 lg:px-6">
       {/* Header */}
-      <Card className="rounded-xl shadow-lg mb-6 sm:mb-8">
-        <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-xl p-3 sm:p-6">
-          <div className="flex flex-col gap-3 sm:gap-4">
-            <CardTitle className="flex items-center gap-2 sm:gap-3 text-lg sm:text-xl lg:text-2xl">
-              <User className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8" />
+      <Card className="rounded-xl shadow-lg mb-4 sm:mb-6">
+        <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-xl p-2 sm:p-4">
+          <div className="flex flex-col gap-2 sm:gap-3">
+            <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg lg:text-xl">
+              <User className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
               {t('masters.page_title')}
             </CardTitle>
-            <div className="flex flex-col gap-2 w-full">
+            <div className="flex flex-col gap-1.5 w-full">
               <Button
                 onClick={() => setIsAddDialogOpen(true)}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/20 w-full justify-center text-sm"
+                className="bg-white/20 hover:bg-white/30 text-white border-white/20 w-full justify-center text-xs"
                 variant="outline"
                 size="sm"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-3 w-3 mr-1.5" />
                 <span>{t('masters.add_master')}</span>
               </Button>
               <Button
                 onClick={() => setIsAddAdministratorDialogOpen(true)}
                 variant="outline"
-                className="border-white/20 text-white hover:bg-white/10 bg-white/5 w-full justify-center text-sm"
+                className="border-white/20 text-white hover:bg-white/10 bg-white/5 w-full justify-center text-xs"
                 size="sm"
               >
-                <User className="h-4 w-4 mr-2" />
+                <User className="h-3 w-3 mr-1.5" />
                 <span>{t('masters.add_administrator')}</span>
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-3 sm:p-4 lg:p-6">
-          <div className="text-sm text-gray-600">
+        <CardContent className="p-2 sm:p-3 lg:p-4">
+          <div className="text-xs text-gray-600">
             {t('masters.management_description')}
           </div>
         </CardContent>
@@ -1838,14 +1838,14 @@ const Masters: React.FC = () => {
           {t('masters.loading_error')}
         </div>
       ) : !masters || masters.length === 0 ? (
-        <div className="bg-gray-50 p-6 sm:p-8 rounded-lg text-center my-8 border border-gray-200">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">{t('masters.no_masters_title')}</h3>
-          <p className="text-sm sm:text-base text-gray-500 mb-4">
+        <div className="bg-gray-50 p-4 sm:p-6 rounded-lg text-center my-6 border border-gray-200">
+          <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-1.5">{t('masters.no_masters_title')}</h3>
+          <p className="text-xs sm:text-sm text-gray-500 mb-3">
             {t('masters.no_masters_description')}
           </p>
           <Button
             onClick={() => setIsAddDialogOpen(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />

@@ -198,23 +198,23 @@ export default function ReportPage() {
   const totals = calculateTotals();
 
   return (
-    <div className="container mx-auto p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 lg:space-y-6">
+    <div className="container mx-auto p-2 sm:p-3 lg:p-4 space-y-2 sm:space-y-3 lg:space-y-4">
       {/* Header */}
       <Card className="rounded-xl shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-xl p-3 sm:p-4 lg:p-6">
-          <CardTitle className="flex items-center gap-2 text-base sm:text-xl lg:text-2xl">
-            <Calendar className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8" />
+        <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-xl p-2 sm:p-3 lg:p-4">
+          <CardTitle className="flex items-center gap-1.5 text-sm sm:text-base lg:text-xl">
+            <Calendar className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
             {t('report.page_title')}
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-3 sm:p-4 lg:p-6">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2 w-full">
-              <label className="text-xs sm:text-sm font-medium">{t('report.branch')}:</label>
+        <CardContent className="p-2 sm:p-3 lg:p-4">
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5 w-full">
+              <label className="text-[9px] sm:text-xs font-medium">{t('report.branch')}:</label>
               <select
                 value={selectedBranch}
                 onChange={(e) => setSelectedBranch(e.target.value)}
-                className="px-2 py-1.5 sm:px-3 sm:py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm w-full"
+                className="px-1.5 py-1 sm:px-2 sm:py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-[9px] sm:text-xs w-full"
               >
                 {branches.map((branch) => (
                   <option key={branch.id} value={branch.id.toString()}>
@@ -224,24 +224,24 @@ export default function ReportPage() {
               </select>
             </div>
             
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs sm:text-sm font-medium">{t('report.period_from')}:</label>
+            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[9px] sm:text-xs font-medium">{t('report.period_from')}:</label>
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="px-2 py-1.5 sm:px-3 sm:py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm w-full"
+                  className="px-1.5 py-1 sm:px-2 sm:py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-[9px] sm:text-xs w-full"
                 />
               </div>
               
-              <div className="flex flex-col gap-2">
-                <label className="text-xs sm:text-sm font-medium">{t('report.period_to')}:</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[9px] sm:text-xs font-medium">{t('report.period_to')}:</label>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="px-2 py-1.5 sm:px-3 sm:py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm w-full"
+                  className="px-1.5 py-1 sm:px-2 sm:py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-[9px] sm:text-xs w-full"
                 />
               </div>
             </div>
@@ -250,7 +250,7 @@ export default function ReportPage() {
               onClick={setCurrentMonth}
               variant="outline"
               size="sm"
-              className="w-full text-xs sm:text-sm"
+              className="w-full text-[9px] sm:text-xs h-7"
             >
               {t('report.current_month')}
             </Button>
@@ -260,10 +260,10 @@ export default function ReportPage() {
 
       {/* Reports Table */}
       <Card className="rounded-xl shadow-lg">
-        <CardHeader className="p-3 sm:p-4 lg:p-6">
-          <CardTitle className="text-sm sm:text-base lg:text-lg">
+        <CardHeader className="p-2 sm:p-3 lg:p-4">
+          <CardTitle className="text-xs sm:text-sm lg:text-base">
             <span className="block">Отчеты за период</span>
-            <span className="block text-xs sm:text-sm font-normal text-gray-600 mt-1">
+            <span className="block text-[9px] sm:text-xs font-normal text-gray-600 mt-0.5">
               {startDate} - {endDate}
               {selectedBranch && ` • ${branches.find(b => b.id.toString() === selectedBranch)?.branches || selectedBranch}`}
             </span>
@@ -271,69 +271,69 @@ export default function ReportPage() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <div className="max-h-[500px] sm:max-h-[600px] overflow-y-auto">
-              <table className="w-full text-[10px] sm:text-xs lg:text-sm min-w-[1200px]">
+            <div className="max-h-[375px] sm:max-h-[450px] overflow-y-auto">
+              <table className="w-full text-[8px] sm:text-[9px] lg:text-xs min-w-[900px]">
                 <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-700 border-b">{t('report.date')}</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.total_revenue')}</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.expenses')}</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.income')}</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.cash_balance')}</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.optima')}</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.mbank')}</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.mbusiness')}</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.demir')}</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.bakai')}</th>
-                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.obank')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.collection')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.salary_payments')}</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">{t('report.notes')}</th>
+                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-left font-medium text-gray-700 border-b">{t('report.date')}</th>
+                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right font-medium text-gray-700 border-b">{t('report.total_revenue')}</th>
+                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right font-medium text-gray-700 border-b">{t('report.expenses')}</th>
+                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right font-medium text-gray-700 border-b">{t('report.income')}</th>
+                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right font-medium text-gray-700 border-b">{t('report.cash_balance')}</th>
+                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right font-medium text-gray-700 border-b">{t('report.optima')}</th>
+                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right font-medium text-gray-700 border-b">{t('report.mbank')}</th>
+                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right font-medium text-gray-700 border-b">{t('report.mbusiness')}</th>
+                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right font-medium text-gray-700 border-b">{t('report.demir')}</th>
+                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right font-medium text-gray-700 border-b">{t('report.bakai')}</th>
+                  <th className="px-1.5 sm:px-3 py-1.5 sm:py-2 text-right font-medium text-gray-700 border-b">{t('report.obank')}</th>
+                  <th className="px-2 py-1.5 text-right font-medium text-gray-700 border-b">{t('report.collection')}</th>
+                  <th className="px-2 py-1.5 text-right font-medium text-gray-700 border-b">{t('report.salary_payments')}</th>
+                  <th className="px-3 py-2 text-left font-medium text-gray-700 border-b">{t('report.notes')}</th>
                 </tr>
               </thead>
               <tbody>
                 {reports.map((report, index) => (
                   <tr key={report.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-4 py-3 border-b">
+                    <td className="px-3 py-2 border-b">
                       {new Date(report.date).toLocaleDateString('ru-RU')}
                     </td>
-                    <td className="px-4 py-3 text-right border-b text-green-600 font-medium">
+                    <td className="px-3 py-2 text-right border-b text-green-600 font-medium">
                       {(report.total_revenue || 0).toLocaleString()} {t('report.som')}
                     </td>
-                    <td className="px-4 py-3 text-right border-b text-red-600 font-medium">
+                    <td className="px-3 py-2 text-right border-b text-red-600 font-medium">
                       {(report.petty_expenses || 0).toLocaleString()} {t('report.som')}
                     </td>
-                    <td className="px-4 py-3 text-right border-b font-bold">
+                    <td className="px-3 py-2 text-right border-b font-bold">
                       {(report.total_income || 0).toLocaleString()} {t('report.som')}
                     </td>
-                    <td className="px-4 py-3 text-right border-b">
+                    <td className="px-3 py-2 text-right border-b">
                       {(report.end_balance || 0).toLocaleString()} {t('report.som')}
                     </td>
-                    <td className="px-4 py-3 text-right border-b">
+                    <td className="px-3 py-2 text-right border-b">
                       {(report.optima_payments || 0).toLocaleString()} {t('report.som')}
                     </td>
-                    <td className="px-4 py-3 text-right border-b">
+                    <td className="px-3 py-2 text-right border-b">
                       {(report.mbank_payments || 0).toLocaleString()} {t('report.som')}
                     </td>
-                    <td className="px-4 py-3 text-right border-b">
+                    <td className="px-3 py-2 text-right border-b">
                       {(report.mbusiness_payments || 0).toLocaleString()} {t('report.som')}
                     </td>
-                    <td className="px-4 py-3 text-right border-b">
+                    <td className="px-3 py-2 text-right border-b">
                       {(report.demir_payments || 0).toLocaleString()} {t('report.som')}
                     </td>
-                    <td className="px-4 py-3 text-right border-b">
+                    <td className="px-3 py-2 text-right border-b">
                       {(report.bakai_payments || 0).toLocaleString()} {t('report.som')}
                     </td>
-                    <td className="px-4 py-3 text-right border-b">
+                    <td className="px-3 py-2 text-right border-b">
                       {(report.obank_payments || 0).toLocaleString()} {t('report.som')}
                     </td>
-                    <td className="px-4 py-3 text-right border-b">
+                    <td className="px-3 py-2 text-right border-b">
                       {(report.cash_collection || 0).toLocaleString()} {t('report.som')}
                     </td>
-                    <td className="px-4 py-3 text-right border-b text-purple-600 font-medium">
+                    <td className="px-3 py-2 text-right border-b text-purple-600 font-medium">
                       {(report.salary_payments || 0).toLocaleString()} {t('report.som')}
                     </td>
-                    <td className="px-4 py-3 border-b text-xs text-gray-600">
+                    <td className="px-3 py-2 border-b text-[9px] text-gray-600">
                       {report.notes || '-'}
                     </td>
                   </tr>
@@ -341,54 +341,54 @@ export default function ReportPage() {
                 
                 {/* Totals Row */}
                 <tr className="bg-blue-50 font-bold">
-                  <td className="px-4 py-3 border-b font-bold">{t('report.total')}</td>
-                  <td className="px-4 py-3 text-right border-b text-green-600">
+                  <td className="px-3 py-2 border-b font-bold">{t('report.total')}</td>
+                  <td className="px-3 py-2 text-right border-b text-green-600">
                     {totals.totalRevenue.toLocaleString()} {t('report.som')}
                   </td>
-                  <td className="px-4 py-3 text-right border-b text-red-600">
+                  <td className="px-3 py-2 text-right border-b text-red-600">
                     {totals.totalExpenses.toLocaleString()} {t('report.som')}
                   </td>
-                  <td className="px-4 py-3 text-right border-b">
+                  <td className="px-3 py-2 text-right border-b">
                     {totals.totalIncome.toLocaleString()} {t('report.som')}
                   </td>
-                  <td className="px-4 py-3 text-right border-b">
+                  <td className="px-3 py-2 text-right border-b">
                     {totals.totalCash.toLocaleString()} {t('report.som')}
                   </td>
-                  <td className="px-4 py-3 text-right border-b">
+                  <td className="px-3 py-2 text-right border-b">
                     {totals.totalOptima.toLocaleString()} {t('report.som')}
                   </td>
-                  <td className="px-4 py-3 text-right border-b">
+                  <td className="px-3 py-2 text-right border-b">
                     {totals.totalMBank.toLocaleString()} {t('report.som')}
                   </td>
-                  <td className="px-4 py-3 text-right border-b">
+                  <td className="px-3 py-2 text-right border-b">
                     {totals.totalMBusiness.toLocaleString()} {t('report.som')}
                   </td>
-                  <td className="px-4 py-3 text-right border-b">
+                  <td className="px-3 py-2 text-right border-b">
                     {totals.totalDemir.toLocaleString()} {t('report.som')}
                   </td>
-                  <td className="px-4 py-3 text-right border-b">
+                  <td className="px-3 py-2 text-right border-b">
                     {totals.totalBakai.toLocaleString()} {t('report.som')}
                   </td>
-                  <td className="px-4 py-3 text-right border-b">
+                  <td className="px-3 py-2 text-right border-b">
                     {totals.totalOBank.toLocaleString()} {t('report.som')}
                   </td>
-                  <td className="px-4 py-3 text-right border-b">
+                  <td className="px-3 py-2 text-right border-b">
                     {totals.totalCollection.toLocaleString()} {t('report.som')}
                   </td>
-                  <td className="px-4 py-3 text-right border-b text-purple-600">
+                  <td className="px-3 py-2 text-right border-b text-purple-600">
                     {totals.totalSalaryPayments.toLocaleString()} {t('report.som')}
                   </td>
-                  <td className="px-4 py-3 border-b"></td>
+                  <td className="px-3 py-2 border-b"></td>
                 </tr>
               </tbody>
             </table>
             </div>
             
             {reports.length === 0 && (
-              <div className="text-center py-8 sm:py-12 text-gray-500">
-                <Calendar className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-base sm:text-lg">{t('report.no_data')}</p>
-                <p className="text-xs sm:text-sm">{t('report.no_data_hint')}</p>
+              <div className="text-center py-6 sm:py-9 text-gray-500">
+                <Calendar className="h-9 w-9 sm:h-12 sm:w-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-xs sm:text-sm">{t('report.no_data')}</p>
+                <p className="text-[9px] sm:text-xs">{t('report.no_data_hint')}</p>
               </div>
             )}
           </div>
