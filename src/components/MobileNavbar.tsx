@@ -3,7 +3,6 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "../contexts/SimpleAuthContext";
 import { useLocale } from '@/contexts/LocaleContext';
 import {
-  LayoutDashboard,
   Users,
   Settings as SettingsIcon,
   LogOut,
@@ -15,7 +14,9 @@ import {
   Calculator,
   DollarSign,
   Gift,
-  MessageCircle
+  MessageCircle,
+  HelpCircle,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LocaleToggle } from '@/components/ui/locale-toggle';
@@ -43,7 +44,7 @@ export function MobileNavbar() {
   };
 
   const navItems = [
-    { path: "/", label: t('sidebar.dashboard'), icon: <LayoutDashboard className="h-5 w-5" /> },
+    { path: "/", label: t('sidebar.how_to_use'), icon: <HelpCircle className="h-5 w-5" /> },
     { path: "/clients", label: t('sidebar.clients'), icon: <Users className="h-5 w-5" /> },
     { path: "/chats", label: t('sidebar.chats'), icon: <MessageCircle className="h-5 w-5" /> },
     {
@@ -51,7 +52,8 @@ export function MobileNavbar() {
       icon: <FileClock className="h-5 w-5" />,
       children: [
         { path: "/crm/calendar", label: t('sidebar.calendar'), icon: <CalendarDays className="h-5 w-5" /> },
-        { path: "/crm/masters", label: t('sidebar.masters'), icon: <UserRound className="h-5 w-5" /> }
+        { path: "/crm/masters", label: t('sidebar.masters'), icon: <UserRound className="h-5 w-5" /> },
+        { path: "/services", label: t('sidebar.services'), icon: <Sparkles className="h-5 w-5" /> }
       ]
     },
     { path: "/accounting", label: t('sidebar.accounting'), icon: <Calculator className="h-5 w-5" /> },
@@ -61,10 +63,12 @@ export function MobileNavbar() {
   ];
 
   return (
-    <div className="bg-background border-b shadow-sm px-4 py-3 flex items-center justify-between sticky top-0 z-50">
+    <div className="bg-gradient-to-r from-slate-900 to-slate-800 border-b border-slate-700/50 shadow-lg px-3 py-2.5 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-2">
-        <img width={20} height={10} src={LOGO} alt="logo" />
-        <h1 className="font-medium text-lg">Octō CRM</h1>
+        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-1.5 rounded-lg shadow-md">
+          <img width={16} height={8} src={LOGO} alt="logo" />
+        </div>
+        <h1 className="font-bold text-base bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Octō CRM</h1>
         <LocaleToggle />
       </div>
 
@@ -73,34 +77,42 @@ export function MobileNavbar() {
 
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="text-slate-300 hover:text-white hover:bg-slate-700/50">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[85vw] sm:w-[350px] p-0">
+          <SheetContent side="left" className="w-[390px] p-0 bg-gradient-to-b from-slate-900 to-slate-800 border-slate-700/50">
             <div className="flex flex-col h-full">
-              <div className="p-4 flex items-center justify-between border-b bg-gradient-to-r from-primary/5 to-primary/10">
+              {/* Header */}
+              <div className="p-4 flex items-center justify-between border-b border-slate-700/50">
                 <div className="flex items-center gap-2">
-                  <img width={32} height={32} src={LOGO} alt="Octō CRM Logo" className="h-8 w-auto" />
-                  <h1 className="font-semibold text-lg">Octō CRM</h1>
+                  <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl shadow-lg">
+                    <img width={20} height={10} src={LOGO} alt="Octō CRM Logo" />
+                  </div>
+                  <div>
+                    <h1 className="font-bold text-lg bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Octō CRM</h1>
+                    <p className="text-slate-400 text-xs">{t('sidebar.admin_panel')}</p>
+                  </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
+                <Button variant="ghost" size="icon" className="text-slate-300 hover:text-white hover:bg-slate-700/50" onClick={() => setOpen(false)}>
                   <X className="h-5 w-5" />
                 </Button>
               </div>
 
-              <div className="mt-4 mb-2 px-4">
+              {/* Branch Selector */}
+              <div className="px-3 py-2 border-b border-slate-700/50">
                 <BranchSelectorDialog />
               </div>
 
-              <nav className="flex-grow py-2 overflow-y-auto">
-                <ul className="space-y-1">
+              {/* Navigation */}
+              <nav className="flex-grow py-3 px-2 overflow-y-auto">
+                <ul className="space-y-1.5">
                   {navItems.map((item, index) => (
                     <li key={item.path || `group-${index}`}>
                       {item.children ? (
                         <div className="mb-2">
-                          <div className="flex items-center px-4 py-2 text-sm font-medium text-muted-foreground">
-                            <span className="mr-3">{item.icon}</span>
+                          <div className="flex items-center px-3 py-2 text-sm font-medium text-slate-300">
+                            <span className="mr-2.5">{item.icon}</span>
                             <span>{item.label}</span>
                           </div>
                           <ul className="mt-1 space-y-1">
@@ -109,14 +121,14 @@ export function MobileNavbar() {
                                 <Link href={child.path || ""}>
                                   <a
                                     className={cn(
-                                      "flex items-center px-4 py-2.5 mx-2 rounded-lg text-sm transition-all duration-200",
+                                      "flex items-center px-3 py-2 ml-4 rounded-lg text-sm transition-all duration-200",
                                       location === child.path
-                                        ? "text-primary bg-primary/10 font-medium shadow-sm"
-                                        : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/10"
+                                        : "text-slate-400 hover:text-white hover:bg-slate-700/50"
                                     )}
                                     onClick={() => setOpen(false)}
                                   >
-                                    <span className="mr-3">{child.icon}</span>
+                                    <span className="mr-2.5">{child.icon}</span>
                                     <span>{child.label}</span>
                                   </a>
                                 </Link>
@@ -128,14 +140,14 @@ export function MobileNavbar() {
                         <Link href={item.path || ""}>
                           <a
                             className={cn(
-                              "flex items-center px-4 py-3 mx-2 rounded-lg text-sm transition-all duration-200",
+                              "flex items-center px-3 py-2.5 rounded-lg text-sm transition-all duration-200",
                               location === item.path
-                                ? "text-primary bg-primary/10 font-medium shadow-sm"
-                                : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/10"
+                                : "text-slate-300 hover:text-white hover:bg-slate-700/50"
                             )}
                             onClick={() => setOpen(false)}
                           >
-                            <span className="mr-3">{item.icon}</span>
+                            <span className="mr-2.5">{item.icon}</span>
                             <span>{item.label}</span>
                           </a>
                         </Link>
@@ -145,13 +157,14 @@ export function MobileNavbar() {
                 </ul>
               </nav>
 
-              <div className="p-4 border-t mt-auto bg-muted/30">
+              {/* Footer */}
+              <div className="p-3 border-t border-slate-700/50">
                 <Button
                   variant="ghost"
-                  className="flex items-center w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
+                  className="flex items-center w-full justify-start text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
                   onClick={handleLogout}
                 >
-                  <LogOut className="h-5 w-5 mr-3" />
+                  <LogOut className="h-5 w-5 mr-2.5" />
                   <span>{t('sidebar.logout')}</span>
                 </Button>
               </div>

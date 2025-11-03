@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { apiGetJson } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -198,48 +198,59 @@ export default function ReportPage() {
   const totals = calculateTotals();
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 lg:space-y-6">
       {/* Header */}
       <Card className="rounded-xl shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-xl">
-          <CardTitle className="flex items-center gap-3 text-2xl">
-            <Calendar className="h-8 w-8" />
+        <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-xl p-3 sm:p-4 lg:p-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-xl lg:text-2xl">
+            <Calendar className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8" />
             {t('report.page_title')}
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4 flex-wrap">
-            <label className="text-sm font-medium">{t('report.branch')}:</label>
-            <select
-              value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value)}
-              className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {branches.map((branch) => (
-                <option key={branch.id} value={branch.id.toString()}>
-                  {branch.branches}
-                </option>
-              ))}
-            </select>
-            <label className="text-sm font-medium">{t('report.period_from')}:</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <label className="text-sm font-medium">{t('report.period_to')}:</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+        <CardContent className="p-3 sm:p-4 lg:p-6">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2 w-full">
+              <label className="text-xs sm:text-sm font-medium">{t('report.branch')}:</label>
+              <select
+                value={selectedBranch}
+                onChange={(e) => setSelectedBranch(e.target.value)}
+                className="px-2 py-1.5 sm:px-3 sm:py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm w-full"
+              >
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id.toString()}>
+                    {branch.branches}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs sm:text-sm font-medium">{t('report.period_from')}:</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="px-2 py-1.5 sm:px-3 sm:py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm w-full"
+                />
+              </div>
+              
+              <div className="flex flex-col gap-2">
+                <label className="text-xs sm:text-sm font-medium">{t('report.period_to')}:</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="px-2 py-1.5 sm:px-3 sm:py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm w-full"
+                />
+              </div>
+            </div>
+            
             <Button 
               onClick={setCurrentMonth}
               variant="outline"
               size="sm"
-              className="ml-2"
+              className="w-full text-xs sm:text-sm"
             >
               {t('report.current_month')}
             </Button>
@@ -249,33 +260,32 @@ export default function ReportPage() {
 
       {/* Reports Table */}
       <Card className="rounded-xl shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-lg">
-            Отчеты за период с {startDate} по {endDate}
-            <span className="text-sm font-normal text-gray-600 ml-2">
-              {selectedBranch ? 
-                `• ${branches.find(b => b.id.toString() === selectedBranch)?.branches || selectedBranch}` : 
-                '• Все филиалы'
-              }
+        <CardHeader className="p-3 sm:p-4 lg:p-6">
+          <CardTitle className="text-sm sm:text-base lg:text-lg">
+            <span className="block">Отчеты за период</span>
+            <span className="block text-xs sm:text-sm font-normal text-gray-600 mt-1">
+              {startDate} - {endDate}
+              {selectedBranch && ` • ${branches.find(b => b.id.toString() === selectedBranch)?.branches || selectedBranch}`}
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto max-h-[600px] relative">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 sticky top-0 z-10">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">{t('report.date')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.total_revenue')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.expenses')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.income')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.cash_balance')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.optima')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.mbank')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.mbusiness')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.demir')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.bakai')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.obank')}</th>
+          <div className="overflow-x-auto">
+            <div className="max-h-[500px] sm:max-h-[600px] overflow-y-auto">
+              <table className="w-full text-[10px] sm:text-xs lg:text-sm min-w-[1200px]">
+                <thead className="bg-gray-50 sticky top-0 z-10">
+                  <tr>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-left font-medium text-gray-700 border-b">{t('report.date')}</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.total_revenue')}</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.expenses')}</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.income')}</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.cash_balance')}</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.optima')}</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.mbank')}</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.mbusiness')}</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.demir')}</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.bakai')}</th>
+                  <th className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-gray-700 border-b">{t('report.obank')}</th>
                   <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.collection')}</th>
                   <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.salary_payments')}</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">{t('report.notes')}</th>
@@ -372,12 +382,13 @@ export default function ReportPage() {
                 </tr>
               </tbody>
             </table>
+            </div>
             
             {reports.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg">{t('report.no_data')}</p>
-                <p className="text-sm">{t('report.no_data_hint')}</p>
+              <div className="text-center py-8 sm:py-12 text-gray-500">
+                <Calendar className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-base sm:text-lg">{t('report.no_data')}</p>
+                <p className="text-xs sm:text-sm">{t('report.no_data_hint')}</p>
               </div>
             )}
           </div>

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, User, Clock, EditIcon, X, Plus, CalendarDays, Camera } from "lucide-react";
+import { Loader2, User, Clock, EditIcon, X, Plus, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MasterWorkingDatesManager from "@/components/MasterWorkingDatesManager";
 import MasterWorkingDatesDisplay from "@/components/MasterWorkingDatesDisplay";
@@ -685,12 +685,12 @@ const MasterCard: React.FC<{
         </div>
       </CardContent>
       <CardFooter className="pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2 sm:gap-3 w-full">
           <Button
             variant="outline"
             size="sm"
             onClick={onEditClick}
-            className="text-gray-600 border-gray-200 hover:bg-gray-50 min-w-[100px] text-sm"
+            className="text-gray-600 border-gray-200 hover:bg-gray-50 flex-1 sm:flex-initial sm:min-w-[100px] text-sm"
           >
             <EditIcon className="h-4 w-4 mr-2" />
             {t('masters.configure')}
@@ -699,7 +699,7 @@ const MasterCard: React.FC<{
             variant="destructive"
             size="sm"
             onClick={onDeleteClick}
-            className="bg-red-600 hover:bg-red-700 min-w-[100px] text-sm"
+            className="bg-red-600 hover:bg-red-700 flex-1 sm:flex-initial sm:min-w-[100px] text-sm"
           >
             <X className="h-4 w-4 mr-2" />
             {t('masters.delete_action')}
@@ -1242,12 +1242,12 @@ const AdministratorCard: React.FC<{
           )}
         </div>
       </CardContent>
-      <CardFooter className="pt-3 border-t border-gray-100 flex justify-between">
+      <CardFooter className="pt-3 border-t border-gray-100 flex flex-wrap gap-2 sm:gap-3 w-full">
         <Button
           variant="outline"
           size="sm"
           onClick={onEditClick}
-          className="text-gray-600 border-gray-200 hover:bg-gray-50"
+          className="text-gray-600 border-gray-200 hover:bg-gray-50 flex-1 sm:flex-initial"
         >
           <EditIcon className="h-4 w-4 mr-2" />
           {t('masters.change')}
@@ -1256,7 +1256,7 @@ const AdministratorCard: React.FC<{
           variant="destructive"
           size="sm"
           onClick={onDeleteClick}
-          className="bg-red-600 hover:bg-red-700"
+          className="bg-red-600 hover:bg-red-700 flex-1 sm:flex-initial"
         >
           <X className="h-4 w-4 mr-2" />
           {t('masters.delete_action')}
@@ -1791,51 +1791,38 @@ const Masters: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
+    <div className="container mx-auto py-6 px-3 sm:py-10 sm:px-4 lg:px-8">
       {/* Header */}
-      <Card className="rounded-xl shadow-lg mb-8">
-        <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-xl">
-          <div className="flex justify-between items-center">
-            <CardTitle className="flex items-center gap-3 text-2xl">
-              <User className="h-8 w-8" />
+      <Card className="rounded-xl shadow-lg mb-6 sm:mb-8">
+        <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-xl p-3 sm:p-6">
+          <div className="flex flex-col gap-3 sm:gap-4">
+            <CardTitle className="flex items-center gap-2 sm:gap-3 text-lg sm:text-xl lg:text-2xl">
+              <User className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8" />
               {t('masters.page_title')}
             </CardTitle>
-            <div className="flex gap-3">
-              <Dialog open={isAddAdministratorDialogOpen} onOpenChange={setIsAddAdministratorDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="border-white/20 text-white hover:bg-white/10 bg-white/5"
-                  >
-                    <User className="h-4 w-4 mr-2" />
-                    {t('masters.add_administrator')}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
-                  <DialogHeader>
-                    <DialogTitle className="text-xl font-semibold text-gray-900">{t('masters.add_administrator')}</DialogTitle>
-                    <DialogDescription className="text-gray-500">
-                      {t('masters.fill_admin_data')}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <AdministratorFormSimple
-                    onSubmit={handleAddAdministrator}
-                    isPending={createAdministratorMutation.isPending}
-                  />
-                </DialogContent>
-              </Dialog>
+            <div className="flex flex-col gap-2 w-full">
               <Button
                 onClick={() => setIsAddDialogOpen(true)}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/20"
+                className="bg-white/20 hover:bg-white/30 text-white border-white/20 w-full justify-center text-sm"
                 variant="outline"
+                size="sm"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                {t('masters.add_master')}
+                <span>{t('masters.add_master')}</span>
+              </Button>
+              <Button
+                onClick={() => setIsAddAdministratorDialogOpen(true)}
+                variant="outline"
+                className="border-white/20 text-white hover:bg-white/10 bg-white/5 w-full justify-center text-sm"
+                size="sm"
+              >
+                <User className="h-4 w-4 mr-2" />
+                <span>{t('masters.add_administrator')}</span>
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent className="p-3 sm:p-4 lg:p-6">
           <div className="text-sm text-gray-600">
             {t('masters.management_description')}
           </div>
@@ -1851,21 +1838,22 @@ const Masters: React.FC = () => {
           {t('masters.loading_error')}
         </div>
       ) : !masters || masters.length === 0 ? (
-        <div className="bg-gray-50 p-8 rounded-lg text-center my-8 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('masters.no_masters_title')}</h3>
-          <p className="text-gray-500 mb-4">
+        <div className="bg-gray-50 p-6 sm:p-8 rounded-lg text-center my-8 border border-gray-200">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">{t('masters.no_masters_title')}</h3>
+          <p className="text-sm sm:text-base text-gray-500 mb-4">
             {t('masters.no_masters_description')}
           </p>
           <Button
             onClick={() => setIsAddDialogOpen(true)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
-            {t('masters.add_master')}
+            <span className="text-sm">{t('masters.add_master')}</span>
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
           {masters.map((master: Master) => (
             <MasterCard
               key={master.id}
@@ -1880,10 +1868,10 @@ const Masters: React.FC = () => {
         </div>
       )}
 
-      <div className="mt-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('masters.administrators')}</h2>
+      <div className="mt-8 sm:mt-12">
+        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-3 sm:mb-4 lg:mb-6">{t('masters.administrators')}</h2>
         {administrators && administrators.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
             {administrators.map((administrator: Administrator) => (
               <AdministratorCard
                 key={administrator.id}
@@ -1894,28 +1882,45 @@ const Masters: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="bg-indigo-50 p-8 rounded-lg text-center my-8 border border-indigo-200">
-            <h3 className="text-lg font-semibold text-indigo-900 mb-2">{t('masters.no_administrators_title')}</h3>
-            <p className="text-indigo-700 mb-4">
+          <div className="bg-indigo-50 p-6 sm:p-8 rounded-lg text-center my-8 border border-indigo-200">
+            <h3 className="text-base sm:text-lg font-semibold text-indigo-900 mb-2">{t('masters.no_administrators_title')}</h3>
+            <p className="text-sm sm:text-base text-indigo-700 mb-4">
               {t('masters.no_administrators_description')}
             </p>
             <Button
               onClick={() => setIsAddAdministratorDialogOpen(true)}
               variant="outline"
               className="border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+              size="sm"
             >
               <User className="h-4 w-4 mr-2" />
-              {t('masters.add_administrator')}
+              <span className="text-sm">{t('masters.add_administrator')}</span>
             </Button>
           </div>
         )}
       </div>
 
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
+      {/* Add Administrator Dialog */}
+      <Dialog open={isAddAdministratorDialogOpen} onOpenChange={setIsAddAdministratorDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-[650px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-gray-900">{t('masters.add_new_master')}</DialogTitle>
-            <DialogDescription className="text-gray-500">
+            <DialogTitle className="text-lg sm:text-xl font-semibold text-gray-900">{t('masters.add_administrator')}</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500">
+              {t('masters.fill_admin_data')}
+            </DialogDescription>
+          </DialogHeader>
+          <AdministratorFormSimple
+            onSubmit={handleAddAdministrator}
+            isPending={createAdministratorMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-[650px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg sm:text-xl font-semibold text-gray-900">{t('masters.add_new_master')}</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500">
               {t('masters.add_master_description')}
             </DialogDescription>
           </DialogHeader>
@@ -1927,7 +1932,7 @@ const Masters: React.FC = () => {
       </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-2xl">
+        <DialogContent className="w-[95vw] max-w-[750px] max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-gray-900">{t('masters.edit_master')}</DialogTitle>
             <DialogDescription className="text-gray-500">
