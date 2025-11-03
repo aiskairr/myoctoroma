@@ -160,8 +160,25 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
     return date >= monthStart && date <= monthEnd;
   });
 
-  // Получаем массив дат для выделения в календаре
-  const workingDays = workingDatesInMonth.map(wd => new Date(wd.date));
+  // Получаем массив дат для выделения в календаре - включаем ВСЕ рабочие дни, не только текущего месяца
+  const workingDays = workingDates
+    .filter(wd => wd.date) // Убеждаемся что дата существует
+    .map(wd => {
+      const date = new Date(wd.date);
+      // Устанавливаем время на полдень для избежания проблем с часовыми поясами
+      date.setHours(12, 0, 0, 0);
+      return date;
+    });
+
+  // Отладочное логирование
+  useEffect(() => {
+    console.log('📅 Working days for calendar highlighting:', {
+      workingDatesCount: workingDates.length,
+      workingDaysCount: workingDays.length,
+      workingDates: workingDates.map(wd => wd.date),
+      workingDaysFormatted: workingDays.map(d => format(d, 'yyyy-MM-dd'))
+    });
+  }, [workingDates, workingDays]);
 
   const handleAddWorkingDate = async (e?: React.MouseEvent) => {
     if (e) {
@@ -384,14 +401,21 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                 }}
                 modifiersStyles={{
                   working: { 
-                    backgroundColor: 'hsl(var(--primary))', 
-                    color: 'hsl(var(--primary-foreground))' 
+                    backgroundColor: 'rgb(34 197 94)', // green-500
+                    color: 'white',
+                    fontWeight: '600',
+                    borderRadius: '0.375rem'
                   },
                   selected: {
-                    backgroundColor: 'hsl(var(--secondary))',
-                    color: 'hsl(var(--secondary-foreground))',
-                    fontWeight: 'bold'
+                    backgroundColor: 'rgb(59 130 246)', // blue-500
+                    color: 'white',
+                    fontWeight: 'bold',
+                    borderRadius: '0.375rem'
                   }
+                }}
+                modifiersClassNames={{
+                  working: 'bg-green-500 text-white font-semibold hover:bg-green-600',
+                  selected: 'bg-blue-500 text-white font-bold hover:bg-blue-600'
                 }}
               />
               {selectedDates.length > 0 && (
@@ -406,6 +430,17 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                   </div>
                 </div>
               )}
+              {/* Легенда для календаря */}
+              <div className="mt-3 p-2 bg-gray-50 rounded text-xs space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-green-500 rounded"></div>
+                  <span className="text-gray-700">Рабочий день</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                  <span className="text-gray-700">Выбранная дата</span>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
