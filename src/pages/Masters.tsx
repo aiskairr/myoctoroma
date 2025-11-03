@@ -100,26 +100,10 @@ const MasterForm: React.FC<{
     createAccount: false
   });
 
-  const [workingDates, setWorkingDates] = useState<WorkingDate[]>(master?.workingDates || []);
-
+  // workingDates больше НЕ нужны - компонент MasterWorkingDatesManager автономен
+  
   // Прогресс заполнения формы
   const [formProgress, setFormProgress] = useState(0);
-
-  // Загрузка рабочих дат при редактировании, если они не предоставлены
-  const { data: fetchedWorkingDates, isLoading: isLoadingDates } = useQuery({
-    queryKey: ['working-dates', master?.id],
-    queryFn: async () => {
-      if (!master) return [];
-      return await apiGetJson(`/api/masters/${master.id}/working-dates`);
-    },
-    enabled: !!master && (!master.workingDates || master.workingDates.length === 0),
-  });
-
-  useEffect(() => {
-    if (fetchedWorkingDates) {
-      setWorkingDates(fetchedWorkingDates);
-    }
-  }, [fetchedWorkingDates]);
 
   // Обновление прогресса заполнения формы
   useEffect(() => {
@@ -195,10 +179,9 @@ const MasterForm: React.FC<{
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // При редактировании мастера НЕ отправляем рабочие даты - они управляются отдельно через MasterWorkingDatesManager
-    // При создании нового мастера отправляем рабочие даты (если есть)
+    // При создании нового мастера рабочие даты будут пустыми - они управляются через отдельный компонент
     const combinedData = {
       ...formData,
-      ...(master?.id ? {} : { workingDates }),
       ...(accountData.createAccount && {
         createAccount: true,
         accountEmail: accountData.email,
@@ -208,13 +191,7 @@ const MasterForm: React.FC<{
     onSubmit(combinedData);
   };
 
-  const handleWorkingDatesChange = (newWorkingDates: WorkingDate[]) => {
-    setWorkingDates(newWorkingDates);
-  };
-
-  if (isLoadingDates) {
-    return <div className="flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-  }
+  // handleWorkingDatesChange больше не нужен - компонент MasterWorkingDatesManager автономен
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
@@ -391,10 +368,9 @@ const MasterForm: React.FC<{
       <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <h3 className="text-xl font-semibold text-gray-900">{t('masters.working_days_hours')}</h3>
         <Separator />
+        {/* Компонент теперь АВТОНОМЕН - управляет своими данными независимо от родителя */}
         <MasterWorkingDatesManager
-          workingDates={workingDates}
-          onWorkingDatesChange={handleWorkingDatesChange}
-          masterId={master?.id}
+          masterId={master?.id!}
         />
       </div>
 

@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Trash2, Plus, Loader2 } from "lucide-react";
+import { Trash2, Plus, Loader2, RefreshCw } from "lucide-react";
 import { format, addMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ru } from "date-fns/locale";
 import { useBranch } from "@/contexts/BranchContext";
@@ -30,55 +30,110 @@ interface ServerWorkingDate {
 }
 
 interface MasterWorkingDatesManagerProps {
-  workingDates: WorkingDate[];
-  onWorkingDatesChange: (dates: WorkingDate[]) => void;
-  masterId?: number; // Добавляем ID мастера для загрузки данных с сервера
+  masterId: number; // ID мастера - единственный обязательный проп
 }
 
 const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
-  workingDates,
-  onWorkingDatesChange,
   masterId
 }) => {
   const { branches, currentBranch } = useBranch();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { t } = useLocale();
+  
+  // ЛОКАЛЬНОЕ СОСТОЯНИЕ - компонент автономен и управляет своими данными
+  const [workingDates, setWorkingDates] = useState<WorkingDate[]>([]);
+  
+  // Генерируем уникальный ключ для принудительного обновления календаря
+  const [calendarKey, setCalendarKey] = useState(Date.now());
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [selectedWorkingDatesToDelete, setSelectedWorkingDatesToDelete] = useState<Set<string>>(new Set());
   const [startTime, setStartTime] = useState('07:00');
   const [endTime, setEndTime] = useState('23:59');
   const [viewMonth, setViewMonth] = useState(new Date());
 
+  // Функция принудительного обновления календаря
+  const forceRefreshCalendar = () => {
+    setCalendarKey(Date.now());
+    console.log('🔄 Force refresh calendar with key:', Date.now());
+  };
+
   // Загружаем рабочие дни с сервера, если передан masterId
-  const { data: serverWorkingDates, isLoading: isLoadingServerDates } = useQuery<ServerWorkingDate[]>({
+  // ВАЖНО: refetchOnMount='always' гарантирует загрузку свежих данных при каждом открытии диалога
+  const { data: serverWorkingDates, isLoading: isLoadingServerDates, refetch: refetchWorkingDates } = useQuery<ServerWorkingDate[]>({
     queryKey: ['working-dates', masterId],
     queryFn: async () => {
       if (!masterId) return [];
+      console.log('🔄 Fetching working dates for master:', masterId);
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates`);
       if (!response.ok) {
         throw new Error('Failed to fetch working dates');
       }
-      return response.json();
+      const data = await response.json();
+      console.log('✅ Fetched working dates:', data);
+      return data;
     },
     enabled: !!masterId,
+    refetchOnMount: 'always', // Всегда перезагружать при монтировании
+    refetchOnWindowFocus: false, // Не перезагружать при фокусе окна (избегаем лишних запросов)
+    staleTime: 0, // Данные всегда считаются устаревшими
   });
 
   // Функция конвертации данных с сервера в локальный формат
   const convertServerToLocalFormat = (serverDates: ServerWorkingDate[]): WorkingDate[] => {
-    return serverDates.map(date => ({
-      date: format(new Date(date.work_date), 'yyyy-MM-dd'),
-      startTime: date.start_time,
-      endTime: date.end_time,
-      branchId: date.branch_id
-    }));
+    return serverDates.map(date => {
+      // Парсим дату из ISO формата "2025-11-06T00:00:00.000Z"
+      const workDate = new Date(date.work_date);
+      
+      // Форматируем в yyyy-MM-dd используя UTC методы для корректности
+      const year = workDate.getUTCFullYear();
+      const month = String(workDate.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(workDate.getUTCDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+      
+      console.log('📅 Converting server date:', {
+        original: date.work_date,
+        parsed: workDate.toISOString(),
+        formatted: dateString
+      });
+      
+      return {
+        date: dateString,
+        startTime: date.start_time,
+        endTime: date.end_time,
+        branchId: date.branch_id
+      };
+    });
   };
+
+  // CRITICAL: Принудительно загружаем данные при монтировании компонента
+  useEffect(() => {
+    if (masterId) {
+      console.log('🚀 Component mounted, fetching working dates for master:', masterId);
+      refetchWorkingDates();
+    }
+  }, [masterId, refetchWorkingDates]);
 
   // Обновляем локальные данные при получении данных с сервера
   useEffect(() => {
     if (serverWorkingDates && masterId) {
+      console.log('📥 Raw server data received:', serverWorkingDates);
+      
       const convertedDates = convertServerToLocalFormat(serverWorkingDates);
-      onWorkingDatesChange(convertedDates);
+      
+      console.log('✅ Server data converted:', {
+        rawCount: serverWorkingDates.length,
+        convertedCount: convertedDates.length,
+        dates: convertedDates.map(d => d.date)
+      });
+      
+      // Обновляем ЛОКАЛЬНОЕ состояние - компонент автономен
+      setWorkingDates(convertedDates);
+      
+      // Принудительно обновляем календарь при получении новых данных
+      forceRefreshCalendar();
+      
+      console.log('✅ Calendar refreshed with server data');
     }
   }, [serverWorkingDates, masterId]);
 
@@ -104,6 +159,11 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
       }
 
       return response.json();
+    },
+    onSuccess: () => {
+      console.log('✅ Working date created, refetching from server...');
+      // Принудительно перезагружаем данные с сервера
+      refetchWorkingDates();
     },
     onError: (error: Error) => {
       console.error('Failed to save working date:', error);
@@ -139,8 +199,9 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
         variant: "default",
       });
 
-      // Обновляем данные с сервера
-      queryClient.invalidateQueries({ queryKey: ['working-dates', masterId] });
+      console.log('✅ Working date deleted, refetching from server...');
+      // Принудительно перезагружаем данные с сервера
+      refetchWorkingDates();
     },
     onError: (error: Error) => {
       toast({
@@ -160,25 +221,54 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
     return date >= monthStart && date <= monthEnd;
   });
 
-  // Получаем массив дат для выделения в календаре - включаем ВСЕ рабочие дни, не только текущего месяца
-  const workingDays = workingDates
-    .filter(wd => wd.date) // Убеждаемся что дата существует
-    .map(wd => {
-      const date = new Date(wd.date);
-      // Устанавливаем время на полдень для избежания проблем с часовыми поясами
-      date.setHours(12, 0, 0, 0);
-      return date;
+  // Мемоизируем workingDays для стабильности и производительности
+  const workingDays = useMemo(() => {
+    console.log('🔄 Recalculating workingDays with:', {
+      workingDatesCount: workingDates.length,
+      calendarKey,
+      workingDatesRaw: workingDates
     });
+    
+    const days = workingDates
+      .filter(wd => wd.date) // Убеждаемся что дата существует
+      .map(wd => {
+        // Парсим строку формата "YYYY-MM-DD"
+        const [year, month, day] = wd.date.split('-').map(Number);
+        
+        // Создаем Date объект используя UTC для избежания проблем с часовыми поясами
+        const date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+        
+        console.log('📅 Converting working date:', {
+          original: wd.date,
+          parsed: date.toISOString(),
+          dateString: date.toDateString()
+        });
+        
+        return date;
+      });
+    
+    console.log('✅ Working days memoized:', {
+      totalWorkingDates: workingDates.length,
+      totalWorkingDays: days.length,
+      dates: days.map(d => d.toISOString().split('T')[0]),
+      calendarKey
+    });
+    
+    return days;
+  }, [workingDates, calendarKey]); // Зависим от calendarKey для принудительного обновления
 
   // Отладочное логирование
   useEffect(() => {
-    console.log('📅 Working days for calendar highlighting:', {
+    console.log('� Working days state update:', {
       workingDatesCount: workingDates.length,
       workingDaysCount: workingDays.length,
-      workingDates: workingDates.map(wd => wd.date),
-      workingDaysFormatted: workingDays.map(d => format(d, 'yyyy-MM-dd'))
+      workingDatesRaw: workingDates,
+      workingDaysFormatted: workingDays.map(d => d.toISOString().split('T')[0]),
+      workingDaysISO: workingDays.map(d => d.toISOString()),
+      calendarKey,
+      timestamp: new Date().toISOString()
     });
-  }, [workingDates, workingDays]);
+  }, [workingDates, workingDays, calendarKey]);
 
   const handleAddWorkingDate = async (e?: React.MouseEvent) => {
     if (e) {
@@ -218,10 +308,15 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
       // Обновляем данные с сервера
       queryClient.invalidateQueries({ queryKey: ['working-dates', masterId] });
       
+      // Принудительно обновляем календарь
+      forceRefreshCalendar();
+      
       // Сброс формы
       setSelectedDates([]);
       setStartTime('07:00');
       setEndTime('23:59');
+      
+      console.log('✅ Working days added successfully, calendar refreshed');
     } catch (error) {
       toast({
         title: "Ошибка при сохранении",
@@ -297,6 +392,11 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
       });
       
       setSelectedWorkingDatesToDelete(new Set());
+      
+      // Принудительно обновляем календарь
+      forceRefreshCalendar();
+      
+      console.log('✅ Multiple working days deleted, calendar refreshed');
     } catch (error) {
       toast({
         title: "Ошибка",
@@ -388,8 +488,22 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
             </div>
 
             <div>
-              <Label>{t('masters.select_dates_instruction')}</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label>{t('masters.select_dates_instruction')}</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={forceRefreshCalendar}
+                  className="h-7 px-2 text-xs"
+                  title="Принудительно обновить календарь"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Обновить
+                </Button>
+              </div>
               <Calendar
+                key={`calendar-${calendarKey}-${workingDays.length}`}
                 mode="multiple"
                 selected={selectedDates}
                 onSelect={(dates) => setSelectedDates(dates || [])}
@@ -439,6 +553,12 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-blue-500 rounded"></div>
                   <span className="text-gray-700">Выбранная дата</span>
+                </div>
+                {/* Отладочная информация */}
+                <div className="pt-2 border-t border-gray-200 text-[10px] text-gray-500">
+                  <div>Рабочих дней: {workingDays.length}</div>
+                  <div>Ключ календаря: {calendarKey}</div>
+                  <div>Обновлен: {new Date().toLocaleTimeString()}</div>
                 </div>
               </div>
             </div>
