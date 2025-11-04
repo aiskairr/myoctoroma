@@ -45,6 +45,7 @@ interface Master {
   name: string;
   specialty?: string;
   description?: string;
+  phoneNumber?: string; // Номер телефона для WhatsApp уведомлений
   isActive: boolean;
   startWorkHour: string;
   endWorkHour: string;
@@ -89,6 +90,7 @@ const MasterForm: React.FC<{
     name: master?.name || '',
     specialty: master?.specialty || '',
     description: master?.description || '',
+    phoneNumber: master?.phoneNumber || '',
     isActive: master?.isActive ?? true,
     startWorkHour: master?.startWorkHour || '09:00',
     endWorkHour: master?.endWorkHour || '20:00',
@@ -240,6 +242,25 @@ const MasterForm: React.FC<{
               className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
               placeholder={t('masters.specialty_placeholder')}
             />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="phoneNumber" className="col-span-1 text-sm font-medium text-gray-700">
+              📲 {t('masters.phone_number')}
+            </Label>
+            <div className="col-span-3 space-y-2">
+              <Input
+                id="phoneNumber"
+                name="phoneNumber"
+                type="tel"
+                value={formData.phoneNumber}
+                onChange={handleChange}
+                className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                placeholder="+996701234567 или 0701234567"
+              />
+              <p className="text-xs text-gray-500">
+                💬 Для WhatsApp уведомлений о новых записях (опционально)
+              </p>
+            </div>
           </div>
           <div className="grid grid-cols-4 items-start gap-4">
             <Label htmlFor="description" className="col-span-1 pt-2 text-sm font-medium text-gray-700">
@@ -652,6 +673,13 @@ const MasterCard: React.FC<{
               {master.startWorkHour} - {master.endWorkHour}
             </span>
           </div>
+          {master.phoneNumber && (
+            <div className="flex items-center text-sm text-gray-600">
+              <span className="mr-2">📲</span>
+              <span className="font-medium">{master.phoneNumber}</span>
+              <span className="ml-2 text-xs text-green-600">WhatsApp</span>
+            </div>
+          )}
           <MasterWorkingDatesDisplay masterId={master.id} masterName={master.name} />
           {master.description && (
             <p className="text-sm text-gray-500 line-clamp-3">
