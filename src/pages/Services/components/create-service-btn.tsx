@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -63,9 +62,7 @@ const CreateServiceBtn = () => {
         },
     });
 
-    const watchedInstanceId = watch('instanceId');
     const watchedDefaultDuration = watch('defaultDuration');
-    const watchedIsActive = watch('isActive');
 
     useEffect(() => {
         if (isOpen && branches.length > 0) {
@@ -183,23 +180,10 @@ const CreateServiceBtn = () => {
                             {...register('description')}
                         />
                     </div>
-                    <div className="space-y-2">
-                        <Label className="text-sm font-medium text-gray-700">{t('services.branch')}</Label>
-                        <Select
-                            value={watchedInstanceId}
-                            onValueChange={(value) => setValue('instanceId', value)}
-                        >
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder={t('services.select_branch')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {branches.map((branch) => (
-                                    <SelectItem key={branch.id} value={branch.id.toString()}>
-                                        {branch.branches}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="text-sm font-medium text-blue-900">
+                            {t('services.branch')}: <strong>{currentBranch?.branches || t('services.branch_not_selected')}</strong>
+                        </div>
                     </div>
                     <div className="space-y-2">
                         <Label className="text-sm font-medium text-gray-700">{t('services.default_duration')}</Label>
@@ -218,13 +202,6 @@ const CreateServiceBtn = () => {
                                 ))}
                             </SelectContent>
                         </Select>
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium text-gray-700">{t('services.active')}</Label>
-                        <Switch
-                            checked={watchedIsActive}
-                            onCheckedChange={(checked) => setValue('isActive', checked)}
-                        />
                     </div>
                     <div className="flex justify-end gap-3">
                         <Button type="button" variant="outline" onClick={handleClose}>

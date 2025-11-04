@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Check, Trash2, Eye, Pen } from 'lucide-react';
+import { Check, Trash2, Eye, Settings, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiGet, apiPut, apiDelete } from '@/lib/api';
 import { useBranch } from '@/contexts/BranchContext';
@@ -15,21 +14,21 @@ import { getBranchIdWithFallback } from '@/utils/branch-utils';
 import { useLocale } from '@/contexts/LocaleContext';
 
 const TIME_COLUMNS = [10, 15, 20, 30, 40, 50, 60, 75, 80, 90, 110, 120, 150, 220] as const;
-type TimeColumn = (typeof TIME_COLUMNS)[number];
 
 const ServicesTable: React.FC = () => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const { branches, currentBranch } = useBranch();
     const { t } = useLocale();
-    const branchID = currentBranch?.id;
     const [editingServices, setEditingServices] = useState<Record<number, any>>({});
-    const [editingCell, setEditingCell] = useState<string | null>(null);
-    const [editValue, setEditValue] = useState<string>('');
+    const [searchQuery, setSearchQuery] = useState<string>('');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
+    const [durationDialogOpen, setDurationDialogOpen] = useState(false);
     const [serviceToDelete, setServiceToDelete] = useState<number | null>(null);
     const [serviceToView, setServiceToView] = useState<any | null>(null);
+    const [serviceToConfigureDurations, setServiceToConfigureDurations] = useState<any | null>(null);
+    const [tempDurations, setTempDurations] = useState<Record<string, number | null>>({});
 
     const branchOptions = [
         ...branches.map(branch => ({ id: branch.id.toString(), name: branch.branches }))
@@ -66,6 +65,20 @@ const ServicesTable: React.FC = () => {
             setEditingServices(initialState);
         }
     }, [services]);
+
+    // Фильтрация услуг по поисковому запросу
+    const filteredServices = React.useMemo(() => {
+        if (!searchQuery.trim()) {
+            return services;
+        }
+        
+        const query = searchQuery.toLowerCase();
+        return services.filter((service) => {
+            const name = service.name?.toLowerCase() || '';
+            const description = service.description?.toLowerCase() || '';
+            return name.includes(query) || description.includes(query);
+        });
+    }, [services, searchQuery]);
 
     const updateMutation = useMutation({
         mutationFn: async (service: any) => {
@@ -131,30 +144,6 @@ const ServicesTable: React.FC = () => {
         }));
     };
 
-    const handleCellClick = (serviceId: number, timeColumn: TimeColumn) => {
-        const service = editingServices[serviceId] || services.find((s) => s.id === serviceId);
-        if (!service) return;
-        const price = service[`duration${timeColumn}_price` as keyof any] || 0;
-        setEditingCell(`${serviceId}-${timeColumn}`);
-        setEditValue(price.toString());
-    };
-
-    const handleCellSave = (serviceId: number, timeColumn: TimeColumn) => {
-        const newPrice = parseInt(editValue) || null;
-        handleInputChange(serviceId, `duration${timeColumn}_price` as keyof any, newPrice);
-        setEditingCell(null);
-        setEditValue('');
-    };
-
-    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>, serviceId: number, timeColumn: TimeColumn) => {
-        if (e.key === 'Enter') {
-            handleCellSave(serviceId, timeColumn);
-        } else if (e.key === 'Escape') {
-            setEditingCell(null);
-            setEditValue('');
-        }
-    };
-
     const handleSaveService = (serviceId: number) => {
         const service = editingServices[serviceId];
         if (service) {
@@ -180,6 +169,47 @@ const ServicesTable: React.FC = () => {
         setViewDialogOpen(true);
     };
 
+    const handleConfigureDurations = (service: any) => {
+        setServiceToConfigureDurations(service);
+        // Инициализируем временные длительности
+        const durations: Record<string, number | null> = {};
+        TIME_COLUMNS.forEach((time) => {
+            durations[`duration${time}_price`] = service[`duration${time}_price`] || null;
+        });
+        setTempDurations(durations);
+        setDurationDialogOpen(true);
+    };
+
+    const handleDurationChange = (field: string, value: string) => {
+        setTempDurations((prev) => ({
+            ...prev,
+            [field]: value === '' ? null : Number(value)
+        }));
+    };
+
+    const handleSaveDurations = () => {
+        if (serviceToConfigureDurations) {
+            // Обновляем editingServices с новыми длительностями
+            setEditingServices((prev) => ({
+                ...prev,
+                [serviceToConfigureDurations.id]: {
+                    ...prev[serviceToConfigureDurations.id],
+                    ...tempDurations
+                }
+            }));
+            
+            // Сохраняем на сервер
+            const updatedService = {
+                ...editingServices[serviceToConfigureDurations.id],
+                ...tempDurations
+            };
+            updateMutation.mutate(updatedService);
+            
+            setDurationDialogOpen(false);
+            setServiceToConfigureDurations(null);
+        }
+    };
+
     const getBranchName = (branchID: string | null) => {
         const branch = branchOptions.find((b) => b.id === branchID);
         return branch ? branch.name : t('services.not_specified');
@@ -195,7 +225,35 @@ const ServicesTable: React.FC = () => {
 
     return (
         <>
-            <Card className="w-full p-4">
+            {/* Поле поиска */}
+            <div className="mb-4 px-2">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input
+                        type="text"
+                        placeholder={t('services.search_placeholder')}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 pr-4 py-2 w-full text-base"
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                            ✕
+                        </button>
+                    )}
+                </div>
+                {searchQuery && (
+                    <div className="mt-2 text-sm text-gray-600">
+                        {t('services.found_results', { count: filteredServices.length.toString() })}
+                    </div>
+                )}
+            </div>
+
+            {/* Десктопная и планшетная версия - таблица */}
+            <Card className="w-full p-4 hidden md:block">
                 <div className="overflow-x-auto max-h-[calc(100vh-200px)]">
                     <table className="w-full border-collapse rounded-xl relative">
                         <thead>
@@ -203,19 +261,12 @@ const ServicesTable: React.FC = () => {
                                 {/* Закрепленная угловая ячейка - название услуги */}
                                 <th className="min-w-[180px] border border-gray-300 px-4 py-3 text-left text-base font-semibold sticky left-0 top-0 z-40 bg-gray-50 shadow-sm">{t('services.name')}</th>
                                 <th className="min-w-[140px] border border-gray-300 px-4 py-3 text-left text-base font-semibold sticky top-0 z-10 bg-gray-50">{t('services.description')}</th>
-                                <th className="min-w-[120px] border border-gray-300 px-4 py-3 text-left text-base font-semibold sticky top-0 z-10 bg-gray-50">{t('services.branch')}</th>
                                 <th className="min-w-[140px] border border-gray-300 px-4 py-3 text-left text-base font-semibold sticky top-0 z-10 bg-gray-50">{t('services.duration')}</th>
-                                <th className="min-w-[100px] text-center border border-gray-300 px-4 py-3 text-base font-semibold sticky top-0 z-10 bg-gray-50">{t('services.active')}</th>
-                                {TIME_COLUMNS.map((time) => (
-                                    <th key={time} className="min-w-[90px] text-center border border-gray-300 px-4 py-3 text-base font-semibold sticky top-0 z-10 bg-gray-50">
-                                        {time} {t('services.minutes')}
-                                    </th>
-                                ))}
-                                <th className="min-w-[140px] text-center border border-gray-300 px-4 py-3 text-base font-semibold sticky top-0 z-10 bg-gray-50">{t('services.actions')}</th>
+                                <th className="min-w-[200px] text-center border border-gray-300 px-4 py-3 text-base font-semibold sticky top-0 z-10 bg-gray-50">{t('services.actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {services.map((service, index) => {
+                            {filteredServices.map((service, index) => {
                                 const editingService = editingServices[service.id] || service;
                                 return (
                                     <tr key={service.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -237,23 +288,6 @@ const ServicesTable: React.FC = () => {
                                         </td>
                                         <td className="border border-gray-300 px-4 py-3">
                                             <Select
-                                                value={editingService.branchID || ''}
-                                                onValueChange={(value) => handleInputChange(service.id, 'branchID', value)}
-                                            >
-                                                <SelectTrigger className="border-0 shadow-none p-2 text-base bg-transparent focus:ring-1 focus:ring-blue-500 min-w-[150px]">
-                                                    <SelectValue placeholder={t('services.select_branch')} />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {branchOptions.map((branch) => (
-                                                        <SelectItem key={branch.id} value={branch.id}>
-                                                            {branch.name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </td>
-                                        <td className="border border-gray-300 px-4 py-3">
-                                            <Select
                                                 value={editingService.defaultDuration.toString()}
                                                 onValueChange={(value) => handleInputChange(service.id, 'defaultDuration', parseInt(value))}
                                             >
@@ -269,41 +303,15 @@ const ServicesTable: React.FC = () => {
                                                 </SelectContent>
                                             </Select>
                                         </td>
-                                        <td className="text-center border border-gray-300 px-4 py-3">
-                                            <Switch
-                                                checked={editingService.isActive}
-                                                onCheckedChange={(checked) => handleInputChange(service.id, 'isActive', checked)}
-                                            />
-                                        </td>
-                                        {TIME_COLUMNS.map((time) => {
-                                            const cellKey = `${service.id}-${time}`;
-                                            const isEditing = editingCell === cellKey;
-                                            const price = editingService[`duration${time}_price` as keyof any] || 0;
-
-                                            return (
-                                                <td key={time} className="text-center border border-gray-300 px-4 py-3">
-                                                    {isEditing ? (
-                                                        <Input
-                                                            value={editValue}
-                                                            onChange={(e) => setEditValue(e.target.value)}
-                                                            onBlur={() => handleCellSave(service.id, time)}
-                                                            onKeyDown={(e) => handleKeyPress(e, service.id, time)}
-                                                            className="w-full text-center text-base font-medium border border-blue-500 focus:ring-2 focus:ring-blue-500 min-w-[80px]"
-                                                            autoFocus
-                                                        />
-                                                    ) : (
-                                                        <div
-                                                            onClick={() => handleCellClick(service.id, time)}
-                                                            className="cursor-pointer hover:bg-blue-100 rounded p-3 min-h-[40px] flex items-center justify-center transition-colors text-base font-medium"
-                                                        >
-                                                            {price > 0 ? `${price}` : <Pen width={15} height={15} strokeWidth={1} />}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            );
-                                        })}
                                         <td className="border border-gray-300 px-4 py-3">
-                                            <div className="flex gap-2 justify-center">
+                                            <div className="flex gap-2 justify-center flex-wrap">
+                                                <Button
+                                                    onClick={() => handleConfigureDurations(editingService)}
+                                                    className="inline-flex items-center justify-center h-9 px-3 border border-gray-300 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors"
+                                                >
+                                                    <Settings className="h-4 w-4 mr-1" />
+                                                    <span className="text-sm">{t('services.configure')}</span>
+                                                </Button>
                                                 <Button
                                                     onClick={() => handleSaveService(service.id)}
                                                     disabled={updateMutation.isPending}
@@ -332,8 +340,96 @@ const ServicesTable: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
-                {services.length === 0 && <div className="text-center py-8 text-gray-500">{t('services.no_services')}</div>}
+                {filteredServices.length === 0 && <div className="text-center py-8 text-gray-500">{searchQuery ? t('services.no_results') : t('services.no_services')}</div>}
             </Card>
+
+            {/* Мобильная версия (до 768px) - карточки */}
+            <div className="md:hidden space-y-3 p-2">
+                {filteredServices.length === 0 ? (
+                    <Card className="p-6">
+                        <div className="text-center text-gray-500">{searchQuery ? t('services.no_results') : t('services.no_services')}</div>
+                    </Card>
+                ) : (
+                    filteredServices.map((service) => {
+                        const editingService = editingServices[service.id] || service;
+                        return (
+                            <Card key={service.id} className="p-4 space-y-3 shadow-sm">
+                                {/* Название услуги */}
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-gray-500">{t('services.name')}</label>
+                                    <Input
+                                        value={editingService.name}
+                                        onChange={(e) => handleInputChange(service.id, 'name', e.target.value)}
+                                        className="text-base font-medium"
+                                    />
+                                </div>
+
+                                {/* Описание */}
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-gray-500">{t('services.description')}</label>
+                                    <Input
+                                        value={editingService.description || ''}
+                                        onChange={(e) => handleInputChange(service.id, 'description', e.target.value)}
+                                        placeholder={t('services.description')}
+                                        className="text-sm"
+                                    />
+                                </div>
+
+                                {/* Длительность */}
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-gray-500">{t('services.duration')}</label>
+                                    <Select
+                                        value={editingService.defaultDuration.toString()}
+                                        onValueChange={(value) => handleInputChange(service.id, 'defaultDuration', parseInt(value))}
+                                    >
+                                        <SelectTrigger className="text-sm">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {TIME_COLUMNS.map((time) => (
+                                                <SelectItem key={time} value={time.toString()}>
+                                                    {time} {t('services.minutes')}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Кнопки действий */}
+                                <div className="flex flex-wrap gap-2 pt-2">
+                                    <Button
+                                        onClick={() => handleConfigureDurations(editingService)}
+                                        className="flex-1 bg-blue-600 text-white hover:bg-blue-700 text-sm h-9"
+                                    >
+                                        <Settings className="h-4 w-4 mr-1" />
+                                        {t('services.configure')}
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleSaveService(service.id)}
+                                        disabled={updateMutation.isPending}
+                                        className="h-9 w-9 p-0 bg-white border border-gray-300 hover:bg-gray-50"
+                                    >
+                                        <Check className="h-4 w-4 text-gray-700" />
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleDeleteService(service.id)}
+                                        disabled={deleteMutation.isPending}
+                                        className="h-9 w-9 p-0 bg-white border border-gray-300 text-red-600 hover:bg-red-50"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleViewService(editingService)}
+                                        className="h-9 w-9 p-0 bg-white border border-gray-300 hover:bg-gray-50"
+                                    >
+                                        <Eye className="h-4 w-4 text-gray-700" />
+                                    </Button>
+                                </div>
+                            </Card>
+                        );
+                    })
+                )}
+            </div>
 
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertDialogContent>
@@ -398,6 +494,65 @@ const ServicesTable: React.FC = () => {
                                         return null;
                                     })}
                                 </div>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Диалог настройки длительностей */}
+            <Dialog open={durationDialogOpen} onOpenChange={setDurationDialogOpen}>
+                <DialogContent className="w-[95vw] sm:max-w-[700px] max-h-[90vh] overflow-y-auto" aria-describedby="duration-config-description">
+                    <DialogHeader>
+                        <DialogTitle className="text-lg sm:text-xl">{t('services.configure_durations')}</DialogTitle>
+                        <DialogDescription id="duration-config-description" className="text-sm">
+                            {t('services.configure_durations_desc')}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {serviceToConfigureDurations && (
+                        <div className="space-y-4">
+                            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <p className="text-xs sm:text-sm font-medium text-gray-700">
+                                    {t('services.configuring_for')}: <span className="font-bold">{serviceToConfigureDurations.name}</span>
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                {TIME_COLUMNS.map((time) => {
+                                    const field = `duration${time}_price`;
+                                    const price = tempDurations[field];
+                                    return (
+                                        <div key={time} className="space-y-2">
+                                            <label className="text-xs sm:text-sm font-medium text-gray-700">
+                                                {time} {t('services.minutes')}
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                value={price || ''}
+                                                onChange={(e) => handleDurationChange(field, e.target.value)}
+                                                placeholder="0"
+                                                className="text-sm sm:text-base"
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setDurationDialogOpen(false)}
+                                    className="w-full sm:w-auto"
+                                >
+                                    {t('common.cancel')}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={handleSaveDurations}
+                                    disabled={updateMutation.isPending}
+                                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+                                >
+                                    {updateMutation.isPending ? t('common.saving') : t('common.save')}
+                                </Button>
                             </div>
                         </div>
                     )}
