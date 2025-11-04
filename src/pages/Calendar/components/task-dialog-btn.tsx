@@ -27,6 +27,8 @@ import { useLocale } from "@/contexts/LocaleContext";
 interface PaymentMethod {
   value: string;
   label: string;
+  bank?: string; // Название банка для группировки
+  type?: 'cash' | 'transfer' | 'pos' | 'gift_certificate'; // Тип оплаты
   icon: string;
   description: string;
 }
@@ -106,91 +108,121 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         },
     });
 
-    // Доступные способы оплаты
+    // Доступные способы оплаты (группированные)
     const paymentMethods: PaymentMethod[] = [
+        // Наличные
         {
             value: "cash",
             label: t('calendar.payment_cash'),
+            type: 'cash',
             icon: "💰",
             description: t('calendar.payment_cash_desc')
         },
+        // Переводы
         {
             value: "mbank_transfer",
             label: t('calendar.payment_mbank_transfer'),
+            bank: "МБанк",
+            type: 'transfer',
             icon: "🏦",
             description: t('calendar.payment_mbank_transfer_desc')
         },
         {
-            value: "mbank_pos",
-            label: t('calendar.payment_mbank_pos'),
-            icon: "💳",
-            description: t('calendar.payment_mbank_pos_desc')
-        },
-        {
             value: "mbusiness_transfer",
             label: t('calendar.payment_mbusiness_transfer'),
+            bank: "МБизнес",
+            type: 'transfer',
             icon: "🏢",
             description: t('calendar.payment_mbusiness_transfer_desc')
         },
         {
-            value: "mbusiness_pos",
-            label: t('calendar.payment_mbusiness_pos'),
-            icon: "💳",
-            description: t('calendar.payment_mbusiness_pos_desc')
-        },
-        {
             value: "О!Банк - Перевод",
             label: "О!Банк - Перевод",
-            icon: "🔴",
+            bank: "О!Банк",
+            type: 'transfer',
+            icon: "�",
             description: "Банковский перевод через О!Банк"
-        },
-        {
-            value: "О!Банк - POS",
-            label: "О!Банк - POS",
-            icon: "💳",
-            description: "POS терминал О!Банк"
         },
         {
             value: "Демир - Перевод",
             label: "Демир - Перевод",
+            bank: "Демир",
+            type: 'transfer',
             icon: "🏗️",
             description: "Банковский перевод через Демир Банк"
         },
         {
-            value: "Демир - POS",
-            label: "Демир - POS",
-            icon: "💳",
-            description: "POS терминал Демир Банк"
-        },
-        {
             value: "Bakai - Перевод",
             label: "Bakai - Перевод",
+            bank: "Bakai",
+            type: 'transfer',
             icon: "🌊",
             description: "Банковский перевод через Bakai Банк"
         },
         {
+            value: "Оптима - Перевод",
+            label: "Оптима - Перевод",
+            bank: "Оптима",
+            type: 'transfer',
+            icon: "⚡",
+            description: "Банковский перевод через Оптима Банк"
+        },
+        // POS терминалы
+        {
+            value: "mbank_pos",
+            label: t('calendar.payment_mbank_pos'),
+            bank: "МБанк",
+            type: 'pos',
+            icon: "💳",
+            description: t('calendar.payment_mbank_pos_desc')
+        },
+        {
+            value: "mbusiness_pos",
+            label: t('calendar.payment_mbusiness_pos'),
+            bank: "МБизнес",
+            type: 'pos',
+            icon: "💳",
+            description: t('calendar.payment_mbusiness_pos_desc')
+        },
+        {
+            value: "О!Банк - POS",
+            label: "О!Банк - POS",
+            bank: "О!Банк",
+            type: 'pos',
+            icon: "💳",
+            description: "POS терминал О!Банк"
+        },
+        {
+            value: "Демир - POS",
+            label: "Демир - POS",
+            bank: "Демир",
+            type: 'pos',
+            icon: "💳",
+            description: "POS терминал Демир Банк"
+        },
+        {
             value: "Bakai - POS",
             label: "Bakai - POS",
+            bank: "Bakai",
+            type: 'pos',
             icon: "💳",
             description: "POS терминал Bakai Банк"
         },
         {
-            value: "Оптима - Перевод",
-            label: "Оптима - Перевод",
-            icon: "⚡",
-            description: "Банковский перевод через Оптима Банк"
-        },
-        {
             value: "Оптима - POS",
             label: "Оптима - POS",
+            bank: "Оптима",
+            type: 'pos',
             icon: "💳",
             description: "POS терминал Оптима Банк"
         },
+        // Подарочный сертификат
         {
-            value: "Подарочный Сертификат",
-            label: "Подарочный Сертификат",
+            value: "gift_certificate",
+            label: t('calendar.payment_gift_certificate'),
+            type: 'gift_certificate',
             icon: "🎁",
-            description: "Оплата подарочным сертификатом"
+            description: t('calendar.payment_gift_certificate_desc')
         }
     ];
 
@@ -957,7 +989,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 paymentMethod: selectedPaymentMethod,
                 dailyReport: calculateTotalPrice() - Math.round(calculateTotalPrice() * ((taskData?.discount || 0) / 100)),
                 adminName: selectedAdministrator,
-                isGiftCertificateUsed: selectedPaymentMethod === 'Подарочный Сертификат',
+                isGiftCertificateUsed: selectedPaymentMethod === 'gift_certificate' || selectedPaymentMethod === 'Подарочный Сертификат',
                 branchId: correctBranchId,
                 date: taskData?.scheduleDate || new Date().toISOString().split('T')[0]
             };
@@ -1829,27 +1861,115 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     </DialogHeader>
 
                     <div className="flex gap-6">
-                        {/* Левая колонка - способы оплаты */}
-                        <div className="flex-1">
+                        {/* Левая колонка - способы оплаты с группировкой */}
+                        <div className="flex-1 max-h-[500px] overflow-y-auto pr-2">
                             <h3 className="text-lg font-semibold mb-4">{t('task_dialog.payment_method_select')}</h3>
-                            <div className="space-y-2">
-                                {paymentMethods.map((method) => (
+                            
+                            {/* Наличные */}
+                            <div className="mb-4">
+                                <h4 className="text-sm font-medium text-gray-500 mb-2">💰 {t('calendar.payment_cash')}</h4>
+                                {paymentMethods.filter(m => m.type === 'cash').map((method) => (
                                     <div
                                         key={method.value}
                                         onClick={() => setSelectedPaymentMethod(method.value)}
-                                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${selectedPaymentMethod === method.value
-                                            ? 'border-amber-400 bg-amber-50'
-                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                            }`}
+                                        className={`p-4 border-2 rounded-xl cursor-pointer transition-all hover:shadow-md ${selectedPaymentMethod === method.value
+                                            ? 'border-green-500 bg-green-50 shadow-lg'
+                                            : 'border-gray-200 hover:border-green-300'
+                                        }`}
                                     >
                                         <div className="flex items-center gap-3">
-                                            <div className="text-2xl">
-                                                <PaymentMethodIcon paymentMethod={method.value} className="w-8 h-8" />
+                                            <div className="text-3xl">
+                                                <PaymentMethodIcon paymentMethod={method.value} className="w-12 h-12" />
                                             </div>
-                                            <div>
-                                                <div className="font-medium">{method.label}</div>
+                                            <div className="flex-1">
+                                                <div className="font-bold text-lg">{method.label}</div>
                                                 <div className="text-sm text-gray-600">{method.description}</div>
                                             </div>
+                                            {selectedPaymentMethod === method.value && (
+                                                <div className="text-green-600 text-2xl">✓</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Переводы */}
+                            <div className="mb-4">
+                                <h4 className="text-sm font-medium text-gray-500 mb-2">🏦 Банковские переводы</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {paymentMethods.filter(m => m.type === 'transfer').map((method) => (
+                                        <div
+                                            key={method.value}
+                                            onClick={() => setSelectedPaymentMethod(method.value)}
+                                            className={`p-3 border-2 rounded-xl cursor-pointer transition-all hover:shadow-md ${selectedPaymentMethod === method.value
+                                                ? 'border-blue-500 bg-blue-50 shadow-lg'
+                                                : 'border-gray-200 hover:border-blue-300'
+                                            }`}
+                                        >
+                                            <div className="flex flex-col items-center text-center gap-2">
+                                                <div className="w-16 h-16 flex items-center justify-center">
+                                                    <PaymentMethodIcon paymentMethod={method.value} className="w-14 h-14" />
+                                                </div>
+                                                <div className="font-semibold text-sm">{method.bank}</div>
+                                                {selectedPaymentMethod === method.value && (
+                                                    <div className="text-blue-600 text-xl">✓</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* POS терминалы */}
+                            <div className="mb-4">
+                                <h4 className="text-sm font-medium text-gray-500 mb-2">💳 POS Терминалы</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {paymentMethods.filter(m => m.type === 'pos').map((method) => (
+                                        <div
+                                            key={method.value}
+                                            onClick={() => setSelectedPaymentMethod(method.value)}
+                                            className={`p-3 border-2 rounded-xl cursor-pointer transition-all hover:shadow-md ${selectedPaymentMethod === method.value
+                                                ? 'border-purple-500 bg-purple-50 shadow-lg'
+                                                : 'border-gray-200 hover:border-purple-300'
+                                            }`}
+                                        >
+                                            <div className="flex flex-col items-center text-center gap-2">
+                                                <div className="w-16 h-16 flex items-center justify-center">
+                                                    <PaymentMethodIcon paymentMethod={method.value} className="w-14 h-14" />
+                                                </div>
+                                                <div className="font-semibold text-sm">{method.bank}</div>
+                                                {selectedPaymentMethod === method.value && (
+                                                    <div className="text-purple-600 text-xl">✓</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Подарочный сертификат */}
+                            <div className="mb-2">
+                                <h4 className="text-sm font-medium text-gray-500 mb-2">🎁 {t('calendar.payment_gift_certificate')}</h4>
+                                {paymentMethods.filter(m => m.type === 'gift_certificate').map((method) => (
+                                    <div
+                                        key={method.value}
+                                        onClick={() => setSelectedPaymentMethod(method.value)}
+                                        className={`p-4 border-2 rounded-xl cursor-pointer transition-all hover:shadow-md ${selectedPaymentMethod === method.value
+                                            ? 'border-amber-500 bg-amber-50 shadow-lg'
+                                            : 'border-gray-200 hover:border-amber-300'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-3xl">
+                                                <PaymentMethodIcon paymentMethod={method.value} className="w-12 h-12" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="font-bold text-lg">{method.label}</div>
+                                                <div className="text-sm text-gray-600">{method.description}</div>
+                                            </div>
+                                            {selectedPaymentMethod === method.value && (
+                                                <div className="text-amber-600 text-2xl">✓</div>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -1885,7 +2005,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
                                 {taskData.discount && taskData.discount > 0 && (
                                     <div className="flex justify-between text-green-600">
-                                        <span className="text-sm">{t('task_dialog.discount_payment', { discount: taskData.discount })}</span>
+                                        <span className="text-sm">{t('task_dialog.discount_payment', { discount: taskData.discount.toString() })}</span>
                                         <span className="text-sm">-{Math.round(calculateTotalPrice() * taskData.discount / 100)} сом</span>
                                     </div>
                                 )}

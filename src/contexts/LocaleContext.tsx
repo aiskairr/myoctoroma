@@ -1365,6 +1365,8 @@ const translations = {
     'calendar.payment_mbusiness_transfer_desc': 'Банковский перевод через МБизнес',
     'calendar.payment_mbusiness_pos': 'МБизнес - POS',
     'calendar.payment_mbusiness_pos_desc': 'POS терминал МБизнес',
+    'calendar.payment_gift_certificate': 'Подарочный сертификат',
+    'calendar.payment_gift_certificate_desc': 'Оплата подарочным сертификатом',
     
     // Task dialog actions
     'calendar.save': 'Сохранить',
@@ -3000,6 +3002,8 @@ const translations = {
     'calendar.payment_mbusiness_transfer_desc': 'МБизнес аркылуу банк которуу',
     'calendar.payment_mbusiness_pos': 'МБизнес - POS',
     'calendar.payment_mbusiness_pos_desc': 'МБизнес POS терминалы',
+    'calendar.payment_gift_certificate': 'Белек сертификаты',
+    'calendar.payment_gift_certificate_desc': 'Белек сертификаты менен төлөө',
     
     // Task dialog actions
     'calendar.save': 'Сактоо',
@@ -4635,6 +4639,8 @@ const translations = {
     'calendar.payment_mbusiness_transfer_desc': 'Bank transfer via MBusiness',
     'calendar.payment_mbusiness_pos': 'MBusiness - POS',
     'calendar.payment_mbusiness_pos_desc': 'MBusiness POS terminal',
+    'calendar.payment_gift_certificate': 'Gift Certificate',
+    'calendar.payment_gift_certificate_desc': 'Payment with gift certificate',
     
     // Task dialog actions
     'calendar.save': 'Save',
