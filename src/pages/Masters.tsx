@@ -8,11 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, User, Clock, EditIcon, X, Plus, Camera } from "lucide-react";
+import { Loader2, User, Clock, EditIcon, X, Plus, Camera, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MasterWorkingDatesManager from "@/components/MasterWorkingDatesManager";
 import MasterWorkingDatesDisplay from "@/components/MasterWorkingDatesDisplay";
 import MasterWorkingDatesCalendar from "@/components/MasterWorkingDatesCalendar";
+import MasterStoriesDialog from "@/components/MasterStoriesDialog";
 import { useBranch } from "@/contexts/BranchContext";
 import { useLocale } from "@/contexts/LocaleContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -714,16 +715,25 @@ const MasterCard: React.FC<{
             variant="outline"
             size="sm"
             onClick={onEditClick}
-            className="text-gray-600 border-gray-200 hover:bg-gray-50 flex-1 sm:flex-initial sm:min-w-[100px] text-sm"
+            className="bg-green-600 hover:bg-green-700 text-white border-none flex-1 sm:flex-initial sm:min-w-[100px] text-sm"
           >
             <EditIcon className="h-4 w-4 mr-2" />
             {t('masters.configure')}
           </Button>
           <Button
-            variant="destructive"
+            variant="outline"
+            size="sm"
+            onClick={onScheduleClick}
+            className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-none hover:from-indigo-600 hover:to-purple-700 flex-1 sm:flex-initial sm:min-w-[100px] text-sm"
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            Stories
+          </Button>
+          <Button
+            variant="outline"
             size="sm"
             onClick={onDeleteClick}
-            className="bg-red-600 hover:bg-red-700 flex-1 sm:flex-initial sm:min-w-[100px] text-sm"
+            className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50 flex-1 sm:flex-initial sm:min-w-[100px] text-sm"
           >
             <X className="h-4 w-4 mr-2" />
             {t('masters.delete_action')}
@@ -1302,6 +1312,8 @@ const Masters: React.FC = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedMasterForSchedule, setSelectedMasterForSchedule] = useState<Master | null>(null);
   const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
+  const [selectedMasterForStories, setSelectedMasterForStories] = useState<Master | null>(null);
+  const [isStoriesDialogOpen, setIsStoriesDialogOpen] = useState(false);
   const [uploadingImages, setUploadingImages] = useState<{ [key: number]: boolean }>({});
   const [isAddAdministratorDialogOpen, setIsAddAdministratorDialogOpen] = useState(false);
   const [editAdministrator, setEditAdministrator] = useState<Administrator | null>(null);
@@ -1773,6 +1785,11 @@ const Masters: React.FC = () => {
     setIsScheduleDialogOpen(true);
   };
 
+  const handleStoriesClick = (master: Master) => {
+    setSelectedMasterForStories(master);
+    setIsStoriesDialogOpen(true);
+  };
+
   const handleAddMaster = (data: Partial<Master>) => {
     const masterData = {
       ...data,
@@ -1884,7 +1901,7 @@ const Masters: React.FC = () => {
               master={master}
               onEditClick={() => handleEditClick(master)}
               onDeleteClick={() => handleDeleteClick(master.id)}
-              onScheduleClick={() => handleScheduleClick(master)}
+              onScheduleClick={() => handleStoriesClick(master)}
               onImageUpload={handleImageUpload}
               isUploading={uploadingImages[master.id] || false}
             />
@@ -1992,6 +2009,17 @@ const Masters: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Stories Dialog - Просмотр доступных временных слотов */}
+      {selectedMasterForStories && (
+        <MasterStoriesDialog
+          isOpen={isStoriesDialogOpen}
+          onClose={() => setIsStoriesDialogOpen(false)}
+          masterId={selectedMasterForStories.id}
+          masterName={selectedMasterForStories.name}
+          branchId={currentBranch?.id?.toString()}
+        />
+      )}
 
       <Dialog open={isEditAdministratorDialogOpen} onOpenChange={setIsEditAdministratorDialogOpen}>
         <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">

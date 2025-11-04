@@ -1110,6 +1110,20 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     </div>
                 </DialogHeader>
 
+                {/* Кнопка оплаты на всю ширину - в верхней части */}
+                {taskId && taskData && (
+                    <div className="px-2 pb-4">
+                        <Button
+                            type="button"
+                            onClick={() => setShowPaymentDialog(true)}
+                            className="w-full bg-amber-500 hover:bg-amber-600 text-white h-12 text-base font-semibold"
+                        >
+                            <CreditCard className="h-5 w-5 mr-2" />
+                            {t('task_dialog.pay_button')}
+                        </Button>
+                    </div>
+                )}
+
                 {/* Loading State */}
                 {taskId && taskLoading && (
                     <div className="p-8 text-center">
@@ -1773,31 +1787,20 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                         )}
                     </div>
 
-                    <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+                    <div className="flex gap-2 mt-6 pt-4 border-t">
                         <Button
                             type="button"
                             variant="outline"
                             onClick={() => handleOpenChange(false)}
+                            className="flex-1"
                         >
                             {t('task_dialog.cancel_button')}
                         </Button>
                         
-                        {/* Кнопка оплаты - показываем только при редактировании существующей задачи */}
-                        {taskId && taskData && (
-                            <Button
-                                type="button"
-                                onClick={() => setShowPaymentDialog(true)}
-                                className="bg-amber-500 hover:bg-amber-600 text-white"
-                            >
-                                <CreditCard className="h-4 w-4 mr-2" />
-                                {t('task_dialog.pay_button')}
-                            </Button>
-                        )}
-                        
                         <Button
                             type="submit"
                             disabled={!taskId ? (!isValid || createTaskMutation.isPending) : false}
-                            className={(!taskId ? (!isValid || createTaskMutation.isPending) : false) ? 'opacity-50 cursor-not-allowed' : ''}
+                            className={`flex-1 ${(!taskId ? (!isValid || createTaskMutation.isPending) : false) ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             {!taskId && createTaskMutation.isPending ? (
                                 <>

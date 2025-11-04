@@ -715,6 +715,20 @@ export const EditAppointmentDialog = ({
             </div>
           </div>
 
+          {/* Кнопка оплаты на всю ширину - в верхней части */}
+          {task?.paid !== 'paid' && (
+            <div className="px-4 pt-4">
+              <Button
+                type="button"
+                onClick={() => setShowPaymentDialog(true)}
+                className="w-full bg-amber-500 hover:bg-amber-600 text-white h-12 text-base font-semibold"
+              >
+                <CreditCard className="h-5 w-5 mr-2" />
+                {t('edit_appointment.mark_as_paid')}
+              </Button>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="flex gap-5 p-4">
             {/* Левая колонка - Клиент */}
             <div className="flex-1 bg-white rounded-lg p-4">
@@ -990,28 +1004,16 @@ export const EditAppointmentDialog = ({
                   <Button type="button" variant="outline" onClick={onClose}>
                     {t('common.cancel')}
                   </Button>
-                  <div className="flex gap-2">
-                    {task?.paid !== 'paid' && (
-                      <Button
-                        type="button"
-                        onClick={() => setShowPaymentDialog(true)}
-                        className="bg-amber-500 hover:bg-amber-600 text-white"
-                      >
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        {t('edit_appointment.mark_as_paid')}
-                      </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={updateTaskMutation.isPending}
+                    className="bg-blue-500 hover:bg-blue-600 text-white"
+                  >
+                    {updateTaskMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
-                    <Button 
-                      type="submit" 
-                      disabled={updateTaskMutation.isPending}
-                      className="bg-blue-500 hover:bg-blue-600 text-white"
-                    >
-                      {updateTaskMutation.isPending && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      )}
-                      {t('edit_appointment.save_changes')}
-                    </Button>
-                  </div>
+                    {t('edit_appointment.save_changes')}
+                  </Button>
                 </div>
               </div>
             </div>

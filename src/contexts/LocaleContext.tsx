@@ -725,6 +725,16 @@ const translations = {
     'masters.error_deleting': 'Ошибка при удалении мастера',
     'masters.error_uploading_photo': 'Ошибка при загрузке фото',
     
+    // Masters Stories
+    'masters.stories.title': 'Доступные слоты',
+    'masters.stories.subtitle': 'Просмотр расписания и занятости',
+    'masters.stories.select_date': 'Выберите дату',
+    'masters.stories.time_slots': 'Временные слоты',
+    'masters.stories.available': 'Свободно',
+    'masters.stories.booked': 'Занято',
+    'masters.stories.available_slot': 'Свободный слот',
+    'masters.stories.booked_slot': 'Занятый слот',
+    
     // Master schedule
     'schedule.work_schedule': 'График работы',
     'schedule.branch': 'Филиал',
@@ -2344,6 +2354,16 @@ const translations = {
     'masters.error_deleting': 'Мастерди өчүрүүдө ката',
     'masters.error_uploading_photo': 'Сүрөттү жүктөөдө ката',
     
+    // Masters Stories
+    'masters.stories.title': 'Жеткиликтүү слоттор',
+    'masters.stories.subtitle': 'Графикти жана бошторду көрүү',
+    'masters.stories.select_date': 'Датаны тандаңыз',
+    'masters.stories.time_slots': 'Убакыт слоттору',
+    'masters.stories.available': 'Бош',
+    'masters.stories.booked': 'Ээлеген',
+    'masters.stories.available_slot': 'Бош слот',
+    'masters.stories.booked_slot': 'Ээленген слот',
+    
     // Master schedule
     'schedule.work_schedule': 'Иш графиги',
     'schedule.branch': 'Филиал',
@@ -3960,6 +3980,16 @@ const translations = {
     'masters.error_updating': 'Error updating master',
     'masters.error_deleting': 'Error deleting master',
     'masters.error_uploading_photo': 'Error uploading photo',
+    
+    // Masters Stories
+    'masters.stories.title': 'Available Slots',
+    'masters.stories.subtitle': 'View schedule and availability',
+    'masters.stories.select_date': 'Select Date',
+    'masters.stories.time_slots': 'Time Slots',
+    'masters.stories.available': 'Available',
+    'masters.stories.booked': 'Booked',
+    'masters.stories.available_slot': 'Available slot',
+    'masters.stories.booked_slot': 'Booked slot',
     
     // Master schedule
     'schedule.work_schedule': 'Work Schedule',
