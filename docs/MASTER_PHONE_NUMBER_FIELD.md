@@ -25,7 +25,7 @@ interface Master {
 
 ### 2. Форма создания/редактирования мастера
 
-**Добавлено в состояние формы:**
+**Добавлено в MasterForm (редактирование):**
 ```typescript
 const [formData, setFormData] = useState({
   name: master?.name || '',
@@ -35,6 +35,19 @@ const [formData, setFormData] = useState({
   isActive: master?.isActive ?? true,
   startWorkHour: master?.startWorkHour || '09:00',
   endWorkHour: master?.endWorkHour || '20:00',
+});
+```
+
+**Добавлено в MasterFormSimple (создание):**
+```typescript
+const [formData, setFormData] = useState({
+  name: '',
+  specialty: '',
+  description: '',
+  phoneNumber: '', // ✅ НОВОЕ
+  isActive: true,
+  startWorkHour: '09:00',
+  endWorkHour: '20:00',
 });
 ```
 
@@ -185,7 +198,8 @@ Backend должен нормализовать номер перед отпра
 
 1. `/src/pages/Masters.tsx`
    - Добавлено `phoneNumber` в интерфейс `Master`
-   - Добавлено поле в форму создания/редактирования
+   - Добавлено поле в `MasterForm` (редактирование мастера)
+   - Добавлено поле в `MasterFormSimple` (создание мастера)
    - Добавлено отображение в карточке мастера
 
 2. `/src/contexts/LocaleContext.tsx`

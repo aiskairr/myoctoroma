@@ -446,6 +446,7 @@ const MasterFormSimple: React.FC<{
     name: '',
     specialty: '',
     description: '',
+    phoneNumber: '',
     isActive: true,
     startWorkHour: '09:00',
     endWorkHour: '20:00',
@@ -523,6 +524,25 @@ const MasterFormSimple: React.FC<{
               className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
               placeholder={t('masters.specialty_placeholder')}
             />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="phoneNumber-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              📲 {t('masters.phone_number')}
+            </Label>
+            <div className="col-span-3 space-y-2">
+              <Input
+                id="phoneNumber-simple"
+                name="phoneNumber"
+                type="tel"
+                value={formData.phoneNumber}
+                onChange={handleChange}
+                className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                placeholder="+996701234567 или 0701234567"
+              />
+              <p className="text-xs text-gray-500">
+                💬 Для WhatsApp уведомлений о новых записях (опционально)
+              </p>
+            </div>
           </div>
           <div className="grid grid-cols-4 items-start gap-4">
             <Label htmlFor="description-simple" className="col-span-1 pt-2 text-sm font-medium text-gray-700">
