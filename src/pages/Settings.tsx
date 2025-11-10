@@ -30,29 +30,12 @@ export default function Settings() {
     confirmPassword: "",
   });
 
-  // WhatsApp configuration state
-  const [whatsappConfig, setWhatsappConfig] = useState({
-    apiUrl: "",
-    mediaUrl: "",
-    branchId: "",
-    apiToken: "",
-  });
-  const [isTestingConnection, setIsTestingConnection] = useState(false);
-
   // Fetch settings - новый API endpoint
   const { data, isLoading, error } = useQuery({
     queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/settings/${currentBranch?.id}`],
     queryFn: getQueryFn({ on401: "throw" }),
     retry: false,
     enabled: !!currentBranch?.id, // Запрос выполняется только если есть branchId
-  });
-
-  // Fetch WhatsApp configuration
-  const { data: whatsappData, isLoading: isLoadingWhatsapp } = useQuery({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/organisation/${currentBranch?.id}/whatsapp/config`],
-    queryFn: getQueryFn({ on401: "throw" }),
-    retry: false,
-    enabled: !!currentBranch?.id,
   });
 
   // Mutation for updating settings
@@ -101,83 +84,6 @@ export default function Settings() {
       toast({
         title: t('error'),
         description: error.message || t('settings.save_failed'),
-        variant: "destructive",
-      });
-    },
-  });
-
-  // WhatsApp configuration mutations
-  const saveWhatsappConfigMutation = useMutation({
-    mutationFn: async (config: typeof whatsappConfig) => {
-      if (!currentBranch?.id) {
-        throw new Error('Branch ID is required');
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/organisation/${currentBranch.id}/whatsapp/config`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(config),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to save WhatsApp configuration');
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: t('settings.config_saved'),
-        description: t('settings.whatsapp_config_saved'),
-      });
-      queryClient.invalidateQueries({
-        queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/organisation/${currentBranch?.id}/whatsapp/config`],
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: t('error'),
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const testWhatsappConnectionMutation = useMutation({
-    mutationFn: async () => {
-      if (!currentBranch?.id) {
-        throw new Error('Branch ID is required');
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/organisation/${currentBranch.id}/whatsapp/test-connection`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Connection test failed');
-      }
-
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: t('settings.connection_successful'),
-        description: t('settings.connection_status', { status: data.details?.instanceStatus || 'connected' }),
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: t('settings.connection_error'),
-        description: error.message,
         variant: "destructive",
       });
     },
@@ -250,55 +156,6 @@ export default function Settings() {
     }
   }, [data, error]);
 
-  // Initialize WhatsApp configuration when data loads
-  useEffect(() => {
-    if (whatsappData && typeof whatsappData === 'object') {
-      const configData = (whatsappData as any).config;
-      if (configData) {
-        setWhatsappConfig({
-          apiUrl: configData.apiUrl || "",
-          mediaUrl: configData.mediaUrl || "",
-          branchId: configData.branchId || "",
-          apiToken: configData.apiToken || "",
-        });
-      }
-    }
-  }, [whatsappData]);
-
-  const handleInputChange = (key: string, value: string) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
-  };
-  
-  const handleSave = async (key: string) => {
-    try {
-      await updateSettingMutation.mutateAsync({ key, value: settings[key] });
-    } catch (error) {
-      console.error(`Error saving ${key}:`, error);
-    }
-  };
-
-  // WhatsApp handlers
-  const handleWhatsappInputChange = (key: keyof typeof whatsappConfig, value: string) => {
-    setWhatsappConfig((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const handleSaveWhatsappConfig = async () => {
-    try {
-      await saveWhatsappConfigMutation.mutateAsync(whatsappConfig);
-    } catch (error) {
-      console.error('Error saving WhatsApp config:', error);
-    }
-  };
-
-  const handleTestConnection = async () => {
-    setIsTestingConnection(true);
-    try {
-      await testWhatsappConnectionMutation.mutateAsync();
-    } finally {
-      setIsTestingConnection(false);
-    }
-  };
-
   // User profile handlers
   const handleProfileInputChange = (key: keyof typeof userProfile, value: string) => {
     setUserProfile((prev) => ({ ...prev, [key]: value }));
@@ -334,123 +191,6 @@ export default function Settings() {
     } catch (error) {
       console.error('Error updating profile:', error);
     }
-  };
-
-  const resetSystemPrompt = () => {
-    // Используем актуальный промпт из файла very_last_prompt.txt
-    const defaultPrompt = `Ты — Айсулуу, виртуальный администратор TAMGA service&SPA в Бишкеке.
-Ты общаешься с клиентами вежливо, доброжелательно и кратко.
-В начале общения ты всегда используешь русский язык, но если клиент пишет на другом языке (KG, EN, ESP, FR и т.д.) — ты переходишь на него.
-#### 🎯 Задача:
-Консультировать клиента и автоматически собирать все данные, необходимые для записи, а затем передавать их в систему через API.
-
-Твоя цель — мягко и уверенно довести клиента до подтверждения записи.
-Если клиент отказывается — объясни ценность массажа, сохраняя уважительный тон.
-Если клиент пишет на английском или кыргызском — продолжай диалог на этом языке. Отвечай на вопросы клиента по контексту даже если они не относятся к промпту.
-Не задавай несколько вопросов подряд — только по одному.
-Не предлагай другой массаж, если клиент уже определился.
-Не повторяй вопросы, если клиент уже ответил.
-ТЫ НЕ МОЖЕШЬ ВОЗВРАЩАТЬ ДЕНЬГИ, ДАРИТЬ КАКИЕ-ТО ПОДАРКИ.
-
-#### Сценарий общения: 
-#### 1. Приветствие:
-> «Здравствуйте! Добро пожаловать в TAMGA service&SPA. Какой вид массажа вас интересует?»
-#### 2. Выбор массажа:
-- НЕ предлагай альтернатив, если клиент уже определился.
-- НЕ придумывай услуги, которых нет в прайсе.
-#### 3. Уточнение длительности:
-- Если клиент не указал длительность — спроси:
-> «На сколько минут вы бы хотели массаж? Для данного массажа у нас есть такие варианты: /возьми возможные длительности из прайс листа»
-#### 4. Уточнение филиала:
-> «В какой из наших филиалов вам удобнее прийти? У нас есть:
-- Тыныстанова, 189/1
-- Раззакова, 15
-- ул. Токтогула 93»
-#### 5. Уточнение мастера:
-- Если клиент указал пол (мужской/женский) — фильтруй мастеров по полу.
-- Называй имена мастеров из доступных /вызови из динамического промпта.
-> «В этом филиале доступны мастера: /назови имена мастеров из динамического промпта в соответствии с филиалом. Какой день вам будет удобен для записи?»
-#### 6. Загрузка временных слотов (динамический промпт):
-- Когда клиент указал:
-        - филиал
-        - мастера (или пол)
-        - дату
-        - длительность
-                → обратись к backend API и получи только доступные слоты на эту дату с учётом длительности и занятости мастеров.
-- Сформулируй ответ:
-> «Вот свободное время на [дата]: 11:00, 13:30, 15:00. Что вам подойдёт?»
-#### 7. Сбор данных клиента:
-- После выбора времени:
-        - «Как вас зовут?»
-        - «Пожалуйста, укажите номер телефона.»
-#### 8. Завершение:
-> «Спасибо, [имя]! Я записала вас на [время], [дату] в нашем филиале по адресу [адрес филиала] к мастеру [имя выбранного мастера]. С собой ничего не нужно брать, кроме хорошего настроения) Перед процедурой просим принять душ.»
-#### ⚠️ Ограничения и правила:
-- Ты не можешь:
-        - Отвечать на вопросы, не связанные с TAMGA или массажем (политика, религия, медицина и т.д.)
-        - Обсуждать возвраты или финансы
-- Если клиент спрашивает про интимные или неприемлемые услуги:
-> «Мы предоставляем только традиционные массажные услуги. Такие услуги мы не оказываем.»
-- Если клиент спрашивает про сертификаты, возвраты, обмен:
-> «Эти вопросы решает только менеджер. Срок действия сертификата указан на нём (от двух недель до месяца). Обмен возможен с доплатой — уточнит менеджер.»
-
-Наши массажи длительность и стоимость:
-Классический массаж
-60 мин - 2 200 сом / 90 мин - 2 700 сом
-Расслабляющий массаж всего тела с кокосовым маслом. Снимает напряжение, улучшает кровообращение.
-Лечебно-оздоровительный массаж
-60 мин - 2 800 сом / 90 мин - 3 200 сом
-Глубокая проработка мышц и триггерных точек + банки в подарок.
-Триггерный массаж
-30 мин - 1 800 сом / 60 мин - 3 400 сом / 90 мин - 5 200 сом
-Интенсивное воздействие на болевые точки + банки в подарок.
-Арома релакс
-60 мин - 2 500 сом / 90 мин - 2 800 сом
-Легкий расслабляющий массаж с аромамаслами.
-Спортивный массаж
-60 мин - 3 000 сом / 90 мин - 3 500 сом
-Интенсивная проработка мышц + кедровая бочка в подарок.
-Микс массаж
-110 мин - 4 200 сом
-Комбо: классика + точечный + камни + горячие камни в подарок.
-Тайский массаж
-80 мин - 3 500 сом
-Растяжка + точечное воздействие в одежде на мате.
-Перезагрузка (4 стихии)
-150 мин - 7 000 сом / 220 мин - 10 000 сом
-Комплекс: лечебный + прогрев + триггерный + кедровая бочка.
-Стоун-терапия 90 мин - 3 400 сом
-Медовый 90 мин - 3 200 сом
-Огненный 90 мин - 3 500 сом
-Королевский (4 руки) 90 мин - 5 200 сом
-Для беременных 50 мин - 2 000 сом
-Детский 30 мин - 800 сом / 50 мин - 1 400 сом
-Массаж шейно-воротниковой зоны (швз) и головы 30 мин - 900 сом
-Массаж шейно-воротниковой зоны (швз) и спины 40 мин - 1200 сом
-Массаж рук 30 мин - 900 сом
-Массаж ног и стоп 50 мин - 1900 сом
-Массаж лица 80 мин - 2400 сом
-Все массажи выполняются с гипоаллергенными маслами.
-
-#### 📤 Структурированный блок данных для системы
-Когда ты понимаешь, что клиент сообщил какую-либо информацию (например, дату или имя мастера), сформируй в отдельном блоке под основным сообщением JSON с информацией о бронировании:
-\`\`\`json
-{
-  "service_type": "Классический массаж",
-  "service_duration": 60,
-  "schedule_date": "2025-05-15", 
-  "schedule_time": "14:00",
-  "branch_id": "wa1",
-  "master_gender": "женский",
-  "client_name": "Анна",
-  "phone": "0500123456"
-}
-\`\`\`
-
-После каждого шага общения ты должен формировать отдельный JSON-блок, содержащий все ключевые поля, включая те, которые пока не заполнены. Все неизвестные значения оставляй пустыми ("" или null), и заполняй только те поля, которые удалось извлечь из последнего сообщения клиента.
-Никогда не пропускай поля. Всегда возвращай все 8 полей, даже если заполнено только 1 из них, при этом не стирая ранее заполненные.
-`;
-    setSettings((prev) => ({ ...prev, systemPrompt: defaultPrompt }));
   };
   
   if (isLoading) {
@@ -650,106 +390,6 @@ export default function Settings() {
               </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
-
-      {/* WhatsApp Configuration Section */}
-      <Card className="bg-gray-100 border-gray-300 opacity-60 relative">
-        <div className="absolute top-4 right-4 bg-gray-500 text-white text-xs px-2 py-1 rounded-md font-semibold z-10">
-          Демо
-        </div>
-        <CardHeader>
-          <CardTitle className="text-gray-600">{t('settings.whatsapp_api')}</CardTitle>
-          <CardDescription className="text-gray-500">
-            Конфигурация подключения к WhatsApp API
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingWhatsapp ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-              <span className="ml-2 text-gray-500">Загрузка конфигурации...</span>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="whatsapp-api-url" className="text-gray-600">API URL</Label>
-                  <Input
-                    id="whatsapp-api-url"
-                    type="url"
-                    disabled
-                    placeholder="https://xxxx.api.greenapi.com"
-                    value={whatsappConfig.apiUrl}
-                    className="bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="whatsapp-media-url" className="text-gray-600">Media URL</Label>
-                  <Input
-                    id="whatsapp-media-url"
-                    type="url"
-                    disabled
-                    placeholder="https://xxxx.media.greenapi.com"
-                    value={whatsappConfig.mediaUrl}
-                    className="bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="whatsapp-branch-id" className="text-gray-600">Branch ID</Label>
-                  <Input
-                    id="whatsapp-branch-id"
-                    type="text"
-                    disabled
-                    placeholder="7105292833"
-                    value={whatsappConfig.branchId}
-                    className="bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="whatsapp-api-token" className="text-gray-600">API Token</Label>
-                  <Input
-                    id="whatsapp-api-token"
-                    type="password"
-                    disabled
-                    placeholder={t('settings.api_token_placeholder')}
-                    value={whatsappConfig.apiToken}
-                    className="bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button
-                  disabled
-                  className="flex-1 bg-gray-400 text-white cursor-not-allowed opacity-50"
-                >
-                  {t('settings.save_config_button')}
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  disabled
-                  className="border-gray-300 text-gray-500 cursor-not-allowed opacity-50"
-                >
-                  {t('settings.test_connection_button')}
-                </Button>
-              </div>
-
-              <div className="bg-gray-200 p-4 rounded-md">
-                <h3 className="text-sm font-medium mb-2 text-gray-600">Информация о настройке</h3>
-                <ul className="text-xs text-gray-500 space-y-1">
-                  <li>• API URL и Media URL получаются от провайдера WhatsApp API</li>
-                  <li>• Branch ID - идентификатор вашего инстанса</li>
-                  <li>• API Token - секретный ключ для авторизации</li>
-                  <li>• Все данные шифруются перед сохранением в базе данных</li>
-                </ul>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 

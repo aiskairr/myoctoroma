@@ -8,7 +8,10 @@ export interface Branch {
   address: string;
   phoneNumber: string;
   organisationId: string | number;
-  waInstance?: string;
+  accountID?: string | null; // Новое поле для ID аккаунта
+  isActive?: boolean; // Для поддержки soft delete
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface BranchContextType {

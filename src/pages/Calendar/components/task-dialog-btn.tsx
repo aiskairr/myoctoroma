@@ -288,16 +288,26 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             const availableDurations = getAvailableDurations();
             const isDurationValid = availableDurations.some(d => `${d.duration} мин - ${d.price} сом` === currentDuration);
             
-            if (!isDurationValid && availableDurations.length > 0) {
-                // Автоматически выбираем первую доступную длительность
-                const firstDuration = availableDurations[0];
-                const durationString = `${firstDuration.duration} мин - ${firstDuration.price} сом`;
-                
-                reset((formValues) => ({
-                    ...formValues,
-                    duration: durationString,
-                    cost: firstDuration.price.toString()
-                }));
+            // Если длительность не выбрана, пустая или невалидна
+            if (!currentDuration || !isDurationValid) {
+                if (availableDurations.length > 0) {
+                    // Автоматически выбираем первую (минимальную) доступную длительность
+                    const firstDuration = availableDurations[0];
+                    const durationString = `${firstDuration.duration} мин - ${firstDuration.price} сом`;
+                    
+                    reset((formValues) => ({
+                        ...formValues,
+                        duration: durationString,
+                        cost: firstDuration.price.toString()
+                    }));
+                } else {
+                    // Если для услуги нет длительностей, устанавливаем "0 мин - 0 сом"
+                    reset((formValues) => ({
+                        ...formValues,
+                        duration: '0 мин - 0 сом',
+                        cost: '0'
+                    }));
+                }
             }
         }
     }, [watchedServiceType, watch, reset]);
@@ -353,7 +363,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     // Если у нас есть длительность и цена из бэкенда
                     if (taskData.serviceDuration && (taskData.servicePrice || taskData.finalPrice)) {
                         const targetDuration = taskData.serviceDuration;
-                        const targetPrice = taskData.finalPrice || taskData.servicePrice;
+                        const targetPrice = taskData.finalPrice || taskData.servicePrice || 0;
                         
                         // Ищем точное совпадение в доступных длительностях
                         const matchingDuration = availableDurations.find(d => 
@@ -379,11 +389,16 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                             }
                         }
                     } else if (availableDurations.length > 0) {
-                        // Если нет данных о длительности, используем первую доступную
+                        // Если нет данных о длительности, используем первую (минимальную) доступную
                         const firstDuration = availableDurations[0];
                         formData.duration = `${firstDuration.duration} мин - ${firstDuration.price} сом`;
                         formData.cost = firstDuration.price.toString();
                         console.log('🔧 Set default duration and cost:', formData.duration, formData.cost);
+                    } else {
+                        // Если для услуги нет длительностей, устанавливаем 0
+                        formData.duration = '0 мин - 0 сом';
+                        formData.cost = '0';
+                        console.log('🔧 No durations available, set to 0:', formData.duration);
                     }
                 }
             }
@@ -1584,6 +1599,13 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                     rules={{
                                         required: t('task_dialog.date_required_validation'),
                                         validate: (value) => {
+                                            // При редактировании существующей записи (taskId существует) 
+                                            // разрешаем выбор даты в прошлом
+                                            if (taskId) {
+                                                return true;
+                                            }
+
+                                            // При создании новой записи проверяем, что дата не в прошлом
                                             const today = new Date();
                                             today.setHours(0, 0, 0, 0);
 
