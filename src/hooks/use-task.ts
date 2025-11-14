@@ -19,6 +19,9 @@ export interface Task {
   branchId: string;
   discount?: number;
   finalPrice?: number;
+  paid?: 'paid' | 'unpaid'; // Статус оплаты
+  paymentMethod?: string | null; // Способ оплаты
+  adminName?: string | null; // Имя администратора, который принял оплату
   client?: {
     telegramId: string;
     firstName?: string;

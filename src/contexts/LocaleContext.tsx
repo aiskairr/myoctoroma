@@ -247,6 +247,7 @@ const translations = {
     'branch.account_id_label': 'ID Аккаунта',
     'branch.account_id_placeholder': 'Введите ID аккаунта (опционально)',
     'branch.account_id_hint': 'Идентификатор аккаунта для интеграции',
+    'branch.select_branch': 'Выберите филиал',
     'branch.loading': 'Загрузка...',
     'branch.no_branch': 'Нет филиала',
     'branch.edit_tooltip': 'Редактировать филиал',
@@ -316,6 +317,8 @@ const translations = {
     
     // Clients page
     'clients.page_title': 'Клиенты',
+    'clients.chats': 'Чаты',
+    'clients.list': 'Список клиентов',
     'clients.no_clients': 'Клиенты не найдены',
     'clients.loading_clients': 'Загрузка клиентов...',
     'clients.select_client': 'Выберите клиента для просмотра переписки',
@@ -705,6 +708,34 @@ const translations = {
     'masters.error_updating': 'Ошибка при обновлении мастера',
     'masters.error_deleting': 'Ошибка при удалении мастера',
     'masters.error_uploading_photo': 'Ошибка при загрузке фото',
+    'masters.error': 'Ошибка',
+    'masters.please_select_image': 'Пожалуйста, выберите файл изображения',
+    'masters.file_size_limit_100mb': 'Размер файла не должен превышать 100MB',
+    'masters.photo_processing': 'Фото загружено и обрабатывается',
+    'masters.photo_processing_title': 'Обработка фото',
+    'masters.photo_processing_desc': 'Фото загружено на сервер и обрабатывается. Оно появится в течение нескольких минут.',
+    
+    // WhatsApp Chat
+    'whatsapp.chat_title': 'WhatsApp чат',
+    'whatsapp.message_sent': 'Сообщение отправлено',
+    'whatsapp.message_sent_successfully': 'Сообщение успешно отправлено',
+    'whatsapp.send_error': 'Ошибка отправки',
+    'whatsapp.send_error_message': 'Не удалось отправить сообщение',
+    'whatsapp.error_loading_history': 'Ошибка загрузки истории сообщений',
+    'whatsapp.no_messages': 'Нет сообщений',
+    'whatsapp.type_message': 'Введите сообщение...',
+    'whatsapp.sent': 'Отправлено',
+    'whatsapp.received': 'Получено',
+    'whatsapp.loading': 'Загрузка...',
+    'whatsapp.messages': 'сообщений',
+    'whatsapp.just_now': 'Только что',
+    'whatsapp.no_account_id': 'У выбранного филиала не настроен WhatsApp аккаунт',
+    'whatsapp.no_account_configured': 'WhatsApp аккаунт не настроен для этого филиала',
+    
+    // Time ago
+    'minutes_ago': 'мин назад',
+    'hours_ago': 'ч назад',
+    'days_ago': 'д назад',
     
     // Masters Stories
     'masters.stories.title': 'Доступные слоты',
@@ -1865,6 +1896,7 @@ const translations = {
     'branch.account_id_label': 'Аккаунттун ID',
     'branch.account_id_placeholder': 'Аккаунттун ID киргизиңиз (милдеттүү эмес)',
     'branch.account_id_hint': 'Интеграция үчүн аккаунттун идентификатору',
+    'branch.select_branch': 'Филиалды тандаңыз',
     'branch.loading': 'Жүктөлүүдө...',
     'branch.no_branch': 'Филиал жок',
     'branch.edit_tooltip': 'Филиалды оңдоо',
@@ -1934,6 +1966,8 @@ const translations = {
     
     // Clients page  
     'clients.page_title': 'Кардарлар',
+    'clients.chats': 'Чаттар',
+    'clients.list': 'Кардарлардын тизмеси',
     'clients.no_clients': 'Кардарлар табылган жок',
     'clients.loading_clients': 'Кардарлар жүктөлүүдө...',
     'clients.select_client': 'Маектешүүнү көрүү үчүн кардарды тандаңыз',  
@@ -2324,6 +2358,34 @@ const translations = {
     'masters.error_updating': 'Мастерди жаңылоодо ката',
     'masters.error_deleting': 'Мастерди өчүрүүдө ката',
     'masters.error_uploading_photo': 'Сүрөттү жүктөөдө ката',
+    'masters.error': 'Ката',
+    'masters.please_select_image': 'Сүрөт файлын тандаңыз',
+    'masters.file_size_limit_100mb': 'Файлдын өлчөмү 100MB ашпашы керек',
+    'masters.photo_processing': 'Сүрөт жүктөлдү жана иштетилүүдө',
+    'masters.photo_processing_title': 'Сүрөттү иштетүү',
+    'masters.photo_processing_desc': 'Сүрөт серверге жүктөлдү жана иштетилүүдө. Ал бир нече мүнөттө көрүнөт.',
+    
+    // WhatsApp Chat
+    'whatsapp.chat_title': 'WhatsApp чат',
+    'whatsapp.message_sent': 'Билдирүү жөнөтүлдү',
+    'whatsapp.message_sent_successfully': 'Билдирүү ийгиликтүү жөнөтүлдү',
+    'whatsapp.send_error': 'Жөнөтүү катасы',
+    'whatsapp.send_error_message': 'Билдирүүнү жөнөтүү мүмкүн эмес',
+    'whatsapp.error_loading_history': 'Билдирүүлөр тарыхын жүктөөдө ката',
+    'whatsapp.no_messages': 'Билдирүүлөр жок',
+    'whatsapp.type_message': 'Билдирүү жазыңыз...',
+    'whatsapp.sent': 'Жөнөтүлгөн',
+    'whatsapp.received': 'Алынган',
+    'whatsapp.loading': 'Жүктөлүүдө...',
+    'whatsapp.messages': 'билдирүүлөр',
+    'whatsapp.just_now': 'Азыр эле',
+    'whatsapp.no_account_id': 'Тандалган филиалда WhatsApp аккаунту конфигурацияланган эмес',
+    'whatsapp.no_account_configured': 'Бул филиал үчүн WhatsApp аккаунту конфигурацияланган эмес',
+    
+    // Time ago
+    'minutes_ago': 'мүн мурун',
+    'hours_ago': 'саат мурун',
+    'days_ago': 'күн мурун',
     
     // Masters Stories
     'masters.stories.title': 'Жеткиликтүү слоттор',
@@ -3482,6 +3544,7 @@ const translations = {
     'branch.account_id_label': 'Account ID',
     'branch.account_id_placeholder': 'Enter account ID (optional)',
     'branch.account_id_hint': 'Account identifier for integration',
+    'branch.select_branch': 'Select a branch',
     'branch.loading': 'Loading...',
     'branch.no_branch': 'No branch',
     'branch.edit_tooltip': 'Edit branch',
@@ -3551,6 +3614,8 @@ const translations = {
     
     // Clients page
     'clients.page_title': 'Clients',
+    'clients.chats': 'Chats',
+    'clients.list': 'Client List',
     'clients.no_clients': 'No clients found',
     'clients.loading_clients': 'Loading clients...',
     'clients.select_client': 'Select a client to view conversation',
@@ -3941,6 +4006,34 @@ const translations = {
     'masters.error_updating': 'Error updating master',
     'masters.error_deleting': 'Error deleting master',
     'masters.error_uploading_photo': 'Error uploading photo',
+    'masters.error': 'Error',
+    'masters.please_select_image': 'Please select an image file',
+    'masters.file_size_limit_100mb': 'File size must not exceed 100MB',
+    'masters.photo_processing': 'Photo uploaded and processing',
+    'masters.photo_processing_title': 'Processing Photo',
+    'masters.photo_processing_desc': 'Photo uploaded to server and is being processed. It will appear within a few minutes.',
+    
+    // WhatsApp Chat
+    'whatsapp.chat_title': 'WhatsApp Chat',
+    'whatsapp.message_sent': 'Message sent',
+    'whatsapp.message_sent_successfully': 'Message sent successfully',
+    'whatsapp.send_error': 'Send error',
+    'whatsapp.send_error_message': 'Failed to send message',
+    'whatsapp.error_loading_history': 'Error loading message history',
+    'whatsapp.no_messages': 'No messages',
+    'whatsapp.type_message': 'Type a message...',
+    'whatsapp.sent': 'Sent',
+    'whatsapp.received': 'Received',
+    'whatsapp.loading': 'Loading...',
+    'whatsapp.messages': 'messages',
+    'whatsapp.just_now': 'Just now',
+    'whatsapp.no_account_id': 'The selected branch does not have a WhatsApp account configured',
+    'whatsapp.no_account_configured': 'WhatsApp account is not configured for this branch',
+    
+    // Time ago
+    'minutes_ago': 'min ago',
+    'hours_ago': 'h ago',
+    'days_ago': 'd ago',
     
     // Masters Stories
     'masters.stories.title': 'Available Slots',

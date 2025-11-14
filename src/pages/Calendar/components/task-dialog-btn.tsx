@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Clock, CalendarIcon, Loader2, CreditCard, Trash2, Plus, CheckCircle, X, Scissors } from "lucide-react";
+import { Clock, CalendarIcon, Loader2, CreditCard, Trash2, Plus, CheckCircle, X, XCircle, Scissors, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import type React from "react";
@@ -22,6 +22,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocale } from "@/contexts/LocaleContext";
+import WhatsAppChat from "@/components/WhatsAppChat";
 
 // Интерфейс для способов оплаты
 interface PaymentMethod {
@@ -64,6 +65,7 @@ interface Props {
 const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+    const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("");
     const [selectedAdministrator, setSelectedAdministrator] = useState<string>("");
 
@@ -1148,13 +1150,27 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 // Убрали onInteractOutside - теперь клик по backdrop будет закрывать модалку
                 onEscapeKeyDown={() => handleOpenChange(false)}
             >
-                <DialogHeader className="pb-4">
-                    <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 bg-red-500 rounded-full"></span>
-                        <DialogTitle className="text-sm font-medium text-gray-600">
-                            {t('calendar.not_paid')}
-                        </DialogTitle>
-                    </div>
+                {/* Динамическая плашка статуса оплаты - по центру */}
+                <div className="flex justify-center pt-4 pb-2">
+                    {taskData?.paid === 'paid' ? (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-full">
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                            <span className="text-sm font-semibold text-green-700">
+                                {t('calendar.paid').toUpperCase()}
+                            </span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-full">
+                            <XCircle className="w-5 h-5 text-red-600" />
+                            <span className="text-sm font-semibold text-red-700">
+                                {t('calendar.not_paid')}
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                <DialogHeader className="pb-2">
+                    <DialogTitle className="sr-only">{t('task_dialog.edit_title')}</DialogTitle>
                 </DialogHeader>
 
                 {/* Кнопка оплаты на всю ширину - в верхней части */}
@@ -1270,6 +1286,20 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                     )}
                                 />
                             </div>
+
+                            {/* WhatsApp Chat Button */}
+                            {taskId && taskData && watch('phone') && (
+                                <div className="border-t pt-4">
+                                    <Button
+                                        type="button"
+                                        onClick={() => setShowWhatsAppDialog(true)}
+                                        className="w-full bg-green-600 hover:bg-green-700 text-white h-12 text-base font-semibold"
+                                    >
+                                        <MessageCircle className="h-5 w-5 mr-2" />
+                                        {t('whatsapp.chat_title')}
+                                    </Button>
+                                </div>
+                            )}
 
                             <div>
                                 <Label className="text-sm text-gray-600 mb-3 block">{t('calendar.status_label')}</Label>
@@ -2081,6 +2111,17 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+        )}
+
+        {/* WhatsApp Chat Dialog */}
+        {taskId && taskData && watch('phone') && (
+            <WhatsAppChat
+                isOpen={showWhatsAppDialog}
+                onClose={() => setShowWhatsAppDialog(false)}
+                phone={watch('phone')}
+                clientName={watch('clientName') || taskData?.clientName}
+                clientId={taskData?.clientId}
+            />
         )}
         </>
     );
