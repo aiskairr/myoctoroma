@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, Phone, Calendar, Edit, Loader2, Save, X, Users } from 'lucide-react';
+import { Search, Phone, Calendar, Edit, Loader2, Save, X, Users, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiGetJson, apiRequest } from '@/lib/api';
+import WhatsAppChat from '@/components/WhatsAppChat';
 
 interface Client {
   id: number;
@@ -74,6 +75,8 @@ export default function Clients() {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Partial<Client>>({});
   const [editLoading, setEditLoading] = useState(false);
+  const [isWhatsAppChatOpen, setIsWhatsAppChatOpen] = useState(false);
+  const [whatsappClientData, setWhatsappClientData] = useState<{ phone: string; name: string; id: number } | null>(null);
 
   const loadTodaysClients = async () => {
     if (!currentBranch) return;
@@ -431,6 +434,21 @@ export default function Clients() {
               {selectedClient ? getClientDisplayName(selectedClient) : t('clients.clientDetails')}
               {selectedClient && (
                 <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setWhatsappClientData({
+                        phone: selectedClient.phoneNumber,
+                        name: getClientDisplayName(selectedClient),
+                        id: selectedClient.id
+                      });
+                      setIsWhatsAppChatOpen(true);
+                    }}
+                  >
+                    <MessageCircle className="h-4 w-4 mr-1" />
+                    WhatsApp
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => handleEditClient(selectedClient)}>
                     <Edit className="h-4 w-4 mr-1" />
                     {t('edit')}
@@ -616,6 +634,17 @@ export default function Clients() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* WhatsApp Chat Dialog */}
+      {whatsappClientData && (
+        <WhatsAppChat
+          isOpen={isWhatsAppChatOpen}
+          onClose={() => setIsWhatsAppChatOpen(false)}
+          phone={whatsappClientData.phone}
+          clientName={whatsappClientData.name}
+          clientId={whatsappClientData.id}
+        />
+      )}
     </div>
   );
 }

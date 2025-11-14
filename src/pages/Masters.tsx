@@ -1739,24 +1739,50 @@ const Masters: React.FC = () => {
   const uploadImageMutation = useMutation({
     mutationFn: async ({ masterId, file }: { masterId: number, file: File }) => {
       const formData = new FormData();
-      formData.append('image', file);
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${masterId}/upload-image`, {
-        method: 'POST',
+      formData.append('photo', file);
+      
+      console.log('📤 Uploading photo for master:', masterId);
+      console.log('📦 File size:', file.size, 'bytes');
+      console.log('📄 File type:', file.type);
+      
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/photo`, {
+        method: 'POST', // POST согласно финальной реализации API
+        credentials: 'include',
         body: formData
       });
+      
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to upload image');
+        throw new Error(errorData.error || 'Failed to upload photo');
       }
-      return res.json();
+      
+      const result = await res.json();
+      console.log('✅ Upload response:', result);
+      return result;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
       setUploadingImages(prev => ({ ...prev, [variables.masterId]: false }));
+      
+      // Показываем информацию о статусе обработки
+      const description = data.status === 'processing' 
+        ? `${data.message || t('masters.photo_processing')} (fileGuid: ${data.fileGuid})`
+        : data.message || t('masters.photo_uploaded');
+      
       toast({
         title: t('masters.photo_uploaded'),
-        description: t('masters.photo_uploaded'),
+        description: description,
         variant: 'default',
       });
+      
+      // Если статус processing, можно показать дополнительное уведомление
+      if (data.status === 'processing') {
+        toast({
+          title: t('masters.photo_processing_title'),
+          description: t('masters.photo_processing_desc'),
+          variant: 'default',
+        });
+      }
+      
       refetch();
     },
     onError: (error, variables) => {
@@ -1801,22 +1827,27 @@ const Masters: React.FC = () => {
   const handleImageUpload = (masterId: number, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    
+    // Проверка типа файла
     if (!file.type.startsWith('image/')) {
       toast({
-        title: 'Ошибка',
-        description: 'Пожалуйста, выберите файл изображения',
+        title: t('masters.error'),
+        description: t('masters.please_select_image'),
         variant: 'destructive',
       });
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
+    
+    // Проверка размера файла (максимум 100MB согласно API)
+    if (file.size > 100 * 1024 * 1024) {
       toast({
-        title: 'Ошибка',
-        description: 'Размер файла не должен превышать 5MB',
+        title: t('masters.error'),
+        description: t('masters.file_size_limit_100mb'),
         variant: 'destructive',
       });
       return;
     }
+    
     setUploadingImages(prev => ({ ...prev, [masterId]: true }));
     uploadImageMutation.mutate({ masterId, file });
   };
