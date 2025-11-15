@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, Phone, Loader2, MessageCircle, AlertTriangle, User, Check, CheckCheck, Send, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Search, Phone, Loader2, MessageCircle, AlertTriangle, User, Check, CheckCheck, Send, X, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiGetJson } from '@/lib/api';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -71,18 +72,26 @@ export default function Chats() {
   const [selectedChat, setSelectedChat] = useState<WhatsAppChatItem | null>(null);
   const [page] = useState(1);
   const [totalChats, setTotalChats] = useState(0);
-  const [filterType, setFilterType] = useState<'all' | 'unread'>('all');
   
+  // Состояние для активного чата
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Диалог отправки на произвольный номер
+  const [showNewMessageDialog, setShowNewMessageDialog] = useState(false);
+  const [customPhone, setCustomPhone] = useState('');
+  const [customMessage, setCustomMessage] = useState('');
+  const [sendingCustom, setSendingCustom] = useState(false);
 
+  // Нормализация номера телефона
   const normalizePhone = (phoneNumber: string) => {
     return phoneNumber.replace(/^\+/, '');
   };
 
+  // Автопрокрутка к последнему сообщению
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -91,6 +100,7 @@ export default function Chats() {
     scrollToBottom();
   }, [messages]);
 
+  // Загрузка списка чатов
   const loadChats = async () => {
     if (!currentBranch?.accountID) {
       return;
@@ -118,6 +128,7 @@ export default function Chats() {
     }
   };
 
+  // Загрузка истории сообщений
   const loadMessages = async (chat: WhatsAppChatItem) => {
     if (!currentBranch?.accountID) return;
 
@@ -142,6 +153,7 @@ export default function Chats() {
     }
   };
 
+  // Отправка сообщения
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedChat || !currentBranch?.id) return;
 
@@ -173,6 +185,7 @@ export default function Chats() {
       
       if (data.success) {
         setNewMessage('');
+        // Добавляем сообщение в список
         const newMsg: Message = {
           id: data.messageId || Date.now().toString(),
           type: 'text',
@@ -182,6 +195,8 @@ export default function Chats() {
           status: 'sent'
         };
         setMessages(prev => [...prev, newMsg]);
+        
+        // Обновляем список чатов
         loadChats();
       }
     } catch (error) {
@@ -196,18 +211,88 @@ export default function Chats() {
     }
   };
 
+  // Отправка на произвольный номер
+  const sendToCustomNumber = async () => {
+    if (!customPhone.trim()) {
+      toast({
+        title: t('error'),
+        description: 'Введите номер телефона',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!customMessage.trim()) {
+      toast({
+        title: t('error'),
+        description: t('whatsapp.type_message'),
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSendingCustom(true);
+    try {
+      const normalizedPhone = normalizePhone(customPhone);
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/whatsapp/send`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            phone: normalizedPhone,
+            message: customMessage.trim(),
+            branchId: currentBranch?.id,
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send message');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: t('whatsapp.message_sent'),
+          description: t('whatsapp.message_sent_successfully'),
+          variant: 'default',
+        });
+        
+        setCustomPhone('');
+        setCustomMessage('');
+        setShowNewMessageDialog(false);
+        loadChats();
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: t('whatsapp.send_error'),
+        description: t('whatsapp.send_error_message'),
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingCustom(false);
+    }
+  };
+
+  // Загрузка чатов при монтировании
   useEffect(() => {
     loadChats();
   }, [currentBranch, page]);
 
+  // Поиск чатов
   useEffect(() => {
     const timer = setTimeout(() => {
       let filtered = chats;
       
-      if (filterType === 'unread') {
-        filtered = filtered.filter(chat => chat.unreadCount > 0);
-      }
-      
+      // Поиск
       if (searchQuery.trim()) {
         filtered = filtered.filter(chat => 
           chat.contactNumber.includes(searchQuery) ||
@@ -220,17 +305,20 @@ export default function Chats() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, chats, filterType]);
+  }, [searchQuery, chats]);
 
+  // Открытие чата
   const handleOpenChat = (chat: WhatsAppChatItem) => {
     setSelectedChat(chat);
     loadMessages(chat);
   };
 
+  // Получение отображаемого имени
   const getChatDisplayName = (chat: WhatsAppChatItem) => {
     return chat.contactName || chat.contactNumber;
   };
 
+  // Форматирование времени для списка чатов
   const formatChatTime = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -247,6 +335,7 @@ export default function Chats() {
     }
   };
 
+  // Форматирование времени для сообщений
   const formatMessageTime = (dateString: string) => {
     try {
       return format(new Date(dateString), 'HH:mm');
@@ -255,6 +344,7 @@ export default function Chats() {
     }
   };
 
+  // Группировка сообщений по датам
   const groupMessagesByDate = (messages: Message[]) => {
     const groups: { [key: string]: Message[] } = {};
     
@@ -283,24 +373,38 @@ export default function Chats() {
 
   return (
     <div className="h-[calc(100vh-8rem)] flex gap-0 overflow-hidden border rounded-lg shadow-lg bg-background">
+      {/* Левая панель - Список чатов */}
       <div className="w-full md:w-96 border-r flex flex-col">
+        {/* Заголовок */}
         <div className="bg-[#008069] text-white p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <MessageCircle className="h-6 w-6" />
             <h1 className="text-xl font-semibold">WhatsApp</h1>
           </div>
-          {totalChats > 0 && (
-            <Badge variant="secondary" className="bg-white/20 text-white border-0">
-              {totalChats}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {totalChats > 0 && (
+              <Badge variant="secondary" className="bg-white/20 text-white border-0">
+                {totalChats}
+              </Badge>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 hover:bg-white/20 text-white"
+              onClick={() => setShowNewMessageDialog(true)}
+              title="Новое сообщение"
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
+        {/* Поиск */}
         <div className="p-3 border-b bg-muted/30">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder={t('clients.search_placeholder') || 'Поиск или новый чат'}
+              placeholder="Поиск или новый чат"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 bg-background"
@@ -308,24 +412,7 @@ export default function Chats() {
           </div>
         </div>
 
-        <div className="px-3 py-2 border-b">
-          <Tabs value={filterType} onValueChange={(v) => setFilterType(v as 'all' | 'unread')}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="all">
-                {t('all') || 'Все'}
-              </TabsTrigger>
-              <TabsTrigger value="unread">
-                {t('unread') || 'Непрочитанное'}
-                {chats.filter(c => c.unreadCount > 0).length > 0 && (
-                  <Badge variant="secondary" className="ml-2 h-5 min-w-5 rounded-full">
-                    {chats.filter(c => c.unreadCount > 0).length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-
+        {/* Список чатов */}
         <div className="flex-1 overflow-y-auto">
           {!currentBranch ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-6 text-muted-foreground">
@@ -361,12 +448,14 @@ export default function Chats() {
                     selectedChat?.contactNumber === chat.contactNumber && "bg-muted"
                   )}
                 >
+                  {/* Аватар */}
                   <Avatar className="h-12 w-12 flex-shrink-0">
                     <AvatarFallback className="bg-[#008069] text-white">
                       <User className="h-6 w-6" />
                     </AvatarFallback>
                   </Avatar>
 
+                  {/* Контент */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <h3 className="font-semibold truncate">
@@ -394,8 +483,10 @@ export default function Chats() {
         </div>
       </div>
 
+      {/* Правая панель - Активный чат */}
       <div className="flex-1 flex flex-col">
         {!selectedChat ? (
+          /* Заглушка когда чат не выбран */
           <div className="flex flex-col items-center justify-center h-full text-center p-6 bg-muted/20">
             <div className="max-w-md space-y-4">
               <div className="w-32 h-32 mx-auto rounded-full bg-[#008069]/10 flex items-center justify-center">
@@ -403,12 +494,13 @@ export default function Chats() {
               </div>
               <h2 className="text-2xl font-semibold">WhatsApp Web</h2>
               <p className="text-muted-foreground">
-                {t('whatsapp.select_chat') || 'Выберите чат, чтобы начать общение'}
+                Выберите чат, чтобы начать общение
               </p>
             </div>
           </div>
         ) : (
           <>
+            {/* Заголовок чата */}
             <div className="bg-muted/30 border-b p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Button
@@ -434,6 +526,7 @@ export default function Chats() {
               </div>
             </div>
 
+            {/* Сообщения */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#efeae2] dark:bg-[#0b141a]">
               {loadingMessages ? (
                 <div className="flex items-center justify-center h-full">
@@ -447,12 +540,14 @@ export default function Chats() {
               ) : (
                 Object.entries(messageGroups).map(([date, msgs]) => (
                   <div key={date} className="space-y-2">
+                    {/* Разделитель по дате */}
                     <div className="flex justify-center">
                       <div className="bg-white dark:bg-[#182229] text-muted-foreground text-xs px-3 py-1 rounded-lg shadow-sm">
                         {date}
                       </div>
                     </div>
                     
+                    {/* Сообщения */}
                     {msgs.map((msg) => (
                       <div
                         key={msg.id}
@@ -497,6 +592,7 @@ export default function Chats() {
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Поле ввода */}
             <div className="border-t bg-muted/30 p-4">
               <div className="flex items-end gap-2">
                 <Textarea
@@ -529,6 +625,87 @@ export default function Chats() {
           </>
         )}
       </div>
+
+      {/* Диалог отправки на произвольный номер */}
+      <Dialog open={showNewMessageDialog} onOpenChange={setShowNewMessageDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Новое сообщение</DialogTitle>
+            <DialogDescription>
+              Отправьте WhatsApp сообщение на любой номер телефона
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="custom-phone" className="flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                Номер телефона
+              </Label>
+              <Input
+                id="custom-phone"
+                placeholder="+996 (XXX) XXX-XXX"
+                value={customPhone}
+                onChange={(e) => setCustomPhone(e.target.value)}
+                disabled={sendingCustom}
+              />
+              <p className="text-xs text-muted-foreground">
+                Формат: +996XXXXXXXXX (автоматически удаляется "+")
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="custom-message" className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4" />
+                Сообщение
+              </Label>
+              <Textarea
+                id="custom-message"
+                placeholder="Введите сообщение..."
+                value={customMessage}
+                onChange={(e) => setCustomMessage(e.target.value)}
+                disabled={sendingCustom}
+                className="min-h-[120px] resize-none"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && e.ctrlKey) {
+                    sendToCustomNumber();
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Ctrl + Enter для отправки
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowNewMessageDialog(false)}
+              disabled={sendingCustom}
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={sendToCustomNumber}
+              disabled={!customPhone.trim() || !customMessage.trim() || sendingCustom}
+              className="bg-[#008069] hover:bg-[#006d5b]"
+            >
+              {sendingCustom ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Отправка...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Отправить
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

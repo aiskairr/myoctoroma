@@ -9,12 +9,14 @@ import 'temporal-polyfill/global'
 import '@schedule-x/theme-default/dist/index.css'
 import { useState } from 'react'
 import { useLocale } from '@/contexts/LocaleContext'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 // Типы для пользователей
 interface User {
     id: string
     name: string
     color: string
+    photoUrl?: string | null
 }
 
 interface UserEvent {
@@ -338,16 +340,43 @@ function UserCalendar({ user, events, onAddEvent }: {
 
     return (
         <div style={{ marginBottom: '30px' }}>
-            <h3 style={{
+            <div style={{
                 color: getUserColor(user),
                 margin: '10px 0',
                 padding: '10px',
                 backgroundColor: `${getUserColor(user)}20`,
                 borderRadius: '8px',
-                border: `2px solid ${getUserColor(user)}`
+                border: `2px solid ${getUserColor(user)}`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
             }}>
-                📅 {user.name} (ID: {user.id})
-            </h3>
+                {/* Фото мастера */}
+                {user.photoUrl ? (
+                    <Avatar className="h-10 w-10">
+                        <AvatarImage src={user.photoUrl} alt={user.name} />
+                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                ) : (
+                    <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        backgroundColor: getUserColor(user),
+                        color: getTextColor(getUserColor(user)),
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '18px',
+                        fontWeight: 'bold'
+                    }}>
+                        {user.name.charAt(0)}
+                    </div>
+                )}
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>
+                    📅 {user.name} (ID: {user.id})
+                </h3>
+            </div>
             <div style={{ border: `2px solid ${getUserColor(user)}`, borderRadius: '8px', overflow: 'hidden', minWidth: '500px' }}>
                 <ScheduleXCalendar calendarApp={calendar} />
             </div>

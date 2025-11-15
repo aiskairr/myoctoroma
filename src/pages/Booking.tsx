@@ -679,7 +679,7 @@ const BookingPageContent: React.FC = () => {
         {organisationBranches?.branches?.map((branch: any, index: number) => (
           <Card
             key={branch.id}
-            className={`cursor-pointer transition-all hover:scale-105 group animate-in fade-in slide-in-from-bottom-2 duration-300 booking-card ${
+            className={`cursor-pointer transition-all hover:scale-105 group animate-in fade-in slide-in-from-bottom-2 duration-300 booking-card overflow-hidden ${
               theme === 'dark'
                 ? 'bg-slate-800/80 border-slate-700 hover:border-blue-500/50 hover:bg-slate-700/90 backdrop-blur-sm dark-card-bg shadow-dark hover:glow-blue'
                 : 'hover:shadow-lg hover:border-primary/50'
@@ -687,28 +687,40 @@ const BookingPageContent: React.FC = () => {
             style={{ animationDelay: `${index * 150}ms` }}
             onClick={() => handleBranchSelect(branch.id)}
           >
-            <CardHeader>
+            <CardHeader className="w-full">
               <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle className={`transition-colors ${
-                    theme === 'dark' 
-                      ? 'text-white group-hover:text-blue-400' 
-                      : 'group-hover:text-primary'
-                  }`}>
-                    {branch.branches}
-                  </CardTitle>
-                  <CardDescription className={`flex items-center gap-1 transition-colors duration-300 ${
-                    theme === 'dark' ? 'text-slate-400' : ''
-                  }`}>
-                    <MapPin className="h-3 w-3" />
-                    {branch.address}
-                  </CardDescription>
+                {/* Фото филиала */}
+                {branch.photoUrl && (
+                  <div className="mr-4 flex-shrink-0">
+                    <img 
+                      src={branch.photoUrl} 
+                      alt={branch.branches}
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                  </div>
+                )}
+                <div className="flex items-start justify-between flex-1">
+                  <div className="space-y-1 flex-1">
+                    <CardTitle className={`transition-colors ${
+                      theme === 'dark' 
+                        ? 'text-white group-hover:text-blue-400' 
+                        : 'group-hover:text-primary'
+                    }`}>
+                      {branch.branches}
+                    </CardTitle>
+                    <CardDescription className={`flex items-center gap-1 transition-colors duration-300 ${
+                      theme === 'dark' ? 'text-slate-400' : ''
+                    }`}>
+                      <MapPin className="h-3 w-3" />
+                      {branch.address}
+                    </CardDescription>
+                  </div>
+                  <ChevronRight className={`h-5 w-5 transition-all flex-shrink-0 ${
+                    theme === 'dark'
+                      ? 'text-slate-400 group-hover:text-blue-400 group-hover:translate-x-1'
+                      : 'text-muted-foreground group-hover:text-primary group-hover:translate-x-1'
+                  }`} />
                 </div>
-                <ChevronRight className={`h-5 w-5 transition-all ${
-                  theme === 'dark'
-                    ? 'text-slate-400 group-hover:text-blue-400 group-hover:translate-x-1'
-                    : 'text-muted-foreground group-hover:text-primary group-hover:translate-x-1'
-                }`} />
               </div>
             </CardHeader>
           </Card>
@@ -775,7 +787,7 @@ const BookingPageContent: React.FC = () => {
             return (
               <Card
                 key={service.id}
-                className={`cursor-pointer transition-all group ${
+                className={`cursor-pointer transition-all group overflow-hidden ${
                   theme === 'dark'
                     ? 'bg-slate-800/80 border-slate-700 hover:border-blue-500/50 hover:bg-slate-700/90 backdrop-blur-sm'
                     : 'hover:shadow-lg hover:border-primary/50'
@@ -786,39 +798,60 @@ const BookingPageContent: React.FC = () => {
                   firstAvailableDuration ? service[firstAvailableDuration.key] : 0
                 )}
               >
-                <CardHeader>
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="space-y-1 flex-1">
-                      <CardTitle className={`text-lg transition-colors ${
-                        theme === 'dark'
-                          ? 'text-white group-hover:text-blue-400'
-                          : 'group-hover:text-primary'
-                      }`}>
-                        {service.name}
-                      </CardTitle>
+                <div className="flex">
+                  {/* Фото услуги */}
+                  {service.photoUrl && (
+                    <div className="w-2/5 flex-shrink-0">
+                      <img 
+                        src={service.photoUrl} 
+                        alt={service.name}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    <div className="text-right shrink-0">
-                      {firstAvailableDuration ? (
-                        <div className={`font-semibold transition-colors duration-300 ${
-                          theme === 'dark' ? 'text-blue-400' : 'text-primary'
+                  )}
+                  <CardHeader className={service.photoUrl ? 'w-3/5' : 'w-full'}>
+                    <div className="flex flex-col gap-3">
+                      <div className="space-y-2 flex-1">
+                        <CardTitle className={`text-lg transition-colors ${
+                          theme === 'dark'
+                            ? 'text-white group-hover:text-blue-400'
+                            : 'group-hover:text-primary'
                         }`}>
-                          {t('booking.service.price')} {service[firstAvailableDuration.key]} сом
+                          {service.name}
+                        </CardTitle>
+                        {service.description && (
+                          <p className={`text-sm line-clamp-2 transition-colors duration-300 ${
+                            theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
+                          }`}>
+                            {service.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <div>
+                          {firstAvailableDuration ? (
+                            <div className={`font-semibold text-lg transition-colors duration-300 ${
+                              theme === 'dark' ? 'text-blue-400' : 'text-primary'
+                            }`}>
+                              {service[firstAvailableDuration.key]} сом
+                            </div>
+                          ) : (
+                            <div className={`font-semibold transition-colors duration-300 ${
+                              theme === 'dark' ? 'text-blue-400' : 'text-primary'
+                            }`}>
+                              Цена не указана
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className={`font-semibold transition-colors duration-300 ${
-                          theme === 'dark' ? 'text-blue-400' : 'text-primary'
+                        <div className={`text-sm transition-colors duration-300 ${
+                          theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
                         }`}>
-                          Цена не указана
+                          {firstAvailableDuration?.duration || service.defaultDuration} {t('booking.service.duration')}
                         </div>
-                      )}
-                      <div className={`text-xs transition-colors duration-300 ${
-                        theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
-                      }`}>
-                        {firstAvailableDuration?.duration || service.defaultDuration} {t('booking.service.duration')}
                       </div>
                     </div>
-                  </div>
-                </CardHeader>
+                  </CardHeader>
+                </div>
               </Card>
             );
           })}
@@ -890,13 +923,21 @@ const BookingPageContent: React.FC = () => {
                   onClick={() => handleMasterSelect(master.id)}
                 >
                   <CardContent className="p-6 text-center space-y-4">
-                    <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center text-2xl font-semibold transition-all duration-300 ${
-                      theme === 'dark'
-                        ? 'bg-gradient-to-br from-blue-800 to-purple-800 text-blue-200'
-                        : 'bg-gradient-to-br from-blue-100 to-sky-100 text-blue-700'
-                    }`}>
-                      {master.name.charAt(0)}
-                    </div>
+                    {master.photoUrl ? (
+                      <img 
+                        src={master.photoUrl} 
+                        alt={master.name}
+                        className="mx-auto w-20 h-20 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center text-2xl font-semibold transition-all duration-300 ${
+                        theme === 'dark'
+                          ? 'bg-gradient-to-br from-blue-800 to-purple-800 text-blue-200'
+                          : 'bg-gradient-to-br from-blue-100 to-sky-100 text-blue-700'
+                      }`}>
+                        {master.name.charAt(0)}
+                      </div>
+                    )}
                     <div>
                       <h3 className={`font-semibold transition-colors ${
                         theme === 'dark'

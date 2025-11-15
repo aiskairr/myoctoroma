@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { BookingLinkCopy } from "@/components/BookingLinkCopy";
 import { UnifiedImportCard } from "@/components/UnifiedImportCard";
 
 export default function Settings() {
@@ -260,66 +259,70 @@ export default function Settings() {
       </div>
 
       {/* User Profile Settings */}
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle>{t('settings.profile_title')}</CardTitle>
-          <CardDescription>
+      <Card className="mb-6 bg-gradient-to-br from-slate-50 to-white border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="pb-3 border-b border-slate-100">
+          <CardTitle className="text-slate-800">{t('settings.profile_title')}</CardTitle>
+          <CardDescription className="text-slate-600">
             {t('settings.profile_description')}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleUpdateProfile(); }}>
+        <CardContent className="pt-6">
+          <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); handleUpdateProfile(); }}>
             {/* Current Email Display */}
             {user?.email && (
-              <div className="bg-muted/50 p-3 rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  {t('settings.current_email')} <span className="font-medium text-foreground">{user.email}</span>
+              <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg">
+                <p className="text-sm text-emerald-700">
+                  {t('settings.current_email')} <span className="font-semibold text-emerald-900">{user.email}</span>
                 </p>
               </div>
             )}
 
             {/* New Email */}
             <div className="space-y-2">
-              <Label htmlFor="new-email">{t('settings.new_email_label')}</Label>
+              <Label htmlFor="new-email" className="text-slate-700 font-medium">{t('settings.new_email_label')}</Label>
               <Input
                 id="new-email"
                 type="email"
                 value={userProfile.email}
                 onChange={(e) => handleProfileInputChange("email", e.target.value)}
                 placeholder={t('settings.new_email_placeholder')}
+                className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500"
               />
             </div>
             
             {/* New Password */}
             <div className="space-y-2">
-              <Label htmlFor="new-password">{t('settings.new_password_label')}</Label>
+              <Label htmlFor="new-password" className="text-slate-700 font-medium">{t('settings.new_password_label')}</Label>
               <Input
                 id="new-password"
                 type="password"
                 value={userProfile.password}
                 onChange={(e) => handleProfileInputChange("password", e.target.value)}
                 placeholder={t('settings.new_password_placeholder')}
+                className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500"
               />
             </div>
 
             {/* Confirm Password */}
             {userProfile.password && (
               <div className="space-y-2">
-                <Label htmlFor="confirm-password">{t('settings.confirm_password_label')}</Label>
+                <Label htmlFor="confirm-password" className="text-slate-700 font-medium">{t('settings.confirm_password_label')}</Label>
                 <Input
                   id="confirm-password"
                   type="password"
                   value={userProfile.confirmPassword}
                   onChange={(e) => handleProfileInputChange("confirmPassword", e.target.value)}
                   placeholder={t('settings.confirm_password_placeholder')}
+                  className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500"
                 />
               </div>
             )}
             
-            <div className="flex justify-end">
+            <div className="flex justify-end pt-2">
               <Button
                 type="submit"
                 disabled={updateProfileMutation.isPending}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6"
               >
                 {updateProfileMutation.isPending ? (
                   <>
@@ -334,11 +337,6 @@ export default function Settings() {
           </form>
         </CardContent>
       </Card>
-      
-      {/* Booking Link Copy */}
-      <div className="mb-6">
-        <BookingLinkCopy />
-      </div>
       
       {/* System Prompt Settings */}
       <Card className="mb-6 bg-gray-100 border-gray-300 opacity-60 relative">

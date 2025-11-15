@@ -17,6 +17,7 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { getBranchIdWithFallback } from '@/utils/branch-utils';
 import { taskParserService } from '@/services/task-parser';
 import type { Master } from '@/hooks/use-masters';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 // Types
 interface Employee {
@@ -30,6 +31,7 @@ interface Employee {
     color: string;
     isWorking: boolean;
     workingDate: any | null;
+    photoUrl?: string | null;
 }
 
 interface DragState {
@@ -310,7 +312,8 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                     workHours,
                     color: EMPLOYEE_COLORS[index % EMPLOYEE_COLORS.length],
                     isWorking,
-                    workingDate: workingDate || null
+                    workingDate: workingDate || null,
+                    photoUrl: master.photoUrl || null
                 };
             })
             .filter(employee => employee.isWorking); // Показываем только работающих мастеров
@@ -1899,12 +1902,22 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                             {/* Employee Header - Sticky */}
                                             <div className="h-12 sm:h-16 p-2 sm:p-3 border-b border-gray-200 bg-white relative group sticky top-0 z-10 shadow-sm">
                                                 <div className="flex items-center gap-1.5 sm:gap-3">
-                                                    <div
-                                                        className="w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-medium text-xs sm:text-sm flex-shrink-0"
-                                                        style={{ backgroundColor: employee.color }}
-                                                    >
-                                                        {employee.name[0]}
-                                                    </div>
+                                                    {/* Фото или аватар мастера */}
+                                                    {employee.photoUrl ? (
+                                                        <Avatar className="w-7 h-7 sm:w-10 sm:h-10 flex-shrink-0">
+                                                            <AvatarImage src={employee.photoUrl} alt={employee.name} />
+                                                            <AvatarFallback style={{ backgroundColor: employee.color }} className="text-white font-medium text-xs sm:text-sm">
+                                                                {employee.name[0]}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                    ) : (
+                                                        <div
+                                                            className="w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-medium text-xs sm:text-sm flex-shrink-0"
+                                                            style={{ backgroundColor: employee.color }}
+                                                        >
+                                                            {employee.name[0]}
+                                                        </div>
+                                                    )}
                                                     <div className="flex-1 min-w-0">
                                                         <div className="font-semibold text-[10px] sm:text-sm text-gray-900 truncate">
                                                             {employee.name}

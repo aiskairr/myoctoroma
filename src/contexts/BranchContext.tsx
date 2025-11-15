@@ -9,6 +9,7 @@ export interface Branch {
   phoneNumber: string;
   organisationId: string | number;
   accountID?: string | null; // Новое поле для ID аккаунта
+  photoUrl?: string | null; // URL фотографии филиала
   isActive?: boolean; // Для поддержки soft delete
   createdAt?: string;
   updatedAt?: string;

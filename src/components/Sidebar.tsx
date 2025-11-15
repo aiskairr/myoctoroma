@@ -38,6 +38,7 @@ interface NavItem {
   label: string;
   icon: React.ReactNode;
   children?: NavItem[];
+  badge?: string;
 }
 
 // Интерфейс для типов useAuth
@@ -349,7 +350,7 @@ function AdminOnlySidebar() {
   const navItems: NavItem[] = [
     { path: "/", label: t('sidebar.how_to_use'), icon: <HelpCircle className="h-5 w-5" /> },
     { path: "/clients", label: t('sidebar.clients'), icon: <Users className="h-5 w-5" /> },
-    { path: "/chats", label: t('sidebar.chats'), icon: <MessageCircle className="h-5 w-5" /> },
+    { path: "/chats", label: t('sidebar.chats'), icon: <MessageCircle className="h-5 w-5" />, badge: 'DEMO' },
     {
       label: t('sidebar.crm'),
       icon: <FileClock className="h-5 w-5" />,
@@ -497,8 +498,17 @@ function AdminOnlySidebar() {
                     )}
                     onClick={() => setLocation(item.path!)}
                   >
-                    {item.icon}
-                    <span className="ml-3 font-medium">{item.label}</span>
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center">
+                        {item.icon}
+                        <span className="ml-3 font-medium">{item.label}</span>
+                      </div>
+                      {item.badge && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
                   </Button>
                 )}
               </div>
@@ -594,7 +604,7 @@ function AdminSidebar() {
     { path: "/", label: t('sidebar.how_to_use'), icon: <HelpCircle className="h-5 w-5" /> },
     { path: "/dashboard", label: t('sidebar.dashboard'), icon: <LayoutDashboard className="h-5 w-5" /> },
     { path: "/clients", label: t('sidebar.clients'), icon: <Users className="h-5 w-5" /> },
-    { path: "/chats", label: t('sidebar.chats'), icon: <MessageCircle className="h-5 w-5" /> },
+    { path: "/chats", label: t('sidebar.chats'), icon: <MessageCircle className="h-5 w-5" />, badge: 'DEMO' },
     {
       label: t('sidebar.crm'),
       icon: <FileClock className="h-5 w-5" />,
@@ -747,8 +757,17 @@ function AdminSidebar() {
                     )}
                     onClick={() => setLocation(item.path!)}
                   >
-                    {item.icon}
-                    <span className="ml-3 font-medium">{item.label}</span>
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center">
+                        {item.icon}
+                        <span className="ml-3 font-medium">{item.label}</span>
+                      </div>
+                      {item.badge && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
                   </Button>
                 )}
               </div>

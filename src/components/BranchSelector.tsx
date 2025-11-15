@@ -11,13 +11,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building, Building2, Pencil, Loader2 } from "lucide-react";
+import { Building, Building2, Pencil, Loader2, Upload } from "lucide-react";
 import { useBranch } from "../contexts/BranchContext";
 import { useAuth } from "../contexts/SimpleAuthContext";
 import { useLocale } from '../contexts/LocaleContext';
 import { useToast } from "@/hooks/use-toast";
 import type { Branch } from "../contexts/BranchContext";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface BranchCardProps {
   branch: Branch;
@@ -52,9 +53,17 @@ const BranchCard: React.FC<BranchCardProps> = ({ branch, isSelected, onClick, on
       )}
       onClick={onClick}
     >
-      <div className="rounded-full p-3 bg-primary/10 text-primary">
-        <Building className="h-6 w-6" />
-      </div>
+      {/* Фото или иконка филиала */}
+      {branch.photoUrl ? (
+        <Avatar className="h-12 w-12">
+          <AvatarImage src={branch.photoUrl} alt={branch.branches} />
+          <AvatarFallback className="text-lg">{branch.branches[0]}</AvatarFallback>
+        </Avatar>
+      ) : (
+        <div className="rounded-full p-3 bg-primary/10 text-primary">
+          <Building className="h-6 w-6" />
+        </div>
+      )}
       <div className="flex-1">
         <div className="flex items-center gap-2">
           <h3 className="font-medium">{branch.branches}</h3>
@@ -102,6 +111,7 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
     phoneNumber: ""
   });
   const [isUpdating, setIsUpdating] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   // Проверяем, является ли пользователь админом или суперадмином
   const isAdminOrSuperAdmin = user?.role === 'admin' || user?.role === 'superadmin';
@@ -130,6 +140,81 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
       accountID: branch.accountID || ''
     });
     setEditDialog(true);
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !editingBranch) return;
+    
+    // Проверка типа файла
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: t('common.error'),
+        description: t('branch.please_select_image'),
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Проверка размера файла (максимум 100MB)
+    if (file.size > 100 * 1024 * 1024) {
+      toast({
+        title: t('common.error'),
+        description: t('branch.file_size_limit_100mb'),
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('photo', file);
+      
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/branches/${editingBranch.id}/photo`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to upload photo');
+      }
+      
+      const result = await response.json();
+      
+      const description = result.status === 'processing' 
+        ? `${result.message || t('branch.photo_processing')} (fileGuid: ${result.fileGuid})`
+        : result.message || t('branch.photo_uploaded');
+      
+      toast({
+        title: t('branch.photo_uploaded'),
+        description: description,
+        variant: 'default',
+      });
+      
+      if (result.status === 'processing') {
+        toast({
+          title: t('branch.photo_processing_title'),
+          description: t('branch.photo_processing_desc'),
+          variant: 'default',
+        });
+      }
+      
+      // Обновляем список филиалов
+      await refetchBranches();
+      
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      toast({
+        title: t('branch.error_uploading_photo'),
+        description: `${error}`,
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const handleUpdateBranch = async () => {
@@ -231,6 +316,43 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Фото филиала */}
+            <div>
+              <Label>{t('branch.photo')}</Label>
+              <div className="flex items-center gap-3 mt-2">
+                <Avatar className="h-20 w-20">
+                  {editingBranch?.photoUrl ? (
+                    <AvatarImage src={editingBranch.photoUrl} alt={editingBranch.branches} />
+                  ) : (
+                    <AvatarFallback className="text-2xl">{editingBranch?.branches[0]}</AvatarFallback>
+                  )}
+                </Avatar>
+                <label htmlFor="branch-photo-upload" className="cursor-pointer flex-1">
+                  <div className="flex items-center justify-center gap-2 h-10 px-4 rounded-md bg-secondary hover:bg-secondary/80 transition-colors">
+                    {uploadingPhoto ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm">{t('branch.uploading')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4" />
+                        <span className="text-sm">{t('branch.upload_photo')}</span>
+                      </>
+                    )}
+                  </div>
+                  <input
+                    id="branch-photo-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                    disabled={uploadingPhoto}
+                  />
+                </label>
+              </div>
+            </div>
+            
             <div>
               <Label htmlFor="branchName">{t('branch.name_label')}</Label>
               <Input

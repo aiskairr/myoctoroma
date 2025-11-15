@@ -6,12 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Check, Trash2, Eye, Settings, Search } from 'lucide-react';
+import { Check, Trash2, Eye, Settings, Search, Upload, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiGet, apiPut, apiDelete } from '@/lib/api';
 import { useBranch } from '@/contexts/BranchContext';
 import { getBranchIdWithFallback } from '@/utils/branch-utils';
 import { useLocale } from '@/contexts/LocaleContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const TIME_COLUMNS = [10, 15, 20, 30, 40, 50, 60, 75, 80, 90, 110, 120, 150, 220] as const;
 
@@ -29,6 +30,7 @@ const ServicesTable: React.FC = () => {
     const [serviceToView, setServiceToView] = useState<any | null>(null);
     const [serviceToConfigureDurations, setServiceToConfigureDurations] = useState<any | null>(null);
     const [tempDurations, setTempDurations] = useState<Record<string, number | null>>({});
+    const [uploadingPhotos, setUploadingPhotos] = useState<Record<number, boolean>>({});
 
     const branchOptions = [
         ...branches.map(branch => ({ id: branch.id.toString(), name: branch.branches }))
@@ -134,6 +136,63 @@ const ServicesTable: React.FC = () => {
         },
     });
 
+    const uploadPhotoMutation = useMutation({
+        mutationFn: async ({ serviceId, file }: { serviceId: number, file: File }) => {
+            const formData = new FormData();
+            formData.append('photo', file);
+            
+            console.log('📤 Uploading photo for service:', serviceId);
+            console.log('📦 File size:', file.size, 'bytes');
+            console.log('📄 File type:', file.type);
+            
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/services/${serviceId}/photo`, {
+                method: 'POST',
+                credentials: 'include',
+                body: formData
+            });
+            
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || 'Failed to upload photo');
+            }
+            
+            const result = await res.json();
+            console.log('✅ Upload response:', result);
+            return result;
+        },
+        onSuccess: (data, variables) => {
+            setUploadingPhotos(prev => ({ ...prev, [variables.serviceId]: false }));
+            
+            const description = data.status === 'processing' 
+                ? `${data.message || t('services.photo_processing')} (fileGuid: ${data.fileGuid})`
+                : data.message || t('services.photo_uploaded');
+            
+            toast({
+                title: t('services.photo_uploaded'),
+                description: description,
+                variant: 'default',
+            });
+            
+            if (data.status === 'processing') {
+                toast({
+                    title: t('services.photo_processing_title'),
+                    description: t('services.photo_processing_desc'),
+                    variant: 'default',
+                });
+            }
+            
+            queryClient.invalidateQueries({ queryKey: ['crm-services'] });
+        },
+        onError: (error, variables) => {
+            setUploadingPhotos(prev => ({ ...prev, [variables.serviceId]: false }));
+            toast({
+                title: t('services.error_uploading_photo'),
+                description: `${error}`,
+                variant: 'destructive',
+            });
+        }
+    });
+
     const handleInputChange = (serviceId: number, field: any, value: string | number | boolean | null) => {
         setEditingServices((prev) => ({
             ...prev,
@@ -210,6 +269,34 @@ const ServicesTable: React.FC = () => {
         }
     };
 
+    const handlePhotoUpload = (serviceId: number, event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        
+        // Проверка типа файла
+        if (!file.type.startsWith('image/')) {
+            toast({
+                title: t('common.error'),
+                description: t('services.please_select_image'),
+                variant: 'destructive',
+            });
+            return;
+        }
+        
+        // Проверка размера файла (максимум 100MB согласно API)
+        if (file.size > 100 * 1024 * 1024) {
+            toast({
+                title: t('common.error'),
+                description: t('services.file_size_limit_100mb'),
+                variant: 'destructive',
+            });
+            return;
+        }
+        
+        setUploadingPhotos(prev => ({ ...prev, [serviceId]: true }));
+        uploadPhotoMutation.mutate({ serviceId, file });
+    };
+
     const getBranchName = (branchID: string | null) => {
         const branch = branchOptions.find((b) => b.id === branchID);
         return branch ? branch.name : t('services.not_specified');
@@ -260,6 +347,7 @@ const ServicesTable: React.FC = () => {
                             <tr className="bg-gray-50">
                                 {/* Закрепленная угловая ячейка - название услуги */}
                                 <th className="min-w-[180px] border border-gray-300 px-4 py-3 text-left text-base font-semibold sticky left-0 top-0 z-40 bg-gray-50 shadow-sm">{t('services.name')}</th>
+                                <th className="min-w-[100px] border border-gray-300 px-4 py-3 text-center text-base font-semibold sticky top-0 z-10 bg-gray-50">{t('services.photo')}</th>
                                 <th className="min-w-[140px] border border-gray-300 px-4 py-3 text-left text-base font-semibold sticky top-0 z-10 bg-gray-50">{t('services.description')}</th>
                                 <th className="min-w-[140px] border border-gray-300 px-4 py-3 text-left text-base font-semibold sticky top-0 z-10 bg-gray-50">{t('services.duration')}</th>
                                 <th className="min-w-[200px] text-center border border-gray-300 px-4 py-3 text-base font-semibold sticky top-0 z-10 bg-gray-50">{t('services.actions')}</th>
@@ -277,6 +365,34 @@ const ServicesTable: React.FC = () => {
                                                 onChange={(e) => handleInputChange(service.id, 'name', e.target.value)}
                                                 className="border-0 shadow-none p-2 text-base font-medium bg-transparent focus-visible:ring-1 focus-visible:ring-blue-500 min-w-[250px]"
                                             />
+                                        </td>
+                                        <td className="border border-gray-300 px-4 py-3">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <Avatar className="h-10 w-10">
+                                                    {editingService.photoUrl ? (
+                                                        <AvatarImage src={editingService.photoUrl} alt={editingService.name} />
+                                                    ) : (
+                                                        <AvatarFallback>{editingService.name[0]}</AvatarFallback>
+                                                    )}
+                                                </Avatar>
+                                                <label htmlFor={`photo-upload-${service.id}`} className="cursor-pointer">
+                                                    <div className="flex items-center justify-center h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+                                                        {uploadingPhotos[service.id] ? (
+                                                            <Loader2 className="h-4 w-4 animate-spin text-gray-600" />
+                                                        ) : (
+                                                            <Upload className="h-4 w-4 text-gray-600" />
+                                                        )}
+                                                    </div>
+                                                    <input
+                                                        id={`photo-upload-${service.id}`}
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={(e) => handlePhotoUpload(service.id, e)}
+                                                        className="hidden"
+                                                        disabled={uploadingPhotos[service.id]}
+                                                    />
+                                                </label>
+                                            </div>
                                         </td>
                                         <td className="border border-gray-300 px-4 py-3">
                                             <Input
@@ -354,6 +470,43 @@ const ServicesTable: React.FC = () => {
                         const editingService = editingServices[service.id] || service;
                         return (
                             <Card key={service.id} className="p-4 space-y-3 shadow-sm">
+                                {/* Фото услуги */}
+                                <div className="space-y-1">
+                                    <label className="text-xs font-medium text-gray-500">{t('services.photo')}</label>
+                                    <div className="flex items-center gap-3">
+                                        <Avatar className="h-16 w-16">
+                                            {editingService.photoUrl ? (
+                                                <AvatarImage src={editingService.photoUrl} alt={editingService.name} />
+                                            ) : (
+                                                <AvatarFallback className="text-lg">{editingService.name[0]}</AvatarFallback>
+                                            )}
+                                        </Avatar>
+                                        <label htmlFor={`photo-upload-mobile-${service.id}`} className="cursor-pointer flex-1">
+                                            <div className="flex items-center justify-center gap-2 h-10 px-4 rounded-md bg-gray-100 hover:bg-gray-200 transition-colors">
+                                                {uploadingPhotos[service.id] ? (
+                                                    <>
+                                                        <Loader2 className="h-4 w-4 animate-spin text-gray-600" />
+                                                        <span className="text-sm text-gray-600">{t('services.uploading')}</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Upload className="h-4 w-4 text-gray-600" />
+                                                        <span className="text-sm text-gray-600">{t('services.upload_photo')}</span>
+                                                    </>
+                                                )}
+                                            </div>
+                                            <input
+                                                id={`photo-upload-mobile-${service.id}`}
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) => handlePhotoUpload(service.id, e)}
+                                                className="hidden"
+                                                disabled={uploadingPhotos[service.id]}
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
+
                                 {/* Название услуги */}
                                 <div className="space-y-1">
                                     <label className="text-xs font-medium text-gray-500">{t('services.name')}</label>
@@ -458,6 +611,14 @@ const ServicesTable: React.FC = () => {
                     </DialogHeader>
                     {serviceToView && (
                         <div className="space-y-4">
+                            {serviceToView.photoUrl && (
+                                <div className="flex justify-center">
+                                    <Avatar className="h-24 w-24">
+                                        <AvatarImage src={serviceToView.photoUrl} alt={serviceToView.name} />
+                                        <AvatarFallback className="text-2xl">{serviceToView.name[0]}</AvatarFallback>
+                                    </Avatar>
+                                </div>
+                            )}
                             <div>
                                 <p className="text-sm font-medium text-gray-500">{t('services.name')}</p>
                                 <p className="text-base font-semibold">{serviceToView.name}</p>
