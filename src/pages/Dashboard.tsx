@@ -16,15 +16,7 @@ import {
   Activity,
   DollarSign
 } from "lucide-react";
-import { format } from "date-fns";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+
 import {
   Select,
   SelectContent,
@@ -91,7 +83,6 @@ export default function Dashboard() {
     messagesToday: 0,
     apiUsage: 0,
   });
-  const [activities, setActivities] = useState<any[]>([]);
   const [serviceTypes, setserviceTypes] = useState<serviceTypeStats[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [masterStats, setMasterStats] = useState<MasterStats[]>([]);
@@ -145,25 +136,7 @@ export default function Dashboard() {
     }
   });
 
-  const activitiesQuery = useQuery({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/activities?branchID=branch${currentBranch?.id}`, currentBranch?.id],
-    refetchInterval: 10000,
-    enabled: !!currentBranch?.id,
-    queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/activities?branchID=branch${currentBranch?.id}`, {
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
-        }
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json();
-    }
-  });
+
 
   const serviceStatsQuery = useQuery({
     queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/stats/service-types?branchId=${currentBranch?.id}`, currentBranch?.id],
@@ -261,14 +234,7 @@ export default function Dashboard() {
     }
   }, [data]);
 
-  useEffect(() => {
-    if (activitiesQuery.data && typeof activitiesQuery.data === 'object') {
-      const apiData = activitiesQuery.data as any;
-      if (apiData.activities && Array.isArray(apiData.activities)) {
-        setActivities(apiData.activities);
-      }
-    }
-  }, [activitiesQuery.data]);
+
 
   useEffect(() => {
     if (serviceStatsQuery.data && typeof serviceStatsQuery.data === 'object') {
@@ -391,10 +357,7 @@ export default function Dashboard() {
     fetchAnalytics();
   }, [currentBranch?.id]);
 
-  const formatActivityTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return format(date, "h:mm a");
-  };
+
 
   // Рендер графика услуг в зависимости от выбранного типа
   const renderServicesChart = () => {
@@ -1310,70 +1273,6 @@ export default function Dashboard() {
 
         {/* Booking Links Statistics */}
         <BookingLinksStats />
-
-        {/* Recent Activity */}
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-gray-900">
-              <Users className="h-5 w-5 mr-2 text-gray-600" />
-              {t('dashboard.recent_actions')}
-            </CardTitle>
-            <p className="text-sm text-gray-500">{t('dashboard.user_activity_realtime')}</p>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="overflow-x-auto">
-              {isLoading || activitiesQuery.isLoading ? (
-                <div className="py-8 text-center">
-                  <div className="animate-spin w-6 h-6 border-4 border-gray-600 border-t-transparent rounded-full mx-auto mb-2"></div>
-                  <p className="text-gray-500">Загрузка...</p>
-                </div>
-              ) : error || activitiesQuery.error ? (
-                <div className="py-8 text-center text-red-600 flex items-center justify-center">
-                  <AlertCircle className="h-5 w-5 mr-2" />
-                  <span>Ошибка загрузки данных</span>
-                </div>
-              ) : activities.length === 0 ? (
-                <div className="py-8 text-center text-gray-500">Нет недавней активности</div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-gray-200 hover:bg-transparent">
-                      <TableHead className="text-gray-500 font-medium">{t('dashboard.time')}</TableHead>
-                      <TableHead className="text-gray-500 font-medium">{t('dashboard.user')}</TableHead>
-                      <TableHead className="text-gray-500 font-medium">{t('dashboard.event')}</TableHead>
-                      <TableHead className="text-gray-500 font-medium">{t('dashboard.status')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {activities.map((activity) => (
-                      <TableRow key={activity.id} className="border-gray-100 hover:bg-gray-50/50">
-                        <TableCell className="font-mono text-sm text-gray-500">
-                          {formatActivityTime(activity.timestamp.toString())}
-                        </TableCell>
-                        <TableCell className="font-medium text-gray-900">
-                          {activity.telegramId === "System" ? (
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full mr-2" />
-                              Система
-                            </div>
-                          ) : (
-                            <div className="flex items-center">
-                              {activity.telegramId || "Неизвестно"}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-gray-900">{activity.event}</TableCell>
-                        <TableCell>
-                          <StatusBadge status={activity.status} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

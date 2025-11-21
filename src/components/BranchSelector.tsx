@@ -31,7 +31,6 @@ interface EditBranchData {
   branches: string;
   address: string;
   phoneNumber: string;
-  accountID?: string;
 }
 
 // Карточка филиала для модального окна
@@ -136,8 +135,7 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
     setEditData({
       branches: branch.branches,
       address: branch.address,
-      phoneNumber: branch.phoneNumber,
-      accountID: branch.accountID || ''
+      phoneNumber: branch.phoneNumber
     });
     setEditDialog(true);
   };
@@ -379,16 +377,6 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
                 onChange={(e) => setEditData({ ...editData, phoneNumber: e.target.value })}
                 placeholder={t('branch.phone_placeholder')}
               />
-            </div>
-            <div>
-              <Label htmlFor="branchAccountID">{t('branch.account_id_label')}</Label>
-              <Input
-                id="branchAccountID"
-                value={editData.accountID || ''}
-                onChange={(e) => setEditData({ ...editData, accountID: e.target.value })}
-                placeholder={t('branch.account_id_placeholder')}
-              />
-              <p className="text-xs text-muted-foreground mt-1">{t('branch.account_id_hint')}</p>
             </div>
           </div>
           <DialogFooter>

@@ -40,23 +40,34 @@ interface ChatsListResponse {
 
 interface Message {
   id: string;
-  type: 'text' | 'image' | 'video' | 'audio' | 'document';
-  body: string;
-  timestamp: string;
-  fromMe: boolean;
-  status?: 'pending' | 'sent' | 'delivered' | 'read';
-  author?: string;
+  direction: 'incoming' | 'outgoing';
+  message: string;
+  to: string;
+  from: string | null;
+  sentAt: string;
+  status: 'SENT' | 'DELIVERED' | 'READ' | 'PENDING';
+  contactName: string | null;
+  contactNumber: string;
+  source: string;
+  clientId: number;
 }
 
 interface ChatHistoryResponse {
   success: boolean;
-  data: {
-    messages: Message[];
-    stats: {
-      totalMessages: number;
-      unreadCount: number;
-      lastMessageTime: string;
-    };
+  phone: string;
+  messages: Message[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+  stats: {
+    sentMessages: number;
+    receivedMessages: number;
+    totalMessages: number;
   };
 }
 
@@ -92,21 +103,19 @@ export default function Chats() {
   };
 
   // Автопрокрутка к последнему сообщению
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, selectedChat]);
 
   // Загрузка списка чатов
-  const loadChats = async () => {
+  const loadChats = async (silent = false) => {
     if (!currentBranch?.accountID) {
       return;
     }
 
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const endpoint = `/api/whatsapp/chats-list?accountId=${currentBranch.accountID}&page=${page}&limit=50`;
       const data = await apiGetJson<ChatsListResponse>(endpoint);
@@ -118,38 +127,42 @@ export default function Chats() {
       }
     } catch (error) {
       console.error('Error loading chats:', error);
-      toast({
-        title: t('error'),
-        description: t('whatsapp.error_loading_history'),
-        variant: 'destructive',
-      });
+      if (!silent) {
+        toast({
+          title: t('error'),
+          description: t('whatsapp.error_loading_history'),
+          variant: 'destructive',
+        });
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   // Загрузка истории сообщений
-  const loadMessages = async (chat: WhatsAppChatItem) => {
+  const loadMessages = async (chat: WhatsAppChatItem, silent = false) => {
     if (!currentBranch?.accountID) return;
 
-    setLoadingMessages(true);
+    if (!silent) setLoadingMessages(true);
     try {
       const normalizedPhone = normalizePhone(chat.contactNumber);
       const endpoint = `/api/whatsapp/history/${normalizedPhone}?accountId=${currentBranch.accountID}&limit=100`;
       const data = await apiGetJson<ChatHistoryResponse>(endpoint);
       
-      if (data.success && data.data) {
-        setMessages(data.data.messages);
+      if (data.success && data.messages) {
+        setMessages(data.messages);
       }
     } catch (error) {
       console.error('Error loading messages:', error);
-      toast({
-        title: t('error'),
-        description: t('whatsapp.error_loading_history'),
-        variant: 'destructive',
-      });
+      if (!silent) {
+        toast({
+          title: t('error'),
+          description: t('whatsapp.error_loading_history'),
+          variant: 'destructive',
+        });
+      }
     } finally {
-      setLoadingMessages(false);
+      if (!silent) setLoadingMessages(false);
     }
   };
 
@@ -187,12 +200,17 @@ export default function Chats() {
         setNewMessage('');
         // Добавляем сообщение в список
         const newMsg: Message = {
-          id: data.messageId || Date.now().toString(),
-          type: 'text',
-          body: newMessage.trim(),
-          timestamp: new Date().toISOString(),
-          fromMe: true,
-          status: 'sent'
+          id: data.messageId || `temp_${Date.now()}`,
+          direction: 'outgoing',
+          message: newMessage.trim(),
+          to: normalizedPhone,
+          from: null,
+          sentAt: new Date().toISOString(),
+          status: 'SENT',
+          contactName: selectedChat.contactName,
+          contactNumber: normalizedPhone,
+          source: 'ui',
+          clientId: 0
         };
         setMessages(prev => [...prev, newMsg]);
         
@@ -282,9 +300,16 @@ export default function Chats() {
     }
   };
 
-  // Загрузка чатов при монтировании
+  // Загрузка чатов при монтировании + автообновление каждые 2 секунды
   useEffect(() => {
-    loadChats();
+    loadChats(false); // Первая загрузка с индикатором
+    
+    // Устанавливаем интервал для тихого автообновления списка чатов
+    const interval = setInterval(() => {
+      loadChats(true); // Тихое обновление без индикатора
+    }, 2000); // Обновляем каждые 2 секунды
+    
+    return () => clearInterval(interval);
   }, [currentBranch, page]);
 
   // Поиск чатов
@@ -310,8 +335,20 @@ export default function Chats() {
   // Открытие чата
   const handleOpenChat = (chat: WhatsAppChatItem) => {
     setSelectedChat(chat);
-    loadMessages(chat);
+    loadMessages(chat, false); // Первая загрузка с индикатором
   };
+
+  // Автообновление истории открытого чата каждые 2 секунды
+  useEffect(() => {
+    if (!selectedChat) return;
+    
+    // Устанавливаем интервал для тихого автообновления истории
+    const interval = setInterval(() => {
+      loadMessages(selectedChat, true); // Тихое обновление без индикатора
+    }, 2000); // Обновляем каждые 2 секунды
+    
+    return () => clearInterval(interval);
+  }, [selectedChat, currentBranch]);
 
   // Получение отображаемого имени
   const getChatDisplayName = (chat: WhatsAppChatItem) => {
@@ -346,10 +383,15 @@ export default function Chats() {
 
   // Группировка сообщений по датам
   const groupMessagesByDate = (messages: Message[]) => {
+    // Сортируем сообщения от старых к новым (по дате отправки)
+    const sortedMessages = [...messages].sort((a, b) => 
+      new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
+    );
+    
     const groups: { [key: string]: Message[] } = {};
     
-    messages.forEach(msg => {
-      const date = new Date(msg.timestamp);
+    sortedMessages.forEach(msg => {
+      const date = new Date(msg.sentAt);
       let dateKey: string;
       
       if (isToday(date)) {
@@ -548,44 +590,47 @@ export default function Chats() {
                     </div>
                     
                     {/* Сообщения */}
-                    {msgs.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={cn(
-                          "flex",
-                          msg.fromMe ? "justify-end" : "justify-start"
-                        )}
-                      >
+                    {msgs.map((msg) => {
+                      const isOutgoing = msg.direction === 'outgoing';
+                      return (
                         <div
+                          key={msg.id}
                           className={cn(
-                            "max-w-[70%] rounded-lg p-3 shadow-sm",
-                            msg.fromMe
-                              ? "bg-[#d9fdd3] dark:bg-[#005c4b] text-foreground"
-                              : "bg-white dark:bg-[#202c33] text-foreground"
+                            "flex",
+                            isOutgoing ? "justify-end" : "justify-start"
                           )}
                         >
-                          <p className="text-sm whitespace-pre-wrap break-words">
-                            {msg.body}
-                          </p>
-                          <div className="flex items-center justify-end gap-1 mt-1">
-                            <span className="text-[10px] text-muted-foreground">
-                              {formatMessageTime(msg.timestamp)}
-                            </span>
-                            {msg.fromMe && (
-                              <span className="text-[#53bdeb]">
-                                {msg.status === 'read' ? (
-                                  <CheckCheck className="h-3 w-3" />
-                                ) : msg.status === 'delivered' ? (
-                                  <CheckCheck className="h-3 w-3 text-muted-foreground" />
-                                ) : (
-                                  <Check className="h-3 w-3 text-muted-foreground" />
-                                )}
-                              </span>
+                          <div
+                            className={cn(
+                              "max-w-[70%] rounded-lg p-3 shadow-sm",
+                              isOutgoing
+                                ? "bg-[#d9fdd3] dark:bg-[#005c4b] text-foreground"
+                                : "bg-white dark:bg-[#202c33] text-foreground"
                             )}
+                          >
+                            <p className="text-sm whitespace-pre-wrap break-words">
+                              {msg.message}
+                            </p>
+                            <div className="flex items-center justify-end gap-1 mt-1">
+                              <span className="text-[10px] text-muted-foreground">
+                                {formatMessageTime(msg.sentAt)}
+                              </span>
+                              {isOutgoing && (
+                                <span className="text-[#53bdeb]">
+                                  {msg.status === 'READ' ? (
+                                    <CheckCheck className="h-3 w-3" />
+                                  ) : msg.status === 'DELIVERED' ? (
+                                    <CheckCheck className="h-3 w-3 text-muted-foreground" />
+                                  ) : (
+                                    <Check className="h-3 w-3 text-muted-foreground" />
+                                  )}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ))
               )}

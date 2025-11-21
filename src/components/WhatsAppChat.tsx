@@ -21,14 +21,6 @@ interface WhatsAppMessage {
   source: 'db' | 'api';
 }
 
-interface WhatsAppChatData {
-  chatId: string | null;
-  contactNumber: string;
-  messages: WhatsAppMessage[];
-  unreadCount: number;
-  lastMessageTime: string;
-}
-
 interface WhatsAppChatProps {
   phone: string;
   clientName?: string;
@@ -47,6 +39,7 @@ export default function WhatsAppChat({ phone, clientName, clientId, isOpen, onCl
   const [sending, setSending] = useState(false);
   const [stats, setStats] = useState({ sentMessages: 0, receivedMessages: 0, totalMessages: 0 });
   const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Нормализация номера телефона (удаляем + если есть)
   const normalizePhone = (phoneNumber: string) => {
@@ -55,7 +48,7 @@ export default function WhatsAppChat({ phone, clientName, clientId, isOpen, onCl
 
   // Загрузка истории чата
   const loadChatHistory = async () => {
-    if (!phone) return;
+    if (!phone || !currentBranch?.accountID) return;
     
     setLoading(true);
     try {
@@ -63,7 +56,7 @@ export default function WhatsAppChat({ phone, clientName, clientId, isOpen, onCl
       console.log('📱 Loading chat history for:', normalizedPhone);
       
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/whatsapp/chats?phone=${normalizedPhone}&page=1&limit=50`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/whatsapp/history/${normalizedPhone}?accountId=${currentBranch.accountID}&limit=100`,
         {
           credentials: 'include',
           headers: {
@@ -79,9 +72,12 @@ export default function WhatsAppChat({ phone, clientName, clientId, isOpen, onCl
       const data = await response.json();
       console.log('✅ Chat history loaded:', data);
 
-      if (data.success && data.data && data.data.length > 0) {
-        const chatData: WhatsAppChatData = data.data[0];
-        setMessages(chatData.messages || []);
+      if (data.success && data.messages) {
+        // Сортируем сообщения по дате (старые сверху)
+        const sortedMessages = [...data.messages].sort((a, b) => 
+          new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
+        );
+        setMessages(sortedMessages);
         setStats(data.stats || { sentMessages: 0, receivedMessages: 0, totalMessages: 0 });
       } else {
         setMessages([]);
@@ -179,10 +175,22 @@ export default function WhatsAppChat({ phone, clientName, clientId, isOpen, onCl
     }
   }, [isOpen, phone]);
 
+  // Автообновление сообщений каждые 20 секунд
+  useEffect(() => {
+    if (!isOpen || !phone || !currentBranch?.accountID) return;
+    
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing WhatsApp chat messages for:', phone);
+      loadChatHistory();
+    }, 20000);
+    
+    return () => clearInterval(interval);
+  }, [isOpen, phone, currentBranch]);
+
   // Автоскролл к последнему сообщению
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 
@@ -284,6 +292,7 @@ export default function WhatsAppChat({ phone, clientName, clientId, isOpen, onCl
                   </div>
                 );
               })}
+              <div ref={messagesEndRef} />
             </div>
           )}
         </ScrollArea>

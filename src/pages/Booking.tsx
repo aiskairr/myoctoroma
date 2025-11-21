@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Separator } from "@/components/ui/separator";
 import {
   Loader2, Phone, User, MapPin, Scissors, Calendar as CalendarIcon,
-  Clock, CheckCircle2, ChevronLeft, ChevronRight, Sparkles, Sun
+  Clock, CheckCircle2, ChevronLeft, ChevronRight, Sparkles, Sun, Search
 } from "lucide-react";
 import { ru } from 'date-fns/locale';
 import axios from 'axios';
@@ -303,6 +303,12 @@ const BookingPageContent: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  
+  // Search states
+  const [serviceSearch, setServiceSearch] = useState<string>('');
+  const [masterSearch, setMasterSearch] = useState<string>('');
+  const [showServiceSearch, setShowServiceSearch] = useState<boolean>(false);
+  const [showMasterSearch, setShowMasterSearch] = useState<boolean>(false);
 
   const { data: masterDetails, isLoading: masterDetailsLoading } = useQuery({
     queryKey: ['masterDetails', bookingData?.masterId],
@@ -730,6 +736,12 @@ const BookingPageContent: React.FC = () => {
   );
 
   const renderServiceStep = () => {
+    // Фильтруем услуги по поисковому запросу
+    const filteredServices = servicesList?.filter((service: any) => 
+      service.name.toLowerCase().includes(serviceSearch.toLowerCase()) ||
+      (service.description && service.description.toLowerCase().includes(serviceSearch.toLowerCase()))
+    ) || [];
+
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -745,24 +757,84 @@ const BookingPageContent: React.FC = () => {
               {t('booking.service.subtitle')}
             </p>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => goToStep(BookingStep.Branch)}
-            className={`transition-all duration-300 ${
-              theme === 'dark' 
-                ? 'hover:bg-slate-700 text-slate-300 hover:text-white' 
-                : ''
-            }`}
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
+          
+          {/* Buttons Group - Back & Search */}
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => goToStep(BookingStep.Branch)}
+              className={`transition-all duration-300 ${
+                theme === 'dark' 
+                  ? 'hover:bg-slate-700 text-slate-300 hover:text-white' 
+                  : ''
+              }`}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            
+            {/* Search Button - Mobile Only */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowServiceSearch(!showServiceSearch)}
+              className={`md:hidden transition-all ${
+                theme === 'dark'
+                  ? 'bg-slate-800/80 border-slate-700 hover:bg-slate-700 text-slate-300'
+                  : ''
+              }`}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <InfoCard />
 
+        {/* Search Bar - Desktop */}
+        <div className="hidden md:block">
+          <div className="relative">
+            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${
+              theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
+            }`} />
+            <Input
+              type="text"
+              placeholder="Поиск услуг..."
+              value={serviceSearch}
+              onChange={(e) => setServiceSearch(e.target.value)}
+              className={`pl-10 transition-all ${
+                theme === 'dark' 
+                  ? 'bg-slate-800/80 border-slate-700 text-white placeholder:text-slate-400 focus:border-blue-500' 
+                  : 'bg-white'
+              }`}
+            />
+          </div>
+        </div>
+
+        {/* Mobile Search Input */}
+        {showServiceSearch && (
+          <div className="md:hidden">
+            <div className="relative">
+              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${
+                theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
+              }`} />
+              <Input
+                type="text"
+                placeholder="Поиск услуг..."
+                value={serviceSearch}
+                onChange={(e) => setServiceSearch(e.target.value)}
+                className={`pl-10 transition-all ${
+                  theme === 'dark' 
+                    ? 'bg-slate-800/80 border-slate-700 text-white placeholder:text-slate-400 focus:border-blue-500' 
+                    : 'bg-white'
+                }`}
+              />
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-4 md:grid-cols-2">
-          {servicesList?.map((service: any) => {
+          {filteredServices.length > 0 ? filteredServices.map((service: any) => {
             const durationFields = [
               { key: 'duration10_price', duration: 10 },
               { key: 'duration15_price', duration: 15 },
@@ -854,61 +926,136 @@ const BookingPageContent: React.FC = () => {
                 </div>
               </Card>
             );
-          })}
+          }) : (
+            <div className={`col-span-2 text-center py-12 rounded-lg border ${
+              theme === 'dark' 
+                ? 'bg-slate-800/60 border-slate-700 text-slate-300' 
+                : 'bg-white/60 text-muted-foreground'
+            }`}>
+              <p>Услуги не найдены</p>
+              <p className="text-sm mt-2">Попробуйте изменить поисковый запрос</p>
+            </div>
+          )}
         </div>
       </div>
     );
   };
 
-  const renderMasterStep = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h2 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${
-            theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
-          }`}>
-            {t('booking.master.title')}
-          </h2>
-          <p className={`transition-colors duration-300 ${
-            theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
-          }`}>
-            {t('booking.master.subtitle')}
-          </p>
-        </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => goToStep(BookingStep.Date)}
-          className={`transition-all duration-300 ${
-            theme === 'dark' 
-              ? 'hover:bg-slate-700 text-slate-300 hover:text-white' 
-              : ''
-          }`}
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-      </div>
+  const renderMasterStep = () => {
+    // Получаем мастеров, работающих в выбранную дату
+    const availableMasters = getMastersForDate(selectedDate);
+    
+    // Фильтруем мастеров по поисковому запросу
+    const filteredMasters = availableMasters?.filter((master: any) => 
+      master.name.toLowerCase().includes(masterSearch.toLowerCase()) ||
+      (master.specialty && master.specialty.toLowerCase().includes(masterSearch.toLowerCase()))
+    ) || [];
 
-      <InfoCard />
-
-      {mastersLoading ? (
-        <div className="flex justify-center items-center py-12">
-          <Loader2 className={`h-8 w-8 animate-spin transition-colors duration-300 ${
-            theme === 'dark' ? 'text-blue-400' : 'text-primary'
-          }`} />
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h2 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${
+              theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
+            }`}>
+              {t('booking.master.title')}
+            </h2>
+            <p className={`transition-colors duration-300 ${
+              theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
+            }`}>
+              {t('booking.master.subtitle')}
+            </p>
+          </div>
+          
+          {/* Buttons Group - Back & Search */}
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => goToStep(BookingStep.Date)}
+              className={`transition-all duration-300 ${
+                theme === 'dark' 
+                  ? 'hover:bg-slate-700 text-slate-300 hover:text-white' 
+                  : ''
+              }`}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            
+            {/* Search Button - Mobile Only */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowMasterSearch(!showMasterSearch)}
+              className={`md:hidden transition-all ${
+                theme === 'dark'
+                  ? 'bg-slate-800/80 border-slate-700 hover:bg-slate-700 text-slate-300'
+                  : ''
+              }`}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-      ) : (() => {
-        // Получаем мастеров, работающих в выбранную дату
-        const availableMasters = getMastersForDate(selectedDate);
-        
-        return availableMasters && availableMasters.length > 0 ? (
+
+        <InfoCard />
+
+        {/* Search Bar - Desktop */}
+        <div className="hidden md:block">
+          <div className="relative">
+            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${
+              theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
+            }`} />
+            <Input
+              type="text"
+              placeholder="Поиск мастеров..."
+              value={masterSearch}
+              onChange={(e) => setMasterSearch(e.target.value)}
+              className={`pl-10 transition-all ${
+                theme === 'dark' 
+                  ? 'bg-slate-800/80 border-slate-700 text-white placeholder:text-slate-400 focus:border-blue-500' 
+                  : 'bg-white'
+              }`}
+            />
+          </div>
+        </div>
+
+        {/* Mobile Search Input */}
+        {showMasterSearch && (
+          <div className="md:hidden">
+            <div className="relative">
+              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${
+                theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
+              }`} />
+              <Input
+                type="text"
+                placeholder="Поиск мастеров..."
+                value={masterSearch}
+                onChange={(e) => setMasterSearch(e.target.value)}
+                className={`pl-10 transition-all ${
+                  theme === 'dark' 
+                    ? 'bg-slate-800/80 border-slate-700 text-white placeholder:text-slate-400 focus:border-blue-500' 
+                    : 'bg-white'
+                }`}
+              />
+            </div>
+          </div>
+        )}
+
+        {mastersLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className={`h-8 w-8 animate-spin transition-colors duration-300 ${
+              theme === 'dark' ? 'text-blue-400' : 'text-primary'
+            }`} />
+          </div>
+        ) : filteredMasters && filteredMasters.length > 0 ? (
           <div className={`rounded-xl shadow-lg border transition-all duration-500 p-6 hover:shadow-xl ${
             theme === 'dark'
               ? 'bg-slate-800/60 backdrop-blur-sm border-slate-700'
               : 'bg-white/60 backdrop-blur-sm border-white/40'
           }`}>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {availableMasters.map((master: any) => (
+              {filteredMasters.map((master: any) => (
                 <Card
                   key={master.id}
                   className={`cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 group ${
@@ -974,14 +1121,14 @@ const BookingPageContent: React.FC = () => {
               <p className={`text-sm mt-2 transition-colors duration-300 ${
                 theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
               }`}>
-                Попробуйте выбрать другую дату
+                {masterSearch ? 'Попробуйте изменить поисковый запрос' : 'Попробуйте выбрать другую дату'}
               </p>
             </div>
           </div>
-        );
-      })()}
-    </div>
-  );
+        )}
+      </div>
+    );
+  };
 
   // Функция для рендера шага выбора даты
   const renderDateStep = () => {

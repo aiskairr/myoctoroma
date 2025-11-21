@@ -10,6 +10,8 @@ export interface Branch {
   organisationId: string | number;
   accountID?: string | null; // Новое поле для ID аккаунта
   photoUrl?: string | null; // URL фотографии филиала
+  systemPrompt?: string | null; // System prompt для AI ассистента
+  managerTimeoutMinutes?: number | null; // Таймаут до передачи менеджеру (минуты)
   isActive?: boolean; // Для поддержки soft delete
   createdAt?: string;
   updatedAt?: string;
@@ -55,14 +57,12 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
       
       console.log('👤 Using user data from AuthContext:', user);
       
-      const organisationId = user.organisationId || user.organization_id || user.orgId || user.organisationID || user.organizationId;
+      const organisationId = user.organisationId || user.organization_id || user.orgId;
       
       console.log('🔍 Checking organisationId fields:', {
         organisationId: user.organisationId,
         organization_id: user.organization_id,
         orgId: user.orgId,
-        organisationID: user.organisationID,
-        organizationId: user.organizationId,
         finalOrgId: organisationId
       });
       
