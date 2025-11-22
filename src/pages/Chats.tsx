@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, Phone, Loader2, MessageCircle, AlertTriangle, User, Check, CheckCheck, Send, X, Plus } from 'lucide-react';
+import { Search, Phone, Loader2, MessageCircle, AlertTriangle, User, Check, CheckCheck, Send, X, Plus, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiGetJson } from '@/lib/api';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -102,12 +102,12 @@ export default function Chats() {
     return phoneNumber.replace(/^\+/, '');
   };
 
-  // Автопрокрутка к последнему сообщению
-  useEffect(() => {
+  // Функция прокрутки вниз
+  const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, selectedChat]);
+  };
 
   // Загрузка списка чатов
   const loadChats = async (silent = false) => {
@@ -569,8 +569,9 @@ export default function Chats() {
             </div>
 
             {/* Сообщения */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#efeae2] dark:bg-[#0b141a]">
-              {loadingMessages ? (
+            <div className="flex-1 relative">
+              <div className="absolute inset-0 overflow-y-auto p-4 space-y-4 bg-[#efeae2] dark:bg-[#0b141a]">
+                {loadingMessages ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="h-8 w-8 animate-spin text-[#008069]" />
                 </div>
@@ -635,6 +636,17 @@ export default function Chats() {
                 ))
               )}
               <div ref={messagesEndRef} />
+              </div>
+
+              {/* Scroll to bottom button */}
+              <Button
+                onClick={scrollToBottom}
+                className="absolute bottom-4 right-4 rounded-full w-12 h-12 shadow-lg bg-[#008069] hover:bg-[#006d5b] z-10"
+                size="icon"
+                title="Прокрутить вниз"
+              >
+                <ChevronDown className="h-5 w-5 text-white" />
+              </Button>
             </div>
 
             {/* Поле ввода */}

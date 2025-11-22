@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Send, Loader2, Phone, MessageCircle } from "lucide-react";
+import { Send, Loader2, Phone, MessageCircle, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocale } from "@/contexts/LocaleContext";
 import { useBranch } from "@/contexts/BranchContext";
@@ -187,12 +187,12 @@ export default function WhatsAppChat({ phone, clientName, clientId, isOpen, onCl
     return () => clearInterval(interval);
   }, [isOpen, phone, currentBranch]);
 
-  // Автоскролл к последнему сообщению
-  useEffect(() => {
+  // Функция прокрутки вниз
+  const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]);
+  };
 
   // Форматирование времени
   const formatTime = (dateString: string) => {
@@ -246,17 +246,18 @@ export default function WhatsAppChat({ phone, clientName, clientId, isOpen, onCl
         </DialogHeader>
 
         {/* Messages */}
-        <ScrollArea className="flex-1 px-6 py-4" ref={scrollRef}>
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400">
-              <MessageCircle className="h-12 w-12 mb-2" />
-              <p>{t('whatsapp.no_messages')}</p>
-            </div>
-          ) : (
+        <div className="flex-1 relative">
+          <ScrollArea className="h-full px-6 py-4" ref={scrollRef}>
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                <MessageCircle className="h-12 w-12 mb-2" />
+                <p>{t('whatsapp.no_messages')}</p>
+              </div>
+            ) : (
             <div className="space-y-4">
               {messages.map((msg, index, arr) => {
                 const isOutgoing = msg.direction === 'outgoing';
@@ -295,7 +296,18 @@ export default function WhatsAppChat({ phone, clientName, clientId, isOpen, onCl
               <div ref={messagesEndRef} />
             </div>
           )}
-        </ScrollArea>
+          </ScrollArea>
+
+          {/* Scroll to bottom button */}
+          <Button
+            onClick={scrollToBottom}
+            className="absolute bottom-4 right-4 rounded-full w-12 h-12 shadow-lg bg-green-600 hover:bg-green-700 z-10"
+            size="icon"
+            title={t('whatsapp.scroll_to_bottom')}
+          >
+            <ChevronDown className="h-5 w-5" />
+          </Button>
+        </div>
 
         {/* Input */}
         <div className="px-6 py-4 border-t bg-gray-50">
