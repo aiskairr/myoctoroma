@@ -140,7 +140,7 @@ const translations = {
     // Сайдбар
     'sidebar.dashboard': 'Дашборд',
     'sidebar.clients': 'Клиенты',
-    'sidebar.chats': 'Чаты',
+    'sidebar.chats': 'AI Мессенджер',
     'sidebar.crm': 'CRM',
     'sidebar.calendar': 'Календарь',
     'sidebar.masters': 'Мастера',
@@ -1821,7 +1821,7 @@ const translations = {
     // Сайдбар
     'sidebar.dashboard': 'Башкы бет',
     'sidebar.clients': 'Кардарлар',
-    'sidebar.chats': 'Маектер',
+    'sidebar.chats': 'AI Мессенджер',
     'sidebar.crm': 'CRM',
     'sidebar.calendar': 'Календарь',
     'sidebar.masters': 'Мастерлер',
@@ -3501,7 +3501,7 @@ const translations = {
     // Сайдбар
     'sidebar.dashboard': 'Dashboard',
     'sidebar.clients': 'Clients',
-    'sidebar.chats': 'Chats',
+    'sidebar.chats': 'AI Messenger',
     'sidebar.crm': 'CRM',
     'sidebar.calendar': 'Calendar',
     'sidebar.masters': 'Masters',

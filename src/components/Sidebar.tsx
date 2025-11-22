@@ -16,8 +16,7 @@ import {
   Sparkles,
   HelpCircle,
   ChevronDown,
-  Calendar as CalendarIcon,
-  MessageCircle
+  Calendar as CalendarIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -350,7 +349,7 @@ function AdminOnlySidebar() {
   const navItems: NavItem[] = [
     { path: "/", label: t('sidebar.how_to_use'), icon: <HelpCircle className="h-5 w-5" /> },
     { path: "/clients", label: t('sidebar.clients'), icon: <Users className="h-5 w-5" /> },
-    { path: "/chats", label: t('sidebar.chats'), icon: <MessageCircle className="h-5 w-5" />, badge: 'DEMO' },
+    { path: "/chats", label: t('sidebar.chats'), icon: <Bot className="h-5 w-5" /> },
     {
       label: t('sidebar.crm'),
       icon: <FileClock className="h-5 w-5" />,
@@ -604,7 +603,7 @@ function AdminSidebar() {
     { path: "/", label: t('sidebar.how_to_use'), icon: <HelpCircle className="h-5 w-5" /> },
     { path: "/dashboard", label: t('sidebar.dashboard'), icon: <LayoutDashboard className="h-5 w-5" /> },
     { path: "/clients", label: t('sidebar.clients'), icon: <Users className="h-5 w-5" /> },
-    { path: "/chats", label: t('sidebar.chats'), icon: <MessageCircle className="h-5 w-5" />, badge: 'DEMO' },
+    { path: "/chats", label: t('sidebar.chats'), icon: <Bot className="h-5 w-5" /> },
     {
       label: t('sidebar.crm'),
       icon: <FileClock className="h-5 w-5" />,
