@@ -142,7 +142,7 @@ export default function WhatsAppChat({ phone, clientName, clientId, isOpen, onCl
           source: 'db'
         };
 
-        setMessages([sentMessage, ...messages]);
+        setMessages([...messages, sentMessage]);
         setStats(prev => ({
           ...prev,
           sentMessages: prev.sentMessages + 1,
@@ -258,7 +258,7 @@ export default function WhatsAppChat({ phone, clientName, clientId, isOpen, onCl
             </div>
           ) : (
             <div className="space-y-4">
-              {messages.slice().reverse().map((msg, index, arr) => {
+              {messages.map((msg, index, arr) => {
                 const isOutgoing = msg.direction === 'outgoing';
                 const showDate = index === 0 || formatDate(msg.sentAt) !== formatDate(arr[index - 1].sentAt);
                 
