@@ -732,6 +732,21 @@ export default function Settings() {
             <UnifiedImportCard />
           </TabsContent>
         </Tabs>
+
+        {/* Footer */}
+        <div className="mt-12 pb-6 text-center">
+          <p className="text-sm text-gray-500">
+            Powered by{" "}
+            <a
+              href="https://prom.consulting"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+            >
+              Prom.Consulting
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );

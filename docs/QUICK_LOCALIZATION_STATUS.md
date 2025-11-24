@@ -59,7 +59,7 @@ how_to_use.phone_button
 "Подарочные Сертификаты и Абонименты"
 "Свяжитесь с нами"
 "info@promconsult.pro"
-"+996 505 96 37 82"
+"+996 600 00 19 78"
 ```
 
 ### Кыргызский (Кыргызча)
@@ -67,7 +67,7 @@ how_to_use.phone_button
 "Белекке арналган Сертификаттар жана Абонименттер"
 "Бизге байланыш"
 "info@promconsult.pro"
-"+996 505 96 37 82"
+"+996 600 00 19 78"
 ```
 
 ### Английский (English)
@@ -75,7 +75,7 @@ how_to_use.phone_button
 "Gift Certificates and Subscriptions"
 "Contact Us"
 "info@promconsult.pro"
-"+996 505 96 37 82"
+"+996 600 00 19 78"
 ```
 
 ## Как это работает?

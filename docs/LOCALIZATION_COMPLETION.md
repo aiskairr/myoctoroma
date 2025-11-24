@@ -53,7 +53,7 @@
 'how_to_use.contact_title': 'Свяжитесь с нами'
 'how_to_use.contact_description': 'Есть вопросы? Напишите нам или позвоните'
 'how_to_use.email_button': 'info@promconsult.pro'
-'how_to_use.phone_button': '+996 505 96 37 82'
+'how_to_use.phone_button': '+996 600 00 19 78'
 ```
 
 **Кыргызский (ky):**
@@ -61,7 +61,7 @@
 'how_to_use.contact_title': 'Бизге байланыш'
 'how_to_use.contact_description': 'Сурооңуз барби? Бизге жазыңыз же чалыңыз'
 'how_to_use.email_button': 'info@promconsult.pro'
-'how_to_use.phone_button': '+996 505 96 37 82'
+'how_to_use.phone_button': '+996 600 00 19 78'
 ```
 
 **Английский (en):**
@@ -69,7 +69,7 @@
 'how_to_use.contact_title': 'Contact Us'
 'how_to_use.contact_description': 'Have questions? Write to us or call'
 'how_to_use.email_button': 'info@promconsult.pro'
-'how_to_use.phone_button': '+996 505 96 37 82'
+'how_to_use.phone_button': '+996 600 00 19 78'
 ```
 
 ## Изменённые файлы
@@ -129,7 +129,7 @@
 
 ### Контактная карточка
 - **Email:** info@promconsult.pro (кнопка с иконкой Mail)
-- **Телефон:** +996 505 96 37 82 (кнопка с иконкой Phone)
+- **Телефон:** +996 600 00 19 78 (кнопка с иконкой Phone)
 - **Фон:** Градиент purple to pink
 - **Доступ:** Боковая панель (Sidebar)
 

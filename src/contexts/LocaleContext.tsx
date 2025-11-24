@@ -665,6 +665,7 @@ const translations = {
     
     // Masters page
     'masters.page_title': 'Мастера',
+    'masters.masters': 'Мастера',
     'masters.add_master': 'Добавить мастера',
     'masters.management_description': 'Управление мастерами и администраторами',
     'masters.loading_error': 'Ошибка при загрузке мастеров. Пожалуйста, попробуйте обновить страницу.',
@@ -1244,7 +1245,7 @@ const translations = {
     'how_to_use.contact_title': 'Свяжитесь с нами',
     'how_to_use.contact_description': 'Есть вопросы? Напишите нам или позвоните',
     'how_to_use.email_button': 'info@promconsult.pro',
-    'how_to_use.phone_button': '+996 505 96 37 82',
+    'how_to_use.phone_button': '+996 600 00 19 78',
     'how_to_use.new_feature': 'Новое',
     
     // Common translations
@@ -2346,6 +2347,7 @@ const translations = {
     
     // Masters page
     'masters.page_title': 'Мастерлер',
+    'masters.masters': 'Мастерлер',
     'masters.add_master': 'Мастер кошуу',
     'masters.management_description': 'Мастерлерди жана администраторлорду башкаруу',
     'masters.loading_error': 'Мастерлерди жүктөөдө ката. Баракты жаңылап көрүңүз.',
@@ -2925,7 +2927,7 @@ const translations = {
     'how_to_use.contact_title': 'Бизге байланыш',
     'how_to_use.contact_description': 'Сурооңуз барби? Бизге жазыңыз же чалыңыз',
     'how_to_use.email_button': 'info@promconsult.pro',
-    'how_to_use.phone_button': '+996 505 96 37 82',
+    'how_to_use.phone_button': '+996 600 00 19 78',
     'how_to_use.new_feature': 'Жаңы',
     
     // Common translations  
@@ -4025,6 +4027,7 @@ const translations = {
     
     // Masters page
     'masters.page_title': 'Masters',
+    'masters.masters': 'Masters',
     'masters.add_master': 'Add Master',
     'masters.management_description': 'Master and administrator management',
     'masters.loading_error': 'Error loading masters. Please try refreshing the page.',
@@ -4604,7 +4607,7 @@ const translations = {
     'how_to_use.contact_title': 'Contact Us',
     'how_to_use.contact_description': 'Have questions? Write to us or call',
     'how_to_use.email_button': 'info@promconsult.pro',
-    'how_to_use.phone_button': '+996 505 96 37 82',
+    'how_to_use.phone_button': '+996 600 00 19 78',
     'how_to_use.new_feature': 'New',
     
     // Common translations

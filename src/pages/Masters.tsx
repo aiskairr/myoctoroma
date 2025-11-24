@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, User, Clock, EditIcon, X, Plus, Camera, Eye } from "lucide-react";
+import { Loader2, User, Clock, EditIcon, X, Plus, Camera, Eye, Users as UsersIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MasterWorkingDatesManager from "@/components/MasterWorkingDatesManager";
 import MasterWorkingDatesDisplay from "@/components/MasterWorkingDatesDisplay";
@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Интерфейс для рабочей даты
 interface WorkingDate {
@@ -1307,6 +1308,7 @@ const Masters: React.FC = () => {
   const { toast } = useToast();
   const { currentBranch } = useBranch();
 
+  const [activeTab, setActiveTab] = useState<string>('masters');
   const [editMaster, setEditMaster] = useState<Master | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -1867,41 +1869,43 @@ const Masters: React.FC = () => {
       {/* Header */}
       <Card className="rounded-xl shadow-lg mb-4 sm:mb-6">
         <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-xl p-2 sm:p-4">
-          <div className="flex flex-col gap-2 sm:gap-3">
-            <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg lg:text-xl">
-              <User className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
-              {t('masters.page_title')}
-            </CardTitle>
-            <div className="flex flex-col gap-1.5 w-full">
-              <Button
-                onClick={() => setIsAddDialogOpen(true)}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/20 w-full justify-center text-xs"
-                variant="outline"
-                size="sm"
-              >
-                <Plus className="h-3 w-3 mr-1.5" />
-                <span>{t('masters.add_master')}</span>
-              </Button>
-              <Button
-                onClick={() => setIsAddAdministratorDialogOpen(true)}
-                variant="outline"
-                className="border-white/20 text-white hover:bg-white/10 bg-white/5 w-full justify-center text-xs"
-                size="sm"
-              >
-                <User className="h-3 w-3 mr-1.5" />
-                <span>{t('masters.add_administrator')}</span>
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-2 sm:p-3 lg:p-4">
-          <div className="text-xs text-gray-600">
+          <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg lg:text-xl">
+            <User className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
+            {t('masters.page_title')}
+          </CardTitle>
+          <CardDescription className="text-indigo-100 mt-2 text-xs sm:text-sm">
             {t('masters.management_description')}
-          </div>
-        </CardContent>
+          </CardDescription>
+        </CardHeader>
       </Card>
 
-      {isLoading ? (
+      {/* Tabs */}
+      <Tabs defaultValue="masters" className="w-full" onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="masters" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            {t('masters.masters')}
+          </TabsTrigger>
+          <TabsTrigger value="administrators" className="flex items-center gap-2">
+            <UsersIcon className="h-4 w-4" />
+            {t('masters.administrators')}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Masters Tab */}
+        <TabsContent value="masters" className="space-y-6">
+          <div className="flex justify-end">
+            <Button
+              onClick={() => setIsAddDialogOpen(true)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t('masters.add_master')}
+            </Button>
+          </div>
+
+          {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
         </div>
@@ -1939,38 +1943,51 @@ const Masters: React.FC = () => {
           ))}
         </div>
       )}
+        </TabsContent>
 
-      <div className="mt-8 sm:mt-12">
-        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 mb-3 sm:mb-4 lg:mb-6">{t('masters.administrators')}</h2>
-        {administrators && administrators.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-            {administrators.map((administrator: Administrator) => (
-              <AdministratorCard
-                key={administrator.id}
-                administrator={administrator}
-                onEditClick={() => handleEditAdministrator(administrator)}
-                onDeleteClick={() => handleDeleteAdministrator(administrator.id)}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="bg-indigo-50 p-6 sm:p-8 rounded-lg text-center my-8 border border-indigo-200">
-            <h3 className="text-base sm:text-lg font-semibold text-indigo-900 mb-2">{t('masters.no_administrators_title')}</h3>
-            <p className="text-sm sm:text-base text-indigo-700 mb-4">
-              {t('masters.no_administrators_description')}
-            </p>
+        {/* Administrators Tab */}
+        <TabsContent value="administrators" className="space-y-6">
+          <div className="flex justify-end">
             <Button
               onClick={() => setIsAddAdministratorDialogOpen(true)}
-              variant="outline"
-              className="border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
               size="sm"
             >
-              <User className="h-4 w-4 mr-2" />
-              <span className="text-sm">{t('masters.add_administrator')}</span>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('masters.add_administrator')}
             </Button>
           </div>
-        )}
-      </div>
+
+          {administrators && administrators.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+              {administrators.map((administrator: Administrator) => (
+                <AdministratorCard
+                  key={administrator.id}
+                  administrator={administrator}
+                  onEditClick={() => handleEditAdministrator(administrator)}
+                  onDeleteClick={() => handleDeleteAdministrator(administrator.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-indigo-50 p-6 sm:p-8 rounded-lg text-center my-8 border border-indigo-200">
+              <h3 className="text-base sm:text-lg font-semibold text-indigo-900 mb-2">{t('masters.no_administrators_title')}</h3>
+              <p className="text-sm sm:text-base text-indigo-700 mb-4">
+                {t('masters.no_administrators_description')}
+              </p>
+              <Button
+                onClick={() => setIsAddAdministratorDialogOpen(true)}
+                variant="outline"
+                className="border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                size="sm"
+              >
+                <User className="h-4 w-4 mr-2" />
+                <span className="text-sm">{t('masters.add_administrator')}</span>
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Add Administrator Dialog */}
       <Dialog open={isAddAdministratorDialogOpen} onOpenChange={setIsAddAdministratorDialogOpen}>
