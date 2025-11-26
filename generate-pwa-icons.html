@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate PWA Icons</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .icon-preview {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            background: #0f172a;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1e293b;
+        }
+        .info {
+            background: #f0f9ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Генератор PWA иконок для Octō CRM</h1>
+    
+    <div class="info">
+        <h3>Инструкция:</h3>
+        <ol>
+            <li>Откройте этот файл в браузере</li>
+            <li>Нажмите на кнопки для скачивания иконок</li>
+            <li>Сохраните файлы в папку <code>/public</code> проекта</li>
+            <li>Иконки будут созданы с логотипом Octō CRM</li>
+        </ol>
+    </div>
+
+    <div class="icon-preview">
+        <div>
+            <h3>192x192</h3>
+            <canvas id="canvas192" width="192" height="192"></canvas>
+            <br>
+            <button onclick="downloadIcon(192)">Скачать 192x192</button>
+        </div>
+        <div>
+            <h3>512x512</h3>
+            <canvas id="canvas512" width="512" height="512"></canvas>
+            <br>
+            <button onclick="downloadIcon(512)">Скачать 512x512</button>
+        </div>
+    </div>
+
+    <button onclick="downloadAll()" style="font-size: 18px; margin-top: 20px;">Скачать все иконки</button>
+
+    <div class="info" style="margin-top: 30px;">
+        <h3>Альтернативный способ:</h3>
+        <p>Используйте онлайн инструменты:</p>
+        <ul>
+            <li><a href="https://realfavicongenerator.net/" target="_blank">RealFaviconGenerator</a> - загрузите SVG логотип</li>
+            <li><a href="https://www.pwabuilder.com/imageGenerator" target="_blank">PWA Builder Image Generator</a></li>
+        </ul>
+    </div>
+
+    <script>
+        const svgString = `<svg width="309" height="283" viewBox="0 0 309 283" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M137.788 38.4355C197.189 38.4357 237.141 80.1112 237.141 121.998C237.14 163.885 197.189 205.56 137.788 205.561C78.3869 205.561 38.4357 163.885 38.4355 121.998C38.4355 80.1111 78.3868 38.4355 137.788 38.4355Z" fill="#00AEEF" stroke="#00AEEF" stroke-width="76.8706"/>
+<path d="M137.788 55.1254C180.494 55.1256 213.304 86.2399 213.304 122.497C213.304 158.753 180.494 189.867 137.788 189.868C95.082 189.868 62.2725 158.753 62.2725 122.497C62.2725 86.2398 95.082 55.1254 137.788 55.1254Z" stroke="white" stroke-width="20.8294"/>
+<circle cx="101.388" cy="122.496" r="13.6292" fill="white"/>
+<circle cx="172.526" cy="122.496" r="13.6292" fill="white"/>
+<path d="M169.866 36.7323L186.82 31.5798V64.3231H169.866V36.7323Z" fill="white"/>
+<path d="M269.607 248.233L189.732 225.56L257.963 166.023L269.607 248.233Z" fill="#00AEEF"/>
+</svg>`;
+
+        function drawIcon(size) {
+            const canvas = document.getElementById(`canvas${size}`);
+            const ctx = canvas.getContext('2d');
+            
+            // Background color
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Create image from SVG
+            const img = new Image();
+            const svgBlob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
+            const url = URL.createObjectURL(svgBlob);
+            
+            img.onload = function() {
+                // Calculate scaling to fit and center the logo
+                const scale = Math.min(size / 309, size / 283) * 0.8;
+                const x = (size - 309 * scale) / 2;
+                const y = (size - 283 * scale) / 2;
+                
+                ctx.drawImage(img, x, y, 309 * scale, 283 * scale);
+                URL.revokeObjectURL(url);
+            };
+            
+            img.src = url;
+        }
+
+        function downloadIcon(size) {
+            const canvas = document.getElementById(`canvas${size}`);
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `pwa-${size}x${size}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        function downloadAll() {
+            setTimeout(() => downloadIcon(192), 100);
+            setTimeout(() => downloadIcon(512), 500);
+        }
+
+        // Draw icons on page load
+        window.onload = function() {
+            drawIcon(192);
+            drawIcon(512);
+        };
+    </script>
+</body>
+</html>

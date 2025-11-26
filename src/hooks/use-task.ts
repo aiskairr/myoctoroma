@@ -80,9 +80,9 @@ export const useTask = (taskId: number | null) => {
       }
     },
     enabled: !!taskId && taskId > 0,
-    staleTime: 1000 * 2, // 2 seconds - данные быстро устаревают
-    refetchInterval: 1000 * 3, // 3 seconds - автообновление каждые 3 секунды
-    refetchIntervalInBackground: true, // Обновлять даже когда диалог не в фокусе
+    staleTime: 1000 * 30, // 30 seconds - данные считаются свежими 30 секунд
+    refetchInterval: false, // Отключаем автоматическое обновление - обновляем только по действию
+    refetchIntervalInBackground: false, // Не обновлять когда диалог не в фокусе
     refetchOnWindowFocus: true, // Обновлять при возврате фокуса
   });
 };

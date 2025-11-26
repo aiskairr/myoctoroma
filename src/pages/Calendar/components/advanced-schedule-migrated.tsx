@@ -123,7 +123,8 @@ const AdvancedScheduleComponent: React.FC = () => {
             return response.json();
         },
         enabled: !!currentBranch?.id,
-        refetchInterval: 10000, // Auto-refresh every 10 seconds
+        refetchInterval: 60000, // Auto-refresh every 60 seconds
+        refetchOnWindowFocus: true, // Refresh when returning to the tab
     });
 
     const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
@@ -136,7 +137,8 @@ const AdvancedScheduleComponent: React.FC = () => {
             return response.json();
         },
         enabled: !!currentBranch?.id,
-        refetchInterval: 10000, // Auto-refresh every 10 seconds
+        refetchInterval: 60000, // Auto-refresh every 60 seconds
+        refetchOnWindowFocus: true, // Refresh when returning to the tab
     });
 
     // Convert masters to employees format for existing UI compatibility

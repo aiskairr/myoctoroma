@@ -118,7 +118,7 @@ export default function Dashboard() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/stats?branchID=branch${currentBranch?.id}`, currentBranch?.id],
-    refetchInterval: 10000,
+    refetchInterval: 60000, // Обновление каждую минуту вместо 10 секунд
     enabled: !!currentBranch?.id,
     queryFn: async () => {
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/stats?branchID=branch${currentBranch?.id}`, {

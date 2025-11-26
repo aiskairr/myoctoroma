@@ -131,9 +131,11 @@ export function useTasks(params: TasksQueryParams = {}) {
       return [];
     },
     enabled: !!branchId && isAuthenticated && !!user && !authLoading && !mastersLoading,
-    staleTime: 1000 * 2, // 2 seconds - данные считаются устаревшими через 2 секунды
-    refetchInterval: 1000 * 3, // 3 seconds - автоматическое обновление каждые 3 секунды (синхронизировано с парсером)
-    refetchIntervalInBackground: true, // Обновлять даже когда вкладка неактивна
+    staleTime: 1000 * 30, // 30 seconds - данные считаются свежими 30 секунд
+    refetchInterval: 1000 * 30, // 30 seconds - автоматическое обновление каждые 30 секунд
+    refetchIntervalInBackground: false, // НЕ обновлять когда вкладка неактивна (экономим ресурсы)
+    refetchOnWindowFocus: true, // Обновлять при возврате на вкладку
+    refetchOnMount: true, // Обновлять при монтировании компонента
   });
 
   // Объединяем данные задач с информацией о мастерах
