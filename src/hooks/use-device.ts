@@ -28,10 +28,11 @@ export function useRefetchSettings() {
   return {
     isMobile,
     // Desktop: обновление каждые 30 секунд
-    // Mobile: обновление каждые 2 минуты (120 секунд)
-    refetchInterval: isMobile ? 1000 * 60 * 2 : 1000 * 30,
-    staleTime: isMobile ? 1000 * 60 * 2 : 1000 * 30,
-    refetchOnWindowFocus: true,
+    // Mobile: обновление каждые 5 минут (300 секунд) - для избежания "прыжков"
+    refetchInterval: isMobile ? 1000 * 60 * 5 : 1000 * 30,
+    staleTime: isMobile ? 1000 * 60 * 5 : 1000 * 30,
+    // На мобильных отключаем автообновление при возврате на вкладку
+    refetchOnWindowFocus: !isMobile,
     refetchIntervalInBackground: false
   };
 }

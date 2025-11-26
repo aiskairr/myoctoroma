@@ -40,35 +40,25 @@ const CalendarScreen = () => {
             }
         };
 
-        // Обновляем дату при изменении URL
-        handleUrlChange();
-
         // Слушаем события навигации браузера (назад/вперед)
         const handlePopState = () => {
             console.log('📅 popstate event');
             handleUrlChange();
         };
 
+        // Слушаем изменения истории через hashchange
+        const handleHashChange = () => {
+            console.log('📅 hashchange event');
+            handleUrlChange();
+        };
+
         window.addEventListener('popstate', handlePopState);
+        window.addEventListener('hashchange', handleHashChange);
         
         return () => {
             window.removeEventListener('popstate', handlePopState);
+            window.removeEventListener('hashchange', handleHashChange);
         };
-    }, []);
-
-    // Периодическая проверка изменений URL (для случаев программного изменения)
-    useEffect(() => {
-        const checkUrlPeriodically = () => {
-            const newDate = getDateFromUrl();
-            if (newDate.getTime() !== selectedDate.getTime()) {
-                console.log('📅 Periodic check: URL date changed from', selectedDate.toISOString(), 'to', newDate.toISOString());
-                setSelectedDate(newDate);
-            }
-        };
-
-        const interval = setInterval(checkUrlPeriodically, 500); // Проверяем каждые 500мс
-        
-        return () => clearInterval(interval);
     }, [selectedDate]);
 
     return (
