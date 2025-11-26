@@ -32,6 +32,7 @@ const translations = {
     'common.create': 'Создать',
     'common.add': 'Добавить',
     'common.update': 'Обновить',
+    'common.today': 'Сегодня',
 
     // Шаги бронирования
     'booking.title': 'Онлайн запись',
@@ -575,6 +576,8 @@ const translations = {
     'settings.at_least_one_field': 'Заполните хотя бы одно поле (email или пароль)',
     'settings.email_already_exists': 'Email уже используется',
     
+    // Account
+    'account.no_bank_payments': 'Нет платежей из банка',
     
     // Booking Links
     'booking_links.title': 'Ссылки для бронирования',
@@ -1311,6 +1314,7 @@ const translations = {
     'calendar.task_title_required': 'Название задачи не может быть пустым!',
     'calendar.new_task_for': 'Новая задача для',
     'calendar.task_title_placeholder': 'Название задачи',
+    'calendar.add_master': 'Добавить мастера',
     
     // Calendar dialogs
     'calendar.add_master_to_day': 'Добавить мастера на день',
@@ -1714,6 +1718,7 @@ const translations = {
     'common.create': 'Түзүү',
     'common.add': 'Кошуу',
     'common.update': 'Жаңылоо',
+    'common.today': 'Бүгүн',
 
     // Шаги бронирования
     'booking.title': 'Онлайн жазылуу',
@@ -2257,6 +2262,8 @@ const translations = {
     'settings.at_least_one_field': 'Жок дегенде бир талааны толтуруңуз (email же сырсөз)',
     'settings.email_already_exists': 'Email эле колдонулууда',
     
+    // Account
+    'account.no_bank_payments': 'Банктан төлөмдөр жок',
     
     // Booking Links
     'booking_links.title': 'Брондоо шилтемелери',
@@ -2992,6 +2999,7 @@ const translations = {
     'calendar.task_title_required': 'Тапшырманын аталышы бош болушу мүмкүн эмес!',
     'calendar.new_task_for': 'Жаңы тапшырма',
     'calendar.task_title_placeholder': 'Тапшырманын аталышы',
+    'calendar.add_master': 'Мастер кошуу',
     
     // Calendar dialogs
     'calendar.add_master_to_day': 'Күнүнө мастер кошуу',
@@ -3395,6 +3403,7 @@ const translations = {
     'common.create': 'Create',
     'common.add': 'Add',
     'common.update': 'Update',
+    'common.today': 'Today',
 
     // Шаги бронирования
     'booking.title': 'Online Booking',
@@ -3937,6 +3946,8 @@ const translations = {
     'settings.at_least_one_field': 'Fill in at least one field (email or password)',
     'settings.email_already_exists': 'Email already in use',
     
+    // Account
+    'account.no_bank_payments': 'No bank payments',
     
     // Booking Links
     'booking_links.title': 'Booking Links',
@@ -4679,6 +4690,7 @@ const translations = {
     'calendar.please_select_service': 'Please select a service',
     'calendar.please_select_master': 'Please select a master',
     'calendar.please_select_time': 'Please select time',
+    'calendar.add_master': 'Add Master',
     
     // Calendar dialogs
     'calendar.add_master_to_day': 'Add Master to Day',

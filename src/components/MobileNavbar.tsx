@@ -44,7 +44,7 @@ export function MobileNavbar() {
   };
 
   const navItems = [
-    { path: "/", label: t('sidebar.how_to_use'), icon: <HelpCircle className="h-5 w-5" /> },
+    { path: "/dashboard", label: t('sidebar.dashboard'), icon: <HelpCircle className="h-5 w-5" /> },
     { path: "/clients", label: t('sidebar.clients'), icon: <Users className="h-5 w-5" /> },
     { path: "/chats", label: t('sidebar.chats'), icon: <Bot className="h-5 w-5" /> },
     {
