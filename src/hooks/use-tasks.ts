@@ -5,6 +5,7 @@ import { getBranchId } from '@/utils/branch-utils';
 import { apiGetJson } from '@/lib/api';
 import { useMasters, type Master } from './use-masters';
 import { useMemo } from 'react';
+import { useRefetchSettings } from './use-device';
 
 // Interface for Task from API
 export interface TaskFromAPI {
@@ -75,6 +76,9 @@ export function useTasks(params: TasksQueryParams = {}) {
   const { currentBranch } = useBranch();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   
+  // Получаем настройки обновления в зависимости от устройства
+  const refetchSettings = useRefetchSettings();
+  
   // Получаем мастеров для присваивания имен
   const { data: mastersData = [], isLoading: mastersLoading } = useMasters();
   
@@ -131,10 +135,12 @@ export function useTasks(params: TasksQueryParams = {}) {
       return [];
     },
     enabled: !!branchId && isAuthenticated && !!user && !authLoading && !mastersLoading,
-    staleTime: 1000 * 30, // 30 seconds - данные считаются свежими 30 секунд
-    refetchInterval: 1000 * 30, // 30 seconds - автоматическое обновление каждые 30 секунд
-    refetchIntervalInBackground: false, // НЕ обновлять когда вкладка неактивна (экономим ресурсы)
-    refetchOnWindowFocus: true, // Обновлять при возврате на вкладку
+    // Используем настройки в зависимости от устройства
+    // Desktop: 30 секунд, Mobile: 2 минуты
+    staleTime: refetchSettings.staleTime,
+    refetchInterval: refetchSettings.refetchInterval,
+    refetchIntervalInBackground: refetchSettings.refetchIntervalInBackground,
+    refetchOnWindowFocus: refetchSettings.refetchOnWindowFocus,
     refetchOnMount: true, // Обновлять при монтировании компонента
   });
 
