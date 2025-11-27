@@ -270,9 +270,13 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="ghost" className="justify-start px-3 py-2 w-full hover:text-white hover:bg-white/10 text-slate-300">
-            <Building2 className="h-5 w-5 mr-2" />
-            <span className="text-left">{t('branch.title')}</span>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="bg-gradient-to-r from-emerald-400 to-teal-400 border-emerald-500 hover:from-emerald-500 hover:to-teal-500 hover:border-emerald-600 text-slate-900 hover:text-slate-900 font-semibold shadow-md hover:shadow-xl transition-all duration-200 gap-1.5 h-8 px-3"
+          >
+            <Building2 className="h-4 w-4" />
+            <span className="text-xs">{currentBranch?.branches || t('branch.title')}</span>
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">

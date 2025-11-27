@@ -7,12 +7,10 @@ import { LocaleProvider } from "./contexts/LocaleContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useIsMaster } from "@/hooks/use-master-role";
-import { useIsAdmin } from "@/hooks/use-admin-role";
 import SimpleLogin from "@/pages/SimpleLogin";
 import { SimpleProtectedRoute } from "@/components/SimpleProtectedRoute";
 import Dashboard from "@/pages/Dashboard";
 import Clients from "@/pages/Clients";
-import Chats from "@/pages/Chats";
 import Settings from "@/pages/Settings";
 import SettingsMasters from "@/pages/SettingsMasters";
 import CRMTasks from "./pages/CRMTasks";
@@ -29,9 +27,9 @@ import HowToUsePage from "./pages/HowToUsePage";
 import { MobileApp } from "./pages/MobileApp";
 import NotFound from "@/pages/not-found";
 import Sidebar from "@/components/Sidebar";
-import { MobileNavbar } from "@/components/MobileNavbar";
+import { MobileBottomTabBar } from "@/components/MobileBottomTabBar";
+import { MobileHeader } from "@/components/MobileHeader";
 import { MobileNavbarMaster } from "@/components/MobileNavbarMaster";
-import { MobileNavbarAdmin } from "@/components/MobileNavbarAdmin";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import CalendarScreen from "./pages/Calendar";
 import MasterCalendarView from "./pages/Calendar/MasterCalendarView";
@@ -41,23 +39,25 @@ import ServicesPage from "./pages/Services";
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const { isMaster } = useIsMaster();
-  const { isAdmin } = useIsAdmin();
 
-  // Определяем какой мобильный navbar показать
-  const getMobileNavbar = () => {
-    if (isMaster) return <MobileNavbarMaster />;
-    if (isAdmin) return <MobileNavbarAdmin />;
-    return <MobileNavbar />;
-  };
+  // Для обычных пользователей на мобильных - показываем новый интерфейс
+  const showNewMobileUI = isMobile && !isMaster;
 
   return (
     <SimpleProtectedRoute>
       <BranchProvider>
         <div className="flex flex-col min-h-screen">
-          {isMobile && getMobileNavbar()}
+          {/* Мобильная навигация для мастеров */}
+          {isMobile && isMaster && <MobileNavbarMaster />}
+          
+          {/* Для обычных пользователей на мобильных - показываем header + bottom bar */}
+          {showNewMobileUI && <MobileHeader />}
+          
           <div className="flex flex-grow">
+            {/* Sidebar только для десктопа */}
             {!isMobile && <Sidebar />}
-            <main className="flex-grow overflow-auto bg-gray-50">
+            
+            <main className={`flex-grow overflow-auto bg-gray-50 ${showNewMobileUI ? 'pb-20' : ''}`}>
               <div className="p-6 lg:p-8">
                 <ErrorBoundary>
                   {children}
@@ -65,6 +65,9 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
               </div>
             </main>
           </div>
+          
+          {/* Bottom Tab Bar для обычных мобильных пользователей */}
+          {showNewMobileUI && <MobileBottomTabBar />}
         </div>
       </BranchProvider>
     </SimpleProtectedRoute>
@@ -105,7 +108,7 @@ function App() {
           {/* Защищенные маршруты */}
           <Route path="/">
             <ProtectedLayout>
-              <HowToUsePage />
+              <Dashboard />
             </ProtectedLayout>
           </Route>
 
@@ -133,9 +136,9 @@ function App() {
             </ProtectedLayout>
           </Route>
 
-          <Route path="/chats">
+          <Route path="/how-to-use">
             <ProtectedLayout>
-              <Chats />
+              <HowToUsePage />
             </ProtectedLayout>
           </Route>
 

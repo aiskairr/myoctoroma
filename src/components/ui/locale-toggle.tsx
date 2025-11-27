@@ -30,7 +30,7 @@ export const LocaleToggle: React.FC = () => {
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 px-2 gap-1 text-sm font-medium"
+          className="h-8 px-2 gap-1 text-sm font-medium text-white hover:text-white hover:bg-slate-700/50"
         >
           <span className="text-base">{localeFlags[locale]}</span>
           <ChevronDown className="h-3 w-3" />
