@@ -58,7 +58,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
             {!isMobile && <Sidebar />}
             
             <main className={`flex-grow overflow-auto bg-gray-50 ${showNewMobileUI ? 'pb-20' : ''}`}>
-              <div className="p-6 lg:p-8">
+              <div className="p-3 sm:p-6 lg:p-8">
                 <ErrorBoundary>
                   {children}
                 </ErrorBoundary>

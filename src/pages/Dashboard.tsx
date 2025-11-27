@@ -863,7 +863,7 @@ export default function Dashboard() {
                   value={selectedMetricChart} 
                   onValueChange={(value) => setSelectedMetricChart(value as 'revenue' | 'expenses' | 'income')}
                 >
-                  <SelectTrigger className="w-[160px]">
+                  <SelectTrigger className="w-full sm:w-[160px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1033,7 +1033,7 @@ export default function Dashboard() {
                   value={selectedPaymentChart} 
                   onValueChange={(value) => setSelectedPaymentChart(value as 'payments' | 'banks')}
                 >
-                  <SelectTrigger className="w-[140px]">
+                  <SelectTrigger className="w-full sm:w-[140px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1221,7 +1221,7 @@ export default function Dashboard() {
                   <p className="text-sm text-gray-500">{t('dashboard.revenue_distribution')}</p>
                 </div>
                 <Select value={servicesChartType} onValueChange={(value) => setServicesChartType(value as ChartType)}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Тип графика" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1252,7 +1252,7 @@ export default function Dashboard() {
                 <p className="text-sm text-gray-500">{t('dashboard.appointments_by_masters')}</p>
               </div>
               <Select value={mastersChartType} onValueChange={(value) => setMastersChartType(value as ChartType)}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Тип графика" />
                 </SelectTrigger>
                 <SelectContent>

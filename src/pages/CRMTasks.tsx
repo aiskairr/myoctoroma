@@ -1604,7 +1604,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
             value={task.status}
             disabled={updateStatusMutation.isPending}
           >
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-full sm:w-[140px]">
               <SelectValue placeholder="Изменить статус" />
             </SelectTrigger>
             <SelectContent>
