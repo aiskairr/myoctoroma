@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useBranch } from "@/contexts/BranchContext";
 import { format } from "date-fns";
+import { useRefetchSettings } from "@/hooks/use-device";
 
 // Types from DailyCalendar
 interface Master {
@@ -107,6 +108,7 @@ const AdvancedScheduleComponent: React.FC = () => {
     const { toast } = useToast();
     const { currentBranch } = useBranch();
     const queryClient = useQueryClient();
+    const refetchSettings = useRefetchSettings();
     
     // State
     const [selectedDate] = useState(() => new Date());
@@ -123,8 +125,11 @@ const AdvancedScheduleComponent: React.FC = () => {
             return response.json();
         },
         enabled: !!currentBranch?.id,
-        refetchInterval: 60000, // Auto-refresh every 60 seconds
-        refetchOnWindowFocus: true, // Refresh when returning to the tab
+        // Используем адаптивные настройки: Desktop 30 сек, Mobile 5 мин
+        refetchInterval: refetchSettings.refetchInterval,
+        staleTime: refetchSettings.staleTime,
+        refetchOnWindowFocus: refetchSettings.refetchOnWindowFocus,
+        refetchIntervalInBackground: refetchSettings.refetchIntervalInBackground,
     });
 
     const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
@@ -137,8 +142,11 @@ const AdvancedScheduleComponent: React.FC = () => {
             return response.json();
         },
         enabled: !!currentBranch?.id,
-        refetchInterval: 60000, // Auto-refresh every 60 seconds
-        refetchOnWindowFocus: true, // Refresh when returning to the tab
+        // Используем адаптивные настройки: Desktop 30 сек, Mobile 5 мин
+        refetchInterval: refetchSettings.refetchInterval,
+        staleTime: refetchSettings.staleTime,
+        refetchOnWindowFocus: refetchSettings.refetchOnWindowFocus,
+        refetchIntervalInBackground: refetchSettings.refetchIntervalInBackground,
     });
 
     // Convert masters to employees format for existing UI compatibility
