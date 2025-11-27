@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { apiGetJson } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, FileDown } from 'lucide-react';
+import { Calendar, FileDown, FileSpreadsheet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useBranch } from '@/contexts/BranchContext';
 import { useLocale } from '@/contexts/LocaleContext';
+import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface DailyCashReport {
   id: number;
@@ -175,96 +176,216 @@ export default function ReportPage() {
     };
   };
 
-  // Экспорт в PDF
-  const exportToPDF = () => {
-    const doc = new jsPDF('landscape');
+  // Экспорт в PDF через html2canvas с поддержкой кириллицы
+  const exportToPDF = async () => {
+    const tableElement = document.querySelector('#report-table-container table') as HTMLElement;
     
-    // Заголовок
-    doc.setFontSize(16);
-    doc.text('Отчеты за период', 14, 15);
-    doc.setFontSize(10);
-    doc.text(`${startDate} - ${endDate}`, 14, 22);
-    if (selectedBranch) {
-      const branchName = branches.find(b => b.id.toString() === selectedBranch)?.branches || selectedBranch;
-      doc.text(`Филиал: ${branchName}`, 14, 28);
+    if (!tableElement) {
+      toast({
+        title: t('common.error'),
+        description: 'Таблица не найдена',
+        variant: 'destructive',
+      });
+      return;
     }
 
-    // Таблица
-    const tableData = reports.map(report => [
-      new Date(report.date).toLocaleDateString('ru-RU'),
-      (report.total_revenue || 0).toLocaleString(),
-      (report.petty_expenses || 0).toLocaleString(),
-      (report.total_income || 0).toLocaleString(),
-      (report.end_balance || 0).toLocaleString(),
-      (report.optima_payments || 0).toLocaleString(),
-      (report.mbank_payments || 0).toLocaleString(),
-      (report.mbusiness_payments || 0).toLocaleString(),
-      (report.demir_payments || 0).toLocaleString(),
-      (report.bakai_payments || 0).toLocaleString(),
-      (report.obank_payments || 0).toLocaleString(),
-      (report.cash_collection || 0).toLocaleString(),
-      (report.salary_payments || 0).toLocaleString(),
-      report.notes || ''
-    ]);
+    try {
+      // Показываем индикатор
+      toast({
+        title: 'Генерация PDF',
+        description: 'Подождите, идет создание документа...',
+      });
 
-    const totals = calculateTotals();
-    tableData.push([
-      'ИТОГО:',
-      totals.totalRevenue.toLocaleString(),
-      totals.totalExpenses.toLocaleString(),
-      totals.totalIncome.toLocaleString(),
-      totals.totalCash.toLocaleString(),
-      totals.totalOptima.toLocaleString(),
-      totals.totalMBank.toLocaleString(),
-      totals.totalMBusiness.toLocaleString(),
-      totals.totalDemir.toLocaleString(),
-      totals.totalBakai.toLocaleString(),
-      totals.totalOBank.toLocaleString(),
-      totals.totalCollection.toLocaleString(),
-      totals.totalSalaryPayments.toLocaleString(),
-      ''
-    ]);
+      // Находим контейнеры с overflow для правильного захвата
+      const overflowContainer = document.querySelector('#report-table-container .overflow-x-auto') as HTMLElement;
+      const scrollContainer = document.querySelector('#report-table-container .overflow-y-auto') as HTMLElement;
+      
+      // Сохраняем оригинальные стили
+      const originalOverflow = overflowContainer?.style.overflow || '';
+      const originalMaxHeight = scrollContainer?.style.maxHeight || '';
+      const originalMinWidth = tableElement.style.minWidth || '';
+      
+      // Временно убираем ограничения
+      if (overflowContainer) overflowContainer.style.overflow = 'visible';
+      if (scrollContainer) scrollContainer.style.maxHeight = 'none';
+      tableElement.style.minWidth = 'max-content'; // Полная ширина таблицы
 
-    autoTable(doc, {
-      head: [[
-        t('report.date'),
-        t('report.total_revenue'),
-        t('report.expenses'),
-        t('report.income'),
-        t('report.cash_balance'),
-        t('report.optima'),
-        t('report.mbank'),
-        t('report.mbusiness'),
-        t('report.demir'),
-        t('report.bakai'),
-        t('report.obank'),
-        t('report.collection'),
-        t('report.salary_payments'),
-        t('report.notes')
-      ]],
-      body: tableData,
-      startY: selectedBranch ? 32 : 26,
-      styles: { fontSize: 7, cellPadding: 2 },
-      headStyles: { fillColor: [59, 130, 246], textColor: 255 },
-      footStyles: { fillColor: [243, 244, 246], textColor: 0, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [249, 250, 251] },
-      didParseCell: (data) => {
-        // Выделяем строку с итогами
-        if (data.row.index === tableData.length - 1) {
-          data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.fillColor = [243, 244, 246];
-        }
+      // Создаем canvas с полной таблицей
+      const canvas = await html2canvas(tableElement, {
+        scale: 2, // Хорошее качество
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: -window.scrollY, // Компенсируем скролл страницы
+        windowWidth: tableElement.scrollWidth,
+        windowHeight: tableElement.scrollHeight,
+      });
+
+      // Восстанавливаем стили
+      if (overflowContainer) overflowContainer.style.overflow = originalOverflow;
+      if (scrollContainer) scrollContainer.style.maxHeight = originalMaxHeight;
+      tableElement.style.minWidth = originalMinWidth;
+
+      // Создаем PDF
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('landscape', 'mm', 'a4');
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      // Отступы
+      const margin = 10;
+      const availableWidth = pdfWidth - (margin * 2);
+      const availableHeight = pdfHeight - (margin * 2);
+      
+      // Вычисляем размеры с сохранением пропорций
+      let imgWidth = availableWidth;
+      let imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // Если не помещается по высоте, масштабируем по высоте
+      if (imgHeight > availableHeight) {
+        imgHeight = availableHeight;
+        imgWidth = (canvas.width * imgHeight) / canvas.height;
       }
-    });
+      
+      // Центрируем
+      const xPosition = (pdfWidth - imgWidth) / 2;
+      const yPosition = (pdfHeight - imgHeight) / 2;
 
-    // Сохранение файла
-    const fileName = `отчет_${startDate}_${endDate}.pdf`;
-    doc.save(fileName);
+      pdf.addImage(imgData, 'PNG', xPosition, yPosition, imgWidth, imgHeight);
 
-    toast({
-      title: 'PDF экспортирован',
-      description: `Файл ${fileName} успешно сохранен`,
-    });
+      // Сохраняем файл
+      const fileName = `отчет_${startDate}_${endDate}.pdf`;
+      pdf.save(fileName);
+
+      toast({
+        title: 'PDF экспортирован',
+        description: `Файл ${fileName} успешно сохранен`,
+      });
+    } catch (error) {
+      console.error('Ошибка при создании PDF:', error);
+      toast({
+        title: t('common.error'),
+        description: 'Не удалось создать PDF',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Экспорт в Excel (XLSX)
+  const exportToExcel = () => {
+    try {
+      // Показываем индикатор
+      toast({
+        title: 'Генерация Excel',
+        description: 'Подождите, идет создание документа...',
+      });
+
+      // Подготавливаем заголовки
+      const headers = [
+        'Дата',
+        'Общая выручка',
+        'Расходы',
+        'Доход',
+        'Касса',
+        'Optima',
+        'MBank',
+        'MBusiness',
+        'Demir',
+        'Bakai',
+        'OBank',
+        'Инкассация',
+        'Выплата з/п',
+        'Заметки',
+      ];
+
+      // Подготавливаем данные
+      const data = reports.map(report => [
+        new Date(report.date).toLocaleDateString('ru-RU'),
+        Number(report.total_revenue) || 0,
+        Number(report.petty_expenses) || 0,
+        Number(report.total_income) || 0,
+        Number(report.end_balance) || 0,
+        Number(report.optima_payments) || 0,
+        Number(report.mbank_payments) || 0,
+        Number(report.mbusiness_payments) || 0,
+        Number(report.demir_payments) || 0,
+        Number(report.bakai_payments) || 0,
+        Number(report.obank_payments) || 0,
+        Number(report.cash_collection) || 0,
+        Number(report.salary_payments) || 0,
+        report.notes || '',
+      ]);
+
+      // Добавляем итоговую строку
+      const totals = calculateTotals();
+      data.push([
+        'ИТОГО',
+        totals.totalRevenue,
+        totals.totalExpenses,
+        totals.totalIncome,
+        totals.totalCash,
+        totals.totalOptima,
+        totals.totalMBank,
+        totals.totalMBusiness,
+        totals.totalDemir,
+        totals.totalBakai,
+        totals.totalOBank,
+        totals.totalCollection,
+        totals.totalSalaryPayments,
+        '',
+      ]);
+
+      // Создаем worksheet
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+
+      // Настраиваем ширину колонок
+      ws['!cols'] = [
+        { wch: 12 }, // Дата
+        { wch: 15 }, // Общая выручка
+        { wch: 12 }, // Расходы
+        { wch: 12 }, // Доход
+        { wch: 12 }, // Касса
+        { wch: 12 }, // Optima
+        { wch: 12 }, // MBank
+        { wch: 12 }, // MBusiness
+        { wch: 12 }, // Demir
+        { wch: 12 }, // Bakai
+        { wch: 12 }, // OBank
+        { wch: 15 }, // Инкассация
+        { wch: 15 }, // Выплата з/п
+        { wch: 30 }, // Заметки
+      ];
+
+      // Создаем workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Отчеты');
+
+      // Добавляем метаданные
+      wb.Props = {
+        Title: `Отчеты за период ${startDate} - ${endDate}`,
+        Subject: 'Финансовые отчеты',
+        Author: 'ElitaRoma',
+        CreatedDate: new Date(),
+      };
+
+      // Сохраняем файл
+      const fileName = `отчет_${startDate}_${endDate}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      toast({
+        title: 'Excel экспортирован',
+        description: `Файл ${fileName} успешно сохранен`,
+      });
+    } catch (error) {
+      console.error('Ошибка при создании Excel:', error);
+      toast({
+        title: t('common.error'),
+        description: 'Не удалось создать Excel',
+        variant: 'destructive',
+      });
+    }
   };
 
   if (isLoading) {
@@ -353,7 +474,7 @@ export default function ReportPage() {
       </Card>
 
       {/* Reports Table */}
-      <Card className="rounded-xl shadow-lg">
+      <Card id="report-table-container" className="rounded-xl shadow-lg">
         <CardHeader className="p-2 sm:p-3 lg:p-4">
           <div className="flex justify-between items-start">
             <CardTitle className="text-xs sm:text-sm lg:text-base">
@@ -363,15 +484,26 @@ export default function ReportPage() {
                 {selectedBranch && ` • ${branches.find(b => b.id.toString() === selectedBranch)?.branches || selectedBranch}`}
               </span>
             </CardTitle>
-            <Button
-              onClick={exportToPDF}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 text-xs"
-            >
-              <FileDown className="h-4 w-4" />
-              Экспорт в PDF
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={exportToExcel}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 text-xs"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                Excel
+              </Button>
+              <Button
+                onClick={exportToPDF}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 text-xs"
+              >
+                <FileDown className="h-4 w-4" />
+                PDF
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">

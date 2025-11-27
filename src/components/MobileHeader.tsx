@@ -1,5 +1,5 @@
 import { LocaleToggle } from '@/components/ui/locale-toggle';
-import { BranchSelectorDialog } from "./BranchSelector";
+import { BranchSelectorMobile } from "./BranchSelectorMobile";
 import LOGO from "./assets/PROM_logo_big_white.svg"
 
 export function MobileHeader() {
@@ -14,7 +14,7 @@ export function MobileHeader() {
 
       <div className="flex items-center gap-2">
         <LocaleToggle />
-        <BranchSelectorDialog />
+        <BranchSelectorMobile />
       </div>
     </div>
   );

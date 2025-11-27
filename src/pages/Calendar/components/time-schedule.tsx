@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Plus, X, Clock, User, Calendar, GripVertical, Coins } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { 
+  MobileDialog, 
+  MobileDialogContent, 
+  MobileDialogTrigger
+} from "@/components/ui/mobile-dialog";
+import { MobileDialogWrapper } from './MobileDialogWrapper';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
@@ -18,6 +24,7 @@ import { getBranchIdWithFallback } from '@/utils/branch-utils';
 import { taskParserService } from '@/services/task-parser';
 import type { Master } from '@/hooks/use-masters';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Types
 interface Employee {
@@ -137,6 +144,13 @@ const getCurrentTimePosition = (): number => {
 
 // Main Component
 const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ initialDate }) => {
+    // Mobile detection
+    const isMobile = useIsMobile();
+    
+    // Conditional wrappers for dialog
+    const DialogWrapper = isMobile ? MobileDialog : Dialog;
+    const DialogContentWrapper = isMobile ? MobileDialogContent : DialogContent;
+    
     // State
     const currentDate = useMemo(() => initialDate || new Date(), [initialDate]);
     
@@ -1658,7 +1672,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                 <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                                     <CancelledAppointments selectedDate={currentDate} />
                                     
-                                    <Dialog open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>
+                                    <DialogWrapper open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>
                                         <DialogTrigger asChild>
                                             <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-xs sm:text-sm">
                                                 <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
@@ -1666,14 +1680,26 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                                 <span className="sm:hidden">{t('calendar.add_master') || 'Мастер'}</span>
                                             </button>
                                         </DialogTrigger>
-                                    <DialogContent className="sm:max-w-[500px]">
-                                        <DialogHeader>
-                                            <DialogTitle className="flex items-center gap-2">
-                                                <User size={20} />
-                                                {t('calendar.add_master_to_day')}
-                                            </DialogTitle>
-                                        </DialogHeader>
-                                        <div className="space-y-6 py-4">
+                                    <DialogContentWrapper className={isMobile ? "" : "sm:max-w-[500px]"}>
+                                        <MobileDialogWrapper
+                                            isMobile={isMobile}
+                                            header={
+                                                isMobile ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <User size={18} />
+                                                        <span className="font-semibold">{t('calendar.add_master_to_day')}</span>
+                                                    </div>
+                                                ) : (
+                                                    <DialogHeader>
+                                                        <DialogTitle className="flex items-center gap-2">
+                                                            <User size={20} />
+                                                            {t('calendar.add_master_to_day')}
+                                                        </DialogTitle>
+                                                    </DialogHeader>
+                                                )
+                                            }
+                                            content={
+                                                <div className="space-y-6 py-4">
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                                     {t('calendar.select_master_required')}
@@ -1731,27 +1757,31 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                                 </div>
                                             </div>
 
-                                            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                                                <button
-                                                    onClick={() => setIsAddEmployeeOpen(false)}
-                                                    className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                                                >
-                                                    {t('common.cancel')}
-                                                </button>
-                                                <button
-                                                    onClick={handleAddEmployee}
-                                                    disabled={!newEmployee.masterId || addMasterToWorkingDayMutation.isPending}
-                                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                                                >
-                                                    {addMasterToWorkingDayMutation.isPending && (
-                                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                                    )}
-                                                    {addMasterToWorkingDayMutation.isPending ? t('calendar.adding') : t('calendar.add_to_day_button')}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </DialogContent>
-                                </Dialog>
+                                                </div>
+                                            }
+                                            footer={
+                                                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                                                    <button
+                                                        onClick={() => setIsAddEmployeeOpen(false)}
+                                                        className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                                    >
+                                                        {t('common.cancel')}
+                                                    </button>
+                                                    <button
+                                                        onClick={handleAddEmployee}
+                                                        disabled={!newEmployee.masterId || addMasterToWorkingDayMutation.isPending}
+                                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                                                    >
+                                                        {addMasterToWorkingDayMutation.isPending && (
+                                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                        )}
+                                                        {addMasterToWorkingDayMutation.isPending ? t('calendar.adding') : t('calendar.add_to_day_button')}
+                                                    </button>
+                                                </div>
+                                            }
+                                        />
+                                    </DialogContentWrapper>
+                                </DialogWrapper>
                             </div>
                             </div>
                         </div>
@@ -1981,15 +2011,27 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                         </div>
 
                         {/* Add Appointment Modal */}
-                        <Dialog open={isAddAppointmentOpen} onOpenChange={setIsAddAppointmentOpen}>
-                            <DialogContent className="sm:max-w-[500px]">
-                                <DialogHeader>
-                                    <DialogTitle className="flex items-center gap-2">
-                                        <Calendar size={20} />
-                                        {t('calendar.new_appointment_at')} {selectedTimeSlot}
-                                    </DialogTitle>
-                                </DialogHeader>
-                                <div className="space-y-6 py-4">
+                        <DialogWrapper open={isAddAppointmentOpen} onOpenChange={setIsAddAppointmentOpen}>
+                            <DialogContentWrapper className={isMobile ? "" : "sm:max-w-[500px]"}>
+                                <MobileDialogWrapper
+                                    isMobile={isMobile}
+                                    header={
+                                        isMobile ? (
+                                            <div className="flex items-center gap-2">
+                                                <Calendar size={18} />
+                                                <span className="font-semibold">{t('calendar.new_appointment_at')} {selectedTimeSlot}</span>
+                                            </div>
+                                        ) : (
+                                            <DialogHeader>
+                                                <DialogTitle className="flex items-center gap-2">
+                                                    <Calendar size={20} />
+                                                    {t('calendar.new_appointment_at')} {selectedTimeSlot}
+                                                </DialogTitle>
+                                            </DialogHeader>
+                                        )
+                                    }
+                                    content={
+                                        <div className="space-y-6 py-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
                                             {t('calendar.client_name_label')} *
@@ -2160,27 +2202,31 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                         </div>
                                     )}
 
-                                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                                        <button
-                                            onClick={() => setIsAddAppointmentOpen(false)}
-                                            className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                                        >
-                                            {t('common.cancel')}
-                                        </button>
-                                        <button
-                                            onClick={handleAddAppointment}
-                                            disabled={!newAppointment.clientName.trim() || !newAppointment.phone.trim() || !newAppointment.service || createTaskMutation.isPending}
-                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                                        >
-                                            {createTaskMutation.isPending && (
-                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                            )}
-                                            {createTaskMutation.isPending ? t('calendar.creating') : t('calendar.create_appointment')}
-                                        </button>
-                                    </div>
-                                </div>
-                            </DialogContent>
-                        </Dialog>
+                                        </div>
+                                    }
+                                    footer={
+                                        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                                            <button
+                                                onClick={() => setIsAddAppointmentOpen(false)}
+                                                className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                            >
+                                                {t('common.cancel')}
+                                            </button>
+                                            <button
+                                                onClick={handleAddAppointment}
+                                                disabled={!newAppointment.clientName.trim() || !newAppointment.phone.trim() || !newAppointment.service || createTaskMutation.isPending}
+                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                                            >
+                                                {createTaskMutation.isPending && (
+                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                )}
+                                                {createTaskMutation.isPending ? t('calendar.creating') : t('calendar.create_appointment')}
+                                            </button>
+                                        </div>
+                                    }
+                                />
+                            </DialogContentWrapper>
+                        </DialogWrapper>
                     </>
                 )}
             </div>

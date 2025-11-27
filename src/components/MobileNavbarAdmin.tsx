@@ -14,7 +14,6 @@ import {
   Gift,
   HelpCircle,
   Sparkles,
-  MessageCircle,
   UserRound,
   Users,
   LayoutDashboard,
@@ -47,7 +46,6 @@ export function MobileNavbarAdmin() {
   const navItems = [
     { path: "/", label: t('nav.dashboard'), icon: <LayoutDashboard className="h-5 w-5" /> },
     { path: "/clients", label: t('nav.clients'), icon: <Users className="h-5 w-5" /> },
-    { path: "/chats", label: t('nav.chats'), icon: <MessageCircle className="h-5 w-5" /> },
     {
       label: t('nav.crm'),
       icon: <FileClock className="h-5 w-5" />,

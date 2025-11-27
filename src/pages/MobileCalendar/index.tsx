@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import AdvancedScheduleComponent from "./components/time-schedule";
+import AdvancedScheduleComponent from "../Calendar/components/time-schedule";
 
-const CalendarScreen = () => {
+const MobileCalendarScreen = () => {
     // Функция для извлечения даты из URL
     const getDateFromUrl = () => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -12,70 +12,61 @@ const CalendarScreen = () => {
             const parsedDate = new Date(dateParam);
             // Проверяем, что дата валидная
             if (!isNaN(parsedDate.getTime())) {
-                console.log('📅 Found date param in URL:', dateParam, 'parsed as:', parsedDate.toISOString());
+                console.log('📅 [Mobile] Found date param in URL:', dateParam, 'parsed as:', parsedDate.toISOString());
                 return parsedDate;
             } else {
-                console.warn('⚠️ Invalid date param in URL:', dateParam);
+                console.warn('⚠️ [Mobile] Invalid date param in URL:', dateParam);
             }
         }
         
         // Возвращаем текущую дату, если параметр отсутствует или невалидный
         const today = new Date();
-        console.log('📅 No valid date param, using today:', today.toISOString());
+        console.log('📅 [Mobile] No valid date param, using today:', today.toISOString());
         return today;
     };
 
     const [selectedDate, setSelectedDate] = useState<Date>(getDateFromUrl);
     
-    console.log('📅 CalendarScreen render - selectedDate:', selectedDate.toISOString());
+    console.log('📅 MobileCalendarScreen render - selectedDate:', selectedDate.toISOString());
 
     // Слушаем изменения URL и обновляем дату
     useEffect(() => {
         const handleUrlChange = () => {
             const newDate = getDateFromUrl();
-            console.log('📅 URL changed, new date:', newDate.toISOString(), 'current selectedDate:', selectedDate.toISOString());
+            console.log('📅 [Mobile] URL changed, new date:', newDate.toISOString(), 'current selectedDate:', selectedDate.toISOString());
             if (newDate.getTime() !== selectedDate.getTime()) {
-                console.log('📅 Setting new selectedDate');
+                console.log('📅 [Mobile] Setting new selectedDate');
                 setSelectedDate(newDate);
             }
         };
 
-        // Обновляем дату при изменении URL
-        handleUrlChange();
-
         // Слушаем события навигации браузера (назад/вперед)
         const handlePopState = () => {
-            console.log('📅 popstate event');
+            console.log('📅 [Mobile] popstate event');
+            handleUrlChange();
+        };
+
+        // Слушаем изменения истории через hashchange
+        const handleHashChange = () => {
+            console.log('📅 [Mobile] hashchange event');
             handleUrlChange();
         };
 
         window.addEventListener('popstate', handlePopState);
+        window.addEventListener('hashchange', handleHashChange);
         
         return () => {
             window.removeEventListener('popstate', handlePopState);
+            window.removeEventListener('hashchange', handleHashChange);
         };
-    }, []);
-
-    // Периодическая проверка изменений URL (для случаев программного изменения)
-    useEffect(() => {
-        const checkUrlPeriodically = () => {
-            const newDate = getDateFromUrl();
-            if (newDate.getTime() !== selectedDate.getTime()) {
-                console.log('📅 Periodic check: URL date changed from', selectedDate.toISOString(), 'to', newDate.toISOString());
-                setSelectedDate(newDate);
-            }
-        };
-
-        const interval = setInterval(checkUrlPeriodically, 500); // Проверяем каждые 500мс
-        
-        return () => clearInterval(interval);
     }, [selectedDate]);
 
     return (
-        <div>
+        <div className="mobile-calendar-container">
+            {/* TODO: Здесь будем добавлять мобильные оптимизации */}
             <AdvancedScheduleComponent key={selectedDate.toISOString()} initialDate={selectedDate} />
         </div>
     )
 }
 
-export default CalendarScreen;
+export default MobileCalendarScreen;

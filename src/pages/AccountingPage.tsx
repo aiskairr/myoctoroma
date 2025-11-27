@@ -32,8 +32,15 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { 
+  MobileDialog, 
+  MobileDialogContent, 
+  MobileDialogTrigger
+} from "@/components/ui/mobile-dialog";
+import { MobileDialogWrapper } from '@/pages/Calendar/components/MobileDialogWrapper';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -84,6 +91,13 @@ interface Administrator {
 }
 
 const AccountingPage = () => {
+  // Mobile detection
+  const isMobile = useIsMobile();
+  
+  // Conditional wrappers for dialogs
+  const DialogWrapper = isMobile ? MobileDialog : Dialog;
+  const DialogContentWrapper = isMobile ? MobileDialogContent : DialogContent;
+  
   const { t } = useLocale();
   const { currentBranch, branches } = useBranch();
   const [records, setRecords] = useState<AccountingRecord[]>([]);
@@ -734,21 +748,33 @@ const AccountingPage = () => {
                       className="pl-10 w-64"
                     />
                   </div>
-                  <Dialog open={isAddRecordOpen} onOpenChange={setIsAddRecordOpen}>
+                  <DialogWrapper open={isAddRecordOpen} onOpenChange={setIsAddRecordOpen}>
                     <DialogTrigger asChild>
                       <Button className="gap-2">
                         <Plus className="h-4 w-4" />
                         {t('accounting.add_record')}
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto" aria-describedby="add-record-description">
-                      <DialogHeader>
-                        <DialogTitle>{t('accounting.add_new_record')}</DialogTitle>
-                        <DialogDescription id="add-record-description">
-                          {t('accounting.fill_record_data')}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid grid-cols-2 gap-4 py-4">
+                    <DialogContentWrapper className={isMobile ? "" : "sm:max-w-[600px] max-h-[80vh] overflow-y-auto"} aria-describedby="add-record-description">
+                      <MobileDialogWrapper
+                        isMobile={isMobile}
+                        header={
+                          isMobile ? (
+                            <div className="flex items-center gap-2">
+                              <Plus size={18} />
+                              <span className="font-semibold">{t('accounting.add_new_record')}</span>
+                            </div>
+                          ) : (
+                            <DialogHeader>
+                              <DialogTitle>{t('accounting.add_new_record')}</DialogTitle>
+                              <DialogDescription id="add-record-description">
+                                {t('accounting.fill_record_data')}
+                              </DialogDescription>
+                            </DialogHeader>
+                          )
+                        }
+                        content={
+                          <div className="grid grid-cols-2 gap-4 py-4">
                         <div className="space-y-2">
                           <Label htmlFor="master">{t('accounting.master')} *</Label>
                           <Select
@@ -923,17 +949,21 @@ const AccountingPage = () => {
                           />
                         </div>
                       </div>
-                      <div className="flex justify-end gap-3">
-                        <Button variant="outline" onClick={() => setIsAddRecordOpen(false)}>
-                          {t('accounting.cancel')}
-                        </Button>
-                        <Button onClick={addRecord} className="gap-2">
-                          <Plus className="h-4 w-4" />
-                          {t('accounting.add_record')}
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                        }
+                        footer={
+                          <div className="flex justify-end gap-3">
+                            <Button variant="outline" onClick={() => setIsAddRecordOpen(false)}>
+                              {t('accounting.cancel')}
+                            </Button>
+                            <Button onClick={addRecord} className="gap-2">
+                              <Plus className="h-4 w-4" />
+                              {t('accounting.add_record')}
+                            </Button>
+                          </div>
+                        }
+                      />
+                    </DialogContentWrapper>
+                  </DialogWrapper>
                 </div>
               </div>
             </CardHeader>
@@ -1130,54 +1160,70 @@ const AccountingPage = () => {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle className="text-xl">{t('accounting.expenses_for_day')}</CardTitle>
-                <Dialog open={isAddExpenseOpen} onOpenChange={setIsAddExpenseOpen}>
+                <DialogWrapper open={isAddExpenseOpen} onOpenChange={setIsAddExpenseOpen}>
                   <DialogTrigger asChild>
                     <Button className="gap-2">
                       <Plus className="h-4 w-4" />
                       {t('accounting.add_expense')}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[400px]" aria-describedby="add-expense-description">
-                    <DialogHeader>
-                      <DialogTitle>{t('accounting.add_expense')}</DialogTitle>
-                      <DialogDescription id="add-expense-description">
-                        {t('accounting.fill_expense_data')}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="expense-name">{t('accounting.expense_name')} *</Label>
-                        <Input
-                          id="expense-name"
-                          name="name"
-                          value={newExpense.name}
-                          onChange={handleNewExpenseChange}
-                          placeholder={t('accounting.expense_name_placeholder')}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="expense-amount">{t('accounting.amount')} *</Label>
-                        <Input
-                          id="expense-amount"
-                          name="amount"
-                          type="number"
-                          value={newExpense.amount}
-                          onChange={handleNewExpenseChange}
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-3">
-                      <Button variant="outline" onClick={() => setIsAddExpenseOpen(false)}>
-                        {t('accounting.cancel')}
-                      </Button>
-                      <Button onClick={addExpense} className="gap-2">
-                        <Plus className="h-4 w-4" />
-                        {t('accounting.add_expense')}
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                  <DialogContentWrapper className={isMobile ? "" : "sm:max-w-[400px]"} aria-describedby="add-expense-description">
+                    <MobileDialogWrapper
+                      isMobile={isMobile}
+                      header={
+                        isMobile ? (
+                          <div className="flex items-center gap-2">
+                            <Plus size={18} />
+                            <span className="font-semibold">{t('accounting.add_expense')}</span>
+                          </div>
+                        ) : (
+                          <DialogHeader>
+                            <DialogTitle>{t('accounting.add_expense')}</DialogTitle>
+                            <DialogDescription id="add-expense-description">
+                              {t('accounting.fill_expense_data')}
+                            </DialogDescription>
+                          </DialogHeader>
+                        )
+                      }
+                      content={
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="expense-name">{t('accounting.expense_name')} *</Label>
+                            <Input
+                              id="expense-name"
+                              name="name"
+                              value={newExpense.name}
+                              onChange={handleNewExpenseChange}
+                              placeholder={t('accounting.expense_name_placeholder')}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="expense-amount">{t('accounting.amount')} *</Label>
+                            <Input
+                              id="expense-amount"
+                              name="amount"
+                              type="number"
+                              value={newExpense.amount}
+                              onChange={handleNewExpenseChange}
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                      }
+                      footer={
+                        <div className="flex justify-end gap-3">
+                          <Button variant="outline" onClick={() => setIsAddExpenseOpen(false)}>
+                            {t('accounting.cancel')}
+                          </Button>
+                          <Button onClick={addExpense} className="gap-2">
+                            <Plus className="h-4 w-4" />
+                            {t('accounting.add_expense')}
+                          </Button>
+                        </div>
+                      }
+                    />
+                  </DialogContentWrapper>
+                </DialogWrapper>
               </div>
             </CardHeader>
             <CardContent>

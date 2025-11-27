@@ -24,6 +24,7 @@ import GiftCertificatesPage from "./pages/GiftCertificatesPage";
 import ReportPage from "./pages/ReportPage";
 import CRMServices from "./pages/CRMServicesTable";
 import HowToUsePage from "./pages/HowToUsePage";
+import Chats from "./pages/Chats";
 import { MobileApp } from "./pages/MobileApp";
 import NotFound from "@/pages/not-found";
 import Sidebar from "@/components/Sidebar";
@@ -31,7 +32,7 @@ import { MobileBottomTabBar } from "@/components/MobileBottomTabBar";
 import { MobileHeader } from "@/components/MobileHeader";
 import { MobileNavbarMaster } from "@/components/MobileNavbarMaster";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import CalendarScreen from "./pages/Calendar";
+import CalendarWrapper from "./pages/CalendarWrapper";
 import MasterCalendarView from "./pages/Calendar/MasterCalendarView";
 import ServicesPage from "./pages/Services";
 
@@ -157,7 +158,7 @@ function App() {
 
           <Route path="/crm/calendar">
             <ProtectedLayout>
-              <CalendarScreen />
+              <CalendarWrapper />
             </ProtectedLayout>
           </Route>
 
@@ -209,6 +210,12 @@ function App() {
             <ProtectedLayout>
               <CRMServices />
               <div></div>
+            </ProtectedLayout>
+          </Route>
+
+          <Route path="/chats">
+            <ProtectedLayout>
+              <Chats />
             </ProtectedLayout>
           </Route>
 

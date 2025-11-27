@@ -33,12 +33,12 @@ interface EditBranchData {
   phoneNumber: string;
 }
 
-// Карточка филиала для модального окна
+// Карточка филиала для мобильного модального окна
 const BranchCard: React.FC<BranchCardProps> = ({ branch, isSelected, onClick, onEdit }) => {
   const { t } = useLocale();
   
   const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Предотвращаем выбор филиала при клике на карандаш
+    e.stopPropagation();
     if (onEdit) {
       onEdit(branch);
     }
@@ -47,61 +47,59 @@ const BranchCard: React.FC<BranchCardProps> = ({ branch, isSelected, onClick, on
   return (
     <div
       className={cn(
-        "p-4 border rounded-lg flex items-start gap-4 cursor-pointer transition-all duration-200",
+        "p-3 border rounded-lg flex items-start gap-3 cursor-pointer transition-all duration-200",
         isSelected ? "border-primary bg-muted/50" : "border-gray-200 hover:border-gray-300 bg-card hover:bg-muted/30"
       )}
       onClick={onClick}
     >
-      {/* Фото или иконка филиала */}
       {branch.photoUrl ? (
-        <Avatar className="h-12 w-12">
+        <Avatar className="h-10 w-10">
           <AvatarImage src={branch.photoUrl} alt={branch.branches} />
-          <AvatarFallback className="text-lg">{branch.branches[0]}</AvatarFallback>
+          <AvatarFallback className="text-sm">{branch.branches[0]}</AvatarFallback>
         </Avatar>
       ) : (
-        <div className="rounded-full p-3 bg-primary/10 text-primary">
-          <Building className="h-6 w-6" />
+        <div className="rounded-full p-2 bg-primary/10 text-primary">
+          <Building className="h-5 w-5" />
         </div>
       )}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h3 className="font-medium">{branch.branches}</h3>
+          <h3 className="font-medium text-sm truncate">{branch.branches}</h3>
           {isSelected && (
-            <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary whitespace-nowrap">
               {t('branch.selected')}
             </span>
           )}
         </div>
-        <p className="text-sm text-muted-foreground">{branch.address}</p>
-        <p className="text-xs text-muted-foreground mt-1">{t('branch.phone_prefix')}{branch.phoneNumber}</p>
+        <p className="text-xs text-muted-foreground truncate">{branch.address}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{t('branch.phone_prefix')}{branch.phoneNumber}</p>
       </div>
       <Button
         variant="ghost"
         size="sm"
-        className="h-8 w-8 p-0 hover:bg-primary/10 text-muted-foreground hover:text-primary"
+        className="h-7 w-7 p-0 hover:bg-primary/10 text-muted-foreground hover:text-primary flex-shrink-0"
         onClick={handleEditClick}
         title={t('branch.edit_tooltip')}
       >
-        <Pencil className="h-4 w-4" />
+        <Pencil className="h-3.5 w-3.5" />
       </Button>
     </div>
   );
 };
 
-// Компонент выбора филиала (модальное окно)
-interface BranchSelectorDialogProps {
-  onSelect?: () => void; // Опциональный колбэк для вызова после выбора филиала
+// Мобильный компонент выбора филиала
+interface BranchSelectorMobileProps {
+  onSelect?: () => void;
 }
 
-export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSelect }) => {
+export const BranchSelectorMobile: React.FC<BranchSelectorMobileProps> = ({ onSelect }) => {
   const { currentBranch, setBranch, branches, isLoading, refetchBranches } = useBranch();
-  const { user } = useAuth(); // Получаем данные пользователя
+  const { user } = useAuth();
   const { t } = useLocale();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(currentBranch);
   
-  // Состояние для редактирования филиала
   const [editDialog, setEditDialog] = useState(false);
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
   const [editData, setEditData] = useState<EditBranchData>({
@@ -112,10 +110,8 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
   const [isUpdating, setIsUpdating] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  // Проверяем, является ли пользователь админом или суперадмином
   const isAdminOrSuperAdmin = user?.role === 'admin' || user?.role === 'superadmin';
 
-  // Если пользователь не админ и не суперадмин, не показываем компонент
   if (!isAdminOrSuperAdmin) {
     return null;
   }
@@ -144,7 +140,6 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
     const file = event.target.files?.[0];
     if (!file || !editingBranch) return;
     
-    // Проверка типа файла
     if (!file.type.startsWith('image/')) {
       toast({
         title: t('common.error'),
@@ -154,7 +149,6 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
       return;
     }
     
-    // Проверка размера файла (максимум 100MB)
     if (file.size > 100 * 1024 * 1024) {
       toast({
         title: t('common.error'),
@@ -200,7 +194,6 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
         });
       }
       
-      // Обновляем список филиалов
       await refetchBranches();
       
     } catch (error) {
@@ -238,10 +231,8 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
         description: t('branch.update_success')
       });
 
-      // Обновляем список филиалов
       await refetchBranches();
       
-      // Закрываем диалог редактирования
       setEditDialog(false);
       setEditingBranch(null);
 
@@ -259,9 +250,9 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
 
   if (isLoading) {
     return (
-      <Button variant="ghost" className="justify-start px-3 py-2 w-full hover:text-white hover:bg-white/10 text-slate-300" disabled>
-        <Building2 className="h-5 w-5 mr-2" />
-        <span className="text-left">{t('branch.loading')}</span>
+      <Button variant="ghost" size="sm" className="h-8 px-3" disabled>
+        <Building2 className="h-4 w-4 mr-1.5" />
+        <span className="text-xs">{t('branch.loading')}</span>
       </Button>
     );
   }
@@ -270,19 +261,23 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="ghost" className="justify-start px-3 py-2 w-full hover:text-white hover:bg-white/10 text-slate-300">
-            <Building2 className="h-5 w-5 mr-2" />
-            <span className="text-left">{t('branch.title')}</span>
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="bg-gradient-to-r from-emerald-400 to-teal-400 border-emerald-500 hover:from-emerald-500 hover:to-teal-500 hover:border-emerald-600 text-slate-900 hover:text-slate-900 font-semibold shadow-md hover:shadow-xl transition-all duration-200 gap-1.5 h-8 px-3"
+          >
+            <Building2 className="h-4 w-4" />
+            <span className="text-xs">{currentBranch?.branches || t('branch.title')}</span>
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t('branch.select_title')}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base">{t('branch.select_title')}</DialogTitle>
+            <DialogDescription className="text-sm">
               {t('branch.select_description')}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 py-4">
+          <div className="space-y-2 py-3">
             {branches.map((branch) => (
               <BranchCard
                 key={branch.id}
@@ -293,49 +288,49 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
               />
             ))}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">
               {t('common.cancel')}
             </Button>
-            <Button onClick={handleSave} disabled={!selectedBranch}>
+            <Button onClick={handleSave} disabled={!selectedBranch} className="w-full sm:w-auto">
               {t('common.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Диалог редактирования филиала */}
+      {/* Диалог редактирования филиала - оптимизирован для мобильных */}
       <Dialog open={editDialog} onOpenChange={setEditDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t('branch.edit_title')}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base">{t('branch.edit_title')}</DialogTitle>
+            <DialogDescription className="text-sm">
               {t('branch.edit_description')}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 py-3">
             {/* Фото филиала */}
             <div>
-              <Label>{t('branch.photo')}</Label>
-              <div className="flex items-center gap-3 mt-2">
-                <Avatar className="h-20 w-20">
+              <Label className="text-sm">{t('branch.photo')}</Label>
+              <div className="flex items-center gap-2 mt-2">
+                <Avatar className="h-16 w-16">
                   {editingBranch?.photoUrl ? (
                     <AvatarImage src={editingBranch.photoUrl} alt={editingBranch.branches} />
                   ) : (
-                    <AvatarFallback className="text-2xl">{editingBranch?.branches[0]}</AvatarFallback>
+                    <AvatarFallback className="text-lg">{editingBranch?.branches[0]}</AvatarFallback>
                   )}
                 </Avatar>
                 <label htmlFor="branch-photo-upload" className="cursor-pointer flex-1">
-                  <div className="flex items-center justify-center gap-2 h-10 px-4 rounded-md bg-secondary hover:bg-secondary/80 transition-colors">
+                  <div className="flex items-center justify-center gap-2 h-9 px-3 rounded-md bg-secondary hover:bg-secondary/80 transition-colors">
                     {uploadingPhoto ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-sm">{t('branch.uploading')}</span>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span className="text-xs">{t('branch.uploading')}</span>
                       </>
                     ) : (
                       <>
-                        <Upload className="h-4 w-4" />
-                        <span className="text-sm">{t('branch.upload_photo')}</span>
+                        <Upload className="h-3.5 w-3.5" />
+                        <span className="text-xs">{t('branch.upload_photo')}</span>
                       </>
                     )}
                   </div>
@@ -352,48 +347,53 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
             </div>
             
             <div>
-              <Label htmlFor="branchName">{t('branch.name_label')}</Label>
+              <Label htmlFor="branchName" className="text-sm">{t('branch.name_label')}</Label>
               <Input
                 id="branchName"
                 value={editData.branches}
                 onChange={(e) => setEditData({ ...editData, branches: e.target.value })}
                 placeholder={t('branch.name_placeholder')}
+                className="text-sm"
               />
             </div>
             <div>
-              <Label htmlFor="branchAddress">{t('branch.address_label')}</Label>
+              <Label htmlFor="branchAddress" className="text-sm">{t('branch.address_label')}</Label>
               <Input
                 id="branchAddress"
                 value={editData.address}
                 onChange={(e) => setEditData({ ...editData, address: e.target.value })}
                 placeholder={t('branch.address_placeholder')}
+                className="text-sm"
               />
             </div>
             <div>
-              <Label htmlFor="branchPhone">{t('branch.phone_label')}</Label>
+              <Label htmlFor="branchPhone" className="text-sm">{t('branch.phone_label')}</Label>
               <Input
                 id="branchPhone"
                 value={editData.phoneNumber}
                 onChange={(e) => setEditData({ ...editData, phoneNumber: e.target.value })}
                 placeholder={t('branch.phone_placeholder')}
+                className="text-sm"
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button 
               variant="outline" 
               onClick={() => setEditDialog(false)}
               disabled={isUpdating}
+              className="w-full sm:w-auto"
             >
               {t('common.cancel')}
             </Button>
             <Button 
               onClick={handleUpdateBranch}
               disabled={isUpdating || !editData.branches.trim()}
+              className="w-full sm:w-auto"
             >
               {isUpdating ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
                   {t('branch.saving')}
                 </>
               ) : (
@@ -404,52 +404,5 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
         </DialogContent>
       </Dialog>
     </>
-  );
-};
-
-// Индикатор текущего филиала (для показа в сайдбаре)
-interface BranchIndicatorProps {
-  compact?: boolean; // Компактный режим для мобильного вида
-}
-
-export const BranchIndicator: React.FC<BranchIndicatorProps> = ({ compact = false }) => {
-  const { currentBranch, isLoading } = useBranch();
-  const { user } = useAuth(); // Получаем данные пользователя
-  const { t } = useLocale();
-
-  // Проверяем, является ли пользователь админом или суперадмином
-  const isAdminOrSuperAdmin = user?.role === 'admin' || user?.role === 'superadmin';
-
-  // Если пользователь не админ и не суперадмин, не показываем компонент
-  if (!isAdminOrSuperAdmin) {
-    return null;
-  }
-
-  if (isLoading || !currentBranch) {
-    return (
-      <div className={compact ? "" : "px-4 py-2"}>
-        <div className={cn(
-          "flex items-center gap-2 text-sm font-medium rounded-md text-muted-foreground bg-muted/50",
-          compact ? "px-2 py-1" : "p-2"
-        )}>
-          <Building className="h-4 w-4" />
-          <span className={compact ? "hidden sm:inline" : ""}>
-            {isLoading ? t('branch.loading') : t('branch.no_branch')}
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={compact ? "" : "px-4 py-2"}>
-      <div className={cn(
-        "flex items-center gap-2  text-sm font-medium rounded-md text-white bg-primary/10",
-        compact ? "px-2 py-1" : "p-2"
-      )}>
-        <Building className="h-4 w-4" />
-        <span className={compact ? "hidden sm:inline" : ""}>{currentBranch.branches}</span>
-      </div>
-    </div>
   );
 };

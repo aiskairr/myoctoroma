@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Plus, X, Clock, User, Calendar, GripVertical } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { 
+  MobileDialog, 
+  MobileDialogContent, 
+  MobileDialogTrigger
+} from "@/components/ui/mobile-dialog";
+import { MobileDialogWrapper } from './MobileDialogWrapper';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useBranch } from '@/contexts/BranchContext';
 import TaskDialogBtn from './task-dialog-btn';
 import { useCreateTask } from '@/hooks/use-task';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Types
 interface DragState {
@@ -127,6 +134,13 @@ interface AdvancedScheduleComponentProps {
 
 // Main Component
 const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ initialDate }) => {
+    // Mobile detection
+    const isMobile = useIsMobile();
+    
+    // Conditional wrappers for dialog
+    const DialogWrapper = isMobile ? MobileDialog : Dialog;
+    const DialogContentWrapper = isMobile ? MobileDialogContent : DialogContent;
+    
     // Branch context
     const { currentBranch } = useBranch();
     
@@ -1073,106 +1087,121 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 </div>
 
                 {/* Add Appointment Modal */}
-                <Dialog open={isAddAppointmentOpen} onOpenChange={setIsAddAppointmentOpen}>
-                    <DialogContent className="sm:max-w-[500px]">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                                <Calendar size={20} />
-                                Новая запись на {selectedTimeSlot}
-                            </DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-6 py-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Имя клиента *
-                                </label>
-                                <input
-                                    type="text"
-                                    value={newAppointment.clientName}
-                                    onChange={(e) => setNewAppointment(prev => ({ ...prev, clientName: e.target.value }))}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="Введите имя клиента"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Услуга *
-                                </label>
-                                <select
-                                    value={newAppointment.service}
-                                    onChange={(e) => handleServiceChange(e.target.value)}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                    <option value="">Выберите услугу</option>
-                                    {SERVICES.map(service => (
-                                        <option key={service.name} value={service.name}>
-                                            {service.name} ({service.duration} мин, {service.price} сом)
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Продолжительность (минуты)
-                                </label>
-                                <input
-                                    type="number"
-                                    value={newAppointment.duration}
-                                    onChange={(e) => setNewAppointment(prev => ({ ...prev, duration: parseInt(e.target.value) || 45 }))}
-                                    min="15"
-                                    max="300"
-                                    step="15"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Примечания
-                                </label>
-                                <textarea
-                                    value={newAppointment.notes}
-                                    onChange={(e) => setNewAppointment(prev => ({ ...prev, notes: e.target.value }))}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                                    rows={3}
-                                    placeholder="Дополнительная информация..."
-                                />
-                            </div>
-
-                            {selectedEmployeeId && (
-                                <div className="p-3 bg-gray-50 rounded-lg">
-                                    <div className="text-sm font-medium text-gray-700">
-                                        Сотрудник: {employees.find(emp => emp.id === selectedEmployeeId)?.name}
+                <DialogWrapper open={isAddAppointmentOpen} onOpenChange={setIsAddAppointmentOpen}>
+                    <DialogContentWrapper className={isMobile ? "" : "sm:max-w-[500px]"}>
+                        <MobileDialogWrapper
+                            isMobile={isMobile}
+                            header={
+                                isMobile ? (
+                                    <div className="flex items-center gap-2">
+                                        <Calendar size={18} />
+                                        <span className="font-semibold">Новая запись на {selectedTimeSlot}</span>
                                     </div>
-                                    <div className="text-sm text-gray-600">
-                                        Время: {selectedTimeSlot} - {minutesToTime(timeToMinutes(selectedTimeSlot) + newAppointment.duration)}
+                                ) : (
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2">
+                                            <Calendar size={20} />
+                                            Новая запись на {selectedTimeSlot}
+                                        </DialogTitle>
+                                    </DialogHeader>
+                                )
+                            }
+                            content={
+                                <div className="space-y-6 py-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Имя клиента *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={newAppointment.clientName}
+                                            onChange={(e) => setNewAppointment(prev => ({ ...prev, clientName: e.target.value }))}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="Введите имя клиента"
+                                        />
                                     </div>
-                                </div>
-                            )}
 
-                            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                                <button
-                                    onClick={() => setIsAddAppointmentOpen(false)}
-                                    className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                                >
-                                    Отмена
-                                </button>
-                                <button
-                                    onClick={handleAddAppointment}
-                                    disabled={!newAppointment.clientName.trim() || !newAppointment.service || createTaskMutation.isPending}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                                >
-                                    {createTaskMutation.isPending && (
-                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Услуга *
+                                        </label>
+                                        <select
+                                            value={newAppointment.service}
+                                            onChange={(e) => handleServiceChange(e.target.value)}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                            <option value="">Выберите услугу</option>
+                                            {SERVICES.map(service => (
+                                                <option key={service.name} value={service.name}>
+                                                    {service.name} ({service.duration} мин, {service.price} сом)
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Продолжительность (минуты)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={newAppointment.duration}
+                                            onChange={(e) => setNewAppointment(prev => ({ ...prev, duration: parseInt(e.target.value) || 45 }))}
+                                            min="15"
+                                            max="300"
+                                            step="15"
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Примечания
+                                        </label>
+                                        <textarea
+                                            value={newAppointment.notes}
+                                            onChange={(e) => setNewAppointment(prev => ({ ...prev, notes: e.target.value }))}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                                            rows={3}
+                                            placeholder="Дополнительная информация..."
+                                        />
+                                    </div>
+
+                                    {selectedEmployeeId && (
+                                        <div className="p-3 bg-gray-50 rounded-lg">
+                                            <div className="text-sm font-medium text-gray-700">
+                                                Сотрудник: {employees.find(emp => emp.id === selectedEmployeeId)?.name}
+                                            </div>
+                                            <div className="text-sm text-gray-600">
+                                                Время: {selectedTimeSlot} - {minutesToTime(timeToMinutes(selectedTimeSlot) + newAppointment.duration)}
+                                            </div>
+                                        </div>
                                     )}
-                                    {createTaskMutation.isPending ? 'Создание...' : 'Создать запись'}
-                                </button>
-                            </div>
-                        </div>
-                    </DialogContent>
-                </Dialog>
+                                </div>
+                            }
+                            footer={
+                                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                                    <button
+                                        onClick={() => setIsAddAppointmentOpen(false)}
+                                        className="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                    >
+                                        Отмена
+                                    </button>
+                                    <button
+                                        onClick={handleAddAppointment}
+                                        disabled={!newAppointment.clientName.trim() || !newAppointment.service || createTaskMutation.isPending}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                                    >
+                                        {createTaskMutation.isPending && (
+                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        )}
+                                        {createTaskMutation.isPending ? 'Создание...' : 'Создать запись'}
+                                    </button>
+                                </div>
+                            }
+                        />
+                    </DialogContentWrapper>
+                </DialogWrapper>
             </div>
         </TooltipProvider>
     );

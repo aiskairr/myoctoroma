@@ -33,6 +33,7 @@ const translations = {
     'common.add': 'Добавить',
     'common.update': 'Обновить',
     'common.today': 'Сегодня',
+    'common.search': 'Поиск',
 
     // Шаги бронирования
     'booking.title': 'Онлайн запись',
@@ -954,6 +955,7 @@ const translations = {
     'accounting.transfers': 'Переводы',
     'accounting.certificates': 'Сертификаты',
     'accounting.bank_breakdown': 'Разбивка по банкам',
+    'accounting.no_bank_payments': 'Нет банковских платежей',
     'accounting.send_to_accounting': 'Отправить в бухгалтерию',
     'accounting.confirm_submit': 'Подтверждение отправки',
     'accounting.confirm_submit_description': 'Подтвердите отправку отчета в бухгалтерию',
@@ -1490,6 +1492,7 @@ const translations = {
     'edit_appointment.payment_method': 'Способ оплаты',
     
     // Task dialog
+    'task_dialog.edit_title': 'Редактировать запись',
     'task_dialog.name_min_length': 'Имя должно содержать минимум 2 символа',
     'task_dialog.phone_required': 'Номер телефона обязателен',
     'task_dialog.phone_format_error': 'Номер должен быть кыргызским: +996 (XXX) XXX-XXX',
@@ -1723,6 +1726,7 @@ const translations = {
     'common.add': 'Кошуу',
     'common.update': 'Жаңылоо',
     'common.today': 'Бүгүн',
+    'common.search': 'Издөө',
 
     // Шаги бронирования
     'booking.title': 'Онлайн жазылуу',
@@ -2615,6 +2619,7 @@ const translations = {
     'accounting.transfers': 'Которуулар',
     'accounting.certificates': 'Сертификаттар',
     'accounting.bank_breakdown': 'Банктар боюнча бөлүү',
+    'accounting.no_bank_payments': 'Банктык төлөмдөр жок',
     'accounting.send_to_accounting': 'Бухгалтерияга жөнөтүү',
     'accounting.confirm_submit': 'Жөнөтүүнү ырастоо',
     'accounting.confirm_submit_description': 'Бухгалтерияга отчетту жөнөтүүнү ырастаңыз',
@@ -3179,6 +3184,7 @@ const translations = {
     'edit_appointment.payment_method': 'Төлөө ыкмасы',
     
     // Task dialog
+    'task_dialog.edit_title': 'Жазууну түзөтүү',
     'task_dialog.name_min_length': 'Ат кеминде 2 символдон турушу керек',
     'task_dialog.phone_required': 'Телефон номери милдеттүү',
     'task_dialog.phone_format_error': 'Номер кыргыз форматында болушу керек: +996 (XXX) XXX-XXX',
@@ -3412,6 +3418,7 @@ const translations = {
     'common.add': 'Add',
     'common.update': 'Update',
     'common.today': 'Today',
+    'common.search': 'Search',
 
     // Шаги бронирования
     'booking.title': 'Online Booking',
@@ -4303,6 +4310,7 @@ const translations = {
     'accounting.transfers': 'Transfers',
     'accounting.certificates': 'Certificates',
     'accounting.bank_breakdown': 'Breakdown by banks',
+    'accounting.no_bank_payments': 'No bank payments',
     'accounting.send_to_accounting': 'Send to accounting',
     'accounting.confirm_submit': 'Confirm submission',
     'accounting.confirm_submit_description': 'Confirm sending the report to accounting',
@@ -4868,6 +4876,7 @@ const translations = {
     'edit_appointment.payment_method': 'Payment Method',
     
     // Task dialog
+    'task_dialog.edit_title': 'Edit Appointment',
     'task_dialog.name_min_length': 'Name must contain at least 2 characters',
     'task_dialog.phone_required': 'Phone number is required',
     'task_dialog.phone_format_error': 'Number must be Kyrgyz format: +996 (XXX) XXX-XXX',

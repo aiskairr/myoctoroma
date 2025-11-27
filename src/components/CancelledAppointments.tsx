@@ -1,5 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { 
+  MobileDialog, 
+  MobileDialogContent, 
+  MobileDialogTrigger
+} from "@/components/ui/mobile-dialog";
+import { MobileDialogWrapper } from '@/pages/Calendar/components/MobileDialogWrapper';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +24,7 @@ import { XCircle, Edit, Calendar, User, Clock, Phone, Search } from 'lucide-reac
 import StatusBadge from '@/components/StatusBadge';
 import { type TaskWithMaster, type TaskFromAPI } from '@/hooks/use-tasks';
 import { useMasters } from '@/hooks/use-masters';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface CancelledAppointmentsProps {
   trigger?: React.ReactNode;
@@ -25,6 +32,13 @@ interface CancelledAppointmentsProps {
 }
 
 export default function CancelledAppointments({ trigger, selectedDate }: CancelledAppointmentsProps) {
+  // Mobile detection
+  const isMobile = useIsMobile();
+  
+  // Conditional wrappers for dialog
+  const DialogWrapper = isMobile ? MobileDialog : Dialog;
+  const DialogContentWrapper = isMobile ? MobileDialogContent : DialogContent;
+  
   const { t } = useLocale();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -238,22 +252,36 @@ export default function CancelledAppointments({ trigger, selectedDate }: Cancell
   );
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <DialogWrapper open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         {trigger || defaultTrigger}
       </DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden p-0">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="flex items-center gap-2">
-            <XCircle className="h-5 w-5 text-red-500" />
-            {t('calendar.cancelled_appointments')}
-            <Badge variant="secondary" className="ml-2">
-              {filteredTasks.length}
-            </Badge>
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="p-6 pt-4 space-y-4 overflow-auto">
+      <DialogContentWrapper className={isMobile ? "" : "max-w-6xl max-h-[90vh] overflow-hidden p-0"}>
+        <MobileDialogWrapper
+          isMobile={isMobile}
+          header={
+            isMobile ? (
+              <div className="flex items-center gap-2">
+                <XCircle className="h-5 w-5 text-red-500" />
+                <span className="font-semibold">{t('calendar.cancelled_appointments')}</span>
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  {filteredTasks.length}
+                </Badge>
+              </div>
+            ) : (
+              <DialogHeader className="p-6 pb-0">
+                <DialogTitle className="flex items-center gap-2">
+                  <XCircle className="h-5 w-5 text-red-500" />
+                  {t('calendar.cancelled_appointments')}
+                  <Badge variant="secondary" className="ml-2">
+                    {filteredTasks.length}
+                  </Badge>
+                </DialogTitle>
+              </DialogHeader>
+            )
+          }
+          content={
+            <div className={isMobile ? "space-y-4" : "p-6 pt-4 space-y-4 overflow-auto"}>
           {/* Фильтры */}
           <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-lg">
             <div className="flex-1 min-w-[200px]">
@@ -360,63 +388,66 @@ export default function CancelledAppointments({ trigger, selectedDate }: Cancell
               ))
             )}
           </div>
-        </div>
+            </div>
+          }
+          footer={null}
+        />
+      </DialogContentWrapper>
 
-        {/* Диалог редактирования */}
-        {selectedTask && (
-          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Редактировать запись</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Статус</Label>
-                  <Select
-                    value={selectedTask.status}
-                    onValueChange={(value) => setSelectedTask({...selectedTask, status: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="scheduled">Записан</SelectItem>
-                      <SelectItem value="in_progress">В процессе</SelectItem>
-                      <SelectItem value="completed">Завершен</SelectItem>
-                      <SelectItem value="cancelled">Отменен</SelectItem>
-                      <SelectItem value="no_show">Не пришел</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Заметки</Label>
-                  <Input
-                    value={selectedTask.notes || ''}
-                    onChange={(e) => setSelectedTask({...selectedTask, notes: e.target.value})}
-                    placeholder="Добавить заметку..."
-                  />
-                </div>
-
-                <div className="flex justify-between">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsEditDialogOpen(false)}
-                  >
-                    Отмена
-                  </Button>
-                  <Button 
-                    onClick={handleSaveTask}
-                    disabled={updateTaskMutation.isPending}
-                  >
-                    {updateTaskMutation.isPending ? 'Сохранение...' : 'Сохранить'}
-                  </Button>
-                </div>
+      {/* Диалог редактирования - вне основного диалога */}
+      {selectedTask && (
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Редактировать запись</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Статус</Label>
+                <Select
+                  value={selectedTask.status}
+                  onValueChange={(value) => setSelectedTask({...selectedTask, status: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="scheduled">Записан</SelectItem>
+                    <SelectItem value="in_progress">В процессе</SelectItem>
+                    <SelectItem value="completed">Завершен</SelectItem>
+                    <SelectItem value="cancelled">Отменен</SelectItem>
+                    <SelectItem value="no_show">Не пришел</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </DialogContent>
-          </Dialog>
-        )}
-      </DialogContent>
-    </Dialog>
+
+              <div>
+                <Label>Заметки</Label>
+                <Input
+                  value={selectedTask.notes || ''}
+                  onChange={(e) => setSelectedTask({...selectedTask, notes: e.target.value})}
+                  placeholder="Добавить заметку..."
+                />
+              </div>
+
+              <div className="flex justify-between">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Отмена
+                </Button>
+                <Button 
+                  onClick={handleSaveTask}
+                  disabled={updateTaskMutation.isPending}
+                >
+                  {updateTaskMutation.isPending ? 'Сохранение...' : 'Сохранить'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </DialogWrapper>
   );
 }

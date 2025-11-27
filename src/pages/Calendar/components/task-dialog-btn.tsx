@@ -1,13 +1,13 @@
 import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Clock, CalendarIcon, Loader2, CreditCard, Trash2, Plus, CheckCircle, X, XCircle, Scissors, MessageCircle } from "lucide-react";
+import { Clock, CalendarIcon, Loader2, Trash2, Plus, CheckCircle, X, Scissors, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import type React from "react";
@@ -23,6 +23,17 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocale } from "@/contexts/LocaleContext";
 import WhatsAppChat from "@/components/WhatsAppChat";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { 
+  MobileDialog, 
+  MobileDialogContent, 
+  MobileDialogTrigger
+} from "@/components/ui/mobile-dialog";
+import { MobileDialogWrapper } from "./MobileDialogWrapper";
+import { TaskDialogHeader } from "./task-dialog/TaskDialogHeader";
+import { TaskDialogFooter } from "./task-dialog/TaskDialogFooter";
+import { PaymentDialogHeader } from "./task-dialog/PaymentDialogHeader";
+import { PaymentDialogFooter } from "./task-dialog/PaymentDialogFooter";
 
 // Интерфейс для способов оплаты
 interface PaymentMethod {
@@ -82,6 +93,12 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
     const { t } = useLocale();
+    const isMobile = useIsMobile();
+
+    // Условные компоненты для мобильной/десктопной версии
+    const DialogWrapper = isMobile ? MobileDialog : Dialog;
+    const DialogContentWrapper = isMobile ? MobileDialogContent : DialogContent;
+    const DialogTriggerWrapper = isMobile ? MobileDialogTrigger : DialogTrigger;
 
     // Fetch task data from API
     const { data: taskData, isLoading: taskLoading, error: taskError } = useTask(taskId);
@@ -1141,51 +1158,28 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
     return (
         <>
-        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-            <DialogTrigger asChild>
+        <DialogWrapper open={isOpen} onOpenChange={handleOpenChange}>
+            <DialogTriggerWrapper asChild>
                 {children}
-            </DialogTrigger>
-            <DialogContent
-                className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto"
+            </DialogTriggerWrapper>
+            <DialogContentWrapper
+                className={isMobile ? "" : "sm:max-w-[800px] max-h-[90vh] overflow-y-auto"}
                 // Убрали onInteractOutside - теперь клик по backdrop будет закрывать модалку
                 onEscapeKeyDown={() => handleOpenChange(false)}
             >
-                {/* Динамическая плашка статуса оплаты - по центру */}
-                <div className="flex justify-center pt-4 pb-2">
-                    {taskData?.paid === 'paid' ? (
-                        <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-full">
-                            <CheckCircle className="w-5 h-5 text-green-600" />
-                            <span className="text-sm font-semibold text-green-700">
-                                {t('calendar.paid').toUpperCase()}
-                            </span>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-full">
-                            <XCircle className="w-5 h-5 text-red-600" />
-                            <span className="text-sm font-semibold text-red-700">
-                                {t('calendar.not_paid')}
-                            </span>
-                        </div>
-                    )}
-                </div>
-
-                <DialogHeader className="pb-2">
-                    <DialogTitle className="sr-only">{t('task_dialog.edit_title')}</DialogTitle>
-                </DialogHeader>
-
-                {/* Кнопка оплаты на всю ширину - в верхней части */}
-                {taskId && taskData && (
-                    <div className="px-2 pb-4">
-                        <Button
-                            type="button"
-                            onClick={() => setShowPaymentDialog(true)}
-                            className="w-full bg-amber-500 hover:bg-amber-600 text-white h-12 text-base font-semibold"
-                        >
-                            <CreditCard className="h-5 w-5 mr-2" />
-                            {t('task_dialog.pay_button')}
-                        </Button>
-                    </div>
-                )}
+                <MobileDialogWrapper
+                    isMobile={isMobile}
+                    header={
+                        <TaskDialogHeader
+                            taskId={taskId}
+                            taskData={taskData}
+                            isMobile={isMobile}
+                            onPaymentClick={() => setShowPaymentDialog(true)}
+                            t={t}
+                        />
+                    }
+                    content={
+                        <>
 
                 {/* Loading State */}
                 {taskId && taskLoading && (
@@ -1287,8 +1281,8 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                 />
                             </div>
 
-                            {/* WhatsApp Chat Button */}
-                            {taskId && taskData && watch('phone') && (
+                            {/* WhatsApp Chat Button - Hidden on mobile */}
+                            {!isMobile && taskId && taskData && watch('phone') && (
                                 <div className="border-t pt-4">
                                     <Button
                                         type="button"
@@ -1871,84 +1865,97 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                         )}
                     </div>
 
-                    <div className="flex gap-2 mt-6 pt-4 border-t">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => handleOpenChange(false)}
-                            className="flex-1"
-                        >
-                            {t('task_dialog.cancel_button')}
-                        </Button>
-                        
-                        <Button
-                            type="submit"
-                            disabled={!taskId ? (!isValid || createTaskMutation.isPending) : false}
-                            className={`flex-1 ${(!taskId ? (!isValid || createTaskMutation.isPending) : false) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                            {!taskId && createTaskMutation.isPending ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    {t('task_dialog.creating')}
-                                </>
-                            ) : (
-                                taskId ? t('calendar.save') : t('calendar.create_task')
-                            )}
-                        </Button>
-                    </div>
                     </form>
                 )}
-            </DialogContent>
-        </Dialog>
+                        </>
+                    }
+                    footer={
+                        <TaskDialogFooter
+                            taskId={taskId}
+                            isValid={isValid}
+                            isPending={createTaskMutation.isPending}
+                            onCancel={() => handleOpenChange(false)}
+                            onSubmit={handleSubmit(onSubmit)}
+                            t={t}
+                        />
+                    }
+                />
+            </DialogContentWrapper>
+        </DialogWrapper>
 
         {/* Диалог оплаты */}
         {taskId && taskData && (
-            <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <CreditCard className="h-5 w-5 text-amber-600" />
-                            {t('calendar.payment_services_title')}
-                        </DialogTitle>
-                    </DialogHeader>
-
-                    <div className="flex gap-6">
+            <DialogWrapper open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+                <DialogContentWrapper className={isMobile ? "" : "max-w-2xl"}>
+                    <MobileDialogWrapper
+                        isMobile={isMobile}
+                        header={
+                            <PaymentDialogHeader
+                                isMobile={isMobile}
+                                t={t}
+                            />
+                        }
+                        content={
+                            <>
+                    <div className={isMobile ? "space-y-4" : "flex gap-6"}>
                         {/* Левая колонка - способы оплаты с группировкой */}
                         <div className="flex-1 max-h-[500px] overflow-y-auto pr-2">
                             <h3 className="text-lg font-semibold mb-4">{t('task_dialog.payment_method_select')}</h3>
                             
-                            {/* Наличные */}
+                            {/* Наличные и Подарочный сертификат в одной строке */}
                             <div className="mb-4">
-                                <h4 className="text-sm font-medium text-gray-500 mb-2">💰 {t('calendar.payment_cash')}</h4>
-                                {paymentMethods.filter(m => m.type === 'cash').map((method) => (
-                                    <div
-                                        key={method.value}
-                                        onClick={() => setSelectedPaymentMethod(method.value)}
-                                        className={`p-4 border-2 rounded-xl cursor-pointer transition-all hover:shadow-md ${selectedPaymentMethod === method.value
-                                            ? 'border-green-500 bg-green-50 shadow-lg'
-                                            : 'border-gray-200 hover:border-green-300'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="text-3xl">
-                                                <PaymentMethodIcon paymentMethod={method.value} className="w-12 h-12" />
+                                <h4 className="text-sm font-medium text-gray-500 mb-2">💰 Основные способы</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {/* Наличные */}
+                                    {paymentMethods.filter(m => m.type === 'cash').map((method) => (
+                                        <div
+                                            key={method.value}
+                                            onClick={() => setSelectedPaymentMethod(method.value)}
+                                            className={`p-3 border-2 rounded-xl cursor-pointer transition-all hover:shadow-md ${selectedPaymentMethod === method.value
+                                                ? 'border-green-500 bg-green-50 shadow-lg'
+                                                : 'border-gray-200 hover:border-green-300'
+                                            }`}
+                                        >
+                                            <div className="flex flex-col items-center text-center gap-2">
+                                                <div className="w-16 h-16 flex items-center justify-center">
+                                                    <PaymentMethodIcon paymentMethod={method.value} className="w-14 h-14" />
+                                                </div>
+                                                <div className="font-semibold text-sm">{method.label}</div>
+                                                {selectedPaymentMethod === method.value && (
+                                                    <div className="text-green-600 text-xl">✓</div>
+                                                )}
                                             </div>
-                                            <div className="flex-1">
-                                                <div className="font-bold text-lg">{method.label}</div>
-                                                <div className="text-sm text-gray-600">{method.description}</div>
-                                            </div>
-                                            {selectedPaymentMethod === method.value && (
-                                                <div className="text-green-600 text-2xl">✓</div>
-                                            )}
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                    
+                                    {/* Подарочный сертификат */}
+                                    {paymentMethods.filter(m => m.type === 'gift_certificate').map((method) => (
+                                        <div
+                                            key={method.value}
+                                            onClick={() => setSelectedPaymentMethod(method.value)}
+                                            className={`p-3 border-2 rounded-xl cursor-pointer transition-all hover:shadow-md ${selectedPaymentMethod === method.value
+                                                ? 'border-amber-500 bg-amber-50 shadow-lg'
+                                                : 'border-gray-200 hover:border-amber-300'
+                                            }`}
+                                        >
+                                            <div className="flex flex-col items-center text-center gap-2">
+                                                <div className="w-16 h-16 flex items-center justify-center">
+                                                    <PaymentMethodIcon paymentMethod={method.value} className="w-14 h-14" />
+                                                </div>
+                                                <div className="font-semibold text-sm">{method.label}</div>
+                                                {selectedPaymentMethod === method.value && (
+                                                    <div className="text-amber-600 text-xl">✓</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
-                            {/* Переводы */}
+                            {/* Переводы - 3 в строку */}
                             <div className="mb-4">
                                 <h4 className="text-sm font-medium text-gray-500 mb-2">🏦 Банковские переводы</h4>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-3 gap-3">
                                     {paymentMethods.filter(m => m.type === 'transfer').map((method) => (
                                         <div
                                             key={method.value}
@@ -1972,10 +1979,10 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                 </div>
                             </div>
 
-                            {/* POS терминалы */}
-                            <div className="mb-4">
+                            {/* POS терминалы - 3 в строку */}
+                            <div className="mb-2">
                                 <h4 className="text-sm font-medium text-gray-500 mb-2">💳 POS Терминалы</h4>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-3 gap-3">
                                     {paymentMethods.filter(m => m.type === 'pos').map((method) => (
                                         <div
                                             key={method.value}
@@ -1997,34 +2004,6 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                         </div>
                                     ))}
                                 </div>
-                            </div>
-
-                            {/* Подарочный сертификат */}
-                            <div className="mb-2">
-                                <h4 className="text-sm font-medium text-gray-500 mb-2">🎁 {t('calendar.payment_gift_certificate')}</h4>
-                                {paymentMethods.filter(m => m.type === 'gift_certificate').map((method) => (
-                                    <div
-                                        key={method.value}
-                                        onClick={() => setSelectedPaymentMethod(method.value)}
-                                        className={`p-4 border-2 rounded-xl cursor-pointer transition-all hover:shadow-md ${selectedPaymentMethod === method.value
-                                            ? 'border-amber-500 bg-amber-50 shadow-lg'
-                                            : 'border-gray-200 hover:border-amber-300'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="text-3xl">
-                                                <PaymentMethodIcon paymentMethod={method.value} className="w-12 h-12" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="font-bold text-lg">{method.label}</div>
-                                                <div className="text-sm text-gray-600">{method.description}</div>
-                                            </div>
-                                            {selectedPaymentMethod === method.value && (
-                                                <div className="text-amber-600 text-2xl">✓</div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
                             </div>
                         </div>
 
@@ -2091,26 +2070,20 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                         </Select>
                     </div>
 
-                    <DialogFooter className="flex justify-between mt-4">
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowPaymentDialog(false)}
-                        >
-                            {t('task_dialog.cancel_button')}
-                        </Button>
-                        <Button
-                            onClick={handlePayment}
-                            disabled={!selectedPaymentMethod || !selectedAdministrator || createPaymentMutation.isPending}
-                            className="bg-amber-500 hover:bg-amber-600 text-white"
-                        >
-                            {createPaymentMutation.isPending && (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            {t('task_dialog.confirm_payment_button')}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                            </>
+                        }
+                        footer={
+                            <PaymentDialogFooter
+                                isPending={createPaymentMutation.isPending}
+                                isDisabled={!selectedPaymentMethod || !selectedAdministrator}
+                                onCancel={() => setShowPaymentDialog(false)}
+                                onConfirm={handlePayment}
+                                t={t}
+                            />
+                        }
+                    />
+                </DialogContentWrapper>
+            </DialogWrapper>
         )}
 
         {/* WhatsApp Chat Dialog */}

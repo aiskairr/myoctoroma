@@ -14,7 +14,6 @@ import {
   Calculator,
   DollarSign,
   Gift,
-  Bot,
   HelpCircle,
   Sparkles
 } from "lucide-react";
@@ -46,7 +45,6 @@ export function MobileNavbar() {
   const navItems = [
     { path: "/dashboard", label: t('sidebar.dashboard'), icon: <HelpCircle className="h-5 w-5" /> },
     { path: "/clients", label: t('sidebar.clients'), icon: <Users className="h-5 w-5" /> },
-    { path: "/chats", label: t('sidebar.chats'), icon: <Bot className="h-5 w-5" /> },
     {
       label: t('sidebar.crm'),
       icon: <FileClock className="h-5 w-5" />,
