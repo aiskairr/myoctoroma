@@ -302,8 +302,8 @@ const GiftCertificatesPage = () => {
 
       <Tabs defaultValue="active" className="w-full">
         <TabsList className="grid w-full grid-cols-2 rounded-lg">
-          <TabsTrigger value="active">Активные сертификаты ({activeCertificates.length})</TabsTrigger>
-          <TabsTrigger value="used">Использованные сертификаты ({usedCertificates.length})</TabsTrigger>
+          <TabsTrigger value="active">Активные ({activeCertificates.length})</TabsTrigger>
+          <TabsTrigger value="used">Использованные ({usedCertificates.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="active" className="space-y-6">

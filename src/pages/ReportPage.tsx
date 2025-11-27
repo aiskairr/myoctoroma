@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { apiGetJson } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar } from 'lucide-react';
+import { Calendar, FileDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useBranch } from '@/contexts/BranchContext';
 import { useLocale } from '@/contexts/LocaleContext';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface DailyCashReport {
   id: number;
@@ -173,6 +175,98 @@ export default function ReportPage() {
     };
   };
 
+  // Экспорт в PDF
+  const exportToPDF = () => {
+    const doc = new jsPDF('landscape');
+    
+    // Заголовок
+    doc.setFontSize(16);
+    doc.text('Отчеты за период', 14, 15);
+    doc.setFontSize(10);
+    doc.text(`${startDate} - ${endDate}`, 14, 22);
+    if (selectedBranch) {
+      const branchName = branches.find(b => b.id.toString() === selectedBranch)?.branches || selectedBranch;
+      doc.text(`Филиал: ${branchName}`, 14, 28);
+    }
+
+    // Таблица
+    const tableData = reports.map(report => [
+      new Date(report.date).toLocaleDateString('ru-RU'),
+      (report.total_revenue || 0).toLocaleString(),
+      (report.petty_expenses || 0).toLocaleString(),
+      (report.total_income || 0).toLocaleString(),
+      (report.end_balance || 0).toLocaleString(),
+      (report.optima_payments || 0).toLocaleString(),
+      (report.mbank_payments || 0).toLocaleString(),
+      (report.mbusiness_payments || 0).toLocaleString(),
+      (report.demir_payments || 0).toLocaleString(),
+      (report.bakai_payments || 0).toLocaleString(),
+      (report.obank_payments || 0).toLocaleString(),
+      (report.cash_collection || 0).toLocaleString(),
+      (report.salary_payments || 0).toLocaleString(),
+      report.notes || ''
+    ]);
+
+    const totals = calculateTotals();
+    tableData.push([
+      'ИТОГО:',
+      totals.totalRevenue.toLocaleString(),
+      totals.totalExpenses.toLocaleString(),
+      totals.totalIncome.toLocaleString(),
+      totals.totalCash.toLocaleString(),
+      totals.totalOptima.toLocaleString(),
+      totals.totalMBank.toLocaleString(),
+      totals.totalMBusiness.toLocaleString(),
+      totals.totalDemir.toLocaleString(),
+      totals.totalBakai.toLocaleString(),
+      totals.totalOBank.toLocaleString(),
+      totals.totalCollection.toLocaleString(),
+      totals.totalSalaryPayments.toLocaleString(),
+      ''
+    ]);
+
+    autoTable(doc, {
+      head: [[
+        t('report.date'),
+        t('report.total_revenue'),
+        t('report.expenses'),
+        t('report.income'),
+        t('report.cash_balance'),
+        t('report.optima'),
+        t('report.mbank'),
+        t('report.mbusiness'),
+        t('report.demir'),
+        t('report.bakai'),
+        t('report.obank'),
+        t('report.collection'),
+        t('report.salary_payments'),
+        t('report.notes')
+      ]],
+      body: tableData,
+      startY: selectedBranch ? 32 : 26,
+      styles: { fontSize: 7, cellPadding: 2 },
+      headStyles: { fillColor: [59, 130, 246], textColor: 255 },
+      footStyles: { fillColor: [243, 244, 246], textColor: 0, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [249, 250, 251] },
+      didParseCell: (data) => {
+        // Выделяем строку с итогами
+        if (data.row.index === tableData.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [243, 244, 246];
+        }
+      }
+    });
+
+    // Сохранение файла
+    const fileName = `отчет_${startDate}_${endDate}.pdf`;
+    doc.save(fileName);
+
+    toast({
+      title: 'PDF экспортирован',
+      description: `Файл ${fileName} успешно сохранен`,
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
@@ -261,13 +355,24 @@ export default function ReportPage() {
       {/* Reports Table */}
       <Card className="rounded-xl shadow-lg">
         <CardHeader className="p-2 sm:p-3 lg:p-4">
-          <CardTitle className="text-xs sm:text-sm lg:text-base">
-            <span className="block">Отчеты за период</span>
-            <span className="block text-[9px] sm:text-xs font-normal text-gray-600 mt-0.5">
-              {startDate} - {endDate}
-              {selectedBranch && ` • ${branches.find(b => b.id.toString() === selectedBranch)?.branches || selectedBranch}`}
-            </span>
-          </CardTitle>
+          <div className="flex justify-between items-start">
+            <CardTitle className="text-xs sm:text-sm lg:text-base">
+              <span className="block">Отчеты за период</span>
+              <span className="block text-[9px] sm:text-xs font-normal text-gray-600 mt-0.5">
+                {startDate} - {endDate}
+                {selectedBranch && ` • ${branches.find(b => b.id.toString() === selectedBranch)?.branches || selectedBranch}`}
+              </span>
+            </CardTitle>
+            <Button
+              onClick={exportToPDF}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 text-xs"
+            >
+              <FileDown className="h-4 w-4" />
+              Экспорт в PDF
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
