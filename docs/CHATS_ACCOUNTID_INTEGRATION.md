@@ -140,7 +140,7 @@ useEffect(() => {
 'branch.select_branch': 'Выберите филиал',
 ```
 
-**Киргизский (ky):**
+**кыргызский (ky):**
 ```typescript
 'whatsapp.no_account_id': 'Тандалган филиалда WhatsApp аккаунту конфигурацияланган эмес',
 'whatsapp.no_account_configured': 'Бул филиал үчүн WhatsApp аккаунту конфигурацияланган эмес',

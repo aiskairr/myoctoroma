@@ -16,6 +16,7 @@ export interface Service {
   duration40_price?: number;
   duration50_price?: number;
   duration60_price?: number;
+  duration75_price?: number;
   duration80_price?: number;
   duration90_price?: number;
   duration110_price?: number;
@@ -131,6 +132,7 @@ export const getServiceDurations = (service: Service): Array<{ duration: number;
     { duration: 40, price: service.duration40_price },
     { duration: 50, price: service.duration50_price },
     { duration: 60, price: service.duration60_price },
+    { duration: 75, price: service.duration75_price },
     { duration: 80, price: service.duration80_price },
     { duration: 90, price: service.duration90_price },
     { duration: 110, price: service.duration110_price },

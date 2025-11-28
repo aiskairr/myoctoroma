@@ -155,7 +155,7 @@ const [whatsappClientData, setWhatsappClientData] = useState<{
 'whatsapp.received': 'Получено',
 'whatsapp.loading': 'Загрузка...',
 
-// Киргизский (ky)
+// кыргызский (ky)
 'whatsapp.chat_title': 'WhatsApp чат',
 'whatsapp.message_sent': 'Билдирүү жөнөтүлдү',
 'whatsapp.message_sent_successfully': 'Билдирүү ийгиликтүү жөнөтүлдү',

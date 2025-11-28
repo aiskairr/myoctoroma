@@ -378,11 +378,13 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 if (selectedService) {
                     console.log('🔧 Found service for task:', selectedService);
                     const availableDurations = getServiceDurations(selectedService);
+                    console.log('🔧 Available durations from API:', availableDurations);
                     
                     // Если у нас есть длительность и цена из бэкенда
                     if (taskData.serviceDuration && (taskData.servicePrice || taskData.finalPrice)) {
                         const targetDuration = taskData.serviceDuration;
                         const targetPrice = taskData.finalPrice || taskData.servicePrice || 0;
+                        console.log('🔧 Task has duration/price:', targetDuration, targetPrice);
                         
                         // Ищем точное совпадение в доступных длительностях
                         const matchingDuration = availableDurations.find(d => 
@@ -390,21 +392,23 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                         );
                         
                         if (matchingDuration) {
+                            // Нашли точное совпадение - используем его
                             formData.duration = `${matchingDuration.duration} мин - ${matchingDuration.price} сом`;
                             formData.cost = matchingDuration.price.toString();
-                            console.log('🔧 Set duration and cost from exact match:', formData.duration, formData.cost);
+                            console.log('✅ Found exact match in service durations:', formData.duration);
                         } else {
-                            // Если точного совпадения нет, используем первую доступную длительность
+                            // Если точного совпадения нет - это означает, что в задаче сохранена неправильная длительность
+                            // Используем первую доступную длительность из API
+                            console.warn('⚠️ Task duration/price not found in service API. Task:', targetDuration, targetPrice, 'Available:', availableDurations);
                             if (availableDurations.length > 0) {
                                 const firstDuration = availableDurations[0];
                                 formData.duration = `${firstDuration.duration} мин - ${firstDuration.price} сом`;
                                 formData.cost = firstDuration.price.toString();
-                                console.log('🔧 Set duration and cost from first available:', formData.duration, formData.cost);
+                                console.log('🔧 Using first available duration instead:', formData.duration);
                             } else {
-                                // Создаем кастомную длительность если нет доступных вариантов
-                                formData.duration = `${targetDuration} мин - ${targetPrice} сом`;
-                                formData.cost = targetPrice.toString();
-                                console.log('🔧 Set custom duration and cost:', formData.duration, formData.cost);
+                                formData.duration = '0 мин - 0 сом';
+                                formData.cost = '0';
+                                console.log('🔧 No durations available for service');
                             }
                         }
                     } else if (availableDurations.length > 0) {
@@ -1413,142 +1417,51 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                     rules={{ required: t('task_dialog.select_or_enter_duration') }}
                                     render={({ field }) => {
                                         const availableDurations = getAvailableDurations();
-                                        const [isCustomMode, setIsCustomMode] = useState(false);
-                                        const [customDuration, setCustomDuration] = useState('');
-                                        const [customPrice, setCustomPrice] = useState('');
-
-                                        // Проверяем, является ли текущее значение кастомным
-                                        const isCurrentValueCustom = field.value && !availableDurations.some(d => 
-                                            `${d.duration} мин - ${d.price} сом` === field.value
-                                        );
 
                                         return (
-                                            <div className="space-y-2">
-                                                {!isCustomMode && !isCurrentValueCustom ? (
-                                                    // Обычный Select
-                                                    <div className="space-y-2">
-                                                        <Select
-                                                            value={field.value}
-                                                            onValueChange={(value) => {
-                                                                if (value === 'custom') {
-                                                                    setIsCustomMode(true);
-                                                                    setCustomDuration('');
-                                                                    setCustomPrice('');
-                                                                } else {
-                                                                    field.onChange(value);
-                                                                    // Автоматически обновляем стоимость при выборе длительности
-                                                                    if (value && value.includes('сом')) {
-                                                                        const priceMatch = value.match(/(\d+)\s*сом$/);
-                                                                        if (priceMatch) {
-                                                                            const price = priceMatch[1];
-                                                                            reset((formValues) => ({
-                                                                                ...formValues,
-                                                                                duration: value,
-                                                                                cost: price
-                                                                            }));
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }}
-                                                            disabled={!watchedServiceType}
-                                                        >
-                                                            <SelectTrigger className={`mt-1 ${errors.duration ? 'border-red-500' : ''}`}>
-                                                                <SelectValue placeholder={
-                                                                    !watchedServiceType 
-                                                                        ? t('task_dialog.select_service_first')
-                                                                        : t('task_dialog.select_duration_label')
-                                                                } />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {availableDurations.map(({ duration, price }) => (
-                                                                    <SelectItem key={`${duration}-${price}`} value={`${duration} мин - ${price} сом`}>
-                                                                        {duration} мин - {price} сом
-                                                                    </SelectItem>
-                                                                ))}
-                                                                <SelectItem value="custom">
-                                                                    {t('task_dialog.custom_duration_option')}
-                                                                </SelectItem>
-                                                                {/* Fallback options */}
-                                                                {!watchedServiceType && (
-                                                                    <SelectItem value="__select_service_first__" disabled>
-                                                                        {t('task_dialog.select_service_for_durations')}
-                                                                    </SelectItem>
-                                                                )}
-                                                                {watchedServiceType && availableDurations.length === 0 && (
-                                                                    <SelectItem value="__no_durations_available__" disabled>
-                                                                        {t('task_dialog.no_durations_available')}
-                                                                    </SelectItem>
-                                                                )}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                ) : (
-                                                    // Кастомный ввод
-                                                    <div className="space-y-2">
-                                                        <div className="flex gap-2">
-                                                            <div className="flex-1">
-                                                                <Input
-                                                                    type="number"
-                                                                    placeholder={t('calendar.minutes_placeholder')}
-                                                                    value={isCurrentValueCustom ? field.value.match(/(\d+)\s*мин/)?.[1] || '' : customDuration}
-                                                                    onChange={(e) => {
-                                                                        const minutes = e.target.value;
-                                                                        setCustomDuration(minutes);
-                                                                        if (minutes && customPrice) {
-                                                                            const newValue = `${minutes} мин - ${customPrice} сом`;
-                                                                            field.onChange(newValue);
-                                                                            reset((formValues) => ({
-                                                                                ...formValues,
-                                                                                duration: newValue,
-                                                                                cost: customPrice
-                                                                            }));
-                                                                        }
-                                                                    }}
-                                                                    className={`${errors.duration ? 'border-red-500' : ''}`}
-                                                                />
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                <Input
-                                                                    type="number"
-                                                                    placeholder={t('calendar.price_placeholder')}
-                                                                    value={isCurrentValueCustom ? field.value.match(/(\d+)\s*сом/)?.[1] || '' : customPrice}
-                                                                    onChange={(e) => {
-                                                                        const price = e.target.value;
-                                                                        setCustomPrice(price);
-                                                                        if (customDuration && price) {
-                                                                            const newValue = `${customDuration} мин - ${price} сом`;
-                                                                            field.onChange(newValue);
-                                                                            reset((formValues) => ({
-                                                                                ...formValues,
-                                                                                duration: newValue,
-                                                                                cost: price
-                                                                            }));
-                                                                        }
-                                                                    }}
-                                                                    className={`${errors.duration ? 'border-red-500' : ''}`}
-                                                                />
-                                                            </div>
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => {
-                                                                    setIsCustomMode(false);
-                                                                    field.onChange('');
-                                                                    setCustomDuration('');
-                                                                    setCustomPrice('');
-                                                                }}
-                                                                className="px-2"
-                                                            >
-                                                                ↩️
-                                                            </Button>
-                                                        </div>
-                                                        <div className="text-xs text-gray-500">
-                                                            {t('task_dialog.enter_duration_and_price')}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <Select
+                                                value={field.value}
+                                                onValueChange={(value) => {
+                                                    field.onChange(value);
+                                                    // Автоматически обновляем стоимость при выборе длительности
+                                                    if (value && value.includes('сом')) {
+                                                        const priceMatch = value.match(/(\d+)\s*сом$/);
+                                                        if (priceMatch) {
+                                                            const price = priceMatch[1];
+                                                            reset((formValues) => ({
+                                                                ...formValues,
+                                                                duration: value,
+                                                                cost: price
+                                                            }));
+                                                        }
+                                                    }
+                                                }}
+                                                disabled={!watchedServiceType}
+                                            >
+                                                <SelectTrigger className={`mt-1 ${errors.duration ? 'border-red-500' : ''}`}>
+                                                    <SelectValue placeholder={
+                                                        !watchedServiceType 
+                                                            ? t('task_dialog.select_service_first')
+                                                            : t('task_dialog.select_duration_label')
+                                                    } />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availableDurations.length > 0 ? (
+                                                        availableDurations.map(({ duration, price }) => (
+                                                            <SelectItem key={`${duration}-${price}`} value={`${duration} мин - ${price} сом`}>
+                                                                {duration} мин - {price} сом
+                                                            </SelectItem>
+                                                        ))
+                                                    ) : (
+                                                        <SelectItem value="__no_durations__" disabled>
+                                                            {!watchedServiceType 
+                                                                ? t('task_dialog.select_service_for_durations')
+                                                                : t('task_dialog.no_durations_available')
+                                                            }
+                                                        </SelectItem>
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
                                         );
                                     }}
                                 />

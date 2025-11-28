@@ -76,15 +76,6 @@ interface Appointment {
     childServices?: any[]; // Дочерние услуги для группировки
 }
 
-// Интерфейс для дополнительной услуги
-interface AdditionalService {
-    id: number;
-    serviceId: number;
-    serviceName: string;
-    duration: number;
-    price: number;
-}
-
 interface AdvancedScheduleComponentProps {
     initialDate?: Date;
 }
@@ -102,6 +93,7 @@ interface NewAppointmentForm {
     startTime: string;
     duration: number;
     notes: string;
+    durationPrice?: string; // Формат: "duration-price", например "20-1000"
 }
 
 // Constants
@@ -466,10 +458,6 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         direction: null
     });
 
-    // States for additional services
-    const [additionalServices, setAdditionalServices] = useState<AdditionalService[]>([]);
-    const [selectedAdditionalService, setSelectedAdditionalService] = useState<string>('');
-
     const scheduleRef = useRef<HTMLDivElement>(null);
 
     const [newEmployee, setNewEmployee] = useState<NewEmployeeForm>({
@@ -483,8 +471,9 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         phone: '',
         service: '',
         startTime: '',
-        duration: 45,
-        notes: ''
+        duration: 30,
+        notes: '',
+        durationPrice: ''
     });
 
     // Отдельный запрос для получения всех мастеров филиала (для диалога добавления)
@@ -791,48 +780,6 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         return startMinutes >= workStartMinutes && endMinutes <= workEndMinutes;
     }, [employees]);
 
-    // Additional services functions
-    const calculateTotalDuration = useCallback((baseAppointment?: Partial<Appointment> | null) => {
-        const mainDuration = baseAppointment?.duration || 0;
-        const additionalDuration = additionalServices.reduce((sum, service) => sum + service.duration, 0);
-        return mainDuration + additionalDuration;
-    }, [additionalServices]);
-
-    const calculateTotalPrice = useCallback((baseAppointment?: Partial<Appointment> | null) => {
-        const mainPrice = baseAppointment?.price || 0;
-        const additionalPrice = additionalServices.reduce((sum, service) => sum + service.price, 0);
-        return mainPrice + additionalPrice;
-    }, [additionalServices]);
-
-    const addAdditionalService = useCallback((serviceName: string) => {
-        const service = services.find(s => s.name === serviceName);
-        if (service) {
-            const newService: AdditionalService = {
-                id: Date.now(), // Temporary ID
-                serviceId: service.id || 0,
-                serviceName: service.name,
-                duration: service.duration,
-                price: service.price
-            };
-            setAdditionalServices(prev => [...prev, newService]);
-            setSelectedAdditionalService('');
-        }
-    }, [services]);
-
-    const removeAdditionalService = useCallback((serviceId: number) => {
-        setAdditionalServices(prev => prev.filter(service => service.id !== serviceId));
-    }, []);
-
-    const updateAdditionalServiceDuration = useCallback((serviceId: number, duration: number) => {
-        setAdditionalServices(prev => 
-            prev.map(service => 
-                service.id === serviceId 
-                    ? { ...service, duration, price: Math.round((duration / 60) * service.price) }
-                    : service
-            )
-        );
-    }, []);
-
     // Get position info from mouse coordinates
     const getPositionFromMouse = useCallback((x: number, y: number) => {
         const employeeColumnWidth = getEmployeeColumnWidth;
@@ -1114,8 +1061,21 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         }
 
         if (newAppointment.clientName.trim() && newAppointment.phone.trim() && newAppointment.service && selectedEmployeeId && selectedTimeSlot) {
-            const service = services.find(s => s.name === newAppointment.service);
-            const duration = service?.duration || newAppointment.duration;
+            // Проверяем, что выбрана длительность
+            if (!newAppointment.durationPrice) {
+                alert(t('calendar.please_select_duration'));
+                return;
+            }
+
+            // Извлекаем длительность и цену из выбранного значения "duration-price"
+            const [duration, servicePrice] = newAppointment.durationPrice.split('-').map(Number);
+            
+            console.log('📝 Creating appointment with:', { 
+                service: newAppointment.service, 
+                duration, 
+                servicePrice,
+                durationPrice: newAppointment.durationPrice 
+            });
 
             if (!doesAppointmentFitWorkingHours(selectedEmployeeId, selectedTimeSlot, duration)) {
                 alert(t('calendar.appointment_not_fit'));
@@ -1124,9 +1084,6 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
             // Форматируем дату для API в формат YYYY-MM-DD (scheduleDate format)
             const scheduleDate = currentDate.toISOString().split('T')[0];
-
-            // Get service price
-            const servicePrice = service?.price || 0;
 
             // Generate unique task ID
             const organisationId = user?.organisationId || user?.organization_id || user?.orgId || '1';
@@ -1153,58 +1110,12 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
             // Send POST request to create task
             createTaskMutation.mutate(taskData, {
-                onSuccess: async (newTask) => {
+                onSuccess: (newTask) => {
                     console.log('✅ Task created successfully:', newTask);
 
-                    // Create additional services if any
-                    if (additionalServices.length > 0) {
-                        for (const [index, service] of additionalServices.entries()) {
-                            try {
-                                // Calculate start time for additional service
-                                let additionalStartTime = selectedTimeSlot;
-                                
-                                // Add main service duration
-                                let totalPreviousDuration = duration;
-                                
-                                // Add duration of previous additional services
-                                for (let i = 0; i < index; i++) {
-                                    totalPreviousDuration += additionalServices[i].duration;
-                                }
-                                
-                                additionalStartTime = minutesToTime(timeToMinutes(selectedTimeSlot) + totalPreviousDuration);
-
-                                const additionalTaskData = {
-                                    id: generateTaskId(organisationId, branchId),
-                                    clientName: newAppointment.clientName.trim(),
-                                    clientPhone: newAppointment.phone.trim() || undefined,
-                                    scheduleDate: scheduleDate,
-                                    scheduleTime: additionalStartTime,
-                                    serviceType: service.serviceName,
-                                    masterId: parseInt(selectedEmployeeId),
-                                    serviceDuration: service.duration,
-                                    servicePrice: service.price,
-                                    branchId: branchId,
-                                    notes: `Дополнительная услуга к основной записи #${newTask.id}`,
-                                    status: 'scheduled',
-                                    motherId: newTask.id // Link to main appointment
-                                };
-
-                                console.log(`📤 Creating additional service ${index + 1}:`, additionalTaskData);
-                                
-                                // Create additional service
-                                await createTaskMutation.mutateAsync(additionalTaskData);
-                                
-                            } catch (error) {
-                                console.error(`❌ Failed to create additional service ${index + 1}:`, error);
-                                // Continue with other services even if one fails
-                            }
-                        }
-                    }
-
-                    // Optionally update local state for immediate UI feedback
+                    // Update local state for immediate UI feedback
                     const startMinutes = timeToMinutes(selectedTimeSlot);
-                    const totalDurationWithServices = calculateTotalDuration({ duration });
-                    const endMinutes = startMinutes + totalDurationWithServices;
+                    const endMinutes = startMinutes + duration;
 
                     const appointment: Appointment = {
                         id: newTask.id.toString(),
@@ -1213,19 +1124,17 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                         service: newAppointment.service,
                         startTime: selectedTimeSlot,
                         endTime: minutesToTime(endMinutes),
-                        duration: totalDurationWithServices,
+                        duration: duration,
                         status: 'scheduled',
                         notes: newAppointment.notes,
-                        price: calculateTotalPrice({ price: servicePrice }),
-                        childIds: additionalServices.map(s => s.id.toString())
+                        price: servicePrice,
+                        childIds: []
                     };
 
                     setAppointments(prev => [...prev, appointment]);
 
                     // Reset form and close dialog
-                    setNewAppointment({ clientName: '', phone: '', service: '', startTime: '', duration: 45, notes: '' });
-                    setAdditionalServices([]);
-                    setSelectedAdditionalService('');
+                    setNewAppointment({ clientName: '', phone: '', service: '', startTime: '', duration: 30, notes: '', durationPrice: '' });
                     setSelectedEmployeeId('');
                     setSelectedTimeSlot('');
                     setIsAddAppointmentOpen(false);
@@ -1248,13 +1157,14 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     }, [isWithinWorkingHours]);
 
     const handleServiceChange = useCallback((serviceName: string) => {
-        const service = services.find(s => s.name === serviceName);
+        // Сбрасываем длительность и цену при смене услуги
         setNewAppointment(prev => ({
             ...prev,
             service: serviceName,
-            duration: service?.duration || 45
+            duration: 30, // Временное значение по умолчанию
+            durationPrice: '' // Сбрасываем выбранную длительность-цену
         }));
-    }, [services]);
+    }, []);
 
     // Get overlapping appointments and calculate positioning
     const getAppointmentLayout = useCallback((employeeId: string) => {
@@ -2069,9 +1979,9 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                         >
                                             <option value="">{t('calendar.select_service')}</option>
-                                            {services.map(service => (
-                                                <option key={service.name} value={service.name}>
-                                                    {service.name} ({service.duration} {t('calendar.min')}, {service.price} {t('calendar.som')})
+                                            {servicesData.map(service => (
+                                                <option key={service.id} value={service.name}>
+                                                    {service.name}
                                                 </option>
                                             ))}
                                         </select>
@@ -2079,17 +1989,57 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            {t('calendar.duration_minutes_label')}
+                                            {t('calendar.duration_label')} *
                                         </label>
-                                        <input
-                                            type="number"
-                                            value={newAppointment.duration}
-                                            onChange={(e) => setNewAppointment(prev => ({ ...prev, duration: parseInt(e.target.value) || 45 }))}
-                                            min="15"
-                                            max="300"
-                                            step="15"
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                        />
+                                        <select
+                                            value={newAppointment.durationPrice || ''}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                if (value) {
+                                                    const [duration, price] = value.split('-').map(Number);
+                                                    setNewAppointment(prev => ({
+                                                        ...prev,
+                                                        duration: duration,
+                                                        durationPrice: value
+                                                    }));
+                                                }
+                                            }}
+                                            disabled={!newAppointment.service}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                                        >
+                                            <option value="">
+                                                {!newAppointment.service 
+                                                    ? t('calendar.select_service_first') 
+                                                    : t('calendar.select_duration_label')}
+                                            </option>
+                                            {newAppointment.service && (() => {
+                                                const selectedService = servicesData.find(s => s.name === newAppointment.service);
+                                                if (!selectedService) return null;
+                                                
+                                                const durations = [
+                                                    { duration: 10, price: selectedService.duration10_price },
+                                                    { duration: 15, price: selectedService.duration15_price },
+                                                    { duration: 20, price: selectedService.duration20_price },
+                                                    { duration: 30, price: selectedService.duration30_price },
+                                                    { duration: 40, price: selectedService.duration40_price },
+                                                    { duration: 50, price: selectedService.duration50_price },
+                                                    { duration: 60, price: selectedService.duration60_price },
+                                                    { duration: 75, price: selectedService.duration75_price },
+                                                    { duration: 80, price: selectedService.duration80_price },
+                                                    { duration: 90, price: selectedService.duration90_price },
+                                                    { duration: 110, price: selectedService.duration110_price },
+                                                    { duration: 120, price: selectedService.duration120_price },
+                                                    { duration: 150, price: selectedService.duration150_price },
+                                                    { duration: 220, price: selectedService.duration220_price },
+                                                ].filter(d => d.price && d.price > 0);
+                                                
+                                                return durations.map(({ duration, price }) => (
+                                                    <option key={`${duration}-${price}`} value={`${duration}-${price}`}>
+                                                        {duration} {t('calendar.min')} - {price} {t('calendar.som')}
+                                                    </option>
+                                                ));
+                                            })()}
+                                        </select>
                                     </div>
 
                                     <div>
@@ -2103,92 +2053,6 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                             rows={3}
                                             placeholder={t('calendar.notes_placeholder')}
                                         />
-                                    </div>
-
-                                    {/* Additional Services Section */}
-                                    <div className="border-t pt-4">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <label className="block text-sm font-medium text-gray-700">
-                                                {t('calendar.additional_services')}
-                                            </label>
-                                            <div className="text-sm text-gray-600">
-                                                {t('calendar.total_time_label', { time: String(calculateTotalDuration({ duration: newAppointment.duration })) })}
-                                            </div>
-                                        </div>
-
-                                        {/* Additional Services List */}
-                                        {additionalServices.length > 0 && (
-                                            <div className="space-y-2 mb-4">
-                                                {additionalServices.map((service) => (
-                                                    <div key={service.id} className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-amber-600 font-medium">📎</span>
-                                                            <span className="text-sm font-medium">{service.serviceName}</span>
-                                                            <div className="flex items-center gap-1">
-                                                                <input
-                                                                    type="number"
-                                                                    value={service.duration}
-                                                                    onChange={(e) => updateAdditionalServiceDuration(service.id, parseInt(e.target.value) || 0)}
-                                                                    className="w-16 h-6 text-xs text-center border border-amber-300 rounded"
-                                                                    min="0"
-                                                                />
-                                                                <span className="text-xs text-gray-500">{t('calendar.min')}</span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-sm font-medium">{service.price} {t('calendar.som')}</span>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => removeAdditionalService(service.id)}
-                                                                className="w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 flex items-center justify-center"
-                                                            >
-                                                                <X size={12} className="text-red-600" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Add Additional Service */}
-                                        <div className="flex gap-2">
-                                            <select
-                                                value={selectedAdditionalService}
-                                                onChange={(e) => setSelectedAdditionalService(e.target.value)}
-                                                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            >
-                                                <option value="">{t('calendar.add_additional_service')}</option>
-                                                {services.filter(s => !additionalServices.some(as => as.serviceName === s.name)).map(service => (
-                                                    <option key={service.name} value={service.name}>
-                                                        {service.name} ({service.duration} {t('calendar.min')}, {service.price} {t('calendar.som')})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    if (selectedAdditionalService) {
-                                                        addAdditionalService(selectedAdditionalService);
-                                                    }
-                                                }}
-                                                disabled={!selectedAdditionalService}
-                                                className="px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                                <Plus size={16} />
-                                            </button>
-                                        </div>
-
-                                        {/* Total Price */}
-                                        {additionalServices.length > 0 && (
-                                            <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-sm font-medium text-blue-800">{t('calendar.total_price_label')}</span>
-                                                    <span className="text-lg font-bold text-blue-800">
-                                                        {calculateTotalPrice({ price: services.find(s => s.name === newAppointment.service)?.price || 0 })} {t('calendar.som')}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
 
                                     {selectedEmployeeId && (
