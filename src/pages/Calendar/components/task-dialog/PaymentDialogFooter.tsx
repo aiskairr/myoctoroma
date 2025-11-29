@@ -34,7 +34,7 @@ export const PaymentDialogFooter: React.FC<PaymentDialogFooterProps> = ({
         <Button
           onClick={onConfirm}
           disabled={isDisabled || isPending}
-          className="flex-1 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 hover:from-slate-800 hover:via-slate-700 hover:to-slate-800 text-white h-11 font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+          className="flex-1 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 hover:from-blue-700 hover:via-blue-600 hover:to-blue-700 text-white h-11 font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
         >
           {isPending ? (
             <>
