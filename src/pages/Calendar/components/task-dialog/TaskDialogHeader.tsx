@@ -29,8 +29,8 @@ export const TaskDialogHeader: React.FC<TaskDialogHeaderProps> = ({
     // Мобильная версия - компактный заголовок для шторки
     return (
       <>
-        {/* Темно-синяя шапка с градиентом */}
-        <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white -mx-6 -mt-6 px-6 py-4 rounded-t-[24px]">
+        {/* Темно-серая шапка с градиентом (как в sidebar) */}
+        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white -mx-6 -mt-6 px-6 py-4 rounded-t-lg">
           <MobileDialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {taskData?.paid === 'paid' ? (
@@ -67,10 +67,10 @@ export const TaskDialogHeader: React.FC<TaskDialogHeaderProps> = ({
     );
   }
 
-  // Десктопная версия - темно-синяя шапка с градиентом
+  // Десктопная версия - темно-серая шапка с градиентом (как в sidebar)
   return (
     <>
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white -mx-6 -mt-6 px-6 py-5 rounded-t-[24px]">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white -mx-6 -mt-6 px-6 py-5 rounded-t-lg">
         <DialogHeader className="mb-0">
           <DialogTitle className="sr-only">
             {t('task_dialog.edit_title')}
@@ -86,7 +86,7 @@ export const TaskDialogHeader: React.FC<TaskDialogHeaderProps> = ({
                   <CheckCircle className="w-6 h-6 text-green-400" />
                 </div>
                 <div>
-                  <div className="text-sm text-blue-200">Статус</div>
+                  <div className="text-sm text-slate-300">Статус</div>
                   <div className="text-lg font-bold text-white">
                     {t('calendar.paid')}
                   </div>
@@ -98,7 +98,7 @@ export const TaskDialogHeader: React.FC<TaskDialogHeaderProps> = ({
                   <XCircle className="w-6 h-6 text-red-400" />
                 </div>
                 <div>
-                  <div className="text-sm text-blue-200">Статус</div>
+                  <div className="text-sm text-slate-300">Статус</div>
                   <div className="text-lg font-bold text-white">
                     {t('calendar.not_paid')}
                   </div>
