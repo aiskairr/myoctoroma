@@ -17,9 +17,9 @@ export const PaymentDialogHeader: React.FC<PaymentDialogHeaderProps> = ({
   t
 }) => {
   if (isMobile) {
-    // Мобильная версия - темно-серая шапка (как в sidebar)
+    // Мобильная версия - светлая дружелюбная синяя шапка
     return (
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white -mx-6 -mt-6 px-6 py-4 rounded-t-lg">
+      <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 text-white -mx-6 -mt-6 px-6 py-4 rounded-t-lg">
         <MobileDialogTitle className="flex items-center gap-3 text-white">
           <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm border border-white/30">
             <CreditCard className="h-5 w-5 text-white" />
@@ -30,9 +30,9 @@ export const PaymentDialogHeader: React.FC<PaymentDialogHeaderProps> = ({
     );
   }
 
-  // Десктопная версия - темно-серая шапка с градиентом (как в sidebar)
+  // Десктопная версия - светлая дружелюбная синяя шапка с градиентом
   return (
-    <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white -mx-6 -mt-6 px-6 py-5 rounded-t-lg">
+    <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 text-white -mx-6 -mt-6 px-6 py-5 rounded-t-lg">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-3 text-white text-xl">
           <div className="bg-white/20 p-2.5 rounded-full backdrop-blur-sm border border-white/30">

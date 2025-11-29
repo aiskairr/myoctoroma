@@ -29,20 +29,20 @@ export const TaskDialogHeader: React.FC<TaskDialogHeaderProps> = ({
     // Мобильная версия - компактный заголовок для шторки
     return (
       <>
-        {/* Темно-серая шапка с градиентом (как в sidebar) */}
-        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white -mx-6 -mt-6 px-6 py-4 rounded-t-lg">
+        {/* Светлая дружелюбная синяя шапка с градиентом */}
+        <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 text-white -mx-6 -mt-6 px-6 py-4 rounded-t-lg">
           <MobileDialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {taskData?.paid === 'paid' ? (
                 <>
-                  <CheckCircle className="w-5 h-5 text-green-400" />
+                  <CheckCircle className="w-5 h-5 text-green-300" />
                   <span className="text-white font-semibold">
                     {taskId ? t('calendar.paid') : t('calendar.create_task')}
                   </span>
                 </>
               ) : (
                 <>
-                  <XCircle className="w-5 h-5 text-red-400" />
+                  <XCircle className="w-5 h-5 text-red-300" />
                   <span className="text-white font-semibold">
                     {taskId ? t('calendar.not_paid') : t('calendar.create_task')}
                   </span>
@@ -67,10 +67,10 @@ export const TaskDialogHeader: React.FC<TaskDialogHeaderProps> = ({
     );
   }
 
-  // Десктопная версия - темно-серая шапка с градиентом (как в sidebar)
+  // Десктопная версия - светлая дружелюбная синяя шапка с градиентом
   return (
     <>
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white -mx-6 -mt-6 px-6 py-5 rounded-t-lg">
+      <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 text-white -mx-6 -mt-6 px-6 py-5 rounded-t-lg">
         <DialogHeader className="mb-0">
           <DialogTitle className="sr-only">
             {t('task_dialog.edit_title')}
@@ -82,11 +82,11 @@ export const TaskDialogHeader: React.FC<TaskDialogHeaderProps> = ({
           <div className="flex items-center gap-3">
             {taskData?.paid === 'paid' ? (
               <>
-                <div className="bg-green-500/20 p-2 rounded-full backdrop-blur-sm border border-green-400/30">
-                  <CheckCircle className="w-6 h-6 text-green-400" />
+                <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm border border-white/30">
+                  <CheckCircle className="w-6 h-6 text-green-300" />
                 </div>
                 <div>
-                  <div className="text-sm text-slate-300">Статус</div>
+                  <div className="text-sm text-blue-100">Статус</div>
                   <div className="text-lg font-bold text-white">
                     {t('calendar.paid')}
                   </div>
@@ -94,11 +94,11 @@ export const TaskDialogHeader: React.FC<TaskDialogHeaderProps> = ({
               </>
             ) : (
               <>
-                <div className="bg-red-500/20 p-2 rounded-full backdrop-blur-sm border border-red-400/30">
-                  <XCircle className="w-6 h-6 text-red-400" />
+                <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm border border-white/30">
+                  <XCircle className="w-6 h-6 text-red-300" />
                 </div>
                 <div>
-                  <div className="text-sm text-slate-300">Статус</div>
+                  <div className="text-sm text-blue-100">Статус</div>
                   <div className="text-lg font-bold text-white">
                     {t('calendar.not_paid')}
                   </div>
