@@ -109,7 +109,7 @@ function App() {
           {/* Защищенные маршруты */}
           <Route path="/">
             <ProtectedLayout>
-              <Dashboard />
+              <HowToUsePage />
             </ProtectedLayout>
           </Route>
 
@@ -134,12 +134,6 @@ function App() {
           <Route path="/clients">
             <ProtectedLayout>
               <Clients />
-            </ProtectedLayout>
-          </Route>
-
-          <Route path="/how-to-use">
-            <ProtectedLayout>
-              <HowToUsePage />
             </ProtectedLayout>
           </Route>
 
