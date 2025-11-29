@@ -29,82 +29,97 @@ export const TaskDialogHeader: React.FC<TaskDialogHeaderProps> = ({
     // Мобильная версия - компактный заголовок для шторки
     return (
       <>
-        <MobileDialogTitle className="flex items-center justify-center gap-2">
-          {taskData?.paid === 'paid' ? (
-            <>
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              <span className="text-green-700">
-                {taskId ? t('calendar.paid') : t('calendar.create_task')}
-              </span>
-            </>
-          ) : (
-            <>
-              <XCircle className="w-5 h-5 text-red-600" />
-              <span className="text-red-700">
-                {taskId ? t('calendar.not_paid') : t('calendar.create_task')}
-              </span>
-            </>
-          )}
-        </MobileDialogTitle>
-
-        {/* Кнопка оплаты в хедере для мобильной версии */}
-        {taskId && taskData && (
-          <div className="pt-2">
-            <Button
-              type="button"
-              onClick={onPaymentClick}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white h-10 text-sm font-semibold"
-            >
-              <CreditCard className="h-4 w-4 mr-2" />
-              {t('task_dialog.pay_button')}
-            </Button>
-          </div>
-        )}
+        {/* Темно-синяя шапка с градиентом */}
+        <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white -mx-6 -mt-6 px-6 py-4 rounded-t-[24px]">
+          <MobileDialogTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {taskData?.paid === 'paid' ? (
+                <>
+                  <CheckCircle className="w-5 h-5 text-green-400" />
+                  <span className="text-white font-semibold">
+                    {taskId ? t('calendar.paid') : t('calendar.create_task')}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-5 h-5 text-red-400" />
+                  <span className="text-white font-semibold">
+                    {taskId ? t('calendar.not_paid') : t('calendar.create_task')}
+                  </span>
+                </>
+              )}
+            </div>
+            
+            {/* Кнопка оплаты в шапке для мобильной версии */}
+            {taskId && taskData && (
+              <Button
+                type="button"
+                onClick={onPaymentClick}
+                className="bg-white/20 hover:bg-white/30 text-white border border-white/30 h-9 px-4 text-sm font-semibold backdrop-blur-sm"
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                {t('task_dialog.pay_button')}
+              </Button>
+            )}
+          </MobileDialogTitle>
+        </div>
       </>
     );
   }
 
-  // Десктопная версия - полноразмерный заголовок
+  // Десктопная версия - темно-синяя шапка с градиентом
   return (
     <>
-      {/* Динамическая плашка статуса оплаты */}
-      <div className="flex justify-center pt-4 pb-2">
-        {taskData?.paid === 'paid' ? (
-          <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-full">
-            <CheckCircle className="w-5 h-5 text-green-600" />
-            <span className="text-sm font-semibold text-green-700">
-              {t('calendar.paid').toUpperCase()}
-            </span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-full">
-            <XCircle className="w-5 h-5 text-red-600" />
-            <span className="text-sm font-semibold text-red-700">
-              {t('calendar.not_paid')}
-            </span>
-          </div>
-        )}
-      </div>
+      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white -mx-6 -mt-6 px-6 py-5 rounded-t-[24px]">
+        <DialogHeader className="mb-0">
+          <DialogTitle className="sr-only">
+            {t('task_dialog.edit_title')}
+          </DialogTitle>
+        </DialogHeader>
 
-      <DialogHeader className="pb-2">
-        <DialogTitle className="sr-only">
-          {t('task_dialog.edit_title')}
-        </DialogTitle>
-      </DialogHeader>
+        <div className="flex items-center justify-between">
+          {/* Статус оплаты */}
+          <div className="flex items-center gap-3">
+            {taskData?.paid === 'paid' ? (
+              <>
+                <div className="bg-green-500/20 p-2 rounded-full backdrop-blur-sm border border-green-400/30">
+                  <CheckCircle className="w-6 h-6 text-green-400" />
+                </div>
+                <div>
+                  <div className="text-sm text-blue-200">Статус</div>
+                  <div className="text-lg font-bold text-white">
+                    {t('calendar.paid')}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-red-500/20 p-2 rounded-full backdrop-blur-sm border border-red-400/30">
+                  <XCircle className="w-6 h-6 text-red-400" />
+                </div>
+                <div>
+                  <div className="text-sm text-blue-200">Статус</div>
+                  <div className="text-lg font-bold text-white">
+                    {t('calendar.not_paid')}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
-      {/* Кнопка оплаты для десктопа */}
-      {taskId && taskData && (
-        <div className="px-2 pb-4">
-          <Button
-            type="button"
-            onClick={onPaymentClick}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-white h-12 text-base font-semibold"
-          >
-            <CreditCard className="h-5 w-5 mr-2" />
-            {t('task_dialog.pay_button')}
-          </Button>
+          {/* Кнопка оплаты */}
+          {taskId && taskData && (
+            <Button
+              type="button"
+              onClick={onPaymentClick}
+              className="bg-white/20 hover:bg-white/30 text-white border border-white/30 h-11 px-6 text-base font-semibold backdrop-blur-sm transition-all duration-200"
+            >
+              <CreditCard className="h-5 w-5 mr-2" />
+              {t('task_dialog.pay_button')}
+            </Button>
+          )}
         </div>
-      )}
+      </div>
     </>
   );
 };

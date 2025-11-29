@@ -80,6 +80,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("");
     const [selectedAdministrator, setSelectedAdministrator] = useState<string>("");
+    const [discountType, setDiscountType] = useState<'percent' | 'amount'>('percent'); // Тип скидки
 
     // States for additional services
     const [additionalServices, setAdditionalServices] = useState<AdditionalService[]>([]);
@@ -428,6 +429,26 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             }
             
             console.log('✅ Final form data with corrections:', formData);
+            
+            // Определяем тип скидки и конвертируем значение для отображения
+            if (taskData.discount && taskData.servicePrice) {
+                const percentFromAmount = Math.round((taskData.discount / taskData.servicePrice) * 100);
+                
+                // Если процент получается круглым (5, 10, 15, 20, и т.д.) и меньше 100, 
+                // скорее всего это был процент - показываем как процент
+                if (percentFromAmount <= 100 && percentFromAmount % 5 === 0) {
+                    setDiscountType('percent');
+                    formData.discount = percentFromAmount.toString();
+                } else {
+                    // Иначе это была абсолютная сумма - показываем как есть
+                    setDiscountType('amount');
+                    formData.discount = taskData.discount.toString();
+                }
+            } else {
+                // Для новых задач по умолчанию проценты
+                setDiscountType('percent');
+            }
+            
             reset(formData);
             
             // Загружаем дополнительные услуги для задачи
@@ -795,11 +816,12 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
                 const serviceDuration = parseInt(data.duration.split(' ')[0]) || 60;
                 const servicePrice = parseFloat(data.cost) || 0;
-                const discountPercent = parseFloat(data.discount) || 0;
+                const discountValue = parseFloat(data.discount) || 0;
                 
-                // Пересчитываем процент скидки в абсолютную сумму
-                // discount должен быть абсолютной суммой, а не процентом
-                const discountAmount = Math.round(servicePrice * discountPercent / 100);
+                // Конвертируем скидку в абсолютную сумму в зависимости от типа
+                const discountAmount = discountType === 'percent' 
+                    ? Math.round(servicePrice * discountValue / 100)
+                    : Math.round(discountValue);
                 
                 const updatePayload: any = {
                     clientName: data.clientName,
@@ -928,11 +950,12 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         // Парсим данные формы для API
         const serviceDuration = parseInt(data.duration.split(' ')[0]); // Извлекаем числовое значение
         const servicePrice = parseFloat(data.cost) || 0;
-        const discountPercent = parseFloat(data.discount) || 0;
+        const discountValue = parseFloat(data.discount) || 0;
         
-        // Пересчитываем процент скидки в абсолютную сумму
-        // discount должен быть абсолютной суммой, а не процентом
-        const discountAmount = Math.round(servicePrice * discountPercent / 100);
+        // Конвертируем скидку в абсолютную сумму в зависимости от типа
+        const discountAmount = discountType === 'percent' 
+            ? Math.round(servicePrice * discountValue / 100)
+            : Math.round(discountValue);
         
         const parsedData = {
             id: generatedTaskId,
@@ -1600,7 +1623,25 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                             </div>
 
                             <div>
-                                <Label className="text-sm text-gray-600">{t('task_dialog.discount')}</Label>
+                                <div className="flex items-center justify-between mb-1">
+                                    <Label className="text-sm text-gray-600">{t('task_dialog.discount')}</Label>
+                                    <div className="flex gap-2 text-xs">
+                                        <button
+                                            type="button"
+                                            onClick={() => setDiscountType('percent')}
+                                            className={`px-2 py-1 rounded ${discountType === 'percent' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                                        >
+                                            %
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setDiscountType('amount')}
+                                            className={`px-2 py-1 rounded ${discountType === 'amount' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                                        >
+                                            сом
+                                        </button>
+                                    </div>
+                                </div>
                                 <Controller
                                     name="discount"
                                     control={control}
@@ -1609,23 +1650,45 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                             value: 0,
                                             message: t('task_dialog.discount_negative')
                                         },
-                                        max: {
+                                        max: discountType === 'percent' ? {
                                             value: 100,
                                             message: t('task_dialog.discount_max_100')
+                                        } : undefined,
+                                        validate: (value) => {
+                                            const cost = parseFloat(watch('cost')) || 0;
+                                            if (discountType === 'amount' && parseFloat(value) > cost) {
+                                                return 'Скидка не может быть больше стоимости';
+                                            }
+                                            return true;
                                         }
                                     }}
                                     render={({ field }) => (
-                                        <Input
-                                            {...field}
-                                            type="number"
-                                            className={`mt-1 ${errors.discount ? 'border-red-500' : ''}`}
-                                            min="0"
-                                            max="100"
-                                        />
+                                        <div className="relative">
+                                            <Input
+                                                {...field}
+                                                type="number"
+                                                className={`mt-1 ${errors.discount ? 'border-red-500' : ''}`}
+                                                min="0"
+                                                max={discountType === 'percent' ? "100" : undefined}
+                                                placeholder={discountType === 'percent' ? '0-100' : '0'}
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+                                                {discountType === 'percent' ? '%' : 'сом'}
+                                            </span>
+                                        </div>
                                     )}
                                 />
                                 {errors.discount && (
                                     <p className="text-red-500 text-xs mt-1">{errors.discount.message}</p>
+                                )}
+                                {/* Показываем эквивалент */}
+                                {watch('discount') && watch('cost') && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        {discountType === 'percent' 
+                                            ? `= ${Math.round(parseFloat(watch('cost')) * parseFloat(watch('discount')) / 100)} сом`
+                                            : `= ${Math.round((parseFloat(watch('discount')) / parseFloat(watch('cost'))) * 100)}%`
+                                        }
+                                    </p>
                                 )}
                             </div>
 
@@ -1950,8 +2013,11 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
                                 {taskData.discount && taskData.discount > 0 && (
                                     <div className="flex justify-between text-green-600">
-                                        <span className="text-sm">{t('task_dialog.discount_payment', { discount: taskData.discount.toString() })}</span>
-                                        <span className="text-sm">-{Math.round(calculateTotalPrice() * taskData.discount / 100)} сом</span>
+                                        <span className="text-sm">
+                                            Скидка {taskData.discount} сом 
+                                            {taskData.servicePrice && taskData.servicePrice > 0 && ` (≈${Math.round((taskData.discount / taskData.servicePrice) * 100)}%)`}
+                                        </span>
+                                        <span className="text-sm">-{taskData.discount} сом</span>
                                     </div>
                                 )}
 
@@ -1960,7 +2026,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                 <div className="flex justify-between font-bold text-lg">
                                     <span>{t('task_dialog.to_pay')}</span>
                                     <span className="text-amber-600">
-                                        {calculateTotalPrice() - Math.round(calculateTotalPrice() * (taskData.discount || 0) / 100)} сом
+                                        {calculateTotalPrice() - (taskData.discount || 0)} сом
                                     </span>
                                 </div>
                             </div>
