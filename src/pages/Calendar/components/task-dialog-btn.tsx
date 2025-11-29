@@ -66,6 +66,7 @@ interface FormData {
     date: string;
     discount: string;
     cost: string;
+    branch?: string;
 }
 
 interface Props {
@@ -782,11 +783,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 // Находим мастера по имени для получения masterId
                 const selectedMaster = mastersData.find(m => m.name === data.master);
 
-                // Вспомогательные функции
-                const calculateFinalPrice = (servicePrice: number, discount: number): number => {
-                    return Math.max(0, servicePrice - (servicePrice * discount / 100));
-                };
-
+                // Вспомогательная функция для расчета endTime
                 const calculateEndTime = (startTime: string, duration: number): string => {
                     const [hours, minutes] = startTime.split(':').map(Number);
                     const startMinutes = hours * 60 + minutes;
@@ -798,7 +795,11 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
                 const serviceDuration = parseInt(data.duration.split(' ')[0]) || 60;
                 const servicePrice = parseFloat(data.cost) || 0;
-                const discount = parseFloat(data.discount) || 0;
+                const discountPercent = parseFloat(data.discount) || 0;
+                
+                // Пересчитываем процент скидки в абсолютную сумму
+                // discount должен быть абсолютной суммой, а не процентом
+                const discountAmount = Math.round(servicePrice * discountPercent / 100);
                 
                 const updatePayload: any = {
                     clientName: data.clientName,
@@ -809,11 +810,12 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     notes: data.notes,
                     scheduleTime: data.time,
                     serviceDuration: serviceDuration,
-                    finalPrice: calculateFinalPrice(servicePrice, discount),
-                    discount: discount,
+                    servicePrice: servicePrice, // Оригинальная цена БЕЗ скидки
+                    discount: discountAmount, // Абсолютная сумма скидки (бэкенд сам пересчитает final_price)
                     branchId: data.branch,
                     status: data.status,
                     endTime: calculateEndTime(data.time, serviceDuration), // Обязательное поле
+                    // final_price НЕ отправляем - бэкенд рассчитает автоматически
                     // НЕ включаем additionalServices в основной PUT запрос
                 };
 
@@ -913,11 +915,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         const branchId = data.branch || '1';
         const generatedTaskId = generateTaskId(organisationId, branchId);
         
-        // Вспомогательные функции
-        const calculateFinalPrice = (servicePrice: number, discount: number): number => {
-            return Math.max(0, servicePrice - (servicePrice * discount / 100));
-        };
-
+        // Вспомогательная функция для расчета endTime
         const calculateEndTime = (startTime: string, duration: number): string => {
             const [hours, minutes] = startTime.split(':').map(Number);
             const startMinutes = hours * 60 + minutes;
@@ -930,7 +928,11 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         // Парсим данные формы для API
         const serviceDuration = parseInt(data.duration.split(' ')[0]); // Извлекаем числовое значение
         const servicePrice = parseFloat(data.cost) || 0;
-        const discount = parseFloat(data.discount) || 0;
+        const discountPercent = parseFloat(data.discount) || 0;
+        
+        // Пересчитываем процент скидки в абсолютную сумму
+        // discount должен быть абсолютной суммой, а не процентом
+        const discountAmount = Math.round(servicePrice * discountPercent / 100);
         
         const parsedData = {
             id: generatedTaskId,
@@ -942,12 +944,12 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             serviceType: data.serviceType,
             masterId: parseInt(data.master),
             serviceDuration: serviceDuration,
-            servicePrice: servicePrice,
-            finalPrice: calculateFinalPrice(servicePrice, discount), // Обязательное поле
-            discount: discount,
+            servicePrice: servicePrice, // Оригинальная цена БЕЗ скидки
+            discount: discountAmount, // Абсолютная сумма скидки (бэкенд сам пересчитает final_price)
             endTime: calculateEndTime(data.time, serviceDuration), // Обязательное поле
             branchId: branchId,
             status: 'scheduled'
+            // final_price НЕ отправляем - бэкенд рассчитает автоматически
         };
         
         console.log('📦 Parsed data for API:', parsedData);
@@ -1015,17 +1017,19 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 ? (typeof taskData.branchId === 'number' ? taskData.branchId : parseInt(taskData.branchId)) 
                 : getBranchIdWithFallback(currentBranch, branches);
             
+            // Используем finalPrice который уже содержит цену с учетом скидки
+            const finalAmount = calculateTotalPrice();
+            
             const paymentData = {
                 master: masterName,
                 client: clientName,
                 serviceType: taskData?.serviceType || t('calendar.service_label'),
                 phoneNumber: taskData?.client?.phoneNumber || '',
-                amount: calculateTotalPrice() - Math.round(calculateTotalPrice() * ((taskData?.discount || 0) / 100)),
-                discount: taskData?.discount || 0,
+                amount: finalAmount,
                 duration: taskData?.serviceDuration || 60,
                 comment: `Оплата через ${selectedPaymentMethod}`,
                 paymentMethod: selectedPaymentMethod,
-                dailyReport: calculateTotalPrice() - Math.round(calculateTotalPrice() * ((taskData?.discount || 0) / 100)),
+                dailyReport: finalAmount,
                 adminName: selectedAdministrator,
                 isGiftCertificateUsed: selectedPaymentMethod === 'gift_certificate' || selectedPaymentMethod === 'Подарочный Сертификат',
                 branchId: correctBranchId,
@@ -1047,13 +1051,10 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
 
             // Обновляем способ оплаты, администратора и статус оплаты для задачи
             // Формируем полный payload на основе текущих данных задачи
-            const servicePrice = taskData?.finalPrice || taskData?.servicePrice || 0;
-            const discount = taskData?.discount || 0;
+            // ВАЖНО: finalPrice уже содержит цену с учетом скидки, servicePrice - без скидки
+            const servicePrice = taskData?.servicePrice || 0;
+            const finalPrice = taskData?.finalPrice || servicePrice;
             const serviceDuration = taskData?.serviceDuration || 60;
-            
-            const calculateFinalPrice = (price: number, discountPercent: number): number => {
-                return Math.max(0, price - (price * discountPercent / 100));
-            };
 
             const calculateEndTime = (startTime: string, duration: number): string => {
                 const [hours, minutes] = startTime.split(':').map(Number);
@@ -1085,8 +1086,8 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 notes: taskData?.notes || '',
                 scheduleTime: taskData?.scheduleTime || '00:00',
                 duration: serviceDuration,
-                finalPrice: calculateFinalPrice(servicePrice, discount), // Обязательное поле
-                discount: discount,
+                servicePrice: servicePrice, // Оригинальная цена БЕЗ скидки
+                finalPrice: finalPrice, // Цена С учетом скидки
                 branchId: taskData?.branchId || getBranchIdWithFallback(null, branches).toString(),
                 status: 'completed', // ВСЕГДА устанавливаем статус на completed при оплате
                 endTime: calculateEndTime(taskData?.scheduleTime || '00:00', serviceDuration), // Обязательное поле

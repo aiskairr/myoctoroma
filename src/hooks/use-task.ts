@@ -163,9 +163,9 @@ export interface CreateTaskRequest {
   masterId: number;
   serviceDuration: number;
   servicePrice: number;
-  finalPrice: number; // Обязательное поле: servicePrice - discount
+  finalPrice?: number; // Опциональное поле - бэкенд рассчитывает автоматически из servicePrice - discount
   branchId: string;
-  discount?: number;
+  discount?: number; // Абсолютная сумма скидки (не процент!)
   status?: string;
 }
 
