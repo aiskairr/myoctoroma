@@ -466,7 +466,7 @@ export default function Chats() {
               <Alert variant="destructive" className="max-w-sm">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  {t('whatsapp.no_account_id') || 'У филиала нет WhatsApp аккаунта'}
+                  Перейдите на страницу настройки в раздел Чат-бот для подключения WhatsApp
                 </AlertDescription>
               </Alert>
             </div>

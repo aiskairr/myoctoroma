@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, BookOpen, ArrowRight, User, Bot, Calendar, Download } from "lucide-react";
 import { UnifiedImportCard } from "@/components/UnifiedImportCard";
 import { BookingLinkCopy } from "@/components/BookingLinkCopy";
+import { WhatsAppConnect } from "@/components/WhatsAppConnect";
 
 export default function Settings() {
   const { t } = useLocale();
@@ -539,6 +540,9 @@ export default function Settings() {
 
           {/* Chatbot Tab */}
           <TabsContent value="chatbot" className="space-y-6">
+            {/* WhatsApp Connection */}
+            <WhatsAppConnect />
+
             {/* Bot Settings */}
             {currentBranch && (
         <Card className="mb-6 bg-gradient-to-br from-blue-50 to-white border-blue-200 shadow-sm hover:shadow-md transition-shadow">
