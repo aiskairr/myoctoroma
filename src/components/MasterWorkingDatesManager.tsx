@@ -40,7 +40,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
   onWorkingDatesChange,
   masterId
 }) => {
-  const { branches } = useBranch();
+  const { branches, currentBranch } = useBranch();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
@@ -51,10 +51,10 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
 
   // Загружаем рабочие дни с сервера, если передан masterId
   const { data: serverWorkingDates, isLoading: isLoadingServerDates } = useQuery<ServerWorkingDate[]>({
-    queryKey: ['working-dates', masterId],
+    queryKey: [`working-dates?staffId=${masterId}&branchId=${currentBranch?.id}`],
     queryFn: async () => {
       if (!masterId) return [];
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates`);
+      const response = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates?staffId=${masterId}&branchId=${currentBranch?.id}`);
       if (!response.ok) {
         throw new Error('Failed to fetch working dates');
       }
@@ -88,7 +88,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
         throw new Error('Master ID is required');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates`, {
+      const response = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates?staffId=${masterId}&branchId=${currentBranch?.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +117,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates/${data.workDate}?branchId=${data.branchId}`,
+        `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/api/masters/${masterId}/working-dates/${data.workDate}?branchId=${data.branchId}`,
         {
           method: 'DELETE',
           credentials: 'include'

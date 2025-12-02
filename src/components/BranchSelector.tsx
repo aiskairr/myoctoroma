@@ -56,7 +56,7 @@ const BranchCard: React.FC<BranchCardProps> = ({ branch, isSelected, onClick, on
       </div>
       <div className="flex-1">
         <div className="flex items-center gap-2">
-          <h3 className="font-medium">{branch.branches}</h3>
+          <h3 className="font-medium text-foreground">{branch.branches}</h3>
           {isSelected && (
             <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
               {t('branch.selected')}
@@ -102,10 +102,10 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
   });
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Проверяем, является ли пользователь админом или суперадмином
-  const isAdminOrSuperAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+  // Проверяем, является ли пользователь учредителем, админом или суперадмином
+  const isAdminOrSuperAdmin = user?.role === 'owner' || user?.role === 'admin' || user?.role === 'superadmin';
 
-  // Если пользователь не админ и не суперадмин, не показываем компонент
+  // Если пользователь не учредитель, админ или суперадмин, не показываем компонент
   if (!isAdminOrSuperAdmin) {
     return null;
   }
@@ -295,10 +295,9 @@ export const BranchIndicator: React.FC<BranchIndicatorProps> = ({ compact = fals
   const { user } = useAuth(); // Получаем данные пользователя
   const { t } = useLocale();
 
-  // Проверяем, является ли пользователь админом или суперадмином
-  const isAdminOrSuperAdmin = user?.role === 'admin' || user?.role === 'superadmin';
-
-  // Если пользователь не админ и не суперадмин, не показываем компонент
+  // Проверяем, является ли пользователь учредителем, админом или суперадмином
+  const isAdminOrSuperAdmin = user?.role === 'owner' || user?.role === 'admin' || user?.role === 'superadmin';
+  // Если пользователь не учредитель, админ или суперадмин, не показываем компонент
   if (!isAdminOrSuperAdmin) {
     return null;
   }
@@ -312,7 +311,7 @@ export const BranchIndicator: React.FC<BranchIndicatorProps> = ({ compact = fals
         )}>
           <Building className="h-4 w-4" />
           <span className={compact ? "hidden sm:inline" : ""}>
-            {isLoading ? t('branch.loading') : t('branch.no_branch')}
+            {isLoading ? t('branch.loading') : currentBranch?.address}
           </span>
         </div>
       </div>
@@ -322,11 +321,11 @@ export const BranchIndicator: React.FC<BranchIndicatorProps> = ({ compact = fals
   return (
     <div className={compact ? "" : "px-4 py-2"}>
       <div className={cn(
-        "flex items-center gap-2  text-sm font-medium rounded-md text-white bg-primary/10",
+        "flex items-center gap-2  text-sm font-medium rounded-md text-slate-200 bg-primary/10",
         compact ? "px-2 py-1" : "p-2"
       )}>
         <Building className="h-4 w-4" />
-        <span className={compact ? "hidden sm:inline" : ""}>{currentBranch.branches}</span>
+        <span className={compact ? "hidden sm:inline" : ""}>{currentBranch.address}</span>
       </div>
     </div>
   );

@@ -41,7 +41,7 @@ export default function Chats() {
 
   // Запрос списка клиентов
   const clientsQuery = useQuery<{ clients: Client[] }>({
-    queryKey: ["/api/clients"],
+    queryKey: ["/clients"],
     refetchInterval: 30000,
   });
 
@@ -52,7 +52,7 @@ export default function Chats() {
 
   // Запрос деталей выбранного клиента и истории сообщений
   const clientDetailsQuery = useQuery<ClientDetailsResponse>({
-    queryKey: ["/api/clients", selectedClientId],
+    queryKey: ["/clients", selectedClientId],
     enabled: !!selectedClientId,
     refetchInterval: 5000,
     retry: 3,
@@ -62,12 +62,12 @@ export default function Chats() {
   // Мутация для обновления имени клиента
   const updateClientNameMutation = useMutation({
     mutationFn: async ({ telegramId, customName }: { telegramId: string; customName: string }) => {
-      const response = await apiRequest("POST", `/api/clients/${telegramId}/update-name`, { customName });
+      const response = await apiRequest("POST", `/clients/${telegramId}/update-name`, { customName });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/clients", selectedClientId] });
+      queryClient.invalidateQueries({ queryKey: ["/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/clients", selectedClientId] });
       toast({
         title: t('success'),
         description: t('clients.name_updated'),
@@ -85,11 +85,11 @@ export default function Chats() {
   // Мутация для отправки сообщения клиенту
   const sendMessageMutation = useMutation({
     mutationFn: async ({ telegramId, message }: { telegramId: string; message: string }) => {
-      const response = await apiRequest("POST", `/api/clients/${telegramId}/send`, { message });
+      const response = await apiRequest("POST", `/clients/${telegramId}/send`, { message });
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/clients", selectedClientId] });
+      queryClient.invalidateQueries({ queryKey: ["/clients", selectedClientId] });
       setNewMessage("");
       toast({
         title: t('sent'),
@@ -277,7 +277,7 @@ export default function Chats() {
               }
 
               // Обновляем список клиентов
-              queryClient.invalidateQueries({ queryKey: ["/api/clients"] });
+              queryClient.invalidateQueries({ queryKey: ["/clients"] });
             }
           } catch (error) {
             console.error("WebSocket message error:", error);

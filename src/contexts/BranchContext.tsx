@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "./SimpleAuthContext";
+import { $apiSecondary } from "@/API/http";
 
 export interface Branch {
   id: number;
@@ -18,6 +19,18 @@ interface BranchContextType {
   isLoading: boolean;
   error: string | null;
   refetchBranches: () => Promise<void>;
+  orgData: Organization | null;
+}
+
+ interface Organization {
+  id: number;
+  user_id: number;
+  name: string;
+  branches: string;           // в данных это строка: "300"
+  paidDate: string;           // ISO-дата: "2025-10-21T00:00:00.000Z"
+  isActive: boolean;
+  createdAt: string;          // ISO-строка
+  updatedAt: string;          // ISO-строка
 }
 
 const BranchContext = createContext<BranchContextType>({
@@ -27,6 +40,7 @@ const BranchContext = createContext<BranchContextType>({
   isLoading: true,
   error: null,
   refetchBranches: async () => {},
+  orgData: null,
 });
 
 export const BranchProvider = ({ children }: { children: ReactNode }) => {
@@ -35,94 +49,109 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [orgData, setOrgData] = useState<Organization | null>(null);
+  const [orgFetched, setOrgFetched] = useState(false); // Флаг что организация уже загружена
 
+    const logCheck = async () => {
+    // Не запускаем повторно если уже загружали
+    if (orgFetched) {
+      console.log("🏢 logCheck: Already fetched, skipping");
+      return;
+    }
+
+    console.log("🏢 logCheck STARTED");
+    setIsLoading(true);
+    try {
+      // Используем $apiSecondary для автоматического обновления токена
+      // Токен добавляется автоматически через interceptor
+      const response = await $apiSecondary.get<Organization[]>(
+        `/organizations?ownerId=${user?.id}`
+      );
+
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        // берём первую или null
+        const orgToSet = response.data ;
+        const firstOrg = orgToSet[0];
+        const resOrgData: any = firstOrg.id ;
+        setOrgData(resOrgData);
+        setOrgFetched(true); // Помечаем что загрузили
+        if (firstOrg?.name) {
+          localStorage.setItem('organization_name', firstOrg.name);
+        }
+        console.log("✅ Organization loaded:", firstOrg?.name);
+      } else {
+        console.log("⚠️ No organizations found");
+        localStorage.removeItem('organization_name');
+      }
+    } catch (error: any) {
+      console.error("❌ org fetch failed:", error);
+      console.error("  - Error message:", error.message);
+      console.error("  - Error response:", error.response?.data);
+      console.error("  - Error status:", error.response?.status);
+      setOrgData(null);
+      setOrgFetched(true); // Даже при ошибке помечаем что попытались загрузить
+      localStorage.removeItem('organization_name');
+    } finally {
+      setIsLoading(false);
+      console.log("🏢 logCheck FINISHED");
+    }
+  };
   const fetchBranches = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       console.log('🏢 BranchContext: Starting branch loading...');
-      
+
       if (!isAuthenticated || !user) {
-        console.log('Пользователь не авторизован или данные не доступны. Пропускаем загрузку филиалов.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Для клиентов филиалы не нужны
+      if (user.role === 'client') {
+        console.log('ℹ️ User is a client, skipping branches loading');
         setIsLoading(false);
         return;
       }
       
-      console.log('👤 Using user data from AuthContext:', user);
-      
-      const organisationId = user.organisationId || user.organization_id || user.orgId || user.organisationID || user.organizationId;
-      
-      console.log('🔍 Checking organisationId fields:', {
-        organisationId: user.organisationId,
-        organization_id: user.organization_id,
-        orgId: user.orgId,
-        organisationID: user.organisationID,
-        organizationId: user.organizationId,
-        finalOrgId: organisationId
-      });
-      
-      if (!organisationId) {
-        console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: organisationId НЕ НАЙДЕН в данных пользователя!');
-        console.log('📝 Полные данные пользователя:', JSON.stringify(user, null, 2));
-        throw new Error('organisationId не найден в данных пользователя. Требуется корректная авторизация.');
-      }
-      
-      console.log('🆔 Using organisationId:', organisationId);
-      
-      const branchesUrl = `${import.meta.env.VITE_BACKEND_URL}/api/organisations/${organisationId}/branches`;
-      console.log('🌐 Fetching branches from:', branchesUrl);
-      
-      const branchesResponse = await fetch(branchesUrl, {
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-        }
-      });
+      // Используем $apiSecondary для автоматического обновления токена
+      const branchesResponse = await $apiSecondary.get<Branch[] | { branches: Branch[] }>(
+        `/branches?organizationId=${orgData}`
+      );
 
-      if (!branchesResponse.ok) {
-        if (branchesResponse.status === 401) {
-          throw new Error('Необходима авторизация');
-        } else if (branchesResponse.status === 404) {
-          throw new Error('Организация не найдена');
-        } else {
-          const errorText = await branchesResponse.text();
-          throw new Error(`Ошибка загрузки филиалов: ${branchesResponse.status} - ${errorText}`);
-        }
-      }
+      const branchesData = branchesResponse.data;
 
-      const branchesData = await branchesResponse.json();
-      console.log('📄 Branches response data:', branchesData);
-      
-      const branchList: Branch[] = branchesData.branches || [];
-      console.log('✅ Loaded branches:', branchList.length, branchList.map(b => ({ id: b.id, name: b.branches })));
+      // Обрабатываем оба случая: если API вернул массив напрямую или объект с полем branches
+      const branchList: Branch[] = Array.isArray(branchesData)
+        ? branchesData
+        : (branchesData.branches || []);
+
+      console.log('✅ Loaded branches:', branchList.length);
 
       setBranches(branchList);
-      
+
       const savedBranchId = localStorage.getItem("currentBranchId");
+
       if (savedBranchId && branchList.length > 0) {
         const saved = branchList.find((b: Branch) => b.id.toString() === savedBranchId);
         if (saved) {
           setCurrentBranch(saved);
-          console.log('📍 Restored saved branch:', saved.branches);
         } else {
           setCurrentBranch(branchList[0]);
           localStorage.setItem("currentBranchId", branchList[0].id.toString());
-          console.log('📍 Selected first branch:', branchList[0].branches);
         }
       } else if (branchList.length > 0) {
         setCurrentBranch(branchList[0]);
         localStorage.setItem("currentBranchId", branchList[0].id.toString());
-        console.log('📍 Selected first branch:', branchList[0].branches);
       }
     } catch (err) {
       console.error('❌ Error fetching branches:', err);
       setError(err instanceof Error ? err.message : 'Ошибка загрузки филиалов');
     } finally {
       setIsLoading(false);
-      console.log('🏁 BranchContext: Loading completed');
     }
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated, orgData]);
 
   const setBranch = (branch: Branch) => {
     setCurrentBranch(branch);
@@ -130,8 +159,19 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    fetchBranches();
-  }, [fetchBranches]);
+    // Сначала получаем организацию, потом филиалы
+    // Вызываем только если user и isAuthenticated существуют
+    if (user && isAuthenticated && !orgFetched) {
+      logCheck();
+    }
+  }, [user, isAuthenticated]);
+
+  useEffect(() => {
+    // Загружаем филиалы только когда orgData готов
+    if (orgData && !branches.length) {
+      fetchBranches();
+    }
+  }, [orgData]);
 
   const value = {
     currentBranch,
@@ -139,6 +179,7 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
     branches,
     isLoading,
     error,
+    orgData,
     refetchBranches: fetchBranches,
   };
 

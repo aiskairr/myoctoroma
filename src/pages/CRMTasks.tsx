@@ -1811,44 +1811,31 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
       if (!formData.clientName) {
         throw new Error("Имя клиента обязательно");
       }
+      
+      if (!formData.phoneNumber) {
+        throw new Error("Номер телефона обязателен");
+      }
 
-      // Генерируем уникальный telegramId для вручную созданного клиента
-      const manualClientPrefix = "manual_";
-      const timestamp = Date.now();
-      const randomStr = Math.random().toString(36).substring(2, 10);
-      const telegramId = `${manualClientPrefix}${timestamp}_${randomStr}`;
+      // Генерируем случайный пароль для клиента
+      const generatePassword = () => {
+        return Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+      };
 
-      // Собираем данные из формы
+      // Собираем данные для создания клиента (в формате snake_case как требует API)
       const payload = {
-        // Поля для создания клиента
-        telegramId: telegramId, // Добавляем уникальный telegramId
-        firstName: formData.clientName, // Используем имя клиента как firstName
-        lastName: "", // Пустая фамилия для вручную созданных клиентов
-        customName: formData.clientName,
-        phoneNumber: formData.phoneNumber,
-        instanceId: formData.branchId, // Используем branchId как instanceId
-        // Дополнительная информация для задачи
-        clientName: formData.clientName,
-        branchId: formData.branchId,
-        serviceType: formData.serviceType,
-        masterName: formData.masterName,
-        notes: formData.notes,
-        scheduleDate: dateTime.date,
-        scheduleTime: dateTime.time,
-        duration: selectedDuration,
-        createAsCard: true, // Это новая карточка, созданная вручную
+        first_name: formData.clientName,
+        last_name: formData.clientName, // Используем имя как фамилию для вручную созданных клиентов
+        phone_number: formData.phoneNumber,
+        branch_id: Number(formData.branchId),
+        source: "manual", // Источник - ручное создание
+        password: generatePassword() // Генерируем случайный пароль
       };
 
       console.log("Отправляем данные для создания клиента:", payload);
 
-      // Отправляем запрос на создание клиента
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/clients`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      // Отправляем запрос на создание клиента (используем SECONDARY backend)
+      // Используем apiPost который автоматически добавит токен авторизации
+      const response = await apiPost('/clients/', payload);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1967,6 +1954,16 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
         toast({
           title: "Ошибка валидации",
           description: "Необходимо указать имя клиента",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!formData.phoneNumber) {
+        console.log("Ошибка валидации: номер телефона не указан");
+        toast({
+          title: "Ошибка валидации",
+          description: "Необходимо указать номер телефона",
           variant: "destructive",
         });
         return;

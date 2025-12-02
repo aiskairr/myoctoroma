@@ -22,6 +22,7 @@ import BookingPage from "./pages/BookingPage";
 import InternalMessenger from "./pages/InternalMessenger";
 import AccountingPage from "./pages/AccountingPage";
 import SalaryPage from "./pages/SalaryPage";
+import SalaryPageNew from "./pages/SalaryPageNew";
 import GiftCertificatesPage from "./pages/GiftCertificatesPage";
 import ReportPage from "./pages/ReportPage";
 import CRMServices from "./pages/CRMServicesTable";
@@ -179,6 +180,12 @@ function App() {
           <Route path="/salary">
             <ProtectedLayout>
               <SalaryPage />
+            </ProtectedLayout>
+          </Route>
+
+          <Route path="/salary-new">
+            <ProtectedLayout>
+              <SalaryPageNew />
             </ProtectedLayout>
           </Route>
 

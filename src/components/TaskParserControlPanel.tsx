@@ -9,6 +9,7 @@ import { getDateRange } from '@/services/task-parser';
 import type { TaskParserResponse } from '@/services/task-parser';
 import { Play, Square, RefreshCw, Download, Clock, Users, AlertCircle, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { useLocale } from '@/contexts/LocaleContext';
 
 interface TaskParserControlPanelProps {
   selectedDate?: Date;
@@ -19,6 +20,7 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
   selectedDate = new Date(),
   onDataReceived
 }) => {
+  const { t } = useLocale();
   const [customDate, setCustomDate] = useState<string>(
     format(selectedDate, 'yyyy-MM-dd')
   );
@@ -79,9 +81,9 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <RefreshCw className={`h-5 w-5 ${isRunning ? 'animate-spin text-green-600' : 'text-gray-600'}`} />
-          Task Parser API
+          {t('parser.title')}
           <Badge variant={isRunning ? 'default' : 'secondary'}>
-            {isRunning ? 'Активен' : 'Остановлен'}
+            {isRunning ? t('parser.status_active') : t('parser.status_stopped')}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -92,9 +94,9 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
           <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
             <Clock className="h-4 w-4 text-blue-600" />
             <div>
-              <div className="text-xs text-blue-600 font-medium">Статус</div>
+              <div className="text-xs text-blue-600 font-medium">{t('parser.status_label')}</div>
               <div className="text-sm font-semibold">
-                {isRunning ? 'Запущен' : 'Остановлен'}
+                {isRunning ? t('parser.status_running') : t('parser.status_not_running')}
               </div>
             </div>
           </div>
@@ -102,7 +104,7 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
           <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
             <Users className="h-4 w-4 text-green-600" />
             <div>
-              <div className="text-xs text-green-600 font-medium">Записей</div>
+              <div className="text-xs text-green-600 font-medium">{t('parser.records_label')}</div>
               <div className="text-sm font-semibold">{tasksCount}</div>
             </div>
           </div>
@@ -110,7 +112,7 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
           <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg">
             <RefreshCw className="h-4 w-4 text-purple-600" />
             <div>
-              <div className="text-xs text-purple-600 font-medium">Подписчиков</div>
+              <div className="text-xs text-purple-600 font-medium">{t('parser.subscribers_label')}</div>
               <div className="text-sm font-semibold">{subscribersCount}</div>
             </div>
           </div>
@@ -122,9 +124,9 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
               <CheckCircle className="h-4 w-4 text-green-600" />
             )}
             <div>
-              <div className="text-xs text-amber-600 font-medium">Статус API</div>
+              <div className="text-xs text-amber-600 font-medium">{t('parser.api_status_label')}</div>
               <div className="text-sm font-semibold">
-                {error ? 'Ошибка' : 'OK'}
+                {error ? t('parser.api_status_error') : t('parser.api_status_ok')}
               </div>
             </div>
           </div>
@@ -133,7 +135,7 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
         {/* Настройки даты */}
         <div className="space-y-2">
           <Label htmlFor="date-picker" className="text-sm font-medium">
-            Дата для парсинга
+            {t('parser.date_for_parsing')}
           </Label>
           <Input
             id="date-picker"
@@ -143,7 +145,7 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
             className="w-48"
           />
           <div className="text-xs text-gray-500">
-            Диапазон: {format(new Date(scheduledAfter), 'dd.MM.yyyy HH:mm')} - {format(new Date(scheduledBefore), 'dd.MM.yyyy HH:mm')}
+            {t('parser.date_range')}: {format(new Date(scheduledAfter), 'dd.MM.yyyy HH:mm')} - {format(new Date(scheduledBefore), 'dd.MM.yyyy HH:mm')}
           </div>
         </div>
 
@@ -156,7 +158,7 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
             variant="default"
           >
             <Play className="h-4 w-4" />
-            Запустить парсер
+            {t('parser.start_parser')}
           </Button>
           
           <Button
@@ -166,7 +168,7 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
             className="flex items-center gap-2"
           >
             <Square className="h-4 w-4" />
-            Остановить
+            {t('parser.stop')}
           </Button>
           
           <Button
@@ -175,7 +177,7 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
             className="flex items-center gap-2"
           >
             <Download className="h-4 w-4" />
-            Запросить сейчас
+            {t('parser.fetch_now')}
           </Button>
           
           <Button
@@ -184,18 +186,18 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
             className="flex items-center gap-2"
           >
             <RefreshCw className="h-4 w-4" />
-            Перезапустить
+            {t('parser.restart')}
           </Button>
         </div>
 
         {/* Информация о последнем обновлении */}
         {lastUpdate && (
           <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
-            <div className="font-medium mb-1">Последнее обновление:</div>
+            <div className="font-medium mb-1">{t('parser.last_update')}</div>
             <div>{format(new Date(lastUpdate), 'dd.MM.yyyy HH:mm:ss')}</div>
             {data?.success && (
               <div className="mt-1 text-green-600">
-                ✅ Получено записей: {data.count}
+                ✅ {t('parser.records_received', { count: String(data.count) })}
               </div>
             )}
           </div>
@@ -206,7 +208,7 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
           <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
             <div className="font-medium mb-1 flex items-center gap-2">
               <AlertCircle className="h-4 w-4" />
-              Ошибка парсера:
+              {t('parser.parser_error')}
             </div>
             <div>{error}</div>
           </div>
@@ -215,14 +217,14 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
         {/* Текущий API URL */}
         <details className="text-xs bg-gray-50 p-3 rounded-lg">
           <summary className="cursor-pointer font-medium text-gray-700">
-            API Endpoint (нажмите для подробностей)
+            {t('parser.api_endpoint')}
           </summary>
           <div className="mt-2 font-mono text-gray-600 break-all">
             <div className="mb-1">
-              <strong>URL:</strong> https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app/api/tasks
+              <strong>{t('parser.api_url')}</strong> {import.meta.env.VITE_BACKEND_URL + "/api/tasks"}
             </div>
             <div className="mb-1">
-              <strong>Параметры:</strong>
+              <strong>{t('parser.api_params')}</strong>
             </div>
             <ul className="ml-4 space-y-1">
               <li>• branchId=1</li>
@@ -233,7 +235,7 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
               <li>• userRole=superadmin</li>
             </ul>
             <div className="mt-2">
-              <strong>Интервал:</strong> 1 минута
+              <strong>{t('parser.api_interval')}</strong> {t('parser.interval_1_min')}
             </div>
           </div>
         </details>
@@ -242,22 +244,22 @@ export const TaskParserControlPanel: React.FC<TaskParserControlPanelProps> = ({
         {data && data.success && data.data.length > 0 && (
           <details className="text-xs bg-blue-50 p-3 rounded-lg border border-blue-200">
             <summary className="cursor-pointer font-medium text-blue-700">
-              Предварительный просмотр данных ({data.count} записей)
+              {t('parser.preview_title', { count: String(data.count) })}
             </summary>
             <div className="mt-2 max-h-40 overflow-y-auto">
               {data.data.slice(0, 3).map((task) => (
                 <div key={task.id} className="mb-2 p-2 bg-white rounded border">
-                  <div><strong>ID:</strong> {task.id}</div>
-                  <div><strong>Клиент:</strong> {task.client?.customName || task.client?.firstName || 'Не указан'}</div>
-                  <div><strong>Услуга:</strong> {task.serviceType || 'Не указана'}</div>
-                  <div><strong>Мастер:</strong> {task.masterName || 'Не указан'}</div>
-                  <div><strong>Время:</strong> {task.scheduleTime || 'Не указано'}</div>
-                  <div><strong>Статус:</strong> {task.status}</div>
+                  <div><strong>{t('parser.preview_id')}</strong> {task.id}</div>
+                  <div><strong>{t('parser.preview_client')}</strong> {task.client?.customName || task.client?.firstName || t('parser.preview_not_specified')}</div>
+                  <div><strong>{t('parser.preview_service')}</strong> {task.serviceType || t('parser.preview_not_specified_f')}</div>
+                  <div><strong>{t('parser.preview_master')}</strong> {task.masterName || t('parser.preview_not_specified')}</div>
+                  <div><strong>{t('parser.preview_time')}</strong> {task.scheduleTime || t('parser.preview_not_specified_n')}</div>
+                  <div><strong>{t('parser.preview_status')}</strong> {task.status}</div>
                 </div>
               ))}
               {data.count > 3 && (
                 <div className="text-gray-500 text-center">
-                  ... и еще {data.count - 3} записей
+                  {t('parser.preview_more', { count: String(data.count - 3) })}
                 </div>
               )}
             </div>

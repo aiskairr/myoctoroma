@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Plus, Gift, CreditCard, User, Calendar, CheckCircle, Search, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useBranch } from '@/contexts/BranchContext';
@@ -14,8 +15,8 @@ interface GiftCertificate {
   id: number;
   certificate_number: string;
   amount: number;
-  admin_name: string;
-  payment_method: string;
+  admin_name?: string;
+  payment_method: any;
   discount: string;
   expiry_date: string;
   client_name?: string;
@@ -34,10 +35,11 @@ const GiftCertificatesPage = () => {
   const [activeCertificates, setActiveCertificates] = useState<GiftCertificate[]>([]);
   const [usedCertificates, setUsedCertificates] = useState<GiftCertificate[]>([]);
   const [newCertificate, setNewCertificate] = useState({
-    certificate_number: '',
     amount: 0,
-    payment_method: '',
-    expiry_date: ''
+    discount: 0,
+    expiryDate: '',
+    paymentMethod: [] as Array<{ type: string; name?: string; amount: number }>,
+    createdBy: { id: 0, firstname: '', role: 'manager' as 'manager' }
   });
   const [usageData, setUsageData] = useState({
     client_name: '',
@@ -56,6 +58,13 @@ const GiftCertificatesPage = () => {
   const [servicesData, setServicesData] = useState<any[]>([]); // Полные данные услуг
   const [durationOptions, setDurationOptions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const fromTyiyn = (value: number | string | null | undefined) => {
+    if (value === null || value === undefined) return 0;
+    const numeric = typeof value === 'string' ? parseFloat(value) : Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    return numeric / 100;
+  };
 
   // Функция для получения доступных длительностей для конкретной услуги
   const getDurationsForService = (serviceName: string): string[] => {
@@ -103,26 +112,40 @@ const GiftCertificatesPage = () => {
       
       setIsLoading(true);
       try {
+        const token = localStorage.getItem('auth_token');
+        const authHeaders: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {};
+        
         // Загружаем все данные параллельно для лучшей производительности
         const [certificatesResponse, mastersResponse, administratorsResponse, serviceTypesResponse] = await Promise.all([
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates?branchId=${currentBranch.id}`),
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${currentBranch.id}`), // Используем dedicated endpoint для мастеров
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchID=${currentBranch.id}`), // Добавляем фильтр по филиалу
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${currentBranch.id}`) // Используем services endpoint вместо service-types
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/gift-certificates?branchId=${currentBranch.id}`, { headers: authHeaders }),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${currentBranch.id}`, { headers: authHeaders }), // Используем dedicated endpoint для мастеров
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchID=${currentBranch.id}`, { headers: authHeaders }), // Добавляем фильтр по филиалу
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/services?branch_id=${currentBranch.id}&page=1&limit=1000`, { headers: authHeaders }) // Используем services endpoint вместо service-types
         ]);
 
         // Обрабатываем сертификаты
         if (certificatesResponse.ok) {
           const allCertificates = await certificatesResponse.json();
           const now = new Date();
-          
-          const active = allCertificates.filter((cert: GiftCertificate) =>
-            !cert.is_used && !cert.is_expired && new Date(cert.expiry_date) >= now
+          const list: GiftCertificate[] = (allCertificates || []).map((c: any) => ({
+            id: c.id,
+            certificate_number: c.certificate_number,
+            amount: fromTyiyn(c.amount),
+            discount: c.discount,
+            expiry_date: c.expiry_date,
+            payment_method: Array.isArray(c.payment_method)
+              ? c.payment_method.map((pm: any) => ({ ...pm, amount: fromTyiyn(pm.amount) }))
+              : c.payment_method,
+            branch_id: String(c.branch_id),
+            is_used: c.status === 'used',
+            is_expired: c.status === 'expired' || new Date(c.expiry_date) < now,
+          }));
+          const active = list.filter((cert: GiftCertificate) =>
+            !cert.is_used && !cert.is_expired
           );
-          const used = allCertificates.filter((cert: GiftCertificate) =>
-            cert.is_used || cert.is_expired || new Date(cert.expiry_date) < now
+          const used = list.filter((cert: GiftCertificate) =>
+            cert.is_used || cert.is_expired
           );
-
           setActiveCertificates(active);
           setUsedCertificates(used);
         } else {
@@ -166,7 +189,9 @@ const GiftCertificatesPage = () => {
 
         // Обрабатываем типы услуг
         if (serviceTypesResponse.ok) {
-          const serviceTypesData = await serviceTypesResponse.json();
+          const serviceTypesResult = await serviceTypesResponse.json();
+          // API возвращает пагинированный ответ { data: [...] }
+          const serviceTypesData = serviceTypesResult.data || [];
           
           // Сохраняем полные данные услуг
           setServicesData(serviceTypesData);
@@ -218,7 +243,7 @@ const GiftCertificatesPage = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setNewCertificate({ ...newCertificate, [name]: value });
+    setNewCertificate({ ...newCertificate, [name]: name === 'amount' || name === 'discount' ? Number(value) : value });
   };
 
   const handleUsageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -227,34 +252,50 @@ const GiftCertificatesPage = () => {
   };
 
   const addCertificate = async () => {
-    if (!newCertificate.certificate_number || !newCertificate.amount || !newCertificate.payment_method || !newCertificate.expiry_date) {
+    if (!currentBranch?.id) {
+      toast({ title: "Ошибка", description: "Выберите филиал", variant: "destructive" });
+      return;
+    }
+    if (!newCertificate.amount || !newCertificate.expiryDate) {
       toast({
         title: "Ошибка валидации",
-        description: "Заполните все обязательные поля: номер сертификата, сумма, способ оплаты, срок действия",
+        description: "Заполните обязательные поля: сумма, срок действия",
         variant: "destructive"
       });
       return;
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/gift-certificates?branchId=${currentBranch.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
         },
         body: JSON.stringify({
-          certificate_number: newCertificate.certificate_number,
           amount: Number(newCertificate.amount),
-          payment_method: newCertificate.payment_method,
-          expiry_date: newCertificate.expiry_date,
-          branch_id: currentBranch?.id,
-          is_used: false,
-          is_expired: false
+          discount: Number(newCertificate.discount) || 0,
+          expiryDate: newCertificate.expiryDate,
+          paymentMethod: newCertificate.paymentMethod.length > 0 ? newCertificate.paymentMethod : undefined,
+          createdBy: newCertificate.createdBy.id ? newCertificate.createdBy : undefined
         }),
       });
 
       if (response.ok) {
-        const savedCertificate = await response.json();
+        const saved = await response.json();
+        const savedCertRaw = saved?.certificate || saved;
+        const savedCertificate: GiftCertificate = {
+          id: savedCertRaw.id,
+          certificate_number: savedCertRaw.certificate_number,
+          amount: savedCertRaw.amount,
+          discount: savedCertRaw.discount,
+          expiry_date: savedCertRaw.expiry_date,
+          payment_method: savedCertRaw.payment_method,
+          branch_id: String(savedCertRaw.branch_id),
+          is_used: savedCertRaw.status === 'used',
+          is_expired: savedCertRaw.status === 'expired',
+        };
         setActiveCertificates([...activeCertificates, savedCertificate]);
         toast({
           title: "Успех",
@@ -262,10 +303,11 @@ const GiftCertificatesPage = () => {
         });
 
         setNewCertificate({
-          certificate_number: '',
           amount: 0,
-          payment_method: '',
-          expiry_date: ''
+          discount: 0,
+          expiryDate: '',
+          paymentMethod: [],
+          createdBy: { id: 0, firstname: '', role: 'manager' }
         });
       } else {
         const errorData = await response.json();
@@ -381,9 +423,10 @@ const GiftCertificatesPage = () => {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/gift-certificates/search/${searchNumber}`);
+      const response = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/gift-certificates?branchId=${currentBranch?.id || ''}&certificateNumber=${encodeURIComponent(searchNumber)}`);
       if (response.ok) {
-        const certificate = await response.json();
+        const list = await response.json();
+        const certificate = Array.isArray(list) ? list.find((c: any) => c.certificate_number === searchNumber) : list;
         toast({
           title: "Сертификат найден",
           description: `Сертификат ${certificate.certificate_number} на сумму ${certificate.amount} сом`
@@ -404,22 +447,7 @@ const GiftCertificatesPage = () => {
     }
   };
 
-  const paymentOptions = [
-    'Наличные',
-    'МБанк - Перевод',
-    'МБанк - POS',
-    'МБизнес - Перевод',
-    'МБизнес - POS',
-    'О!Банк - Перевод',
-    'О!Банк - POS',
-    'Демир - Перевод',
-    'Демир - POS',
-    'Bakai - Перевод',
-    'Bakai - POS',
-    'Оптима - Перевод',
-    'Оптима - POS',
-    'Подарочный Сертификат'
-  ];
+  const paymentTypes = ['cash', 'transfer', 'pos'];
 
   if (isLoading) {
     return (
@@ -473,43 +501,141 @@ const GiftCertificatesPage = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <Input
-                  name="certificate_number"
-                  value={newCertificate.certificate_number}
-                  onChange={handleInputChange}
-                  placeholder="Номер сертификата*"
-                  className="rounded-lg"
-                />
-                <Input
-                  type="number"
-                  name="amount"
-                  value={newCertificate.amount}
-                  onChange={handleInputChange}
-                  placeholder="Сумма*"
-                  className="rounded-lg"
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="gc-amount">Сумма*</Label>
+                  <Input
+                    id="gc-amount"
+                    type="number"
+                    name="amount"
+                    value={newCertificate.amount}
+                    onChange={handleInputChange}
+                    placeholder="Например 5 000"
+                    className="rounded-lg"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gc-discount">Скидка</Label>
+                  <Input
+                    id="gc-discount"
+                    type="number"
+                    name="discount"
+                    value={Number(newCertificate.discount)}
+                    onChange={handleInputChange}
+                    placeholder="Например 10.5"
+                    className="rounded-lg"
+                  />
+                </div>
 
-                <Select
-                  value={newCertificate.payment_method}
-                  onValueChange={(value) => setNewCertificate({ ...newCertificate, payment_method: value })}
-                >
-                  <SelectTrigger className="rounded-lg">
-                    <SelectValue placeholder="Способ оплаты*" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {paymentOptions.map(option => (
-                      <SelectItem key={option} value={option}>{option}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="col-span-1 md:col-span-2 space-y-3">
+                  <div className="text-sm font-medium">Оплата (опционально)</div>
+                  {(newCertificate.paymentMethod.length === 0 ? [0] : newCertificate.paymentMethod).map((pm, idx) => {
+                    const val = newCertificate.paymentMethod[idx] || { type: '', name: '', amount: 0 };
+                    return (
+                      <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor={`gc-payment-type-${idx}`}>Тип оплаты</Label>
+                          <Select
+                            value={val.type}
+                            onValueChange={(value) => {
+                              const next = [...newCertificate.paymentMethod];
+                              next[idx] = { ...val, type: value as any };
+                              setNewCertificate({ ...newCertificate, paymentMethod: next });
+                            }}
+                          >
+                            <SelectTrigger id={`gc-payment-type-${idx}`} className="rounded-lg">
+                              <SelectValue placeholder="Выберите тип" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {paymentTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`gc-payment-name-${idx}`}>Название банка / комментарий</Label>
+                          <Input
+                            id={`gc-payment-name-${idx}`}
+                            placeholder="Например Demir Bank"
+                            value={val.name || ''}
+                            onChange={(e) => {
+                              const next = [...newCertificate.paymentMethod];
+                              next[idx] = { ...val, name: e.target.value };
+                              setNewCertificate({ ...newCertificate, paymentMethod: next });
+                            }}
+                            className="rounded-lg"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`gc-payment-amount-${idx}`}>Сумма оплаты</Label>
+                          <Input
+                            id={`gc-payment-amount-${idx}`}
+                            type="number"
+                            placeholder="0"
+                            value={val.amount || 0}
+                            onChange={(e) => {
+                              const next = [...newCertificate.paymentMethod];
+                              next[idx] = { ...val, amount: Number(e.target.value) };
+                              setNewCertificate({ ...newCertificate, paymentMethod: next });
+                            }}
+                            className="rounded-lg"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-lg"
+                    onClick={() => setNewCertificate({ ...newCertificate, paymentMethod: [...newCertificate.paymentMethod, { type: '', name: '', amount: 0 }] })}
+                  >
+                    Добавить способ оплаты
+                  </Button>
+                </div>
 
-                <Input
-                  type="date"
-                  name="expiry_date"
-                  value={newCertificate.expiry_date}
-                  onChange={handleInputChange}
-                  className="rounded-lg"
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="gc-expiry">Срок действия</Label>
+                  <Input
+                    id="gc-expiry"
+                    type="date"
+                    name="expiryDate"
+                    value={newCertificate.expiryDate}
+                    onChange={handleInputChange}
+                    className="rounded-lg"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 col-span-1 md:col-span-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="gc-creator-id">ID создателя</Label>
+                    <Input
+                      id="gc-creator-id"
+                      type="number"
+                      placeholder="Опционально"
+                      value={newCertificate.createdBy.id || 0}
+                      onChange={(e) => setNewCertificate({ ...newCertificate, createdBy: { ...newCertificate.createdBy, id: Number(e.target.value) } })}
+                      className="rounded-lg"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gc-creator-name">Имя создателя</Label>
+                    <Input
+                      id="gc-creator-name"
+                      placeholder="Опционально"
+                      value={newCertificate.createdBy.firstname}
+                      onChange={(e) => setNewCertificate({ ...newCertificate, createdBy: { ...newCertificate.createdBy, firstname: e.target.value } })}
+                      className="rounded-lg"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gc-creator-role">Роль</Label>
+                    <Input
+                      id="gc-creator-role"
+                      placeholder="manager / admin"
+                      value={newCertificate.createdBy.role}
+                      onChange={(e) => setNewCertificate({ ...newCertificate, createdBy: { ...newCertificate.createdBy, role: e.target.value as any } })}
+                      className="rounded-lg"
+                    />
+                  </div>
+                </div>
               </div>
               <Button onClick={addCertificate} className="w-full rounded-lg">
                 <Plus className="h-4 w-4 mr-2" />
@@ -546,7 +672,11 @@ const GiftCertificatesPage = () => {
                       <div className="flex items-center gap-2">
                         <CreditCard className="h-4 w-4 text-purple-600" />
                         <span className="font-medium">Оплата:</span>
-                        <span>{cert.payment_method}</span>
+                        <span>
+                          {Array.isArray(cert.payment_method)
+                            ? cert.payment_method.map((pm: any) => `${pm.type}${pm.name ? ` ${pm.name}` : ''}: ${pm.amount}`).join(', ')
+                            : (typeof cert.payment_method === 'string' ? cert.payment_method : '—')}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">Скидка:</span>

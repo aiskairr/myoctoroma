@@ -138,10 +138,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     
     console.log('📅 AdvancedScheduleComponent mounted with initialDate:', initialDate?.toISOString(), 'currentDate:', currentDate.toISOString());
 
-    // Debug: логируем изменения даты
-    useEffect(() => {
-        console.log('📅 currentDate changed to:', currentDate.toISOString());
-    }, [currentDate]);
+    // Убрали избыточные логи изменения даты
 
     // Context
     const { currentBranch } = useBranch();
@@ -318,11 +315,6 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
     useEffect(() => {
         if (tasksData.length > 0) {
-            console.log("🔄 Converting tasks to appointments...");
-            console.log("  - Tasks data sample:", tasksData[0]);
-            console.log("  - Tasks with masterName:", tasksData.filter(t => t.masterName).length);
-            console.log("  - Tasks without masterName:", tasksData.filter(t => !t.masterName && t.masterId).length);
-            
             // Создаем карту дочерних задач для расчета общей длительности
             const childTasksMap: { [taskId: string]: any[] } = {};
             tasksData

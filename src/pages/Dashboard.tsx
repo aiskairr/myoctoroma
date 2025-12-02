@@ -68,8 +68,8 @@ export default function Dashboard() {
     return <Redirect to="/master/calendar" />;
   }
 
-  // Проверка доступа только для суперадминов
-  if (user && user.role !== 'superadmin') {
+  // Проверка доступа для учредителей (owner, admin, superadmin)
+  if (user && !['owner', 'admin', 'superadmin'].includes(user.role)) {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">

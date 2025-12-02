@@ -1,31 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { apiGetJson } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useBranch } from '@/contexts/BranchContext';
 import { useLocale } from '@/contexts/LocaleContext';
-
-interface DailyCashReport {
-  id: number;
-  date: string;
-  admin_name: string;
-  total_revenue: number;
-  petty_expenses: number;
-  total_income: number;
-  end_balance: number;
-  optima_payments: number;
-  mbank_payments: number;
-  mbusiness_payments: number;
-  demir_payments: number;
-  bakai_payments: number;
-  obank_payments: number;
-  cash_collection: number;
-  salary_payments: number;
-  branch_id: string;
-  notes?: string;
-}
+import { reportService } from '@/services/report-service';
+import type { DailyCashReport } from '@/services/report-service';
 
 interface User {
   role: string;
@@ -35,16 +16,14 @@ export default function ReportPage() {
   const { t } = useLocale();
   const [user, setUser] = useState<User | null>(null);
   const [reports, setReports] = useState<DailyCashReport[]>([]);
-  const [startDate, setStartDate] = useState<string>(() => {
-    return localStorage.getItem('reportPage_startDate') || '2025-07-01';
-  });
-  const [endDate, setEndDate] = useState<string>(() => {
-    return localStorage.getItem('reportPage_endDate') || '2025-07-31';
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   });
   const [selectedBranch, setSelectedBranch] = useState<string>(() => {
-    return localStorage.getItem('reportPage_selectedBranch') || '';
+    return localStorage.getItem('currentBranchId') || '';
   });
-  const { branches } = useBranch(); // Используем branches из контекста
+  const { branches, currentBranch } = useBranch();
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -52,10 +31,10 @@ export default function ReportPage() {
   const fetchUserData = async () => {
     try {
       console.log('🔍 Loading user data...');
-      const data = await apiGetJson('/api/user');
+      const data = localStorage.getItem('user_data');
       console.log('✅ User data loaded:', data);
       if (data) {
-        setUser({ role: data.role });
+        setUser({ role: JSON.parse(data).role as string });
       }
     } catch (error) {
       console.error('Ошибка загрузки данных пользователя:', error);
@@ -67,22 +46,35 @@ export default function ReportPage() {
     }
   };
 
-    // Загрузка данных пользователя (removed fetchBranches function since we use context)
-
   // Загрузка данных отчетов
   const fetchReports = async () => {
     setIsLoading(true);
     try {
-      const branchParam = selectedBranch ? `&branchId=${selectedBranch}` : '';
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/daily-cash-reports?startDate=${startDate}&endDate=${endDate}${branchParam}`);
-      if (response.ok) {
-        const data = await response.json();
-        setReports(data);
+      // Используем currentBranch.id или selectedBranch
+      const branchId = currentBranch?.id || (selectedBranch ? parseInt(selectedBranch) : 0);
+
+      if (!branchId) {
+        console.warn('⚠️ Branch ID not available');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('📡 Fetching reports for branch:', branchId, 'date:', selectedDate);
+
+      const data = await reportService.getReports(branchId, selectedDate);
+
+      if (data) {
+        // Конвертируем тыйыны в сомы
+        const formattedReports = data.map(report =>
+          reportService.formatReportForDisplay(report)
+        );
+        setReports(formattedReports);
+        console.log('✅ Reports loaded and formatted:', formattedReports);
       } else {
-        throw new Error('Failed to fetch reports');
+        setReports([]);
       }
     } catch (error) {
-      console.error('Ошибка загрузки отчетов:', error);
+      console.error('❌ Error loading reports:', error);
       toast({
         title: t('salary.error'),
         description: t('report.failed_to_load_reports'),
@@ -95,82 +87,39 @@ export default function ReportPage() {
 
   useEffect(() => {
     fetchUserData();
+  }, []);
+
+  useEffect(() => {
     fetchReports();
-  }, [startDate, endDate, selectedBranch]);
+  }, [selectedDate, selectedBranch]);
 
-  // Сохранение фильтров в localStorage
-  useEffect(() => {
-    localStorage.setItem('reportPage_startDate', startDate);
-  }, [startDate]);
-
-  useEffect(() => {
-    localStorage.setItem('reportPage_endDate', endDate);
-  }, [endDate]);
-
-  useEffect(() => {
-    localStorage.setItem('reportPage_selectedBranch', selectedBranch);
-  }, [selectedBranch]);
-
-  // Функция для установки дат текущего месяца
-  const setCurrentMonth = () => {
+  // Функция для установки текущей даты
+  const setToday = () => {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    
-    const firstDay = new Date(year, month, 1);
-    const startDateStr = firstDay.toISOString().split('T')[0];
-    
-    const lastDay = new Date(year, month + 1, 0);
-    const endDateStr = lastDay.toISOString().split('T')[0];
-    
-    setStartDate(startDateStr);
-    setEndDate(endDateStr);
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    setSelectedDate(todayStr);
   };
 
   // Подсчет итогов
   const calculateTotals = () => {
-    let totalRevenue = 0;
-    let totalExpenses = 0; 
-    let totalIncome = 0;
-    let totalCash = 0;
-    let totalOptima = 0;
-    let totalMBank = 0;
-    let totalMBusiness = 0;
-    let totalDemir = 0;
-    let totalBakai = 0;
-    let totalOBank = 0;
-    let totalCollection = 0;
-    let totalSalaryPayments = 0;
+    if (reports.length === 0) {
+      return {
+        total_revenue: 0,
+        total_income: 0,
+        expenses_total: 0,
+        end_balance: 0,
+        cash_collection: 0,
+        salary_payments: 0,
+        cash_payments: 0,
+        card_payments: 0,
+        transfer_payments: 0,
+        gift_certificate_payments: 0,
+        bank_payments_total: 0,
+        bank_payments_by_name: {} as Record<string, number>,
+      };
+    }
 
-    reports.forEach(report => {
-      totalRevenue += Number(report.total_revenue) || 0;
-      totalExpenses += Number(report.petty_expenses) || 0;
-      totalIncome += Number(report.total_income) || 0;
-      totalCash += Number(report.end_balance) || 0;
-      totalOptima += Number(report.optima_payments) || 0;
-      totalMBank += Number(report.mbank_payments) || 0;
-      totalMBusiness += Number(report.mbusiness_payments) || 0;
-      totalDemir += Number(report.demir_payments) || 0;
-      totalBakai += Number(report.bakai_payments) || 0;
-      totalOBank += Number(report.obank_payments) || 0;
-      totalCollection += Number(report.cash_collection) || 0;
-      totalSalaryPayments += Number(report.salary_payments) || 0;
-    });
-
-    return {
-      totalRevenue,
-      totalExpenses,
-      totalIncome,
-      totalCash,
-      totalOptima,
-      totalMBank,
-      totalMBusiness,
-      totalDemir,
-      totalBakai,
-      totalOBank,
-      totalCollection,
-      totalSalaryPayments
-    };
+    return reportService.calculateTotals(reports);
   };
 
   if (isLoading) {
@@ -183,7 +132,7 @@ export default function ReportPage() {
     );
   }
 
-  if (user?.role !== 'superadmin' && user?.role !== 'admin') {
+  if (user?.role !== 'superadmin' && user?.role !== 'admin' && user?.role !== 'owner') {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
@@ -213,35 +162,28 @@ export default function ReportPage() {
             <select
               value={selectedBranch}
               onChange={(e) => setSelectedBranch(e.target.value)}
-              className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
             >
               {branches.map((branch) => (
-                <option key={branch.id} value={branch.id.toString()}>
+                <option key={branch.id} value={branch.id.toString()} className="bg-white text-gray-900">
                   {branch.branches}
                 </option>
               ))}
             </select>
-            <label className="text-sm font-medium">{t('report.period_from')}:</label>
+            <label className="text-sm font-medium">{t('report.date')}:</label>
             <input
               type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
             />
-            <label className="text-sm font-medium">{t('report.period_to')}:</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <Button 
-              onClick={setCurrentMonth}
+            <Button
+              onClick={setToday}
               variant="outline"
               size="sm"
               className="ml-2"
             >
-              {t('report.current_month')}
+              {t('report.today') || 'Сегодня'}
             </Button>
           </div>
         </CardContent>
@@ -251,11 +193,11 @@ export default function ReportPage() {
       <Card className="rounded-xl shadow-lg">
         <CardHeader>
           <CardTitle className="text-lg">
-            Отчеты за период с {startDate} по {endDate}
+            Отчеты за {new Date(selectedDate).toLocaleDateString('ru-RU')}
             <span className="text-sm font-normal text-gray-600 ml-2">
-              {selectedBranch ? 
-                `• ${branches.find(b => b.id.toString() === selectedBranch)?.branches || selectedBranch}` : 
-                '• Все филиалы'
+              {selectedBranch ?
+                `• ${branches.find(b => b.id.toString() === selectedBranch)?.branches || selectedBranch}` :
+                `• ${currentBranch?.branches || 'Филиал не выбран'}`
               }
             </span>
           </CardTitle>
@@ -265,108 +207,89 @@ export default function ReportPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">{t('report.date')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">ID</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">{t('report.issued_by') || 'Составил'}</th>
                   <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.total_revenue')}</th>
                   <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.expenses')}</th>
                   <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.income')}</th>
                   <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.cash_balance')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.optima')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.mbank')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.mbusiness')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.demir')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.bakai')}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.obank')}</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.bank_payments') || 'Банки'}</th>
                   <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.collection')}</th>
                   <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{t('report.salary_payments')}</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">{t('report.notes')}</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">{t('report.status') || 'Статус'}</th>
                 </tr>
               </thead>
               <tbody>
-                {reports.map((report, index) => (
-                  <tr key={report.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-4 py-3 border-b">
-                      {new Date(report.date).toLocaleDateString('ru-RU')}
-                    </td>
-                    <td className="px-4 py-3 text-right border-b text-green-600 font-medium">
-                      {(report.total_revenue || 0).toLocaleString()} {t('report.som')}
-                    </td>
-                    <td className="px-4 py-3 text-right border-b text-red-600 font-medium">
-                      {(report.petty_expenses || 0).toLocaleString()} {t('report.som')}
-                    </td>
-                    <td className="px-4 py-3 text-right border-b font-bold">
-                      {(report.total_income || 0).toLocaleString()} {t('report.som')}
-                    </td>
-                    <td className="px-4 py-3 text-right border-b">
-                      {(report.end_balance || 0).toLocaleString()} {t('report.som')}
-                    </td>
-                    <td className="px-4 py-3 text-right border-b">
-                      {(report.optima_payments || 0).toLocaleString()} {t('report.som')}
-                    </td>
-                    <td className="px-4 py-3 text-right border-b">
-                      {(report.mbank_payments || 0).toLocaleString()} {t('report.som')}
-                    </td>
-                    <td className="px-4 py-3 text-right border-b">
-                      {(report.mbusiness_payments || 0).toLocaleString()} {t('report.som')}
-                    </td>
-                    <td className="px-4 py-3 text-right border-b">
-                      {(report.demir_payments || 0).toLocaleString()} {t('report.som')}
-                    </td>
-                    <td className="px-4 py-3 text-right border-b">
-                      {(report.bakai_payments || 0).toLocaleString()} {t('report.som')}
-                    </td>
-                    <td className="px-4 py-3 text-right border-b">
-                      {(report.obank_payments || 0).toLocaleString()} {t('report.som')}
-                    </td>
-                    <td className="px-4 py-3 text-right border-b">
-                      {(report.cash_collection || 0).toLocaleString()} {t('report.som')}
-                    </td>
-                    <td className="px-4 py-3 text-right border-b text-purple-600 font-medium">
-                      {(report.salary_payments || 0).toLocaleString()} {t('report.som')}
-                    </td>
-                    <td className="px-4 py-3 border-b text-xs text-gray-600">
-                      {report.notes || '-'}
-                    </td>
-                  </tr>
-                ))}
+                {reports.map((report, index) => {
+                  // Вычисляем общую сумму банковских платежей
+                  const totalBankPayments = reportService.calculateTotalBankPayments(report);
+
+                  return (
+                    <tr key={report.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-4 py-3 border-b text-sm text-gray-600">
+                        #{report.id}
+                      </td>
+                      <td className="px-4 py-3 border-b text-sm">
+                        {report.issued_by ?
+                          `${report.issued_by.fist_name} ${report.issued_by.last_name}` :
+                          '-'
+                        }
+                      </td>
+                      <td className="px-4 py-3 text-right border-b text-green-600 font-medium">
+                        {(report.total_revenue || 0).toLocaleString()} {t('report.som')}
+                      </td>
+                      <td className="px-4 py-3 text-right border-b text-red-600 font-medium">
+                        {(report.expenses_total || 0).toLocaleString()} {t('report.som')}
+                      </td>
+                      <td className="px-4 py-3 text-right border-b font-bold">
+                        {(report.total_income || 0).toLocaleString()} {t('report.som')}
+                      </td>
+                      <td className="px-4 py-3 text-right border-b">
+                        {(report.end_balance || 0).toLocaleString()} {t('report.som')}
+                      </td>
+                      <td className="px-4 py-3 text-right border-b">
+                        {totalBankPayments.toLocaleString()} {t('report.som')}
+                      </td>
+                      <td className="px-4 py-3 text-right border-b">
+                        {(report.cash_collection || 0).toLocaleString()} {t('report.som')}
+                      </td>
+                      <td className="px-4 py-3 text-right border-b text-purple-600 font-medium">
+                        {(report.salary_payments || 0).toLocaleString()} {t('report.som')}
+                      </td>
+                      <td className="px-4 py-3 border-b">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          report.status === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {report.status === 'confirmed' ? 'Подтвержден' : 'Не подтвержден'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
                 
                 {/* Totals Row */}
                 <tr className="bg-blue-50 font-bold">
-                  <td className="px-4 py-3 border-b font-bold">{t('report.total')}</td>
+                  <td colSpan={2} className="px-4 py-3 border-b font-bold">{t('report.total')}</td>
                   <td className="px-4 py-3 text-right border-b text-green-600">
-                    {totals.totalRevenue.toLocaleString()} {t('report.som')}
+                    {totals.total_revenue.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b text-red-600">
-                    {totals.totalExpenses.toLocaleString()} {t('report.som')}
+                    {totals.expenses_total.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b">
-                    {totals.totalIncome.toLocaleString()} {t('report.som')}
+                    {totals.total_income.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b">
-                    {totals.totalCash.toLocaleString()} {t('report.som')}
+                    {totals.end_balance.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b">
-                    {totals.totalOptima.toLocaleString()} {t('report.som')}
+                    {totals.bank_payments_total.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b">
-                    {totals.totalMBank.toLocaleString()} {t('report.som')}
-                  </td>
-                  <td className="px-4 py-3 text-right border-b">
-                    {totals.totalMBusiness.toLocaleString()} {t('report.som')}
-                  </td>
-                  <td className="px-4 py-3 text-right border-b">
-                    {totals.totalDemir.toLocaleString()} {t('report.som')}
-                  </td>
-                  <td className="px-4 py-3 text-right border-b">
-                    {totals.totalBakai.toLocaleString()} {t('report.som')}
-                  </td>
-                  <td className="px-4 py-3 text-right border-b">
-                    {totals.totalOBank.toLocaleString()} {t('report.som')}
-                  </td>
-                  <td className="px-4 py-3 text-right border-b">
-                    {totals.totalCollection.toLocaleString()} {t('report.som')}
+                    {totals.cash_collection.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 text-right border-b text-purple-600">
-                    {totals.totalSalaryPayments.toLocaleString()} {t('report.som')}
+                    {totals.salary_payments.toLocaleString()} {t('report.som')}
                   </td>
                   <td className="px-4 py-3 border-b"></td>
                 </tr>

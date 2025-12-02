@@ -76,9 +76,14 @@ const CreateServiceBtn = () => {
 
     const createMutation = useMutation({
         mutationFn: async (service: Omit<any, 'id' | 'createdAt'>) => {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services`, {
+            const token = localStorage.getItem('auth_token');
+            
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/services`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` })
+                },
                 body: JSON.stringify({
                     name: service.name,
                     description: service.description,

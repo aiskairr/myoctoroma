@@ -31,45 +31,23 @@ const CalendarScreen = () => {
 
     // Слушаем изменения URL и обновляем дату
     useEffect(() => {
-        const handleUrlChange = () => {
-            const newDate = getDateFromUrl();
-            console.log('📅 URL changed, new date:', newDate.toISOString(), 'current selectedDate:', selectedDate.toISOString());
-            if (newDate.getTime() !== selectedDate.getTime()) {
-                console.log('📅 Setting new selectedDate');
-                setSelectedDate(newDate);
-            }
-        };
-
-        // Обновляем дату при изменении URL
-        handleUrlChange();
-
         // Слушаем события навигации браузера (назад/вперед)
         const handlePopState = () => {
             console.log('📅 popstate event');
-            handleUrlChange();
+            const newDate = getDateFromUrl();
+            console.log('📅 URL changed via popstate, new date:', newDate.toISOString());
+            setSelectedDate(newDate);
         };
 
         window.addEventListener('popstate', handlePopState);
-        
+
         return () => {
             window.removeEventListener('popstate', handlePopState);
         };
     }, []);
 
-    // Периодическая проверка изменений URL (для случаев программного изменения)
-    useEffect(() => {
-        const checkUrlPeriodically = () => {
-            const newDate = getDateFromUrl();
-            if (newDate.getTime() !== selectedDate.getTime()) {
-                console.log('📅 Periodic check: URL date changed from', selectedDate.toISOString(), 'to', newDate.toISOString());
-                setSelectedDate(newDate);
-            }
-        };
-
-        const interval = setInterval(checkUrlPeriodically, 500); // Проверяем каждые 500мс
-        
-        return () => clearInterval(interval);
-    }, [selectedDate]);
+    // Убрали периодическую проверку - она вызывала бесконечный цикл
+    // URL изменения отслеживаются через popstate выше
 
     return (
         <div>

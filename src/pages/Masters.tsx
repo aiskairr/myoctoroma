@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiGetJson } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +20,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from '@/contexts/SimpleAuthContext';
+import { salaryService } from '@/services/salary-service';
 
 // Интерфейс для рабочей даты
 interface WorkingDate {
@@ -55,6 +58,9 @@ interface Master {
   createAccount?: boolean;
   accountEmail?: string;
   accountPassword?: string;
+  // Поля для зарплаты
+  baseSalary?: number;
+  commissionRate?: number;
 }
 
 // Интерфейс для администратора
@@ -72,6 +78,9 @@ interface Administrator {
   createAccount?: boolean;
   accountEmail?: string;
   accountPassword?: string;
+  // Поля для зарплаты
+  baseSalary?: number;
+  commissionRate?: number;
 }
 
 // Компонент формы мастера
@@ -80,8 +89,11 @@ const MasterForm: React.FC<{
   onSubmit: (data: Partial<Master>) => void;
   isPending: boolean;
   branchUsers?: BranchUser[];
-}> = ({ master, onSubmit, isPending, branchUsers }) => {
+  onDelete?: (masterId: number) => void;
+  isDeleting?: boolean;
+}> = ({ master, onSubmit, isPending, branchUsers, onDelete, isDeleting }) => {
   const { t } = useLocale();
+  const { currentBranch } = useBranch();
   const [formData, setFormData] = useState({
     name: master?.name || '',
     specialty: master?.specialty || '',
@@ -89,12 +101,14 @@ const MasterForm: React.FC<{
     isActive: master?.isActive ?? true,
     startWorkHour: master?.startWorkHour || '09:00',
     endWorkHour: master?.endWorkHour || '20:00',
+    baseSalary: master?.baseSalary || 10000,
+    commissionRate: master?.commissionRate || 0.1,
   });
 
   const [accountData, setAccountData] = useState({
     email: '',
     password: '',
-    createAccount: false
+    createAccount: !master // Автоматически включаем для новых сотрудников
   });
 
   const [workingDates, setWorkingDates] = useState<WorkingDate[]>(master?.workingDates || []);
@@ -102,18 +116,12 @@ const MasterForm: React.FC<{
   // Прогресс заполнения формы
   const [formProgress, setFormProgress] = useState(0);
 
-  // Поиск пользователя в данных из нового эндпоинта
-  const userAccountData = useMemo(() => {
-    if (!master?.name || !branchUsers) return null;
-    return findUserByName(branchUsers, master.name);
-  }, [master?.name, branchUsers]);
-
   // Загрузка рабочих дат при редактировании, если они не предоставлены
   const { data: fetchedWorkingDates, isLoading: isLoadingDates } = useQuery({
     queryKey: ['working-dates', master?.id],
     queryFn: async () => {
       if (!master) return [];
-      return await apiGetJson(`/api/masters/${master.id}/working-dates`);
+      return await apiGetJson(`/working-dates`);
     },
     enabled: !!master && (!master.workingDates || master.workingDates.length === 0),
   });
@@ -154,19 +162,43 @@ const MasterForm: React.FC<{
     setAccountData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCreateAccountToggle = (checked: boolean) => {
-    if (checked && userAccountData) {
-      setAccountData({
-        createAccount: true,
-        email: userAccountData.email || '',
-        password: '' // Пароль не приходит из API для безопасности
-      });
-    } else {
+  const handleCreateAccountToggle = async (checked: boolean) => {
+    if (checked) {
+      // При включении toggle: отправляем запрос на получение данных пользователя
+      if (currentBranch?.id) {
+        try {
+          const result = await apiGetJson(`/api/crm/reception-master/user/${currentBranch.id}`);
+          if (result && result.data && Array.isArray(result.data)) {
+            // Ищем пользователя по имени мастера
+            const foundUser = result.data.find((user: BranchUser) => 
+              user.username.toLowerCase().trim() === formData.name.toLowerCase().trim()
+            );
+            
+            if (foundUser) {
+              // Если найден пользователь, заполняем поля
+              setAccountData({
+                createAccount: true,
+                email: foundUser.email || '',
+                password: ''
+              });
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Ошибка при загрузке данных пользователя:', error);
+        }
+      }
+      
+      // Если пользователь не найден или запрос не выполнен, просто включаем toggle
       setAccountData((prev) => ({
         ...prev,
-        createAccount: checked,
-        email: checked ? prev.email : '',
-        password: checked ? prev.password : ''
+        createAccount: true
+      }));
+    } else {
+      // При отключении toggle: очищаем поля
+      setAccountData((prev) => ({
+        ...prev,
+        createAccount: false
       }));
     }
   };
@@ -203,9 +235,9 @@ const MasterForm: React.FC<{
       {/* Основная информация */}
       <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-gray-900">Основная информация</h3>
+          <h3 className="text-xl font-semibold text-gray-900">{t('masters.main_information')}</h3>
           <Badge variant="outline" className="text-indigo-600 border-indigo-200">
-            {master ? 'Редактирование' : 'Создание'}
+            {master ? t('masters.editing') : t('masters.creation')}
           </Badge>
         </div>
         <Separator />
@@ -233,7 +265,7 @@ const MasterForm: React.FC<{
               value={formData.specialty}
               onChange={handleChange}
               className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              placeholder="Массажист, тренер и т.д."
+              placeholder={t('masters.specialty_placeholder')}
             />
           </div>
           <div className="grid grid-cols-4 items-start gap-4">
@@ -246,7 +278,7 @@ const MasterForm: React.FC<{
               value={formData.description}
               onChange={handleChange}
               className="col-span-3 min-h-[120px] rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              placeholder="Дополнительная информация о мастере"
+              placeholder={t('masters.additional_info_placeholder')}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
@@ -262,7 +294,7 @@ const MasterForm: React.FC<{
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="workHours" className="col-span-1 text-sm font-medium text-gray-700">
-              Время работы
+              {t('masters.work_time')}
             </Label>
             <div className="col-span-3 flex items-center space-x-3">
               <Input
@@ -273,7 +305,7 @@ const MasterForm: React.FC<{
                 onChange={handleChange}
                 className="w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
               />
-              <span className="text-gray-500">до</span>
+              <span className="text-gray-500">{t('masters.until')}</span>
               <Input
                 id="endWorkHour"
                 name="endWorkHour"
@@ -283,9 +315,56 @@ const MasterForm: React.FC<{
                 className="w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
               />
               <span className="text-xs text-gray-500 ml-2">
-                (по умолчанию)
+                {t('masters.by_default')}
               </span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Настройки зарплаты */}
+      <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-gray-900">💰 Настройки зарплаты</h3>
+          <Badge variant="outline" className="text-green-600 border-green-200">
+            По умолчанию
+          </Badge>
+        </div>
+        <Separator />
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="baseSalary" className="col-span-1 text-sm font-medium text-gray-700">
+              Базовая зарплата (сом)
+            </Label>
+            <Input
+              id="baseSalary"
+              name="baseSalary"
+              type="number"
+              value={formData.baseSalary}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              min="0"
+              step="1000"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="commissionRate" className="col-span-1 text-sm font-medium text-gray-700">
+              Процент комиссии (0.1 = 10%)
+            </Label>
+            <Input
+              id="commissionRate"
+              name="commissionRate"
+              type="number"
+              value={formData.commissionRate}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              min="0"
+              max="1"
+              step="0.01"
+            />
+          </div>
+          <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
+            <strong>Подсказка:</strong> Базовая зарплата - фиксированная часть. Процент комиссии применяется к сумме выполненных услуг. Например: 0.1 означает 10% комиссии.
           </div>
         </div>
       </div>
@@ -294,68 +373,73 @@ const MasterForm: React.FC<{
       <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-semibold text-gray-900">
-            {master && userAccountData ? 'Редактировать аккаунт' : t('masters.create_account')}
+            {t('masters.create_account')}
+            {!master && <span className="text-red-500 ml-2">*</span>}
           </h3>
-          <Switch
-            checked={accountData.createAccount}
-            onCheckedChange={handleCreateAccountToggle}
-            className="data-[state=checked]:bg-indigo-600"
-          />
+          {master && (
+            <Switch
+              checked={accountData.createAccount}
+              onCheckedChange={handleCreateAccountToggle}
+              className="data-[state=checked]:bg-indigo-600"
+            />
+          )}
         </div>
         <Separator />
-
-        {master && userAccountData && !accountData.createAccount && (
-          <div className="p-4 bg-green-50 rounded-lg border border-green-200 transition-all duration-200">
-            <p className="text-sm font-medium text-green-800 mb-2">Аккаунт существует (новый эндпоинт):</p>
-            <div className="space-y-1 text-sm text-gray-600">
-              <p><strong>Логин:</strong> {userAccountData.username}</p>
-              <p><strong>Email:</strong> {userAccountData.email}</p>
-              <p><strong>Роль:</strong> {userAccountData.role}</p>
-              <p><strong>ID:</strong> {userAccountData.id}</p>
-              <p><strong>Филиал:</strong> {userAccountData.branchId}</p>
-            </div>
-          </div>
+        {!master && !accountData.createAccount && (
+          <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
+            Email и пароль обязательны для создания нового сотрудника
+          </p>
         )}
+
         {accountData.createAccount && (
           <div className="space-y-5 p-4 bg-blue-50 rounded-lg border border-blue-200 transition-all duration-200">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="accountEmail" className="col-span-1 text-sm font-medium text-gray-700">
-                {t('masters.email')}
+                {t('masters.email')} {!master && <span className="text-red-500">*</span>}
               </Label>
-              <Input
-                id="accountEmail"
-                name="email"
-                type="email"
-                value={accountData.email}
-                onChange={handleAccountDataChange}
-                className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                placeholder="email@example.com"
-                required={accountData.createAccount}
-              />
+              <div className="col-span-3 space-y-2">
+                <Input
+                  id="accountEmail"
+                  name="email"
+                  type="email"
+                  value={accountData.email}
+                  onChange={handleAccountDataChange}
+                  className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                  placeholder="email@example.com"
+                  required={accountData.createAccount}
+                />
+                {accountData.email && (
+                  <p className="text-xs text-blue-600">
+                    Заполнено: <strong>{accountData.email}</strong>
+                  </p>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="accountPassword" className="col-span-1 text-sm font-medium text-gray-700">
-                {t('masters.password')}
+                {t('masters.password')} {!master && <span className="text-red-500">*</span>}
               </Label>
-              <Input
-                id="accountPassword"
-                name="password"
-                type="password"
-                value={accountData.password}
-                onChange={handleAccountDataChange}
-                className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                placeholder={userAccountData ? "Введите новый пароль" : "Введите пароль"}
-                required={accountData.createAccount}
-              />
+              <div className="col-span-3 space-y-2">
+                <Input
+                  id="accountPassword"
+                  name="password"
+                  type="password"
+                  value={accountData.password}
+                  onChange={handleAccountDataChange}
+                  className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                  placeholder="Введите пароль"
+                  required={accountData.createAccount}
+                />
+                <p className="text-xs text-blue-600">
+                  Пароль из системы не отображается в целях безопасности. Введите пароль для аккаунта.
+                </p>
+              </div>
             </div>
             <div className="p-3 bg-white rounded-lg border border-blue-200">
               <div className="space-y-1 text-sm text-gray-600">
-                <p><strong>Логин:</strong> {userAccountData ? userAccountData.username : formData.name}</p>
+                <p><strong>Логин:</strong> {formData.name || 'Заполните имя мастера выше'}</p>
                 <p><strong>Роль:</strong> master</p>
-                <p><strong>Филиал:</strong> {master?.id ? `ID: ${master.id}` : 'Будет установлен после создания'}</p>
-                {userAccountData && (
-                  <p className="text-green-600 mt-2">✓ Аккаунт уже существует, редактируете данные</p>
-                )}
+                <p><strong>Филиал:</strong> {currentBranch?.id ? `ID: ${currentBranch.id}` : 'Филиал не выбран'}</p>
               </div>
             </div>
           </div>
@@ -364,13 +448,356 @@ const MasterForm: React.FC<{
 
       {/* Рабочие даты */}
       <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-        <h3 className="text-xl font-semibold text-gray-900">Рабочие дни и часы</h3>
+        <h3 className="text-xl font-semibold text-gray-900">{t('masters.working_days_hours')}</h3>
         <Separator />
         <MasterWorkingDatesManager
           workingDates={workingDates}
           onWorkingDatesChange={handleWorkingDatesChange}
           masterId={master?.id}
         />
+      </div>
+
+      <DialogFooter className="mt-8 flex justify-between items-center">
+        <div>
+          {master && onDelete && (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (window.confirm(`Вы уверены, что хотите удалить мастера "${master.name}"? Это действие удалит также его аккаунт в системе.`)) {
+                  onDelete(master.id);
+                }
+              }}
+              disabled={isDeleting || isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <X className="h-4 w-4 mr-2" />}
+              {t('masters.delete_action')}
+            </Button>
+          )}
+        </div>
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => window.dispatchEvent(new Event('close-dialog'))}
+            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            {t('masters.cancel')}
+          </Button>
+          <Button
+            type="submit"
+            disabled={
+              isPending || 
+              isDeleting || 
+              !formData.name.trim() ||
+              (!master && (!accountData.email.trim() || !accountData.password.trim()))
+            }
+            className="bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200"
+          >
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            {master ? t('masters.save') : t('masters.add_master')}
+          </Button>
+        </div>
+      </DialogFooter>
+    </form>
+  );
+};
+
+// Упрощённая форма мастера для добавления (без аккаунта и рабочих дат)
+const MasterFormSimple: React.FC<{
+  onSubmit: (data: Partial<Master>) => void;
+  isPending: boolean;
+}> = ({ onSubmit, isPending }) => {
+  const { t } = useLocale();
+  const [formData, setFormData] = useState({
+    username: '',
+    firstname: '',
+    lastname: '',
+    name: '',
+    specialty: '',
+    description: '',
+    isActive: true,
+    startWorkHour: '09:00',
+    endWorkHour: '20:00',
+    baseSalary: 10000,
+    commissionRate: 0.1,
+  });
+
+  const [accountData, setAccountData] = useState({
+    email: '',
+    password: '',
+  });
+
+  const [formProgress, setFormProgress] = useState(0);
+
+  // Обновление прогресса заполнения формы
+  useEffect(() => {
+    const fields = [
+      formData.username,
+      formData.firstname,
+      formData.lastname,
+      formData.name,
+      formData.specialty,
+      formData.description,
+      formData.startWorkHour,
+      formData.endWorkHour,
+      accountData.email,
+      accountData.password,
+    ];
+    const filledFields = fields.filter(field => field && typeof field === 'string' ? field.trim() !== '' : true).length;
+    const progress = Math.round((filledFields / fields.length) * 100);
+    setFormProgress(progress);
+  }, [formData, accountData]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAccountDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setAccountData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSwitchChange = (checked: boolean) => {
+    setFormData((prev) => ({ ...prev, isActive: checked }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      ...formData,
+      createAccount: true,
+      accountEmail: accountData.email,
+      accountPassword: accountData.password
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Прогресс заполнения формы */}
+      <div className="relative">
+        <Progress value={formProgress} className="h-2 bg-gray-100" />
+      </div>
+
+      {/* Основная информация */}
+      <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-gray-900">{t('masters.main_information')}</h3>
+          <Badge variant="outline" className="text-indigo-600 border-indigo-200">
+            {t('masters.creation')}
+          </Badge>
+        </div>
+        <Separator />
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="username-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              username <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="username-simple"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="firstname-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              firstname <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="firstname-simple"
+              name="firstname"
+              value={formData.firstname}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="lastname-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              lastname <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="lastname-simple"
+              name="lastname"
+              value={formData.lastname}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="name-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.name')} <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="name-simple"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="specialty-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.specialty')}
+            </Label>
+            <Input
+              id="specialty-simple"
+              name="specialty"
+              value={formData.specialty}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              placeholder={t('masters.specialty_placeholder')}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label htmlFor="description-simple" className="col-span-1 pt-2 text-sm font-medium text-gray-700">
+              {t('masters.description')}
+            </Label>
+            <Textarea
+              id="description-simple"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              className="col-span-3 min-h-[120px] rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              placeholder={t('masters.additional_info_placeholder')}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="isActive-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.active')}
+            </Label>
+            <Switch
+              id="isActive-simple"
+              checked={formData.isActive}
+              onCheckedChange={handleSwitchChange}
+              className="col-span-3"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="workHours-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.work_time')}
+            </Label>
+            <div className="col-span-3 flex items-center space-x-3">
+              <Input
+                id="startWorkHour-simple"
+                name="startWorkHour"
+                type="time"
+                value={formData.startWorkHour}
+                onChange={handleChange}
+                className="w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              />
+              <span className="text-gray-500">{t('masters.until')}</span>
+              <Input
+                id="endWorkHour-simple"
+                name="endWorkHour"
+                type="time"
+                value={formData.endWorkHour}
+                onChange={handleChange}
+                className="w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              />
+              <span className="text-xs text-gray-500 ml-2">
+                {t('masters.by_default')}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Настройки зарплаты */}
+      <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-gray-900">💰 Настройки зарплаты</h3>
+          <Badge variant="outline" className="text-green-600 border-green-200">
+            По умолчанию
+          </Badge>
+        </div>
+        <Separator />
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="baseSalary-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              Базовая зарплата (сом)
+            </Label>
+            <Input
+              id="baseSalary-simple"
+              name="baseSalary"
+              type="number"
+              value={formData.baseSalary}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              min="0"
+              step="1000"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="commissionRate-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              Процент комиссии (0.1 = 10%)
+            </Label>
+            <Input
+              id="commissionRate-simple"
+              name="commissionRate"
+              type="number"
+              value={formData.commissionRate}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              min="0"
+              max="1"
+              step="0.01"
+            />
+          </div>
+          <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
+            <strong>Подсказка:</strong> Базовая зарплата - фиксированная часть. Процент комиссии применяется к сумме выполненных услуг. Например: 0.1 означает 10% комиссии.
+          </div>
+        </div>
+      </div>
+
+      {/* Данные для создания аккаунта */}
+      <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-gray-900">{t('masters.create_account')}</h3>
+        </div>
+        <Separator />
+        <div className="space-y-5 p-4 bg-blue-50 rounded-lg border border-blue-200 transition-all duration-200">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="accountEmail-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.email')} <span className="text-red-500">*</span>
+            </Label>
+            <div className="col-span-3 space-y-2">
+              <Input
+                id="accountEmail-simple"
+                name="email"
+                type="email"
+                value={accountData.email}
+                onChange={handleAccountDataChange}
+                className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                placeholder="email@example.com"
+                required
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="accountPassword-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.password')} <span className="text-red-500">*</span>
+            </Label>
+            <div className="col-span-3 space-y-2">
+              <Input
+                id="accountPassword-simple"
+                name="password"
+                type="password"
+                value={accountData.password}
+                onChange={handleAccountDataChange}
+                className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                placeholder="Введите пароль"
+                required
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <DialogFooter className="mt-8 flex justify-between">
@@ -383,11 +810,19 @@ const MasterForm: React.FC<{
         </Button>
         <Button
           type="submit"
-          disabled={isPending || !formData.name.trim()}
+          disabled={
+            isPending ||
+            !formData.username.trim() ||
+            !formData.firstname.trim() ||
+            !formData.lastname.trim() ||
+            !formData.name.trim() ||
+            !accountData.email.trim() ||
+            !accountData.password.trim()
+          }
           className="bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200"
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-          {master ? t('masters.save') : t('masters.add_master')}
+          {t('masters.add_master')}
         </Button>
       </DialogFooter>
     </form>
@@ -403,9 +838,10 @@ const MasterCard: React.FC<{
   onImageUpload: (masterId: number, event: React.ChangeEvent<HTMLInputElement>) => void;
   isUploading: boolean;
 }> = ({ master, onEditClick, onDeleteClick, onScheduleClick, onImageUpload, isUploading }) => {
+  const { t } = useLocale();
   return (
     <Card
-      className={`relative overflow-hidden transition-all duration-300 ${!master.isActive ? 'opacity-80 bg-gray-50' : 'bg-white'
+      className={`relative overflow-hidden transition-all duration-300 ${!(master as any).isActive && (master as any).is_active === false ? 'opacity-80 bg-gray-50' : 'bg-white'
         } hover:shadow-lg border-none shadow-sm min-w-[300px] max-w-full`}
     >
       <CardHeader className="pb-4">
@@ -441,12 +877,12 @@ const MasterCard: React.FC<{
             <div>
               <CardTitle className="text-lg font-semibold text-gray-900 flex items-center">
                 {master.name}
-                {!master.isActive && (
+                {(((master as any).isActive === false) || ((master as any).is_active === false)) && (
                   <Badge
                     variant="secondary"
                     className="ml-2 bg-gray-200 text-gray-700 hover:bg-gray-300"
                   >
-                    Неактивен
+                    {t('masters.inactive')}
                   </Badge>
                 )}
               </CardTitle>
@@ -484,7 +920,7 @@ const MasterCard: React.FC<{
             className="text-gray-600 border-gray-200 hover:bg-gray-50 min-w-[100px] text-sm"
           >
             <EditIcon className="h-4 w-4 mr-2" />
-            Настроить
+            {t('masters.configure')}
           </Button>
           <Button
             variant="destructive"
@@ -493,7 +929,7 @@ const MasterCard: React.FC<{
             className="bg-red-600 hover:bg-red-700 min-w-[100px] text-sm"
           >
             <X className="h-4 w-4 mr-2" />
-            Удалить
+            {t('masters.delete_action')}
           </Button>
         </div>
       </CardFooter>
@@ -507,7 +943,9 @@ const AdministratorForm: React.FC<{
   onSubmit: (data: Partial<Administrator>) => void;
   isPending: boolean;
   branchUsers?: BranchUser[];
-}> = ({ administrator, onSubmit, isPending, branchUsers }) => {
+  onDelete?: (administratorId: number) => void;
+  isDeleting?: boolean;
+}> = ({ administrator, onSubmit, isPending, branchUsers, onDelete, isDeleting }) => {
   const { t } = useLocale();
   const { currentBranch } = useBranch();
   const [formData, setFormData] = useState({
@@ -517,7 +955,9 @@ const AdministratorForm: React.FC<{
     phoneNumber: administrator?.phoneNumber || '',
     email: administrator?.email || '',
     notes: administrator?.notes || '',
-    isActive: administrator?.isActive ?? true
+    isActive: administrator?.isActive ?? true,
+    baseSalary: administrator?.baseSalary || 15000,
+    commissionRate: administrator?.commissionRate || 0.05,
   });
 
   const [accountData, setAccountData] = useState({
@@ -528,12 +968,6 @@ const AdministratorForm: React.FC<{
 
   // Прогресс заполнения формы
   const [formProgress, setFormProgress] = useState(0);
-
-  // Поиск пользователя в данных из нового эндпоинта
-  const userAccountData = useMemo(() => {
-    if (!administrator?.name || !branchUsers) return null;
-    return findUserByName(branchUsers, administrator.name);
-  }, [administrator?.name, branchUsers]);
 
   // Обновление прогресса заполнения формы
   useEffect(() => {
@@ -565,20 +999,36 @@ const AdministratorForm: React.FC<{
     setAccountData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCreateAccountToggle = (checked: boolean) => {
-    if (checked && userAccountData) {
-      setAccountData({
-        createAccount: true,
-        email: userAccountData.email || '',
-        password: '' // Пароль не приходит из API для безопасности
-      });
+  const handleCreateAccountToggle = async (checked: boolean) => {
+    if (checked) {
+      // При включении toggle: отправляем запрос на получение данных пользователя
+      if (currentBranch?.id) {
+        try {
+          const result = await apiGetJson(`/api/crm/reception-master/user/${currentBranch.id}`);
+          if (result && result.data && Array.isArray(result.data)) {
+            // Ищем пользователя по имени администратора
+            const foundUser = result.data.find((user: BranchUser) => 
+              user.username.toLowerCase().trim() === formData.name.toLowerCase().trim()
+            );
+            
+            if (foundUser) {
+              // Если найден пользователь, заполняем поля
+              setAccountData({
+                createAccount: true,
+                email: foundUser.email || '',
+                password: ''
+              });
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Ошибка при загрузке данных пользователя:', error);
+        }
+      }
+      // Если пользователь не найден или произошла ошибка, просто включаем toggle
+      setAccountData((prev) => ({...prev, createAccount: true}));
     } else {
-      setAccountData((prev) => ({
-        ...prev,
-        createAccount: checked,
-        email: checked ? prev.email : '',
-        password: checked ? prev.password : ''
-      }));
+      setAccountData((prev) => ({...prev, createAccount: false}));
     }
   };
 
@@ -605,9 +1055,9 @@ const AdministratorForm: React.FC<{
       {/* Основная информация */}
       <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-gray-900">Основная информация</h3>
+          <h3 className="text-xl font-semibold text-gray-900">{t('masters.basic_info')}</h3>
           <Badge variant="outline" className="text-indigo-600 border-indigo-200">
-            {administrator ? 'Редактирование' : 'Создание'}
+            {administrator ? t('masters.editing') : t('masters.creating')}
           </Badge>
         </div>
         <Separator />
@@ -627,7 +1077,7 @@ const AdministratorForm: React.FC<{
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="admin-role" className="col-span-1 text-sm font-medium text-gray-700">
-              Роль
+              {t('masters.role')}
             </Label>
             <Input
               id="admin-role"
@@ -635,12 +1085,12 @@ const AdministratorForm: React.FC<{
               value={formData.role}
               onChange={handleChange}
               className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              placeholder="администратор"
+              placeholder={t('masters.role_placeholder')}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="admin-phone" className="col-span-1 text-sm font-medium text-gray-700">
-              Телефон
+              {t('masters.phone')}
             </Label>
             <Input
               id="admin-phone"
@@ -648,12 +1098,12 @@ const AdministratorForm: React.FC<{
               value={formData.phoneNumber}
               onChange={handleChange}
               className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              placeholder="+7-777-123-4567"
+              placeholder={t('masters.phone_placeholder')}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="admin-email" className="col-span-1 text-sm font-medium text-gray-700">
-              Email
+              {t('masters.email')}
             </Label>
             <Input
               id="admin-email"
@@ -662,12 +1112,12 @@ const AdministratorForm: React.FC<{
               value={formData.email}
               onChange={handleChange}
               className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              placeholder="admin@tamgaspa.com"
+              placeholder={t('masters.email_placeholder')}
             />
           </div>
           <div className="grid grid-cols-4 items-start gap-4">
             <Label htmlFor="admin-notes" className="col-span-1 pt-2 text-sm font-medium text-gray-700">
-              Заметки
+              {t('masters.notes')}
             </Label>
             <Textarea
               id="admin-notes"
@@ -675,12 +1125,12 @@ const AdministratorForm: React.FC<{
               value={formData.notes}
               onChange={handleChange}
               className="col-span-3 min-h-[120px] rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              placeholder="Дополнительная информация об администраторе"
+              placeholder={t('masters.notes_placeholder')}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="admin-isActive" className="col-span-1 text-sm font-medium text-gray-700">
-              Активный
+              {t('masters.is_active')}
             </Label>
             <Switch
               id="admin-isActive"
@@ -692,11 +1142,58 @@ const AdministratorForm: React.FC<{
         </div>
       </div>
 
+      {/* Настройки зарплаты */}
+      <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-gray-900">💰 Настройки зарплаты</h3>
+          <Badge variant="outline" className="text-green-600 border-green-200">
+            По умолчанию
+          </Badge>
+        </div>
+        <Separator />
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-baseSalary" className="col-span-1 text-sm font-medium text-gray-700">
+              Базовая зарплата (сом)
+            </Label>
+            <Input
+              id="admin-baseSalary"
+              name="baseSalary"
+              type="number"
+              value={formData.baseSalary}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              min="0"
+              step="1000"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-commissionRate" className="col-span-1 text-sm font-medium text-gray-700">
+              Процент комиссии (0.1 = 10%)
+            </Label>
+            <Input
+              id="admin-commissionRate"
+              name="commissionRate"
+              type="number"
+              value={formData.commissionRate}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              min="0"
+              max="1"
+              step="0.01"
+            />
+          </div>
+          <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
+            <strong>Подсказка:</strong> Базовая зарплата - фиксированная часть. Процент комиссии применяется к сумме выполненных услуг. Например: 0.05 означает 5% комиссии.
+          </div>
+        </div>
+      </div>
+
       {/* Область создания аккаунта */}
       <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-semibold text-gray-900">
-            {administrator && userAccountData ? 'Редактировать аккаунт' : 'Создать аккаунт'}
+            {t('masters.create_account')}
           </h3>
           <Switch
             checked={accountData.createAccount}
@@ -706,62 +1203,399 @@ const AdministratorForm: React.FC<{
         </div>
         <Separator />
 
-        {administrator && userAccountData && !accountData.createAccount && (
-          <div className="p-4 bg-green-50 rounded-lg border border-green-200 transition-all duration-200">
-            <p className="text-sm font-medium text-green-800 mb-2">Аккаунт существует (новый эндпоинт):</p>
-            <div className="space-y-1 text-sm text-gray-600">
-              <p><strong>Логин:</strong> {userAccountData.username}</p>
-              <p><strong>Email:</strong> {userAccountData.email}</p>
-              <p><strong>Роль:</strong> {userAccountData.role}</p>
-              <p><strong>ID:</strong> {userAccountData.id}</p>
-              <p><strong>Филиал:</strong> {userAccountData.branchId}</p>
-            </div>
-          </div>
-        )}
         {accountData.createAccount && (
           <div className="space-y-5 p-4 bg-blue-50 rounded-lg border border-blue-200 transition-all duration-200">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="admin-accountEmail" className="col-span-1 text-sm font-medium text-gray-700">
-                Email
+                {t('masters.email')}
               </Label>
-              <Input
-                id="admin-accountEmail"
-                name="email"
-                type="email"
-                value={accountData.email}
-                onChange={handleAccountDataChange}
-                className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                placeholder="email@example.com"
-                required={accountData.createAccount}
-              />
+              <div className="col-span-3 space-y-2">
+                <Input
+                  id="admin-accountEmail"
+                  name="email"
+                  type="email"
+                  value={accountData.email}
+                  onChange={handleAccountDataChange}
+                  className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                  placeholder="email@example.com"
+                  required={accountData.createAccount}
+                />
+                {accountData.email && (
+                  <p className="text-xs text-blue-600">
+                    Заполнено: <strong>{accountData.email}</strong>
+                  </p>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="admin-accountPassword" className="col-span-1 text-sm font-medium text-gray-700">
-                Пароль
+                {t('masters.password')}
               </Label>
-              <Input
-                id="admin-accountPassword"
-                name="password"
-                type="password"
-                value={accountData.password}
-                onChange={handleAccountDataChange}
-                className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                placeholder={userAccountData ? "Введите новый пароль" : "Введите пароль"}
-                required={accountData.createAccount}
-              />
+              <div className="col-span-3 space-y-2">
+                <Input
+                  id="admin-accountPassword"
+                  name="password"
+                  type="password"
+                  value={accountData.password}
+                  onChange={handleAccountDataChange}
+                  className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                  placeholder="Введите пароль"
+                  required={accountData.createAccount}
+                />
+                <p className="text-xs text-blue-600">
+                  Пароль из системы не отображается в целях безопасности. Введите пароль для аккаунта.
+                </p>
+              </div>
             </div>
             <div className="p-3 bg-white rounded-lg border border-blue-200">
               <div className="space-y-1 text-sm text-gray-600">
-                <p><strong>Логин:</strong> {userAccountData ? userAccountData.username : formData.name}</p>
+                <p><strong>Логин:</strong> {formData.name || 'Заполните имя администратора выше'}</p>
                 <p><strong>Роль:</strong> reception</p>
-                <p><strong>Филиал:</strong> {administrator?.id ? `ID: ${administrator.id}` : 'Будет установлен после создания'}</p>
-                {userAccountData && (
-                  <p className="text-green-600 mt-2">✓ Аккаунт уже существует, редактируете данные</p>
-                )}
+                <p><strong>Филиал:</strong> {currentBranch?.id ? `ID: ${currentBranch.id}` : 'Филиал не выбран'}</p>
               </div>
             </div>
           </div>
         )}
+      </div>
+
+      <DialogFooter className="mt-8 flex justify-between items-center">
+        <div>
+          {administrator && onDelete && (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (window.confirm(`Вы уверены, что хотите удалить администратора "${administrator.name}"? Это действие удалит также его аккаунт в системе.`)) {
+                  onDelete(administrator.id);
+                }
+              }}
+              disabled={isDeleting || isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <X className="h-4 w-4 mr-2" />}
+              {t('masters.delete_action')}
+            </Button>
+          )}
+        </div>
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={() => window.dispatchEvent(new Event('close-dialog'))}
+            className="border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            {t('masters.cancel')}
+          </Button>
+          <Button
+            type="submit"
+            disabled={isPending || isDeleting || !formData.name.trim()}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200"
+          >
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            {administrator ? t('masters.save_changes') : t('masters.add_administrator')}
+          </Button>
+        </div>
+      </DialogFooter>
+    </form>
+  );
+};
+
+// Упрощённая форма администратора для добавления (без аккаунта)
+const AdministratorFormSimple: React.FC<{
+  onSubmit: (data: Partial<Administrator>) => void;
+  isPending: boolean;
+}> = ({ onSubmit, isPending }) => {
+  const { t } = useLocale();
+  const { currentBranch } = useBranch();
+  const [formData, setFormData] = useState({
+    username: '',
+    firstname: '',
+    lastname: '',
+    name: '',
+    role: 'администратор',
+    branchId: currentBranch?.id?.toString() || '',
+    phoneNumber: '',
+    email: '',
+    notes: '',
+    isActive: true,
+    baseSalary: 15000,
+    commissionRate: 0.05,
+  });
+
+  const [accountData, setAccountData] = useState({
+    email: '',
+    password: '',
+  });
+
+  const [formProgress, setFormProgress] = useState(0);
+
+  // Обновление прогресса заполнения формы
+  useEffect(() => {
+    const fields = [
+      formData.username,
+      formData.firstname,
+      formData.lastname,
+      formData.name,
+      formData.role,
+      formData.phoneNumber,
+      formData.email,
+      formData.notes,
+      accountData.email,
+      accountData.password,
+    ];
+    const filledFields = fields.filter(field => field && typeof field === 'string' ? field.trim() !== '' : true).length;
+    const progress = Math.round((filledFields / fields.length) * 100);
+    setFormProgress(progress);
+  }, [formData, accountData]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAccountDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setAccountData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSwitchChange = (checked: boolean) => {
+    setFormData((prev) => ({ ...prev, isActive: checked }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({
+      ...formData,
+      createAccount: true,
+      accountEmail: accountData.email,
+      accountPassword: accountData.password
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Прогресс заполнения формы */}
+      <div className="relative">
+        <Progress value={formProgress} className="h-2 bg-gray-100" />
+      </div>
+
+      {/* Основная информация */}
+      <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-gray-900">{t('masters.basic_info')}</h3>
+          <Badge variant="outline" className="text-indigo-600 border-indigo-200">
+            {t('masters.creating')}
+          </Badge>
+        </div>
+        <Separator />
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-username-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              username <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="admin-username-simple"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-firstname-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              firstname <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="admin-firstname-simple"
+              name="firstname"
+              value={formData.firstname}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-lastname-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              lastname <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="admin-lastname-simple"
+              name="lastname"
+              value={formData.lastname}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-name-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.name')} <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="admin-name-simple"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-role-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.role')}
+            </Label>
+            <Input
+              id="admin-role-simple"
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              placeholder={t('masters.role_placeholder')}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-phone-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.phone')}
+            </Label>
+            <Input
+              id="admin-phone-simple"
+              name="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              placeholder={t('masters.phone_placeholder')}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-email-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.email')}
+            </Label>
+            <Input
+              id="admin-email-simple"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              placeholder={t('masters.email_placeholder')}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label htmlFor="admin-notes-simple" className="col-span-1 pt-2 text-sm font-medium text-gray-700">
+              {t('masters.notes')}
+            </Label>
+            <Textarea
+              id="admin-notes-simple"
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              className="col-span-3 min-h-[120px] rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              placeholder={t('masters.notes_placeholder')}
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-isActive-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.is_active')}
+            </Label>
+            <Switch
+              id="admin-isActive-simple"
+              checked={formData.isActive}
+              onCheckedChange={handleSwitchChange}
+              className="col-span-3"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Настройки зарплаты */}
+      <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-gray-900">💰 Настройки зарплаты</h3>
+          <Badge variant="outline" className="text-green-600 border-green-200">
+            По умолчанию
+          </Badge>
+        </div>
+        <Separator />
+        <div className="space-y-5">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-baseSalary-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              Базовая зарплата (сом)
+            </Label>
+            <Input
+              id="admin-baseSalary-simple"
+              name="baseSalary"
+              type="number"
+              value={formData.baseSalary}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              min="0"
+              step="1000"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-commissionRate-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              Процент комиссии (0.1 = 10%)
+            </Label>
+            <Input
+              id="admin-commissionRate-simple"
+              name="commissionRate"
+              type="number"
+              value={formData.commissionRate}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              min="0"
+              max="1"
+              step="0.01"
+            />
+          </div>
+          <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
+            <strong>Подсказка:</strong> Базовая зарплата - фиксированная часть. Процент комиссии применяется к сумме выполненных услуг. Например: 0.05 означает 5% комиссии.
+          </div>
+        </div>
+      </div>
+
+      {/* Данные для создания аккаунта */}
+      <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-gray-900">{t('masters.create_account')}</h3>
+        </div>
+        <Separator />
+        <div className="space-y-5 p-4 bg-blue-50 rounded-lg border border-blue-200 transition-all duration-200">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-accountEmail-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.email')} <span className="text-red-500">*</span>
+            </Label>
+            <div className="col-span-3 space-y-2">
+              <Input
+                id="admin-accountEmail-simple"
+                name="email"
+                type="email"
+                value={accountData.email}
+                onChange={handleAccountDataChange}
+                className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                placeholder="email@example.com"
+                required
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="admin-accountPassword-simple" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.password')} <span className="text-red-500">*</span>
+            </Label>
+            <div className="col-span-3 space-y-2">
+              <Input
+                id="admin-accountPassword-simple"
+                name="password"
+                type="password"
+                value={accountData.password}
+                onChange={handleAccountDataChange}
+                className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                placeholder="Введите пароль"
+                required
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <DialogFooter className="mt-8 flex justify-between">
@@ -770,15 +1604,23 @@ const AdministratorForm: React.FC<{
           onClick={() => window.dispatchEvent(new Event('close-dialog'))}
           className="border-gray-300 text-gray-700 hover:bg-gray-50"
         >
-          Отмена
+          {t('masters.cancel')}
         </Button>
         <Button
           type="submit"
-          disabled={isPending || !formData.name.trim()}
+          disabled={
+            isPending ||
+            !formData.username.trim() ||
+            !formData.firstname.trim() ||
+            !formData.lastname.trim() ||
+            !formData.name.trim() ||
+            !accountData.email.trim() ||
+            !accountData.password.trim()
+          }
           className="bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200"
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-          {administrator ? 'Сохранить изменения' : 'Добавить администратора'}
+          {t('masters.add_administrator')}
         </Button>
       </DialogFooter>
     </form>
@@ -791,6 +1633,8 @@ const AdministratorCard: React.FC<{
   onEditClick: () => void;
   onDeleteClick: () => void;
 }> = ({ administrator, onEditClick, onDeleteClick }) => {
+  const { t } = useLocale();
+  const isActive = (administrator as any).is_active ?? administrator.isActive ?? true;
   return (
     <Card className={`w-full relative overflow-hidden transition-all duration-300  hover:shadow-lg border-none shadow-sm`}>
       <CardHeader className="pb-3">
@@ -810,8 +1654,8 @@ const AdministratorCard: React.FC<{
               </CardDescription>
             </div>
           </div>
-          <Badge variant={administrator.isActive ? "default" : "destructive"} className={administrator.isActive ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-red-100 text-red-800"}>
-            {administrator.isActive ? 'Активен' : 'Неактивен'}
+          <Badge variant={isActive ? "default" : "destructive"} className={isActive ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-red-100 text-red-800"}>
+            {isActive ? t('masters.active_status') : t('masters.inactive')}
           </Badge>
         </div>
       </CardHeader>
@@ -846,7 +1690,7 @@ const AdministratorCard: React.FC<{
           className="text-gray-600 border-gray-200 hover:bg-gray-50"
         >
           <EditIcon className="h-4 w-4 mr-2" />
-          Изменить
+          {t('masters.change')}
         </Button>
         <Button
           variant="destructive"
@@ -855,7 +1699,7 @@ const AdministratorCard: React.FC<{
           className="bg-red-600 hover:bg-red-700"
         >
           <X className="h-4 w-4 mr-2" />
-          Удалить
+          {t('masters.delete_action')}
         </Button>
       </CardFooter>
     </Card>
@@ -863,17 +1707,13 @@ const AdministratorCard: React.FC<{
 };
 
 // Функция для поиска связанного пользователя по имени
-const findUserByName = (users: BranchUser[] | undefined, name: string): BranchUser | undefined => {
-  if (!users || !Array.isArray(users) || !name) return undefined;
-  return users.find(user => user.username.toLowerCase().trim() === name.toLowerCase().trim());
-};
-
 // Основной компонент страницы мастеров
 const Masters: React.FC = () => {
   const { t } = useLocale();
   const { toast } = useToast();
-  const { currentBranch } = useBranch();
-
+  const { currentBranch, orgData } = useBranch();
+  const { user } = useAuth();
+  console.log('orgData', orgData);
   const [editMaster, setEditMaster] = useState<Master | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -883,15 +1723,16 @@ const Masters: React.FC = () => {
   const [isAddAdministratorDialogOpen, setIsAddAdministratorDialogOpen] = useState(false);
   const [editAdministrator, setEditAdministrator] = useState<Administrator | null>(null);
   const [isEditAdministratorDialogOpen, setIsEditAdministratorDialogOpen] = useState(false);
+  const creatingAdminRef = useRef(false);
 
   // Запрос для получения пользователей филиала с ролями master и reception
   const { data: branchUsers } = useQuery({
-    queryKey: ['/api/crm/reception-master/user', currentBranch?.id],
+    queryKey: ['/staff?organizationId', currentBranch?.id],
     queryFn: async () => {
       if (!currentBranch?.id) {
         return [];
       }
-      const url = `/api/crm/reception-master/user/${currentBranch.id}`;
+      const url = `/staff?organizationId=${currentBranch.id}`;
       const result = await apiGetJson(url);
       return Array.isArray(result) ? result : [];
     },
@@ -899,83 +1740,90 @@ const Masters: React.FC = () => {
   });
 
   const { data: administrators, refetch: refetchAdministrators } = useQuery({
-    queryKey: ['/api/administrators', currentBranch?.id],
+    queryKey: ['/staff?organizationId=', orgData + "&role=manager"],
     queryFn: async () => {
-      if (!currentBranch?.id) {
+      if (!orgData) {
         return [];
       }
-      const url = `/api/administrators?branchID=${currentBranch.id}`;
+      const url = `/staff?organizationId=${orgData}&role=manager`;
       return await apiGetJson(url);
     },
-    enabled: !!currentBranch?.id,
+    enabled: !!orgData,
   });
 
   const { data: masters, isLoading, isError, refetch } = useQuery({
-    queryKey: ['/api/crm/masters', currentBranch?.id],
+    queryKey: ['/staff?organizationId=', orgData + "&role=employee"],
     queryFn: async () => {
-      if (!currentBranch?.id) {
+      if (!orgData) {
         return [];
       }
-      const url = `/api/crm/masters/${currentBranch.id}`;
+      const url = `/staff?organizationId=${orgData}`;
       return await apiGetJson(url);
     },
-    enabled: !!currentBranch?.id,
+    enabled: !!orgData,
   });
-
+  console.log(masters + " sdoksodkoskodk")
   const createMasterMutation = useMutation({
     mutationFn: async (data: Partial<Master>) => {
-      const { workingDates, createAccount, accountEmail, accountPassword, ...masterData } = data;
+      if (!currentBranch?.id) {
+        throw new Error('Branch not selected');
+      }
 
-      // Создаем мастера
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${currentBranch.id}`, {
+      const { workingDates, createAccount, accountEmail, accountPassword, baseSalary, commissionRate, ...masterData } = data;
+
+      // Подготовка данных для создания сотрудника согласно API
+      const staffPayload = {
+        username: (masterData as any).username || masterData.name,
+        firstname: (masterData as any).firstname || masterData.name?.split(' ')[0] || masterData.name || '',
+        lastname: (masterData as any).lastname || masterData.name?.split(' ').slice(1).join(' ') || '',
+        email: accountEmail,
+        password: accountPassword,
+        role: 'employee', // По умолчанию роль manager для мастеров
+        specialty: masterData.specialty || '',
+        description: masterData.description || '',
+        is_active: masterData.isActive ?? true,
+        organizationId: orgData,
+        branches: [
+          {
+            id: currentBranch.id,
+            name: (currentBranch as any).name,
+            address: (currentBranch as any).address,
+            
+          }
+        ]
+      };
+      
+      console.log('Creating staff with payload:', staffPayload);
+      
+      // Создаем сотрудника через /staff endpoint
+      const res = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff?organisationId=${orgData}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(masterData)
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Accept': 'application/json', 
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}` 
+        },
+        body: JSON.stringify(staffPayload)
       });
+      
       if (!res.ok) {
-        throw new Error('Failed to create master');
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to create staff member');
       }
-      const newMaster = await res.json();
+      
+      const response = await res.json();
 
-      // Создаем аккаунт пользователя, если требуется
-      if (createAccount && accountEmail && accountPassword) {
-        const userRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/register-user`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            username: newMaster.name,
-            email: accountEmail,
-            password: accountPassword,
-            role: 'master',
-            branchId: currentBranch?.id?.toString(),
-            organisationId: currentBranch?.organisationId?.toString()
-          })
-        });
-        if (!userRes.ok) {
-          const errorData = await userRes.json();
-          throw new Error(errorData.message || 'Failed to create user account');
-        }
+      // API возвращает объект с success, message и data
+      if (response.success && response.data) {
+        return { staffData: response.data, baseSalary, commissionRate };
       }
 
-      // Добавляем рабочие даты
-      if (workingDates && workingDates.length > 0) {
-        await Promise.all(workingDates.map(async (wd) => {
-          await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${newMaster.id}/working-dates`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              workDate: wd.date,
-              startTime: wd.startTime,
-              endTime: wd.endTime,
-              branchId: wd.branchId
-            })
-          });
-        }));
-      }
-      return newMaster;
+      // Если формат ответа другой, возвращаем как есть
+      return { staffData: response, baseSalary, commissionRate };
     },
-    onSuccess: () => {
+    onSuccess: async (result) => {
+      const { staffData, baseSalary, commissionRate } = result;
+
       setIsAddDialogOpen(false);
       toast({
         title: t('masters.master_created'),
@@ -983,6 +1831,37 @@ const Masters: React.FC = () => {
         variant: 'default',
       });
       refetch();
+
+      // Создаем salary record
+      if (staffData && staffData.id && user && currentBranch?.id) {
+        try {
+          console.log('📊 Staff data for salary:', staffData);
+
+          const salaryResult = await salaryService.createSalaryRecord({
+            staff: {
+              id: staffData.id,
+              firstname: staffData.firstname || (staffData as any).first_name || staffData.username,
+              lastname: staffData.lastname || (staffData as any).last_name || '',
+              role: staffData.role || 'employee',
+            },
+            baseSalary: baseSalary || 10000,
+            commissionRate: commissionRate || 0.1,
+            createdBy: {
+              id: user.id,
+              firstname: user.firstname || (user as any).first_name || user.username,
+              lastname: user.lastname || (user as any).last_name || '',
+              role: user.role,
+            },
+          }, currentBranch.id);
+
+          if (salaryResult) {
+            console.log('✅ Salary record created successfully:', salaryResult);
+          }
+        } catch (error) {
+          console.error('❌ Failed to create salary record:', error);
+          // Не показываем ошибку пользователю, т.к. мастер уже создан
+        }
+      }
     },
     onError: (error) => {
       toast({
@@ -995,72 +1874,121 @@ const Masters: React.FC = () => {
 
   const updateMasterMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: Partial<Master> }) => {
-      const { workingDates, createAccount, accountEmail, accountPassword, ...masterData } = data;
+      const { workingDates, createAccount, accountEmail, accountPassword, baseSalary, commissionRate, ...masterData } = data;
+      console.log(workingDates + " workingDates")
 
-      // Обновляем мастера
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(masterData)
+      // Подготовка данных для обновления согласно новому API
+      const staffUpdatePayload: any = {};
+
+      // Маппинг полей: name -> firstname/lastname
+      if (masterData.name) {
+        const nameParts = masterData.name.split(' ');
+        staffUpdatePayload.firstname = nameParts[0] || '';
+        staffUpdatePayload.lastname = nameParts.slice(1).join(' ') || '';
+        staffUpdatePayload.username = masterData.name;
+      }
+
+      // Остальные поля
+      if (masterData.specialty !== undefined) staffUpdatePayload.specialty = masterData.specialty;
+      if (masterData.description !== undefined) staffUpdatePayload.description = masterData.description;
+      if (masterData.isActive !== undefined) staffUpdatePayload.is_active = masterData.isActive;
+      if (accountEmail) staffUpdatePayload.email = accountEmail;
+
+      // Обновляем сотрудника через PATCH /staff/{id}
+      console.log('🔄 Updating master via PATCH /staff/' + id);
+      console.log('📦 Payload:', staffUpdatePayload);
+      console.log('🔗 URL:', `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff/${id}`);
+
+      const res = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify(staffUpdatePayload)
       });
-      if (!res.ok) {
-        throw new Error('Failed to update master');
-      }
-      const updatedMaster = await res.json();
 
-      // Создаем или обновляем аккаунт пользователя, если требуется
-      if (createAccount && accountEmail && accountPassword) {
-        const userRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/register-user`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            username: updatedMaster.name,
-            email: accountEmail,
-            password: accountPassword,
-            role: 'master',
-            branchId: currentBranch?.id?.toString(),
-            organisationId: currentBranch?.organisationId?.toString()
-          })
-        });
-        if (!userRes.ok) {
-          const errorData = await userRes.json();
-          if (!errorData.message?.includes('already exists')) {
-            throw new Error(errorData.message || 'Failed to create/update user account');
-          }
-        }
+      console.log('📡 Response status:', res.status);
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('❌ Update failed:', errorData);
+        throw new Error(errorData.message || `Failed to update staff member (${res.status})`);
       }
+
+      const response = await res.json();
+      console.log('✅ Update response:', response);
+      const updatedStaff = response.success ? response.data : response;
 
       // Обновляем рабочие даты: удаляем все существующие и добавляем новые
-      if (workingDates) {
-        const allWorkingDatesRes = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/masters/${id}/working-dates`
-        );
-        if (allWorkingDatesRes.ok) {
-          const allWorkingDates = await allWorkingDatesRes.json();
-          await Promise.all(allWorkingDates.map(async (cwd: any) => {
-            await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${id}/working-dates/${cwd.work_date}?branchId=${cwd.branch_id}`, {
-              method: 'DELETE'
+      console.log('🔍 Checking working dates update:', {
+        hasWorkingDates: !!workingDates,
+        workingDatesLength: workingDates?.length,
+        hasBranchId: !!currentBranch?.id,
+        branchId: currentBranch?.id
+      });
+
+      if (workingDates && currentBranch?.id) {
+        console.log('🗓️ Updating working dates for branch:', currentBranch.id);
+
+        try {
+          // Получаем все рабочие даты для этого филиала
+          const workingDatesUrl = `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates?branchId=${currentBranch.id}`;
+          console.log('📡 Fetching working dates from URL:', workingDatesUrl);
+
+          const allWorkingDatesRes = await fetch(workingDatesUrl);
+          console.log('📡 Working dates response status:', allWorkingDatesRes.status);
+
+          if (allWorkingDatesRes.ok) {
+            const allWorkingDates = await allWorkingDatesRes.json();
+            console.log('📅 Found working dates to delete:', allWorkingDates.length);
+
+            // Удаляем все существующие рабочие даты для этого мастера в этом филиале
+            await Promise.all(allWorkingDates.map(async (cwd: any) => {
+              await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates/${cwd.id}`, {
+                method: 'DELETE'
+              });
+            }));
+          } else {
+            const errorData = await allWorkingDatesRes.json().catch(() => ({}));
+            console.error('❌ Failed to fetch working dates:', {
+              status: allWorkingDatesRes.status,
+              error: errorData,
+              url: workingDatesUrl
+            });
+          }
+
+          // Добавляем новые рабочие даты
+          console.log('➕ Adding new working dates:', workingDates.length);
+          await Promise.all(workingDates.map(async (wd) => {
+            await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates/`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                workDate: wd.date,
+                startTime: wd.startTime,
+                endTime: wd.endTime,
+                branchId: wd.branchId || currentBranch.id
+              })
             });
           }));
+
+          console.log('✅ Working dates updated successfully');
+        } catch (error) {
+          console.error('❌ Failed to update working dates:', error);
+          // Не выбрасываем ошибку, чтобы не прервать обновление сотрудника
         }
-        await Promise.all(workingDates.map(async (wd) => {
-          await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${id}/working-dates`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              workDate: wd.date,
-              startTime: wd.startTime,
-              endTime: wd.endTime,
-              branchId: wd.branchId
-            })
-          });
-        }));
+      } else {
+        console.log('⏭️ Skipping working dates update:', {
+          reason: !workingDates ? 'No working dates provided' : 'No branch ID available'
+        });
       }
-      return updatedMaster;
+
+      return { updatedStaff, baseSalary, commissionRate };
     },
-    onSuccess: () => {
+    onSuccess: async (result) => {
+      const { updatedStaff, baseSalary, commissionRate } = result;
+
       setIsEditDialogOpen(false);
       setEditMaster(null);
       toast({
@@ -1069,6 +1997,46 @@ const Masters: React.FC = () => {
         variant: 'default',
       });
       refetch();
+
+      // Создаем или обновляем salary record
+      if ((baseSalary !== undefined || commissionRate !== undefined) && updatedStaff?.id && user && currentBranch?.id) {
+        try {
+          console.log('💰 Creating/updating salary record for master...');
+          console.log('📊 Updated staff data:', updatedStaff);
+
+          const salaryResult = await salaryService.createSalaryRecord({
+            staff: {
+              id: updatedStaff.id,
+              firstname: updatedStaff.firstname || (updatedStaff as any).first_name || updatedStaff.username,
+              lastname: updatedStaff.lastname || (updatedStaff as any).last_name || '',
+              role: updatedStaff.role || 'employee',
+            },
+            baseSalary: baseSalary || 10000,
+            commissionRate: commissionRate || 0.1,
+            createdBy: {
+              id: user.id,
+              firstname: user.firstname || (user as any).first_name || user.username,
+              lastname: user.lastname || (user as any).last_name || '',
+              role: user.role,
+            },
+          }, currentBranch.id);
+
+          if (salaryResult) {
+            console.log('✅ Salary record created/updated successfully:', salaryResult);
+            toast({
+              title: 'Зарплата обновлена',
+              description: 'Настройки зарплаты успешно сохранены',
+            });
+          }
+        } catch (error) {
+          console.error('❌ Failed to create/update salary record:', error);
+          toast({
+            title: 'Предупреждение',
+            description: 'Мастер обновлен, но не удалось сохранить настройки зарплаты',
+            variant: 'destructive',
+          });
+        }
+      }
     },
     onError: (error) => {
       toast({
@@ -1081,26 +2049,48 @@ const Masters: React.FC = () => {
 
   const deleteMasterMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${id}`, {
-        method: 'DELETE'
+      // Сначала удаляем мастера из основной таблицы
+      const deleteRes = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
       });
-      if (!res.ok) {
+      if (!deleteRes.ok) {
         throw new Error('Failed to delete master');
       }
-      return res.json();
+      const deletedMaster = await deleteRes.json();
+
+      // Затем удаляем пользователя из таблицы users (если существует)
+      if (deletedMaster?.id) {
+        try {
+          const userDeleteRes = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+          });
+          // Не выбрасываем ошибку, если удаление пользователя не удалось
+          if (!userDeleteRes.ok) {
+            console.warn('Warning: Could not delete master user account');
+          }
+        } catch (err) {
+          console.warn('Warning: Failed to delete master user account', err);
+        }
+      }
+
+      return deletedMaster;
     },
-    onSuccess: () => {
+    onSuccess: (deletedMaster) => {
       toast({
         title: t('masters.master_deleted'),
-        description: t('masters.master_deleted'),
+        description: `Мастер "${deletedMaster?.name || ''}" и его аккаунт успешно удалены`,
         variant: 'default',
       });
       refetch();
+      setIsEditDialogOpen(false);
+      setEditMaster(null);
     },
     onError: (error) => {
       toast({
         title: 'Ошибка',
-        description: `${error}`,
+        description: `Не удалось удалить мастера: ${error}`,
         variant: 'destructive',
       });
     }
@@ -1108,43 +2098,50 @@ const Masters: React.FC = () => {
 
   const createAdministratorMutation = useMutation({
     mutationFn: async (data: Partial<Administrator>) => {
-      const { createAccount, accountEmail, accountPassword, ...adminData } = data;
-
-      // Создаем администратора
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators`, {
+      if (!currentBranch?.id) {
+        throw new Error('Branch not selected');
+      }
+      const { createAccount, accountEmail, accountPassword, baseSalary, commissionRate, ...adminData } = data;
+      const staffPayload = {
+        username: (adminData as any).username || adminData.name,
+        firstname: (adminData as any).firstname || adminData.name?.split(' ')[0] || adminData.name || '',
+        lastname: (adminData as any).lastname || adminData.name?.split(' ').slice(1).join(' ') || '',
+        email: accountEmail,
+        password: accountPassword,
+        role: 'manager',
+        description: adminData.notes || '',
+        is_active: adminData.isActive ?? true,
+        organizationId: orgData,
+        branches: [
+          {
+            id: currentBranch.id,
+            name: (currentBranch as any).name,
+            address: (currentBranch as any).address,
+          }
+        ]
+      };
+      const res = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff?organisationId=${orgData}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(adminData)
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify(staffPayload)
       });
       if (!res.ok) {
-        throw new Error('Failed to create administrator');
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to create administrator');
       }
-      const newAdmin = await res.json();
-
-      // Создаем аккаунт пользователя, если требуется
-      if (createAccount && accountEmail && accountPassword) {
-        const userRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/register-user`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            username: newAdmin.name,
-            email: accountEmail,
-            password: accountPassword,
-            role: 'reception',
-            branchId: currentBranch?.id?.toString(),
-            organisationId: currentBranch?.organisationId?.toString()
-          })
-        });
-        if (!userRes.ok) {
-          const errorData = await userRes.json();
-          throw new Error(errorData.message || 'Failed to create user account');
-        }
+      const response = await res.json();
+      if (response.success && response.data) {
+        return { staffData: response.data, baseSalary, commissionRate };
       }
-
-      return newAdmin;
+      return { staffData: response, baseSalary, commissionRate };
     },
-    onSuccess: () => {
+    onSuccess: async (result) => {
+      const { staffData, baseSalary, commissionRate } = result;
+
       setIsAddAdministratorDialogOpen(false);
       toast({
         title: 'Администратор добавлен',
@@ -1152,6 +2149,37 @@ const Masters: React.FC = () => {
         variant: 'default',
       });
       refetchAdministrators();
+
+      // Создаем salary record
+      if (staffData && staffData.id && user && currentBranch?.id) {
+        try {
+          console.log('📊 Staff data for salary (Administrator):', staffData);
+
+          const salaryResult = await salaryService.createSalaryRecord({
+            staff: {
+              id: staffData.id,
+              firstname: staffData.firstname || (staffData as any).first_name || staffData.username,
+              lastname: staffData.lastname || (staffData as any).last_name || '',
+              role: staffData.role || 'manager',
+            },
+            baseSalary: baseSalary || 15000,
+            commissionRate: commissionRate || 0.05,
+            createdBy: {
+              id: user.id,
+              firstname: user.firstname || (user as any).first_name || user.username,
+              lastname: user.lastname || (user as any).last_name || '',
+              role: user.role,
+            },
+          }, currentBranch.id);
+
+          if (salaryResult) {
+            console.log('✅ Salary record created successfully for administrator:', salaryResult);
+          }
+        } catch (error) {
+          console.error('❌ Failed to create salary record for administrator:', error);
+          // Не показываем ошибку пользователю, т.к. администратор уже создан
+        }
+      }
     },
     onError: (error) => {
       toast({
@@ -1164,46 +2192,56 @@ const Masters: React.FC = () => {
 
   const updateAdministratorMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: Partial<Administrator> }) => {
-      const { createAccount, accountEmail, accountPassword, ...adminData } = data;
+      const { createAccount, accountEmail, accountPassword, baseSalary, commissionRate, ...adminData } = data;
 
-      // Обновляем администратора
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(adminData)
+      // Подготовка данных для обновления согласно новому API
+      const staffUpdatePayload: any = {};
+
+      // Маппинг полей: name -> firstname/lastname
+      if (adminData.name) {
+        const nameParts = adminData.name.split(' ');
+        staffUpdatePayload.firstname = nameParts[0] || '';
+        staffUpdatePayload.lastname = nameParts.slice(1).join(' ') || '';
+        staffUpdatePayload.username = adminData.name;
+      }
+
+      // Остальные поля
+      if (adminData.notes !== undefined) staffUpdatePayload.description = adminData.notes;
+      if (adminData.isActive !== undefined) staffUpdatePayload.is_active = adminData.isActive;
+      if (accountEmail) staffUpdatePayload.email = accountEmail;
+      if (adminData.role !== undefined) staffUpdatePayload.customRole = adminData.role;
+
+      // Обновляем сотрудника через PATCH /staff/{id}
+      console.log('🔄 Updating administrator via PATCH /staff/' + id);
+      console.log('📦 Payload:', staffUpdatePayload);
+      console.log('🔗 URL:', `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff/${id}`);
+
+      const res = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify(staffUpdatePayload)
       });
+
+      console.log('📡 Response status:', res.status);
+
       if (!res.ok) {
-        throw new Error('Failed to update administrator');
-      }
-      const updatedAdmin = await res.json();
-
-      // Создаем или обновляем аккаунт пользователя, если требуется
-      if (createAccount && accountEmail && accountPassword) {
-        const userRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/register-user`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            username: updatedAdmin.name,
-            email: accountEmail,
-            password: accountPassword,
-            role: 'reception',
-            branchId: currentBranch?.id?.toString(),
-            organisationId: currentBranch?.organisationId?.toString()
-          })
-        });
-        if (!userRes.ok) {
-          const errorData = await userRes.json();
-          if (!errorData.message?.includes('already exists')) {
-            throw new Error(errorData.message || 'Failed to create/update user account');
-          }
-        }
+        const errorData = await res.json().catch(() => ({}));
+        console.error('❌ Update failed:', errorData);
+        throw new Error(errorData.message || `Failed to update administrator (${res.status})`);
       }
 
-      return updatedAdmin;
+      const response = await res.json();
+      console.log('✅ Update response:', response);
+      const updatedStaff = response.success ? response.data : response;
+
+      return { updatedStaff, baseSalary, commissionRate };
     },
-    onSuccess: () => {
+    onSuccess: async (result) => {
+      const { updatedStaff, baseSalary, commissionRate } = result;
+
       setIsEditAdministratorDialogOpen(false);
       setEditAdministrator(null);
       toast({
@@ -1212,6 +2250,46 @@ const Masters: React.FC = () => {
         variant: 'default',
       });
       refetchAdministrators();
+
+      // Создаем или обновляем salary record
+      if ((baseSalary !== undefined || commissionRate !== undefined) && updatedStaff?.id && user && currentBranch?.id) {
+        try {
+          console.log('💰 Creating/updating salary record for administrator...');
+          console.log('📊 Updated staff data (Administrator):', updatedStaff);
+
+          const salaryResult = await salaryService.createSalaryRecord({
+            staff: {
+              id: updatedStaff.id,
+              firstname: updatedStaff.firstname || (updatedStaff as any).first_name || updatedStaff.username,
+              lastname: updatedStaff.lastname || (updatedStaff as any).last_name || '',
+              role: updatedStaff.role || 'manager',
+            },
+            baseSalary: baseSalary || 15000,
+            commissionRate: commissionRate || 0.05,
+            createdBy: {
+              id: user.id,
+              firstname: user.firstname || (user as any).first_name || user.username,
+              lastname: user.lastname || (user as any).last_name || '',
+              role: user.role,
+            },
+          }, currentBranch.id);
+
+          if (salaryResult) {
+            console.log('✅ Salary record created/updated successfully:', salaryResult);
+            toast({
+              title: 'Зарплата обновлена',
+              description: 'Настройки зарплаты успешно сохранены',
+            });
+          }
+        } catch (error) {
+          console.error('❌ Failed to create/update salary record:', error);
+          toast({
+            title: 'Предупреждение',
+            description: 'Администратор обновлен, но не удалось сохранить настройки зарплаты',
+            variant: 'destructive',
+          });
+        }
+      }
     },
     onError: (error) => {
       toast({
@@ -1224,21 +2302,42 @@ const Masters: React.FC = () => {
 
   const deleteAdministratorMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators/${id}`, {
+      // Сначала удаляем администратора из основной таблицы
+      const deleteRes = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/api/administrators/${id}`, {
         method: 'DELETE',
       });
-      if (!res.ok) {
+      if (!deleteRes.ok) {
         throw new Error('Failed to delete administrator');
       }
-      return res.json();
+      const deletedAdmin = await deleteRes.json();
+
+      // Затем удаляем пользователя из таблицы users (если существует)
+      if (deletedAdmin?.id) {
+        try {
+          const userDeleteRes = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/api/reception/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          // Не выбрасываем ошибку, если удаление пользователя не удалось
+          if (!userDeleteRes.ok) {
+            console.warn('Warning: Could not delete administrator user account');
+          }
+        } catch (err) {
+          console.warn('Warning: Failed to delete administrator user account', err);
+        }
+      }
+
+      return deletedAdmin;
     },
-    onSuccess: () => {
+    onSuccess: (deletedAdmin) => {
       toast({
         title: 'Администратор удален',
-        description: 'Администратор успешно удален из системы',
+        description: `Администратор "${deletedAdmin?.name || ''}" и его аккаунт успешно удалены из системы`,
         variant: 'default',
       });
       refetchAdministrators();
+      setIsEditAdministratorDialogOpen(false);
+      setEditAdministrator(null);
     },
     onError: (error) => {
       toast({
@@ -1250,7 +2349,13 @@ const Masters: React.FC = () => {
   });
 
   const handleAddAdministrator = (data: Partial<Administrator>) => {
-    createAdministratorMutation.mutate(data);
+    if (creatingAdminRef.current || createAdministratorMutation.isPending) return;
+    creatingAdminRef.current = true;
+    createAdministratorMutation.mutate(data, {
+      onSettled: () => {
+        creatingAdminRef.current = false;
+      }
+    });
   };
 
   const handleEditAdministrator = (administrator: Administrator) => {
@@ -1278,7 +2383,7 @@ const Masters: React.FC = () => {
     mutationFn: async ({ masterId, file }: { masterId: number, file: File }) => {
       const formData = new FormData();
       formData.append('image', file);
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${masterId}/upload-image`, {
+      const res = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/api/crm/masters/${masterId}/upload-image`, {
         method: 'POST',
         body: formData
       });
@@ -1323,12 +2428,19 @@ const Masters: React.FC = () => {
     setIsScheduleDialogOpen(true);
   };
 
+  const creatingMasterRef = useRef(false);
   const handleAddMaster = (data: Partial<Master>) => {
+    if (creatingMasterRef.current || createMasterMutation.isPending) return;
+    creatingMasterRef.current = true;
     const masterData = {
       ...data,
       branchId: currentBranch?.id?.toString(),
     };
-    createMasterMutation.mutate(masterData);
+    createMasterMutation.mutate(masterData, {
+      onSettled: () => {
+        creatingMasterRef.current = false;
+      }
+    });
   };
 
   const handleImageUpload = (masterId: number, event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1363,7 +2475,7 @@ const Masters: React.FC = () => {
       updateMasterMutation.mutate({ id: editMaster.id, data: masterData });
     }
   };
-
+  console.log(masters)
   return (
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
       {/* Header */}
@@ -1385,17 +2497,16 @@ const Masters: React.FC = () => {
                     {t('masters.add_administrator')}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] bg-white rounded-xl">
+                <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
                   <DialogHeader>
-                    <DialogTitle className="text-xl font-semibold text-gray-900">Добавить администратора</DialogTitle>
+                    <DialogTitle className="text-xl font-semibold text-gray-900">{t('masters.add_administrator')}</DialogTitle>
                     <DialogDescription className="text-gray-500">
-                      Заполните данные нового администратора.
+                      {t('masters.fill_admin_data')}
                     </DialogDescription>
                   </DialogHeader>
-                  <AdministratorForm
+                  <AdministratorFormSimple
                     onSubmit={handleAddAdministrator}
                     isPending={createAdministratorMutation.isPending}
-                    branchUsers={branchUsers}
                   />
                 </DialogContent>
               </Dialog>
@@ -1441,7 +2552,7 @@ const Masters: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {masters.map((master: Master) => (
+          {masters.data.map((master: Master) => (
             <MasterCard
               key={master.id}
               master={master}
@@ -1457,9 +2568,9 @@ const Masters: React.FC = () => {
 
       <div className="mt-12">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('masters.administrators')}</h2>
-        {administrators && administrators.length > 0 ? (
+        {administrators && administrators.data && administrators.data.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {administrators.map((administrator: Administrator) => (
+            {administrators.data.map((administrator: Administrator) => (
               <AdministratorCard
                 key={administrator.id}
                 administrator={administrator}
@@ -1487,17 +2598,16 @@ const Masters: React.FC = () => {
       </div>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
+        <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-gray-900">{t('masters.add_new_master')}</DialogTitle>
             <DialogDescription className="text-gray-500">
               {t('masters.add_master_description')}
             </DialogDescription>
           </DialogHeader>
-          <MasterForm
+          <MasterFormSimple
             onSubmit={handleAddMaster}
             isPending={createMasterMutation.isPending}
-            branchUsers={branchUsers}
           />
         </DialogContent>
       </Dialog>
@@ -1516,6 +2626,8 @@ const Masters: React.FC = () => {
               onSubmit={handleUpdateMaster}
               isPending={updateMasterMutation.isPending}
               branchUsers={branchUsers}
+              onDelete={handleDeleteClick}
+              isDeleting={deleteMasterMutation.isPending}
             />
           )}
         </DialogContent>
@@ -1539,7 +2651,7 @@ const Masters: React.FC = () => {
       </Dialog>
 
       <Dialog open={isEditAdministratorDialogOpen} onOpenChange={setIsEditAdministratorDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
+        <DialogContent className="sm:max-w-[750px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-gray-900">Редактировать администратора</DialogTitle>
             <DialogDescription className="text-gray-500">
@@ -1552,6 +2664,8 @@ const Masters: React.FC = () => {
               onSubmit={handleUpdateAdministrator}
               isPending={updateAdministratorMutation.isPending}
               branchUsers={branchUsers}
+              onDelete={handleDeleteAdministrator}
+              isDeleting={deleteAdministratorMutation.isPending}
             />
           )}
         </DialogContent>

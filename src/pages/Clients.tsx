@@ -11,6 +11,27 @@ import { Search, Phone, Calendar, Edit, Loader2, Save, X, Users } from 'lucide-r
 import { useToast } from '@/hooks/use-toast';
 import { apiGetJson, apiRequest } from '@/lib/api';
 
+// API Response types (snake_case from backend)
+interface ApiClient {
+  id: number;
+  first_name: string | null;
+  last_name?: string | null;
+  custom_name?: string;
+  phone_number: string;
+  source_id?: string;
+  is_active: boolean;
+  organization_id?: number;
+}
+
+interface ApiClientActivity {
+  id: number;
+  client_id: number;
+  branch_id: number;
+  service_id?: number;
+  last_active_at: string;
+}
+
+// Frontend types (camelCase)
 interface Client {
   id: number;
   telegramId: string;
@@ -38,12 +59,9 @@ interface Task {
   notes?: string;
 }
 
-interface ClientsResponse {
-  clients: Client[];
-  total: number;
-  searchPattern: string;
-  normalizedPattern: string;
-  branchId: string;
+interface ApiClientsResponse {
+  clients: ApiClient[];
+  clientsActivity: ApiClientActivity[];
 }
 
 interface ClientTasksResponse {
@@ -55,6 +73,24 @@ interface ClientTasksResponse {
     customName?: string;
   };
 }
+
+// Функция преобразования API данных в формат приложения
+const mapApiClientToClient = (apiClient: ApiClient, activity?: ApiClientActivity): Client => {
+  return {
+    id: apiClient.id,
+    telegramId: apiClient.source_id || '',
+    firstName: apiClient.first_name,
+    lastName: apiClient.last_name || null,
+    customName: apiClient.custom_name,
+    phoneNumber: apiClient.phone_number,
+    branchId: activity?.branch_id?.toString() || '',
+    tasks_count: 0, // Эта информация должна приходить отдельно
+    isActive: apiClient.is_active,
+    lastActiveAt: activity?.last_active_at || new Date().toISOString(),
+    firstSeenAt: activity?.last_active_at || new Date().toISOString(),
+    username: null
+  };
+};
 
 export default function Clients() {
   const { t } = useLocale();
@@ -81,8 +117,15 @@ export default function Clients() {
     setTodaysLoading(true);
     try {
       // Загружаем сегодняшних клиентов
-      const data: Client[] = await apiGetJson(`/api/clients/today/${currentBranch.id}`);
-      setTodaysClients(data || []);
+      const data: ApiClientsResponse = await apiGetJson(`/clients/`);
+      
+      // Преобразуем данные из API формата в формат приложения
+      const clients = data.clients.map(apiClient => {
+        const activity = data.clientsActivity?.find(a => a.client_id === apiClient.id);
+        return mapApiClientToClient(apiClient, activity);
+      });
+      
+      setTodaysClients(clients);
     } catch (error) {
       console.error('Error loading today\'s clients:', error);
       toast({
@@ -105,9 +148,15 @@ export default function Clients() {
     setLoading(true);
     try {
       // Используем новый эндпоинт для поиска клиентов по номеру телефона
-      const data: ClientsResponse = await apiGetJson(`/api/clients/${encodeURIComponent(query.trim())}?branchId=${currentBranch.id}`);
+      const data: ApiClientsResponse = await apiGetJson(`/clients/${encodeURIComponent(query.trim())}?branchId=${currentBranch.id}`);
       
-      setClients(data.clients || []);
+      // Преобразуем данные из API формата в формат приложения
+      const clients = data.clients.map(apiClient => {
+        const activity = data.clientsActivity?.find(a => a.client_id === apiClient.id);
+        return mapApiClientToClient(apiClient, activity);
+      });
+      
+      setClients(clients);
     } catch (error) {
       console.error('Error searching clients:', error);
       toast({
@@ -125,7 +174,7 @@ export default function Clients() {
     setTasksLoading(true);
     try {
       // Новый эндпоинт для получения задач клиента
-      const data: ClientTasksResponse = await apiGetJson(`/api/clients/${clientId}/tasks`);
+      const data: ClientTasksResponse = await apiGetJson(`/clients/${clientId}/tasks`);
       setClientTasks(data.tasks || []);
       setTotalTasks(data.total || 0);
     } catch (error) {
@@ -140,7 +189,7 @@ export default function Clients() {
   const updateClient = async (clientId: number, updates: Partial<Client>) => {
     setEditLoading(true);
     try {
-      const response = await apiRequest(`/api/clients/${clientId}`, {
+      const response = await apiRequest(`/clients/${clientId}`, {
         method: 'PUT',
         body: JSON.stringify(updates),
       });

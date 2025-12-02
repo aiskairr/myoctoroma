@@ -1,6 +1,8 @@
 import { QueryClient } from "@tanstack/react-query";
 import type { QueryFunction } from "@tanstack/react-query";
 import Cookies from "js-cookie";
+import { navigateTo } from "@/utils/navigation";
+import { requestTokenRefresh } from "@/API/http";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -39,12 +41,26 @@ export async function apiRequest(
     headers["Content-Type"] = "application/json";
   }
   
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include", // Always include cookies in requests
-  });
+  const executeRequest = () =>
+    fetch(url, {
+      method,
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include", // Always include cookies in requests
+    });
+
+  let res = await executeRequest();
+
+  if (res.status === 401) {
+    const newToken = await requestTokenRefresh().catch((err) => {
+      console.error("Failed to refresh token before retry:", err);
+      return null;
+    });
+    if (newToken) {
+      headers["Authorization"] = `Bearer ${newToken}`;
+      res = await executeRequest();
+    }
+  }
 
   console.log(`API Response status: ${res.status}`);
   
@@ -57,7 +73,7 @@ export async function apiRequest(
     // Redirect to login on unauthorized responses
     if (window.location.pathname !== '/login') {
       console.log("Redirecting to login due to 401 error");
-      window.location.href = '/login';
+      navigateTo('/login', { replace: true });
     }
   }
   
@@ -85,10 +101,24 @@ export const getQueryFn: <T>(options: {
       headers["Authorization"] = `Bearer ${token}`;
     }
     
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
-      headers
-    });
+    const executeRequest = () =>
+      fetch(queryKey[0] as string, {
+        credentials: "include",
+        headers
+      });
+
+    let res = await executeRequest();
+
+    if (res.status === 401) {
+      const newToken = await requestTokenRefresh().catch((err) => {
+        console.error("Failed to refresh token before retry:", err);
+        return null;
+      });
+      if (newToken) {
+        headers["Authorization"] = `Bearer ${newToken}`;
+        res = await executeRequest();
+      }
+    }
     
     console.log(`Query Response status: ${res.status}`);
 
@@ -106,7 +136,7 @@ export const getQueryFn: <T>(options: {
       } else if (window.location.pathname !== '/login') {
         // Redirect to login page when we get 401
         console.log("Redirecting to login due to 401 error");
-        window.location.href = '/login';
+        navigateTo('/login', { replace: true });
       }
     }
 

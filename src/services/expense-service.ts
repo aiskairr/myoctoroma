@@ -1,3 +1,5 @@
+import { $api } from '@/API/http';
+
 interface ExpenseRecord {
   id?: number;
   name: string;
@@ -10,11 +12,8 @@ interface ExpenseRecord {
 class ExpenseService {
   async getExpensesForDate(date: string, branchId: string): Promise<ExpenseRecord[]> {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/expenses?date=${date}&branchId=${branchId}`);
-      if (response.ok) {
-        return await response.json();
-      }
-      return [];
+      const response = await $api.get<ExpenseRecord[]>(`/api/expenses?date=${date}&branchId=${branchId}`);
+      return response.data;
     } catch (error) {
       console.error('Error fetching expenses:', error);
       return [];
@@ -23,17 +22,8 @@ class ExpenseService {
 
   async createExpense(expense: Omit<ExpenseRecord, 'id'>): Promise<ExpenseRecord | null> {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/expenses`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(expense),
-      });
-      if (response.ok) {
-        return await response.json();
-      }
-      return null;
+      const response = await $api.post<ExpenseRecord>('/api/expenses', expense);
+      return response.data;
     } catch (error) {
       console.error('Error creating expense:', error);
       return null;
@@ -42,10 +32,8 @@ class ExpenseService {
 
   async deleteExpense(id: number): Promise<boolean> {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/expenses/${id}`, {
-        method: 'DELETE',
-      });
-      return response.ok;
+      await $api.delete(`/api/expenses/${id}`);
+      return true;
     } catch (error) {
       console.error('Error deleting expense:', error);
       return false;

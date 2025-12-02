@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -63,26 +63,73 @@ export default function CRMServices() {
 
   // Get services data
   const { data: services = [], isLoading } = useQuery<serviceService[]>({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchID}`],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/services?branch_id=${branchID}`],
+    queryFn: async () => {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/services?branch_id=${branchID}&page=1&limit=1000`, {
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch services');
+      const result = await response.json();
+      return result.data || [];
+    },
+    enabled: !!branchID
   });
+
+  // Get single service by ID
+  const fetchServiceById = async (serviceId: number) => {
+    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/services/${serviceId}`);
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('Service not found');
+      }
+      throw new Error('Failed to fetch service');
+    }
+    
+    return response.json();
+  };
 
   // Create service mutation
   const createMutation = useMutation({
     mutationFn: async (newService: ServiceFormData) => {
-      const url = `${import.meta.env.VITE_BACKEND_URL}/api/crm/services`;
+      const url = `${import.meta.env.VITE_BACKEND_URL}/services`;
       console.log('CREATE SERVICE - URL:', url);
       console.log('CREATE SERVICE - Data:', { ...newService, branchID });
       
+      // Преобразуем durationPrices в массив prices согласно API
+      const prices = Object.entries(newService.durationPrices)
+        .filter(([_, price]) => price > 0)
+        .map(([duration, price]) => ({
+          duration: parseInt(duration),
+          price: price
+        }));
+      
+      // Находим defaultDuration (самую популярную или первую длительность)
+      const defaultDuration = prices.length > 0 ? prices[0].duration : 60;
+      
+      // Получаем токен из localStorage
+      const token = localStorage.getItem('auth_token');
+      
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
         body: JSON.stringify({
           name: newService.name,
-          description: newService.description,
+          defaultDuration: defaultDuration,
+          prices: prices,
+          description: newService.description || null,
+          category: newService.serviceGroup || null,
+          group: newService.serviceGroup || null,
+          recommendations: null,
+          ageRestriction: null,
           isActive: newService.isActive,
-          branchID: branchID,
-          serviceGroup: newService.serviceGroup,
-          durationPrices: newService.durationPrices
+          branchID: branchID
         }),
       });
       
@@ -94,7 +141,7 @@ export default function CRMServices() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
+      queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/services`] });
       setIsAddDialogOpen(false);
       resetForm();
       toast({
@@ -111,31 +158,50 @@ export default function CRMServices() {
     },
   });
 
-  // Update service mutation
+  // Update service mutation (PATCH согласно документации)
   const updateMutation = useMutation({
     mutationFn: async (updatedService: ServiceFormData & { id: number }) => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${updatedService.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+      // Преобразуем durationPrices в массив prices
+      const prices = Object.entries(updatedService.durationPrices)
+        .filter(([_, price]) => price > 0)
+        .map(([duration, price]) => ({
+          duration: parseInt(duration),
+          price: price
+        }));
+      
+      // Находим defaultDuration
+      const defaultDuration = prices.length > 0 ? prices[0].duration : 60;
+      
+      // Получаем токен из localStorage
+      const token = localStorage.getItem('auth_token');
+      
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/services/${updatedService.id}`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
         body: JSON.stringify({
           name: updatedService.name,
-          description: updatedService.description,
-          isActive: updatedService.isActive,
-          branchID: branchID,
-          serviceGroup: updatedService.serviceGroup,
-          durationPrices: updatedService.durationPrices
+          defaultDuration: defaultDuration,
+          prices: prices,
+          description: updatedService.description || null,
+          category: updatedService.serviceGroup || null,
+          group: updatedService.serviceGroup || null,
+          recommendations: null,
+          ageRestriction: null
         }),
       });
       
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({ message: 'Failed to update service' }));
         throw new Error(error.message || 'Failed to update service');
       }
       
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
+      queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/services`] });
       setIsEditDialogOpen(false);
       setSelectedService(null);
       resetForm();
@@ -156,19 +222,25 @@ export default function CRMServices() {
   // Delete service mutation
   const deleteMutation = useMutation({
     mutationFn: async (serviceId: number) => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${serviceId}`, {
+      // Получаем токен из localStorage
+      const token = localStorage.getItem('auth_token');
+      
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/services/${serviceId}`, {
         method: 'DELETE',
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
       });
       
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({ message: 'Failed to delete service' }));
         throw new Error(error.message || 'Failed to delete service');
       }
       
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/crm/services'] });
+      queryClient.invalidateQueries({ queryKey: [`${import.meta.env.VITE_BACKEND_URL}/services`] });
       setSelectedService(null);
       toast({
         title: t('success'),

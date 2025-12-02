@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CalendarDays, Clock, Plus, X } from "lucide-react";
+import { CalendarDays, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "../lib/queryClient";
 import { useBranch } from "@/contexts/BranchContext";
-import { format, startOfMonth, endOfMonth, isAfter, isBefore, isEqual } from 'date-fns';
+import { useLocale } from "@/contexts/LocaleContext";
+import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
 interface WorkingDate {
@@ -29,6 +29,7 @@ interface MasterWorkingDatesCalendarProps {
 const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({ masterId, masterName }) => {
   const { toast } = useToast();
   const { currentBranch } = useBranch();
+  const { t } = useLocale();
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -66,14 +67,14 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Успех", description: "Рабочая дата сохранена" });
+      toast({ title: t('common.success'), description: t('masters.working_date_saved') });
       refetch();
       setIsDialogOpen(false);
       setSelectedDate(undefined);
       setEditingDate(null);
     },
     onError: () => {
-      toast({ title: "Ошибка", description: "Не удалось сохранить рабочую дату", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('masters.error_saving_working_date'), variant: "destructive" });
     },
   });
 
@@ -87,11 +88,11 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Успех", description: "Рабочая дата удалена" });
+      toast({ title: t('common.success'), description: t('masters.working_date_deleted') });
       refetch();
     },
     onError: () => {
-      toast({ title: "Ошибка", description: "Не удалось удалить рабочую дату", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('masters.error_deleting_working_date'), variant: "destructive" });
     },
   });
 
@@ -157,10 +158,10 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center">
             <CalendarDays className="h-5 w-5 mr-2" />
-            Рабочие дни {masterName}
+            {t('masters.working_dates_title', { masterName })}
           </CardTitle>
           <CardDescription>
-            Выберите даты и время работы мастера на {format(currentMonth, 'LLLL yyyy', { locale: ru })}
+            {t('masters.working_dates_description', { month: new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' }).format(currentMonth) })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -190,11 +191,11 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
             <div className="flex items-center space-x-4">
               <div className="flex items-center">
                 <div className="w-4 h-4 bg-primary rounded mr-2"></div>
-                <span>Рабочие дни</span>
+                <span>{t('masters.working_days_legend')}</span>
               </div>
               <div className="flex items-center">
                 <div className="w-4 h-4 bg-muted rounded mr-2"></div>
-                <span>Выходные дни</span>
+                <span>{t('masters.days_off_legend')}</span>
               </div>
             </div>
           </div>
@@ -206,17 +207,17 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingDate ? 'Редактировать' : 'Добавить'} рабочий день
+              {editingDate ? t('masters.edit_working_day') : t('masters.add_working_day')} {t('masters.working_day_label')}
             </DialogTitle>
             <DialogDescription>
-              {selectedDate && format(selectedDate, 'dd LLLL yyyy', { locale: ru })}
+              {selectedDate && new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' }).format(selectedDate)}
             </DialogDescription>
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="startTime" className="text-right">
-                Начало работы
+                {t('masters.work_start_time')}
               </Label>
               <Input
                 id="startTime"
@@ -228,7 +229,7 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="endTime" className="text-right">
-                Конец работы
+                {t('masters.work_end_time')}
               </Label>
               <Input
                 id="endTime"
@@ -250,12 +251,12 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
                 {deleteWorkingDate.isPending ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Удаление...
+                    {t('masters.deleting')}
                   </>
                 ) : (
                   <>
                     <X className="h-4 w-4 mr-2" />
-                    Удалить
+                    {t('common.delete')}
                   </>
                 )}
               </Button>
@@ -267,12 +268,12 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
               {saveWorkingDate.isPending ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Сохранение...
+                  {t('common.loading')}
                 </>
               ) : (
                 <>
                   <Plus className="h-4 w-4 mr-2" />
-                  Сохранить
+                  {t('common.save')}
                 </>
               )}
             </Button>

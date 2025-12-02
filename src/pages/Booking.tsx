@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { LocaleProvider, useLocale } from '@/contexts/LocaleContext';
 import { LocaleToggle } from '@/components/ui/locale-toggle';
 import { extractTrackingInfo } from '@/utils/tracking';
 import PrivacyConsent from "@/components/PrivacyConsent";
+import * as BookingService from '@/services/booking-service';
 
 interface BookingData {
   branch?: string;
@@ -34,19 +35,43 @@ interface BookingData {
   phone: string;
 }
 
+// Используем новый booking API для получения филиалов
 const getOrganisationBranches = async (organisationId: string): Promise<any> => {
-  const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/organisation-branches?organisationId=${organisationId}`);
-  return response.data;
+  const branches = await BookingService.getBranches(Number(organisationId));
+  // Преобразуем формат ответа для совместимости со старым кодом
+  return {
+    branches: branches.map(branch => ({
+      id: branch.id.toString(),
+      branches: branch.name,
+      name: branch.name,
+      address: branch.address,
+      phone: branch.phone,
+      timezone: branch.timezone,
+      isActive: branch.isActive,
+      organization_id: branch.organization_id
+    }))
+  };
 };
 
 const getServices = async (branchId: string): Promise<any> => {
-  const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchId}`);
-  return response.data;
+  const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services?branch_id=${branchId}&page=1&limit=1000`);
+  // API возвращает пагинированный ответ { data: [...] }
+  return (response.data as any).data || [];
 };
 
+// Используем новый booking API для получения сотрудников (мастеров)
 const getMasters = async (branchId: string): Promise<any> => {
-  const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/public/masters?branchId=${branchId}`);
-  return response.data;
+  const response = await BookingService.getStaff(undefined, branchId);
+  // Преобразуем формат ответа для совместимости со старым кодом
+  return response.data.map(staff => ({
+    id: staff.id,
+    name: BookingService.getStaffFullName(staff),
+    specialty: staff.specialty,
+    is_active: staff.is_active,
+    role: staff.role,
+    email: staff.email,
+    photo_url: staff.photo_url
+  }));
 };
 
 const getMasterDetails = async (masterId: number): Promise<any> => {
@@ -281,6 +306,31 @@ const BookingPageContent: React.FC = () => {
     branch: '',
   });
 
+  // Получаем гостевой токен при загрузке страницы
+  useEffect(() => {
+    const fetchGuestToken = async () => {
+      try {
+        console.log('🔑 Fetching guest token for organization:', organisationId);
+        const tokenResponse = await BookingService.getGuestToken(Number(organisationId));
+
+        // Сохраняем токен в localStorage для использования в API запросах
+        localStorage.setItem('guest_token', tokenResponse.token);
+        console.log('✅ Guest token received and saved');
+      } catch (error) {
+        console.error('❌ Failed to fetch guest token:', error);
+        toast({
+          title: "Ошибка авторизации",
+          description: "Не удалось получить доступ к системе бронирования",
+          variant: "destructive"
+        });
+      }
+    };
+
+    if (organisationId) {
+      fetchGuestToken();
+    }
+  }, [organisationId, toast]);
+
   const { data: organisationBranches, isLoading: organisationBranchesLoading, error: organisationBranchesError } = useQuery({
     queryKey: ['organisationBranches', organisationId],
     queryFn: () => getOrganisationBranches(organisationId),
@@ -479,39 +529,55 @@ const BookingPageContent: React.FC = () => {
       // Извлекаем информацию об источнике записи для отслеживания
       const trackingInfo = extractTrackingInfo();
 
-      // Формируем datetime в формате YYYY-MM-DDTHH:mm из выбранной даты
+      // Формируем дату и время
       const selectedDate = bookingData.date || new Date();
-      const year = selectedDate.getFullYear();
-      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-      const day = String(selectedDate.getDate()).padStart(2, '0');
-      const datetime = `${year}-${month}-${day}T${bookingData.time}`;
+      const assignmentDate = BookingService.formatDateForBookingAPI(selectedDate);
 
-      const bookingPayload = {
-        branchId: String(bookingData.branch),
-        datetime: datetime,
-        masterId: Number(bookingData.masterId),
-        name: bookingData.name,
-        phone: bookingData.phone,
-        serviceDuration: Number(bookingData.serviceDuration),
-        serviceId: String(bookingData.serviceId),
-        servicePrice: Number(bookingData.servicePrice),
-        // Добавляем notes с информацией об источнике если есть параметры
-        ...(trackingInfo.notesText && { notes: trackingInfo.notesText })
+      // Парсим время начала и вычисляем время окончания
+      const [hours, minutes] = (bookingData.time || '00:00').split(':').map(Number);
+      const startTime = bookingData.time || '00:00';
+
+      // Вычисляем endTime на основе duration
+      const duration = bookingData.serviceDuration || 60;
+      const endDate = new Date(selectedDate);
+      endDate.setHours(hours);
+      endDate.setMinutes(minutes + duration);
+      const endTime = BookingService.formatTimeForBookingAPI(endDate);
+
+      // Подготавливаем payload для нового API
+      const assignmentPayload: BookingService.CreateAssignmentRequest = {
+        organizationId: Number(organisationId),
+        branchId: Number(bookingData.branch),
+        client: {
+          firstname: bookingData.name,
+          phoneNumber: bookingData.phone
+        },
+        employeeId: Number(bookingData.masterId),
+        assignmentDate: assignmentDate,
+        startTime: startTime,
+        endTime: endTime,
+        service: {
+          id: Number(bookingData.serviceId),
+          name: '', // Будет заполнено на бэкенде
+          price: bookingData.servicePrice || 0,
+          duration: duration
+        },
+        notes: trackingInfo.notesText || undefined,
+        source: trackingInfo.trackingSource || 'web',
+        paid: 'unpaid'
       };
 
-      console.log('Booking payload:', bookingPayload);
+      console.log('📝 Creating assignment with payload:', assignmentPayload);
       if (trackingInfo.notesText) {
-        console.log('Added tracking notes:', trackingInfo.notesText);
-        console.log('Tracking source:', trackingInfo.trackingSource || 'Direct');
-        console.log('URL parameters:', trackingInfo.parameters);
+        console.log('📌 Tracking info:', {
+          source: trackingInfo.trackingSource || 'Direct',
+          parameters: trackingInfo.parameters
+        });
       }
 
-      const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/booking`,
-        bookingPayload
-      );
+      const response = await BookingService.createAssignment(assignmentPayload);
 
-      console.log('Booking response:', response.data);
+      console.log('✅ Assignment created:', response.data);
 
       toast({
         title: "Запись создана",

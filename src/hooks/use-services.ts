@@ -41,7 +41,7 @@ export const useServices = () => {
   const branchId = getBranchIdWithFallback(currentBranch, branches);
 
   return useQuery<Service[]>({
-    queryKey: ['/api/crm/services', branchId],
+    queryKey: ['/services?branch_id', branchId],
     queryFn: async () => {
       if (!branchId) {
         console.warn('❌ No valid branch ID available, skipping services fetch');
@@ -49,14 +49,16 @@ export const useServices = () => {
       }
 
       try {
-        // Use the new path-based API structure
-        const url = `${import.meta.env.VITE_BACKEND_URL}/api/crm/services/${branchId}`;
+        // Use the new path-based API structure with pagination
+        const url = `${import.meta.env.VITE_BACKEND_URL}/services?branch_id=${branchId}&page=1&limit=1000`;
         console.log('📡 Services API URL:', url);
         
+        const token = localStorage.getItem('auth_token');
+        
         const response = await fetch(url, {
-          credentials: 'include',
           headers: {
             'Accept': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
           }
         });
 
@@ -72,7 +74,9 @@ export const useServices = () => {
           }
         }
 
-        const data = await response.json();
+        const result = await response.json();
+        // API возвращает пагинированный ответ { page, limit, total, pages, data }
+        const data = result.data || [];
         console.log('✅ Loaded services:', data.length, data.map((s: Service) => ({ id: s.id, name: s.name })));
         return data;
       } catch (error) {

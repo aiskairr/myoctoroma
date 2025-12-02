@@ -498,56 +498,62 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 price: service.price
             };
             
-            // Если это редактирование существующей записи (есть taskId), 
-            // сразу отправляем POST запрос на создание дополнительной услуги
+            // Добавляем в локальное состояние
+            const updatedServices = [...additionalServices, newService];
+            setAdditionalServices(updatedServices);
+            
+            // Если это редактирование существующей записи, обновляем через PATCH
             if (taskId) {
                 try {
-                    const additionalServicePayload = {
-                        id: generateTaskId(), // Генерируем уникальный ID для дополнительной услуги
-                        serviceType: newService.serviceName,
-                        serviceServiceId: newService.serviceId,
-                        duration: newService.duration
+                    const updatePayload = {
+                        additionalServices: updatedServices.map(s => ({
+                            id: s.serviceId,
+                            name: s.serviceName,
+                            duration: s.duration,
+                            price: s.price
+                        }))
                     };
 
-                    const additionalResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}/additional-services`, {
-                        method: 'POST',
+                    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/assignments/${taskId}`, {
+                        method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify(additionalServicePayload),
+                        body: JSON.stringify(updatePayload),
                         credentials: 'include'
                     });
 
-                    if (!additionalResponse.ok) {
-                        const errorData = await additionalResponse.json();
-                        console.error('❌ Error creating additional service:', errorData);
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error('❌ Error updating additional services:', errorData);
                         toast({
                             title: "Ошибка",
                             description: "Не удалось добавить дополнительную услугу",
                             variant: "destructive",
                         });
+                        // Откатываем изменения в локальном состоянии
+                        setAdditionalServices(additionalServices);
                         return;
-                    } else {
-                        console.log('✅ Additional service created:', additionalServicePayload);
-                        toast({
-                            title: "Услуга добавлена",
-                            description: "Дополнительная услуга успешно добавлена",
-                            variant: "default",
-                        });
                     }
+                    
+                    console.log('✅ Additional service added');
+                    toast({
+                        title: "Услуга добавлена",
+                        description: "Дополнительная услуга успешно добавлена",
+                        variant: "default",
+                    });
                 } catch (error) {
-                    console.error('❌ Error creating additional service:', error);
+                    console.error('❌ Error updating additional services:', error);
                     toast({
                         title: "Ошибка",
                         description: "Не удалось добавить дополнительную услугу",
                         variant: "destructive",
                     });
+                    // Откатываем изменения в локальном состоянии
+                    setAdditionalServices(additionalServices);
                     return;
                 }
             }
-            
-            // Добавляем в локальное состояние (для новых записей или для отображения)
-            setAdditionalServices(prev => [...prev, newService]);
             setNewAdditionalService({
                 serviceId: '',
                 serviceName: '',
@@ -555,58 +561,73 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 price: 0
             });
         }
-    }, [services, newAdditionalService, taskId, toast]);
+    }, [services, newAdditionalService, taskId, toast, additionalServices]);
 
     const removeAdditionalService = useCallback(async (serviceId: number) => {
-        // Если это редактирование существующей записи, отправляем DELETE запрос
+        // Удаляем из локального состояния
+        const updatedServices = additionalServices.filter(service => service.id !== serviceId);
+        setAdditionalServices(updatedServices);
+        
+        // Если это редактирование существующей записи, обновляем через PATCH
         if (taskId) {
             try {
-                const additionalResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}/additional-services/${serviceId}`, {
-                    method: 'DELETE',
+                const updatePayload = {
+                    additionalServices: updatedServices.map(s => ({
+                        id: s.serviceId,
+                        name: s.serviceName,
+                        duration: s.duration,
+                        price: s.price
+                    }))
+                };
+
+                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/assignments/${taskId}`, {
+                    method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
                     },
+                    body: JSON.stringify(updatePayload),
                     credentials: 'include'
                 });
 
-                if (!additionalResponse.ok) {
-                    const errorData = await additionalResponse.json();
-                    console.error('❌ Error deleting additional service:', errorData);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('❌ Error updating additional services:', errorData);
                     toast({
                         title: "Ошибка",
                         description: "Не удалось удалить дополнительную услугу",
                         variant: "destructive",
                     });
+                    // Откатываем изменения в локальном состоянии
+                    setAdditionalServices(additionalServices);
                     return;
-                } else {
-                    console.log('✅ Additional service deleted:', serviceId);
-                    toast({
-                        title: "Услуга удалена",
-                        description: "Дополнительная услуга успешно удалена",
-                        variant: "default",
-                    });
                 }
+                
+                console.log('✅ Additional service removed');
+                toast({
+                    title: "Услуга удалена",
+                    description: "Дополнительная услуга успешно удалена",
+                    variant: "default",
+                });
             } catch (error) {
-                console.error('❌ Error deleting additional service:', error);
+                console.error('❌ Error updating additional services:', error);
                 toast({
                     title: "Ошибка",
                     description: "Не удалось удалить дополнительную услугу",
                     variant: "destructive",
                 });
+                // Откатываем изменения в локальном состоянии
+                setAdditionalServices(additionalServices);
                 return;
             }
         }
-        
-        // Удаляем из локального состояния
-        setAdditionalServices(prev => prev.filter(service => service.id !== serviceId));
-    }, [taskId, toast]);
+    }, [taskId, toast, additionalServices]);
 
     // Функция для загрузки дополнительных услуг
     const loadAdditionalServices = useCallback(async (taskId: string) => {
-        console.log('🔍 loadAdditionalServices called for taskId:', taskId);
+        console.log('🔍 loadAdditionalServices called for assignment ID:', taskId);
         try {
-            // Сначала пробуем загрузить дочерние задачи
-            const childrenResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}/children`, {
+            // Загружаем assignment с дополнительными услугами
+            const assignmentResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/assignments/${taskId}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -614,101 +635,40 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 credentials: 'include'
             });
 
-            console.log('🔍 children response status:', childrenResponse.status);
+            console.log('🔍 assignment response status:', assignmentResponse.status);
 
-            if (childrenResponse.ok) {
-                const childTasksData = await childrenResponse.json();
-                console.log('🔍 childTasksData from API:', childTasksData);
+            if (assignmentResponse.ok) {
+                const responseData = await assignmentResponse.json();
+                console.log('🔍 assignment data from API:', responseData);
                 
-                if (childTasksData && childTasksData.length > 0) {
-                    const formattedServices: AdditionalService[] = await Promise.all(
-                        childTasksData.map(async (task: any) => {
-                            console.log('🔍 Processing child task:', {
-                                id: task.id,
-                                serviceType: task.serviceType,
-                                serviceServiceId: task.serviceServiceId,
-                                duration: task.duration,
-                                serviceDuration: task.serviceDuration,
-                                servicePrice: task.servicePrice,
-                                finalPrice: task.finalPrice,
-                                cost: task.cost,
-                                price: task.price,
-                                allFields: Object.keys(task)
-                            });
-                            
-                            let price = task.servicePrice || task.finalPrice || task.cost || task.price || 0;
-                            
-                            // Если цена не найдена и есть serviceServiceId, попробуем получить цену из услуги
-                            if (!price && task.serviceServiceId) {
-                                try {
-                                    const serviceResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/services/${task.serviceServiceId}`, {
-                                        method: 'GET',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                        },
-                                        credentials: 'include'
-                                    });
-                                    
-                                    if (serviceResponse.ok) {
-                                        const serviceData = await serviceResponse.json();
-                                        console.log('🔍 Service data for ID', task.serviceServiceId, ':', serviceData);
-                                        price = serviceData.price || serviceData.basePrice || 0;
-                                    }
-                                } catch (error) {
-                                    console.log('🔍 Failed to fetch service price for ID', task.serviceServiceId, ':', error);
-                                }
-                            }
-                            
-                            return {
-                                id: task.id,
-                                serviceId: task.serviceServiceId || 0,
-                                serviceName: task.serviceType || t('calendar.additional_service_default'),
-                                duration: task.serviceDuration || task.duration || 0,
-                                price: price
-                            };
-                        })
-                    );
+                // Проверяем структуру ответа { success: true, data: {...} }
+                const assignmentData = responseData.success ? responseData.data : responseData;
+                
+                // Извлекаем additionalServices из assignment
+                if (assignmentData.additionalServices && Array.isArray(assignmentData.additionalServices)) {
+                    const formattedServices: AdditionalService[] = assignmentData.additionalServices.map((service: any, index: number) => ({
+                        id: service.id || index, // используем index если id нет
+                        serviceId: service.id || 0,
+                        serviceName: service.name || t('calendar.additional_service_default'),
+                        duration: service.duration || 0,
+                        price: service.price || 0
+                    }));
                     
-                    console.log('🔍 formattedServices from children:', formattedServices);
+                    console.log('🔍 formattedServices from assignment:', formattedServices);
                     setAdditionalServices(formattedServices);
-                    return;
+                } else {
+                    console.log('ℹ️ No additional services found in assignment:', taskId);
+                    setAdditionalServices([]);
                 }
-            }
-
-            // Если дочерних задач нет, пробуем старый API
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}/additional-services`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include'
-            });
-
-            console.log('🔍 additional-services response status:', response.status);
-
-            if (response.ok) {
-                const additionalServicesData = await response.json();
-                console.log('🔍 additionalServicesData from API:', additionalServicesData);
-                
-                const formattedServices: AdditionalService[] = additionalServicesData.map((service: any) => ({
-                    id: service.id,
-                    serviceId: service.serviceId,
-                    serviceName: service.serviceName,
-                    duration: service.duration,
-                    price: service.price
-                }));
-                
-                console.log('🔍 formattedServices:', formattedServices);
-                setAdditionalServices(formattedServices);
             } else {
-                console.log('ℹ️ No additional services found for task:', taskId);
+                console.log('ℹ️ Failed to load assignment:', taskId);
                 setAdditionalServices([]);
             }
         } catch (error) {
             console.error('❌ Error loading additional services:', error);
             setAdditionalServices([]);
         }
-    }, []);
+    }, [t]);
 
     // Функция конвертации даты из формата dd.MM.yyyy в YYYY-MM-DD для API
     const convertDateFormat = (dateStr: string): string => {
@@ -726,14 +686,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
             console.log('📝 Updating existing task with ID:', taskId);
             
             try {
-                // Находим мастера по имени для получения masterId
-                const selectedMaster = mastersData.find(m => m.name === data.master);
-
-                // Вспомогательные функции
-                const calculateFinalPrice = (servicePrice: number, discount: number): number => {
-                    return Math.max(0, servicePrice - (servicePrice * discount / 100));
-                };
-
+                // Вспомогательная функция для расчета времени окончания
                 const calculateEndTime = (startTime: string, duration: number): string => {
                     const [hours, minutes] = startTime.split(':').map(Number);
                     const startMinutes = hours * 60 + minutes;
@@ -747,32 +700,29 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 const servicePrice = parseFloat(data.cost) || 0;
                 const discount = parseFloat(data.discount) || 0;
                 
-                const updatePayload: any = {
-                    clientName: data.clientName,
-                    phoneNumber: data.phone,
-                    serviceType: data.serviceType,
-                    masterName: data.master,
-                    masterId: selectedMaster?.id || null,
+                // Находим service по имени для получения ID
+                const selectedService = servicesData.find(s => s.name === data.serviceType);
+                const serviceId = selectedService?.id || 0;
+                
+                const updatePayload = {
+                    assignmentDate: data.date && data.date.trim() ? convertDateFormat(data.date) : undefined,
+                    startTime: data.time,
+                    endTime: calculateEndTime(data.time, serviceDuration),
+                    service: {
+                        id: serviceId,
+                        name: data.serviceType,
+                        duration: serviceDuration,
+                        price: servicePrice
+                    },
                     notes: data.notes,
-                    scheduleTime: data.time,
-                    serviceDuration: serviceDuration,
-                    finalPrice: calculateFinalPrice(servicePrice, discount),
                     discount: discount,
-                    branchId: data.branch,
-                    status: data.status,
-                    endTime: calculateEndTime(data.time, serviceDuration), // Обязательное поле
-                    // НЕ включаем additionalServices в основной PUT запрос
+                    status: data.status
                 };
 
-                // scheduleDate только если дата заполнена
-                if (data.date && data.date.trim()) {
-                    updatePayload.scheduleDate = convertDateFormat(data.date); // Конвертируем в формат YYYY-MM-DD
-                }
-
-                console.log('🚀 Sending PATCH request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`);
+                console.log('🚀 Sending PATCH request to:', `${import.meta.env.VITE_BACKEND_URL}/assignments/${taskId}`);
                 console.log('📦 Update payload:', updatePayload);
 
-                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
+                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/assignments/${taskId}`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
@@ -804,7 +754,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 
                 // Обновляем данные в кэше
                 queryClient.invalidateQueries({ queryKey: ['calendar-tasks'] });
-                queryClient.invalidateQueries({ queryKey: ['/api/tasks', taskId] });
+                queryClient.invalidateQueries({ queryKey: ['assignments', taskId] });
                 
                 // Закрываем диалог после успешного обновления
                 handleOpenChange(false);

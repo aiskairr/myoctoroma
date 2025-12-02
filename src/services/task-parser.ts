@@ -1,3 +1,5 @@
+import { createApiUrl } from '../API/http';
+
 // Парсер для регулярных запросов к API tasks
 export interface ParsedTask {
   id: number;
@@ -42,8 +44,6 @@ class TaskParserService {
   private intervalId: NodeJS.Timeout | null = null;
   private subscribers: ((data: TaskParserResponse) => void)[] = [];
   
-  // URL для парсинга
-  private readonly API_URL = 'https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app/api/tasks';
   private readonly DEFAULT_PARAMS = {
     branchId: '1',
     sortBy: 'scheduleDate',
@@ -61,18 +61,19 @@ class TaskParserService {
   }
 
   // Построение URL с параметрами
-  private buildUrl(params: Record<string, string> = {}): string {
+  private buildUrl(params: Record<string, string> = {}, useSecondary = false): string {
     const urlParams = new URLSearchParams({
       ...this.DEFAULT_PARAMS,
       ...params
     });
-    return `${this.API_URL}?${urlParams.toString()}`;
+    const baseUrl = createApiUrl('/api/tasks', useSecondary);
+    return `${baseUrl}?${urlParams.toString()}`;
   }
 
   // Отправка запроса к API
-  private async fetchTasks(customParams: Record<string, string> = {}): Promise<TaskParserResponse> {
+  private async fetchTasks(customParams: Record<string, string> = {}, useSecondary = false): Promise<TaskParserResponse> {
     try {
-      const url = this.buildUrl(customParams);
+      const url = this.buildUrl(customParams, useSecondary);
       console.log(`[TaskParser] Fetching tasks from: ${url}`);
       
       const response = await fetch(url, {
@@ -112,7 +113,7 @@ class TaskParserService {
   }
 
   // Запуск парсера с интервалом в 1 минуту
-  public start(customParams: Record<string, string> = {}): void {
+  public start(customParams: Record<string, string> = {}, useSecondary = false): void {
     if (this.isRunning) {
       console.log('[TaskParser] Parser is already running');
       return;
@@ -122,11 +123,11 @@ class TaskParserService {
     this.isRunning = true;
 
     // Немедленный первый запрос
-    this.performRequest(customParams);
-
+    this.performRequest(customParams, useSecondary);
+    
     // Запуск интервала каждые 20 секунд (20000 мс)
     this.intervalId = setInterval(() => {
-      this.performRequest(customParams);
+      this.performRequest(customParams, useSecondary);
     }, 20000);
 
     console.log('[TaskParser] Parser started successfully');
@@ -151,8 +152,8 @@ class TaskParserService {
   }
 
   // Выполнение запроса и уведомление подписчиков
-  private async performRequest(customParams: Record<string, string> = {}): Promise<void> {
-    const result = await this.fetchTasks(customParams);
+  private async performRequest(customParams: Record<string, string> = {}, useSecondary = false): Promise<void> {
+    const result = await this.fetchTasks(customParams, useSecondary);
     
     // Уведомляем всех подписчиков
     this.subscribers.forEach(callback => {
@@ -186,15 +187,16 @@ class TaskParserService {
   }
 
   // Ручной запрос данных
-  public async manualFetch(customParams: Record<string, string> = {}): Promise<TaskParserResponse> {
-    return this.fetchTasks(customParams);
+  public async manualFetch(customParams: Record<string, string> = {}, useSecondary = false): Promise<TaskParserResponse> {
+    return this.fetchTasks(customParams, useSecondary);
   }
 
   // Запрос с конкретным диапазоном дат (как в примере)
   public async fetchTasksForDateRange(
     scheduledAfter: string, 
     scheduledBefore: string,
-    additionalParams: Record<string, string> = {}
+    additionalParams: Record<string, string> = {},
+    useSecondary = false
   ): Promise<TaskParserResponse> {
     const params = {
       scheduledAfter,
@@ -202,7 +204,7 @@ class TaskParserService {
       ...additionalParams
     };
     
-    return this.fetchTasks(params);
+    return this.fetchTasks(params, useSecondary);
   }
 }
 

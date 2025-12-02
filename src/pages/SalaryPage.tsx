@@ -10,16 +10,30 @@ import { useLocale } from '@/contexts/LocaleContext';
 
 interface SalaryRecord {
   id?: number;
+  staff_id?: number;
   employee: string;
+  name?: string;
+  first_name?: string;
+  last_name?: string;
   base_salary: number;
   commission_rate: number;
   employee_role: string;
+  role?: string;
   master_id?: number;
   branch_id?: string;
   specialization?: string;
+  // Старые поля (для совместимости)
   calculated_commission?: number;
   completed_services?: number;
   total_earnings?: number;
+  // Новые поля из API /salaries (уже в сомах)
+  service_sum?: number;
+  total_salary?: number;
+  already_paid?: number;
+  paid_amount?: number;
+  remaining_amount?: number;
+  payments_count?: number;
+  payments?: any[];
   created_at?: string; // Формат: YYYY-MM-DD (дата создания записи)
   updated_at?: string; // Формат: YYYY-MM-DD (дата обновления записи)
   employee_type?: string; // 'master' или 'administrator'
@@ -88,28 +102,78 @@ export default function SalaryPage() {
         setIsLoading(false);
         return;
       }
-      
-      const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/salaries`);
+
+      const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/salaries`);
       url.searchParams.append('branchId', branchId);
-      
-      const response = await fetch(url.toString());
+      url.searchParams.append('startDate', startDate);
+      url.searchParams.append('endDate', endDate);
+
+      console.log('📡 Fetching salaries from:', url.toString());
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+        },
+      });
       if (response.ok) {
-        const data = await response.json();
-        // Новый формат API возвращает объект с полем salaries
-        const salariesArray = data.salaries || data;
-        // Приводим числовые значения к корректному формату
+        const responseData = await response.json();
+        console.log('📦 Raw API response:', responseData);
+
+        // Новый API /salaries возвращает { data: [...], meta: {...} }
+        const salariesArray = responseData.data || responseData.salaries || responseData;
+
+        console.log('📊 Salaries array (raw):', salariesArray);
+        if (salariesArray.length > 0) {
+          console.log('💵 Sample data (тыйыны):', {
+            base_salary: salariesArray[0].base_salary,
+            total_salary: salariesArray[0].total_salary,
+            service_sum: salariesArray[0].service_sum
+          });
+        }
+
+        // Маппим новый формат API к старому формату компонента
+        // API возвращает значения в тыйынах (1 сом = 100 тыйын), поэтому делим на 100
         const formattedData = salariesArray.map((record: any) => ({
-          ...record,
-          base_salary: Math.round(parseFloat(record.base_salary) || 0),
+          id: record.staff_id,
+          staff_id: record.staff_id,
+          // Имя сотрудника (несколько форматов для совместимости)
+          employee: `${record.staff?.first_name || ''} ${record.staff?.last_name || ''}`.trim(),
+          name: `${record.staff?.first_name || ''} ${record.staff?.last_name || ''}`.trim(),
+          first_name: record.staff?.first_name || '',
+          last_name: record.staff?.last_name || '',
+          // Роль сотрудника (несколько форматов для совместимости)
+          employee_role: record.staff?.role || '',
+          role: record.staff?.role || '',
+          // Финансовые данные - конвертируем тыйыны в сомы (делим на 100)
+          base_salary: Math.round((parseFloat(record.base_salary) || 0) / 100),
           commission_rate: parseFloat(record.commission_rate) || 0,
-          calculated_commission: parseFloat(record.calculated_commission) || 0,
-          completed_services: parseInt(record.completed_services) || 0,
-          total_earnings: parseFloat(record.total_earnings) || 0
+          service_sum: Math.round((parseFloat(record.service_sum) || 0) / 100),
+          completed_services: Math.round((parseFloat(record.service_sum) || 0) / 100),
+          calculated_commission: Math.round((parseFloat(record.service_sum) || 0) * parseFloat(record.commission_rate) / 100),
+          total_salary: Math.round((parseFloat(record.total_salary) || 0) / 100),
+          total_earnings: Math.round((parseFloat(record.total_salary) || 0) / 100),
+          already_paid: Math.round((parseFloat(record.already_paid) || 0) / 100),
+          paid_amount: Math.round((parseFloat(record.already_paid) || 0) / 100),
+          remaining_amount: Math.round((parseFloat(record.remaining_amount) || 0) / 100),
+          payments_count: parseInt(record.payments_count) || 0,
+          payments: record.payments || [],
         }));
-        console.log('Загружены данные зарплат:', formattedData);
+
+        console.log('✅ Formatted salary data (сомы):', formattedData);
+        if (formattedData.length > 0) {
+          console.log('💰 Sample converted (сомы):', {
+            employee: formattedData[0].employee,
+            base_salary: formattedData[0].base_salary,
+            total_salary: formattedData[0].total_salary,
+            service_sum: formattedData[0].service_sum
+          });
+        }
         setSalaryRecords(formattedData);
       } else {
-        console.error('Ошибка загрузки зарплат:', response.status, response.statusText);
+        console.error('❌ Ошибка загрузки зарплат:', response.status, response.statusText);
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('📄 Error response:', errorText);
       }
     } catch (error) {
       console.error('Ошибка загрузки данных зарплат:', error);
@@ -138,8 +202,13 @@ export default function SalaryPage() {
       url.searchParams.append('startDate', startDate);
       url.searchParams.append('endDate', endDate);
       url.searchParams.append('branchId', branchId);
-      
-      const response = await fetch(url.toString());
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setAccountingData(data);
@@ -162,7 +231,12 @@ export default function SalaryPage() {
         return;
       }
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments?branchId=${branchId}&startDate=${startDate}&endDate=${endDate}`);
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments?branchId=${branchId}&startDate=${startDate}&endDate=${endDate}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         console.log('Данные выплат:', data);
@@ -305,6 +379,7 @@ export default function SalaryPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
         },
         body: JSON.stringify(paymentData),
       });
@@ -366,8 +441,12 @@ export default function SalaryPage() {
 
     try {
       // Используем общий endpoint для удаления, который обработает и мастеров, и администраторов
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salaries/${record.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/salaries/${record.id}`, {
         method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
+        },
       });
 
       if (response?.ok) {
@@ -401,6 +480,7 @@ export default function SalaryPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
         },
         body: JSON.stringify({ paid_amount: paidAmount }),
       });
@@ -481,6 +561,7 @@ export default function SalaryPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
         },
         body: JSON.stringify(requestData),
       });
@@ -599,9 +680,10 @@ export default function SalaryPage() {
               </thead>
               <tbody>
                 {salaryRecords.map((record, index) => {
-                  const calculatedSalary = calculateSalary(record);
-                  const totalPaid = getTotalPaidAmount(record);
-                  const remaining = calculatedSalary - totalPaid;
+                  // Используем готовые значения из API (уже в сомах)
+                  const calculatedSalary = record.total_salary || 0;
+                  const totalPaid = record.already_paid || 0;
+                  const remaining = record.remaining_amount || 0;
                   const currentPayment = editedPayments[record.id!] || 0;
 
                   const isEditing = editingRows[record.id!];
@@ -774,7 +856,8 @@ export default function SalaryPage() {
               <h3 className="text-lg font-semibold text-blue-800">{t('salary.total_salary_sum')}</h3>
               <p className="text-2xl font-bold text-blue-600">
                 {(() => {
-                  const total = salaryRecords.reduce((sum, record) => sum + calculateSalary(record), 0);
+                  // Используем готовые значения из API (уже в сомах)
+                  const total = salaryRecords.reduce((sum, record) => sum + (record.total_salary || 0), 0);
                   console.log('Общая сумма ЗП:', total);
                   return Math.round(total).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                 })()} {t('salary.som')}
@@ -792,7 +875,8 @@ export default function SalaryPage() {
                   });
 
                   const totalPaid = relevantEmployees.reduce((sum, record) => {
-                    const paidAmount = getTotalPaidAmount(record);
+                    // Используем готовое значение из API (уже в сомах)
+                    const paidAmount = record.already_paid || 0;
                     console.log(`Выплачено ${record.employee}:`, paidAmount);
                     return sum + paidAmount;
                   }, 0);
@@ -818,9 +902,9 @@ export default function SalaryPage() {
                   });
 
                   const totalToPay = relevantEmployees.reduce((sum, record) => {
-                    const calculatedSalary = calculateSalary(record);
-                    const paidAmount = getTotalPaidAmount(record);
-                    return sum + (calculatedSalary - paidAmount);
+                    // Используем готовое значение из API (уже в сомах)
+                    const remainingAmount = record.remaining_amount || 0;
+                    return sum + remainingAmount;
                   }, 0);
 
                   console.log('К доплате:', totalToPay);

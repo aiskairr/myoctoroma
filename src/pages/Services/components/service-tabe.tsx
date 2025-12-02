@@ -48,11 +48,15 @@ const ServicesTable: React.FC = () => {
             if (!correctBranchId) {
                 throw new Error('No branch selected');
             }
-            const response = await apiGet(`/api/crm/services/${correctBranchId}`);
+            // Добавляем параметры пагинации - получаем все услуги
+            const response = await apiGet(`/services?branchId=${correctBranchId}&page=1&limit=50`);
             if (!response.ok) {
                 throw new Error('Failed to fetch services');
             }
-            return response.json();
+            const result = await response.json();
+            console.log(result , "result")
+            // API возвращает пагинированный ответ с данными в поле data
+            return result.data || [];
         },
         enabled: !!correctBranchId // Запрос выполняется только при наличии branchId
     });
@@ -69,7 +73,7 @@ const ServicesTable: React.FC = () => {
 
     const updateMutation = useMutation({
         mutationFn: async (service: any) => {
-            const response = await apiPut(`/api/crm/services/${service.id}`, {
+            const response = await apiPut(`/services/${service.id}`, {
                 name: service.name,
                 description: service.description,
                 isActive: service.isActive,
@@ -108,7 +112,7 @@ const ServicesTable: React.FC = () => {
 
     const deleteMutation = useMutation({
         mutationFn: async (serviceId: number) => {
-            const response = await apiDelete(`/api/crm/services/${serviceId}`);
+            const response = await apiDelete(`/services/${serviceId}`);
             if (!response.ok) throw new Error(t('services.error_deleting'));
             return response.json();
         },
@@ -252,7 +256,7 @@ const ServicesTable: React.FC = () => {
                                         </td>
                                         <td className="border border-gray-300 px-4 py-3">
                                             <Select
-                                                value={editingService.defaultDuration.toString()}
+                                                value={(editingService.defaultDuration || editingService.default_duration || 60).toString()}
                                                 onValueChange={(value) => handleInputChange(service.id, 'defaultDuration', parseInt(value))}
                                             >
                                                 <SelectTrigger className="border-0 shadow-none p-2 text-base bg-transparent focus:ring-1 focus:ring-blue-500">

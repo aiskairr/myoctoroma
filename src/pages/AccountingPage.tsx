@@ -4,7 +4,7 @@ import { useLocale } from '@/contexts/LocaleContext';
 import { getBranchIdWithFallback } from '@/utils/branch-utils';
 import { accountingService } from '@/services/accounting-service';
 import { expenseService, type ExpenseRecord } from '@/services/expense-service';
-import { apiGetJson } from '@/lib/api';
+import { $api } from '@/API/http';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import {
@@ -137,9 +137,9 @@ const AccountingPage = () => {
       const branchId = getBranchIdWithFallback(currentBranch, branches);
       const url = `/api/masters?branchID=${branchId}`;
       console.log('Fetching masters with URL:', url);
-      const response = await apiGetJson(url);
-      console.log('Masters response:', response);
-      return response;
+      const response = await $api.get(url);
+      console.log('Masters response:', response.data);
+      return response.data;
     } catch (error) {
       console.error('Error fetching masters:', error);
       throw error;
@@ -151,9 +151,9 @@ const AccountingPage = () => {
       const branchId = getBranchIdWithFallback(currentBranch, branches);
       const url = `/api/administrators?branchID=${branchId}`;
       console.log('Fetching administrators with URL:', url);
-      const response = await apiGetJson(url);
-      console.log('Administrators response:', response);
-      return response;
+      const response = await $api.get(url);
+      console.log('Administrators response:', response.data);
+      return response.data;
     } catch (error) {
       console.error('Error fetching administrators:', error);
       throw error;
@@ -163,9 +163,10 @@ const AccountingPage = () => {
   const fetchServices = async () => {
     try {
       const branchId = getBranchIdWithFallback(currentBranch, branches);
-      const response = await apiGetJson(`/api/crm/services/${branchId}`);
-      console.log('Services response:', response);
-      return response;
+      const response = await $api.get(`/services?branch_id=${branchId}&page=1&limit=1000`);
+      console.log('Services response:', response.data);
+      // API возвращает пагинированный ответ
+      return response.data?.data || [];
     } catch (error) {
       console.error('Error fetching services:', error);
       throw error;
@@ -178,9 +179,9 @@ const AccountingPage = () => {
         console.warn('No organisation ID available for branches fetch');
         return [];
       }
-      const response = await apiGetJson(`/api/organisations/${currentBranch.organisationId}/branches`);
-      console.log('Branches response:', response);
-      return response;
+      const response = await $api.get(`/api/organisations/${currentBranch.organisationId}/branches`);
+      console.log('Branches response:', response.data);
+      return response.data;
     } catch (error) {
       console.error('Error fetching branches:', error);
       throw error;
@@ -193,33 +194,19 @@ const AccountingPage = () => {
       const dateString = new Date(targetDate.getTime() - (targetDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
       
       const branchId = getBranchIdWithFallback(currentBranch, branches);
-      const url = `${import.meta.env.VITE_BACKEND_URL}/api/statistics/accounting/${dateString}/${dateString}?branchId=${branchId}`;
+      const url = `${import.meta.env.VITE_BACKEND_URL}/accounting?branchId=${branchId}&date=${dateString}`;
       console.log('Fetching accounting statistics with URL:', url);
       
       const response = await fetch(url);
       if (response.ok) {
         const apiData = await response.json();
         console.log('Accounting statistics response:', apiData);
-        
-        // Новый формат данных: data = [доходы, расходы, записей, прибыль]
-        if (apiData.success && Array.isArray(apiData.data) && apiData.data.length >= 4) {
-          const [dailyIncome, dailyExpenses, recordsCount, netProfit] = apiData.data;
-          
-          setDailyStats({
-            dailyIncome,
-            dailyExpenses, 
-            recordsCount,
-            netProfit
-          });
-          
-          setDailyCashData({
-            dailyIncome,
-            dailyExpenses,
-            netProfit
-          });
-        } else {
-          console.error('Invalid data format from accounting statistics API');
-        }
+        const dailyIncome = Number(apiData.income || 0);
+        const dailyExpenses = Number(apiData.expenses || 0);
+        const netProfit = Number(apiData.profit || (dailyIncome - dailyExpenses));
+        const recordsCount = Array.isArray(apiData.accountings) ? apiData.accountings.length : Number(apiData.assignments || 0);
+        setDailyStats({ dailyIncome, dailyExpenses, recordsCount, netProfit });
+        setDailyCashData({ dailyIncome, dailyExpenses, netProfit });
       } else {
         console.error('Failed to fetch accounting statistics:', response.status);
       }
@@ -279,9 +266,11 @@ const AccountingPage = () => {
         fetchServices(),
         fetchBranches()
       ]);
+      console.log('Setting services:', servicesData);
+      console.log('Setting branches:', branchesData);
       setServices(servicesData);
-      // Если ответ содержит поле branches, используем его, иначе используем весь ответ
-      setBranchesData(branchesData.branches || branchesData);
+      // Ответ уже распакован в fetchBranches
+      setBranchesData(Array.isArray(branchesData) ? branchesData : []);
     } catch (error) {
       console.error('Error loading services and branches:', error);
     }

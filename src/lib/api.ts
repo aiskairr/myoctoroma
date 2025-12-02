@@ -1,9 +1,12 @@
 // Универсальная функция для API запросов с правильными CORS заголовками
 
 import Cookies from "js-cookie";
+import { requestTokenRefresh } from "@/API/http";
 
-// В dev режиме используем проксированные пути, в production - полный URL
-const API_BASE_URL = import.meta.env.DEV ? '' : import.meta.env.VITE_BACKEND_URL;
+// Используем SECONDARY_BACKEND_URL для новых endpoints (/clients, /branches и т.д.)
+// Для старых endpoints используем BACKEND_URL
+const SECONDARY_API_BASE_URL = import.meta.env.VITE_SECONDARY_BACKEND_URL;
+const PRIMARY_API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
 interface ApiRequestOptions extends RequestInit {
   skipPragmaHeader?: boolean;
@@ -22,8 +25,12 @@ export const apiRequest = async (endpoint: string, options: ApiRequestOptions = 
 
   // Добавляем Bearer токен для аутентификации, если не пропускаем auth
   if (!skipAuth) {
-    const token = Cookies.get('token');
-    console.log('API Request - Token from cookies:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
+    // Приоритет: сначала localStorage, потом cookies
+    const token = localStorage.getItem('auth_token') || Cookies.get('token');
+    console.log('API Request - Token source:', 
+      localStorage.getItem('auth_token') ? 'localStorage' : (Cookies.get('token') ? 'cookies' : 'NO TOKEN'),
+      token ? `${token.substring(0, 20)}...` : 'NO TOKEN'
+    );
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -37,30 +44,72 @@ export const apiRequest = async (endpoint: string, options: ApiRequestOptions = 
     delete headers['Cache-Control'];
   }
 
+  // Определяем нужны ли credentials для этого эндпоинта
+  // Используем credentials только для endpoints которым это действительно нужно
+  const needsCredentials = endpoint.startsWith('/api/auth') || 
+                          endpoint.startsWith('/api/organisation') ||
+                          endpoint.includes('/whatsapp/');
+  
   const config: RequestInit = {
-    credentials: 'include',
+    credentials: needsCredentials ? 'include' : 'omit',
     ...fetchOptions,
     headers
   };
 
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+  // Определяем какой базовый URL использовать
+  // Новые endpoints (/clients, /branches, /user, /admin, /staffAuthorization, /booking) используют SECONDARY_API_BASE_URL
+  // Старые endpoints (/api/*) используют PRIMARY_API_BASE_URL
+  let baseUrl: string;
+  if (endpoint.startsWith('http')) {
+    baseUrl = '';
+  } else if (endpoint.startsWith('/clients') || endpoint.startsWith('/branches') || endpoint.startsWith('/user') || endpoint.startsWith('/admin') || endpoint.startsWith('/staff') || endpoint.startsWith('/staffAuthorization') || endpoint.startsWith('/working-dates') || endpoint.startsWith('/booking')) {
+    baseUrl = SECONDARY_API_BASE_URL;
+  } else {
+    baseUrl = PRIMARY_API_BASE_URL;
+  }
+  
+  const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
   
   console.log('🌐 API Request:', {
     method: config.method || 'GET',
     url: url,
+    baseUrl: baseUrl,
+    endpoint: endpoint,
     hasAuth: !!headers['Authorization'],
-    contentType: headers['Content-Type']
+    authToken: headers['Authorization'] ? `${headers['Authorization'].substring(0, 30)}...` : 'NO AUTH',
+    contentType: headers['Content-Type'],
+    credentials: config.credentials
   });
   
-  try {
+  const executeRequest = async () => {
     const response = await fetch(url, config);
-    
-    // Проверяем на 401 ошибку аутентификации
+    return response;
+  };
+
+  try {
+    let response = await executeRequest();
+
+    if (response.status === 401 && !skipAuth) {
+      console.warn('🔄 Access token expired. Attempting refresh before retry...');
+      const newToken = await requestTokenRefresh().catch((err) => {
+        console.error('❌ Token refresh failed:', err);
+        return null;
+      });
+
+      if (newToken) {
+        headers['Authorization'] = `Bearer ${newToken}`;
+        response = await executeRequest();
+      }
+    }
+
+    // Проверяем на 401 ошибку аутентификации после повторной попытки
     if (response.status === 401) {
       console.error('🔒 Authentication failed. Token may be expired or invalid.');
+      const token = localStorage.getItem('auth_token') || Cookies.get('token');
       console.log('🔍 Token details:', {
-        hasToken: !!Cookies.get('token'),
-        tokenPreview: Cookies.get('token') ? `${Cookies.get('token')?.substring(0, 20)}...` : 'NO TOKEN'
+        hasTokenInLocalStorage: !!localStorage.getItem('auth_token'),
+        hasTokenInCookies: !!Cookies.get('token'),
+        tokenPreview: token ? `${token.substring(0, 20)}...` : 'NO TOKEN'
       });
     }
     

@@ -10,6 +10,7 @@ import { useLocale } from "@/contexts/LocaleContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import Lottie from "lottie-react";
 import circularLinesAnimation from "@/lotties/Circular lines 01.json";
+import { navigateTo } from "@/utils/navigation";
 
 export default function SimpleLogin() {
   const [email, setEmail] = useState("");
@@ -17,19 +18,37 @@ export default function SimpleLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   
-  const { login, isLoading, isAuthenticated, user } = useAuth();
+  const { login, logCheck, isLoading, isAuthenticated, user } = useAuth();
   const { t } = useLocale();
 
   // Если пользователь уже авторизован, перенаправляем его
   useEffect(() => {
-    if (isAuthenticated && user) {
+    console.log("🔍 useEffect: Checking auth status...");
+    console.log("  - isAuthenticated:", isAuthenticated);
+    console.log("  - isLoading:", isLoading);
+    console.log("  - user:", user);
+    console.log("  - user.role:", user?.role);
+    
+    if (isAuthenticated && user && !isLoading) {
+      console.log("✅ User is authenticated, checking role for redirect...");
+      
       if (user.role === 'master') {
-        window.location.href = "/crm/calendar";
+        console.log("🔄 useEffect: Redirecting master to /crm/calendar");
+        navigateTo("/crm/calendar", { replace: true });
+      } else if (user.role === 'owner' || user.role === 'admin') {
+        console.log("🔄 useEffect: Redirecting owner/admin to /dashboard");
+        navigateTo("/dashboard", { replace: true });
+      } else if (user.role === 'manager') {
+        console.log("🔄 useEffect: Redirecting manager to /dashboard");
+        navigateTo("/dashboard", { replace: true });
       } else {
-        window.location.href = "/";
+        console.log("🔄 useEffect: Redirecting to / (role:", user.role, ")");
+        navigateTo("/", { replace: true });
       }
+    } else {
+      console.log("⏸️ Not redirecting yet. Auth:", isAuthenticated, "User:", !!user, "Loading:", isLoading);
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, isLoading]);
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -46,16 +65,49 @@ export default function SimpleLogin() {
     setError("");
 
     try {
+      console.log("📤 Calling login function...");
       const result = await login(email, password);
+      console.log("📥 Login result:", result);
 
       if (result.success) {
+        console.log("✅ Login successful, redirecting...");
+        console.log("👤 User data from login result:", result.user);
+        console.log("👤 User role:", result.user?.role);
+        console.log("👤 User email:", result.user?.email);
+        console.log("👤 User id:", result.user?.id);
+        
+        // Проверяем что у нас есть все необходимые данные
+        if (!result.user) {
+          console.error("❌ No user data in result!");
+          setError(t('login.error.no_user'));
+          return;
+        }
+        
+        if (!result.user.role) {
+          console.error("❌ No role in user data!");
+          setError(t('login.error.no_role'));
+          return;
+        }
+        
         // Перенаправляем в зависимости от роли
-        if (result.user?.role === 'master') {
-          window.location.href = "/crm/calendar";
+        console.log("⏳ Waiting 2 seconds before redirect...");
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        if (result.user.role === 'master') {
+          console.log("🔄 Redirecting to /crm/calendar");
+          navigateTo("/crm/calendar", { replace: true });
+        } else if (result.user.role === 'owner' || result.user.role === 'admin') {
+          console.log("🔄 Redirecting to /dashboard");
+          navigateTo("/dashboard", { replace: true });
+        } else if (result.user.role === 'manager') {
+          console.log("🔄 Redirecting manager to /dashboard");
+          navigateTo("/dashboard", { replace: true });
         } else {
-          window.location.href = "/";
+          console.log("🔄 Redirecting to / (unknown role:", result.user.role, ")");
+          navigateTo("/", { replace: true });
         }
       } else {
+        console.log("❌ Login failed:", result.message);
         // Обрабатываем ошибку
         setError(result.message || t('login.error.invalid'));
       }
@@ -80,7 +132,7 @@ export default function SimpleLogin() {
           animationData={circularLinesAnimation}
           loop={true}
           autoplay={true}
-          className="w-full h-full object-cover opacity-55 scale-[130%]"
+          className="w-full h-full object-cover opacity-55 scale-[210%]"
         />
       </div>
 
@@ -118,7 +170,7 @@ export default function SimpleLogin() {
 
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-xs sm:text-sm font-medium text-gray-700">
-                  {t('login.email')}
+                  {t('login.phone')}
                 </Label>
                 <Input
                   id="email"
@@ -126,7 +178,7 @@ export default function SimpleLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={t('login.email_placeholder')}
+                  placeholder={t('login.phone_placeholder')}
                   disabled={isLoading}
                   className="w-full outline-none focus:outline-none text-sm sm:text-base"
                   autoComplete="email"

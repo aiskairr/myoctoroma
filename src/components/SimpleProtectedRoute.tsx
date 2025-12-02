@@ -1,5 +1,6 @@
 import { useAuth } from "@/contexts/SimpleAuthContext";
 import { Loader2 } from "lucide-react";
+import { navigateTo } from "@/utils/navigation";
 
 interface SimpleProtectedRouteProps {
   children: React.ReactNode;
@@ -23,7 +24,7 @@ export function SimpleProtectedRoute({ children, requiredRole }: SimpleProtected
 
   // Если не авторизован, перенаправляем на логин
   if (!isAuthenticated) {
-    window.location.href = "/login";
+    navigateTo("/login", { replace: true });
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -38,7 +39,7 @@ export function SimpleProtectedRoute({ children, requiredRole }: SimpleProtected
   if (requiredRole && user?.role !== requiredRole) {
     // Мастера направляем на календарь
     if (user?.role === 'master') {
-      window.location.href = "/crm/calendar";
+      navigateTo("/crm/calendar", { replace: true });
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="text-center">
