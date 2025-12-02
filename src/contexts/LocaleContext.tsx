@@ -231,6 +231,7 @@ const translations = {
     'taskStatus.in_progress': 'В процессе',
     'taskStatus.completed': 'Завершена',
     'taskStatus.cancelled': 'Отменена',
+    'taskStatus.scheduled': 'Запланирована',
 
     // Филиалы
     'branch.title': 'Филиал',
@@ -1929,6 +1930,7 @@ const translations = {
     'taskStatus.in_progress': 'Аткарылууда',
     'taskStatus.completed': 'Аткарылды',
     'taskStatus.cancelled': 'Жокко чыгарылды',
+    'taskStatus.scheduled': 'Пландалган',
 
     // Филиалы
     'branch.title': 'Филиал',
@@ -3624,6 +3626,7 @@ const translations = {
     'taskStatus.in_progress': 'In Progress',
     'taskStatus.completed': 'Completed',
     'taskStatus.cancelled': 'Cancelled',
+    'taskStatus.scheduled': 'Scheduled',
 
     // Филиалы
     'branch.title': 'Branch',
