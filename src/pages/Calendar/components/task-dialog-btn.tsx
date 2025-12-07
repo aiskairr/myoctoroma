@@ -11,7 +11,7 @@ import { Clock, CalendarIcon, Loader2, Trash2, Plus, CheckCircle, X, Scissors, M
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import type React from "react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useTask, formatTaskForForm, useCreateTask, generateTaskId } from "@/hooks/use-task";
 import { useMasters } from "@/hooks/use-masters";
 import { useServices, convertServicesToLegacyFormat, getServiceDurations } from "@/hooks/use-services";
@@ -74,13 +74,14 @@ interface Props {
     taskId?: number | null; // ID задачи для загрузки данных
 }
 
+// Build version: 2025-12-05-v2 - Fixed duration/time/discount loading
 const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [showPaymentDialog, setShowPaymentDialog] = useState(false);
     const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("");
     const [selectedAdministrator, setSelectedAdministrator] = useState<string>("");
-    const [discountType, setDiscountType] = useState<'percent' | 'amount'>('percent'); // Тип скидки
+    const [discountType, setDiscountType] = useState<'percent' | 'amount'>('amount'); // Тип скидки - по умолчанию сомы
 
     // States for additional services
     const [additionalServices, setAdditionalServices] = useState<AdditionalService[]>([]);
@@ -90,6 +91,15 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         duration: 0,
         price: 0
     });
+    
+    // Flag to prevent service type useEffect from overwriting loaded task data
+    const [isTaskDataLoaded, setIsTaskDataLoaded] = useState(false);
+    
+    // Ref to store loaded task data for validation in useEffect
+    const loadedTaskDataRef = useRef<{ duration: string; cost: string; time: string } | null>(null);
+    
+    // Ref to track if we're currently loading task data (to skip auto-fill effects)
+    const isLoadingTaskRef = useRef(false);
 
     // Hooks
     const { toast } = useToast();
@@ -113,6 +123,19 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     const { data: servicesData = [] } = useServices();
     const { branches, currentBranch } = useBranch();
     const { user } = useAuth();
+
+    // Диагностика загрузки данных
+    console.log('📊 TaskDialogBtn render:', {
+        taskId,
+        hasTaskData: !!taskData,
+        taskLoading,
+        taskError: taskError?.message,
+        servicesDataLength: servicesData?.length,
+        mastersDataLength: mastersData?.length,
+        isTaskDataLoaded
+    });
+
+    // ТЕСТОВЫЙ useEffect - перемещён ниже после определения reset
 
     // Fetch administrators
     const getBranchIdWithFallback = (currentBranch: any, branches: any[]) => {
@@ -273,6 +296,100 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         }
     });
 
+    // ГЛАВНЫЙ useEffect для загрузки данных задачи в форму
+    // Срабатывает когда данные задачи получены (не зависит от isOpen)
+    useEffect(() => {
+        console.log('🟢🟢🟢 MAIN TASK USEEFFECT FIRED 🟢🟢🟢', {
+            taskData: taskData ? 'exists' : 'null',
+            taskId,
+            isOpen,
+            taskLoading,
+            isTaskDataLoaded
+        });
+        
+        // Загружаем данные когда они готовы (без проверки isOpen)
+        // isOpen убран потому что данные загружаются ДО открытия диалога
+        if (taskData && !taskLoading && !isTaskDataLoaded) {
+            console.log('🔄🔄🔄 LOADING TASK DATA INTO FORM 🔄🔄🔄');
+            console.log('📦 Raw taskData:', taskData);
+            
+            isLoadingTaskRef.current = true;
+            
+            const formData = formatTaskForForm(taskData);
+            
+            // Устанавливаем время из taskData
+            if (taskData.scheduleTime) {
+                formData.time = taskData.scheduleTime;
+                console.log('⏰ Set time:', formData.time);
+            }
+            
+            // Устанавливаем длительность и цену из taskData
+            if (taskData.serviceDuration !== null && taskData.serviceDuration !== undefined) {
+                const targetPrice = taskData.servicePrice || taskData.finalPrice || 0;
+                formData.duration = `${taskData.serviceDuration} мин - ${targetPrice} сом`;
+                console.log('⏱️ Set duration:', formData.duration);
+            }
+            
+            // Стоимость - используем finalPrice (цена после скидки)
+            if (taskData.finalPrice !== null && taskData.finalPrice !== undefined) {
+                formData.cost = taskData.finalPrice.toString();
+                console.log('💰 Set cost from finalPrice:', formData.cost);
+            } else if (taskData.servicePrice !== null && taskData.servicePrice !== undefined) {
+                formData.cost = taskData.servicePrice.toString();
+                console.log('💰 Set cost from servicePrice:', formData.cost);
+            }
+            
+            // Мастер
+            if (!formData.master && taskData.masterId && mastersData?.length > 0) {
+                const masterById = mastersData.find(m => m.id === taskData.masterId);
+                if (masterById) {
+                    formData.master = masterById.name;
+                    console.log('👤 Set master:', formData.master);
+                }
+            }
+            if (!formData.master && taskData.masterName) {
+                formData.master = taskData.masterName;
+                console.log('👤 Set master from masterName:', formData.master);
+            }
+            
+            // Скидка приходит в сомах
+            if (taskData.discount !== null && taskData.discount !== undefined && taskData.discount > 0) {
+                setDiscountType('amount');
+                formData.discount = taskData.discount.toString();
+                console.log('🏷️ Set discount (amount):', formData.discount);
+            } else {
+                setDiscountType('amount');
+                formData.discount = '0';
+            }
+            
+            console.log('✅ FINAL FORM DATA:', formData);
+            console.log('⏰ formData.time value:', JSON.stringify(formData.time), 'type:', typeof formData.time);
+            
+            // Устанавливаем флаг ПЕРЕД reset
+            setIsTaskDataLoaded(true);
+            loadedTaskDataRef.current = {
+                duration: formData.duration,
+                cost: formData.cost,
+                time: formData.time
+            };
+            
+            reset(formData);
+            
+            // Проверяем что значение установилось после reset
+            setTimeout(() => {
+                const currentTime = watch('time');
+                console.log('⏰ After reset - time value:', JSON.stringify(currentTime));
+            }, 100);
+            
+            isLoadingTaskRef.current = false;
+            
+            // Загружаем доп. услуги
+            if (taskId) {
+                loadAdditionalServices(taskId.toString());
+            }
+        }
+    }, [taskData, taskLoading, taskId, isTaskDataLoaded, mastersData, reset]);
+
     // Watch для отслеживания изменений в форме
     const watchedServiceType = watch('serviceType');
     const watchedDuration = watch('duration');
@@ -288,7 +405,20 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     };
 
     // Автоматическое заполнение стоимости при изменении длительности
+    // НО только для новых задач, не для загруженных
     useEffect(() => {
+        // Пропускаем если идёт загрузка данных задачи или данные уже загружены
+        if (isLoadingTaskRef.current) {
+            console.log('⏳ Skipping duration useEffect - loading task data');
+            return;
+        }
+        
+        // Для существующих задач - не перезаписываем cost автоматически
+        if (taskId && isTaskDataLoaded) {
+            console.log('⏳ Skipping duration useEffect - task data already loaded');
+            return;
+        }
+        
         if (watchedDuration && watchedDuration.includes('сом')) {
             const priceMatch = watchedDuration.match(/(\d+)\s*сом$/);
             if (priceMatch) {
@@ -299,167 +429,62 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 }));
             }
         }
-    }, [watchedDuration, reset]);
+    }, [watchedDuration, reset, taskId, isTaskDataLoaded]);
 
     // Сбрасываем длительность при изменении типа услуги
+    // НО только для НОВЫХ задач (без taskId)
     useEffect(() => {
+        // Пропускаем если идёт загрузка данных задачи
+        if (isLoadingTaskRef.current) {
+            console.log('⏳ Skipping serviceType useEffect - loading task data');
+            return;
+        }
+        
+        // Для существующих задач - НЕ сбрасываем длительность автоматически
+        if (taskId) {
+            console.log('⏳ Skipping serviceType useEffect - editing existing task');
+            return;
+        }
+        
+        // Для новых задач (без taskId) - применяем стандартную логику
         if (watchedServiceType) {
-            // Если услуга изменилась, сбрасываем длительность
             const currentDuration = watch('duration');
             const availableDurations = getAvailableDurations();
+            
+            // Если доступных длительностей нет (все цены null в API), 
+            // не сбрасываем текущее значение - оставляем как есть
+            if (availableDurations.length === 0) {
+                console.log('⚠️ No available durations from API for service, keeping current value:', currentDuration);
+                return;
+            }
+            
             const isDurationValid = availableDurations.some(d => `${d.duration} мин - ${d.price} сом` === currentDuration);
             
             // Если длительность не выбрана, пустая или невалидна
             if (!currentDuration || !isDurationValid) {
-                if (availableDurations.length > 0) {
-                    // Автоматически выбираем первую (минимальную) доступную длительность
-                    const firstDuration = availableDurations[0];
-                    const durationString = `${firstDuration.duration} мин - ${firstDuration.price} сом`;
-                    
-                    reset((formValues) => ({
-                        ...formValues,
-                        duration: durationString,
-                        cost: firstDuration.price.toString()
-                    }));
-                } else {
-                    // Если для услуги нет длительностей, устанавливаем "0 мин - 0 сом"
-                    reset((formValues) => ({
-                        ...formValues,
-                        duration: '0 мин - 0 сом',
-                        cost: '0'
-                    }));
-                }
+                // Автоматически выбираем первую (минимальную) доступную длительность
+                const firstDuration = availableDurations[0];
+                const durationString = `${firstDuration.duration} мин - ${firstDuration.price} сом`;
+                
+                reset((formValues) => ({
+                    ...formValues,
+                    duration: durationString,
+                    cost: firstDuration.price.toString()
+                }));
             }
         }
-    }, [watchedServiceType, watch, reset]);
+    }, [watchedServiceType, watch, reset, taskId]);
 
-    // Update form when task data is loaded
-    useEffect(() => {
-        if (taskData && !taskLoading && servicesData.length > 0) {
-            console.log('🔄 Loading task data into form:', taskData);
-            console.log('🔄 Available masters:', mastersData);
-            console.log(' taskData.branchId:', taskData.branchId);
-            
-            const formData = formatTaskForForm(taskData);
-            console.log('📝 Formatted form data:', formData);
-            
-            if (!formData.time && taskData.scheduleTime) {
-                formData.time = taskData.scheduleTime;
-                console.log('🔧 Set time from taskData:', formData.time);
-            }
-            
-            if (!formData.master) {
-                console.log('🔍 Looking for master...');
-                // Попробуем найти мастера по ID из данных
-                if (taskData.masterId && mastersData?.length > 0) {
-                    const masterById = mastersData.find(m => m.id === taskData.masterId);
-                    if (masterById) {
-                        formData.master = masterById.name;
-                        console.log('🔧 Found master by ID:', masterById);
-                    }
-                }
-                // Если не нашли по ID, попробуем по имени
-                else if (taskData.master?.name) {
-                    formData.master = taskData.master.name;
-                    console.log('🔧 Set master from taskData.master:', formData.master);
-                }
-                // Последняя попытка - по masterName
-                else if (taskData.masterName) {
-                    formData.master = taskData.masterName;
-                    console.log('🔧 Set master from masterName:', formData.master);
-                }
-                
-                if (!formData.master) {
-                    console.log('❌ Could not find master!');
-                }
-            }
-
-            // Специальная обработка для длительности и стоимости
-            if (taskData.serviceType && servicesData.length > 0) {
-                const selectedService = servicesData.find(s => s.name === taskData.serviceType);
-                if (selectedService) {
-                    console.log('🔧 Found service for task:', selectedService);
-                    const availableDurations = getServiceDurations(selectedService);
-                    console.log('🔧 Available durations from API:', availableDurations);
-                    
-                    // Если у нас есть длительность и цена из бэкенда
-                    if (taskData.serviceDuration && (taskData.servicePrice || taskData.finalPrice)) {
-                        const targetDuration = taskData.serviceDuration;
-                        const targetPrice = taskData.finalPrice || taskData.servicePrice || 0;
-                        console.log('🔧 Task has duration/price:', targetDuration, targetPrice);
-                        
-                        // Ищем точное совпадение в доступных длительностях
-                        const matchingDuration = availableDurations.find(d => 
-                            d.duration === targetDuration && d.price === targetPrice
-                        );
-                        
-                        if (matchingDuration) {
-                            // Нашли точное совпадение - используем его
-                            formData.duration = `${matchingDuration.duration} мин - ${matchingDuration.price} сом`;
-                            formData.cost = matchingDuration.price.toString();
-                            console.log('✅ Found exact match in service durations:', formData.duration);
-                        } else {
-                            // Если точного совпадения нет - это означает, что в задаче сохранена неправильная длительность
-                            // Используем первую доступную длительность из API
-                            console.warn('⚠️ Task duration/price not found in service API. Task:', targetDuration, targetPrice, 'Available:', availableDurations);
-                            if (availableDurations.length > 0) {
-                                const firstDuration = availableDurations[0];
-                                formData.duration = `${firstDuration.duration} мин - ${firstDuration.price} сом`;
-                                formData.cost = firstDuration.price.toString();
-                                console.log('🔧 Using first available duration instead:', formData.duration);
-                            } else {
-                                formData.duration = '0 мин - 0 сом';
-                                formData.cost = '0';
-                                console.log('🔧 No durations available for service');
-                            }
-                        }
-                    } else if (availableDurations.length > 0) {
-                        // Если нет данных о длительности, используем первую (минимальную) доступную
-                        const firstDuration = availableDurations[0];
-                        formData.duration = `${firstDuration.duration} мин - ${firstDuration.price} сом`;
-                        formData.cost = firstDuration.price.toString();
-                        console.log('🔧 Set default duration and cost:', formData.duration, formData.cost);
-                    } else {
-                        // Если для услуги нет длительностей, устанавливаем 0
-                        formData.duration = '0 мин - 0 сом';
-                        formData.cost = '0';
-                        console.log('🔧 No durations available, set to 0:', formData.duration);
-                    }
-                }
-            }
-            
-            console.log('✅ Final form data with corrections:', formData);
-            
-            // Определяем тип скидки и конвертируем значение для отображения
-            if (taskData.discount && taskData.servicePrice) {
-                const percentFromAmount = Math.round((taskData.discount / taskData.servicePrice) * 100);
-                
-                // Если процент получается круглым (5, 10, 15, 20, и т.д.) и меньше 100, 
-                // скорее всего это был процент - показываем как процент
-                if (percentFromAmount <= 100 && percentFromAmount % 5 === 0) {
-                    setDiscountType('percent');
-                    formData.discount = percentFromAmount.toString();
-                } else {
-                    // Иначе это была абсолютная сумма - показываем как есть
-                    setDiscountType('amount');
-                    formData.discount = taskData.discount.toString();
-                }
-            } else {
-                // Для новых задач по умолчанию проценты
-                setDiscountType('percent');
-            }
-            
-            reset(formData);
-            
-            // Загружаем дополнительные услуги для задачи
-            if (taskId) {
-                loadAdditionalServices(taskId.toString());
-            }
-        }
-    }, [taskData, taskLoading, reset, branches, taskId, mastersData, servicesData]);
+    // OLD useEffect removed - logic moved to main useEffect above (after useForm)
 
     const handleOpenChange = useCallback((open: boolean) => {
         setIsOpen(open);
+        // Сбрасываем флаги и ref при закрытии диалога
+        if (!open) {
+            setIsTaskDataLoaded(false);
+            loadedTaskDataRef.current = null;
+            isLoadingTaskRef.current = false;
+        }
     }, []);
 
     useEffect(() => {
@@ -509,19 +534,31 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         return `+${formattedValue}`;
     };
 
-    // Генерация временных слотов
-    const generateTimeSlots = () => {
+    // Генерация временных слотов (с учетом режима 24ч для филиала)
+    const generateTimeSlots = useCallback(() => {
         const slots = [];
-        for (let hour = 9; hour <= 21; hour++) {
-            for (let minute = 0; minute < 60; minute += 30) {
+        const is24hMode = currentBranch?.view24h === true;
+        const startHour = is24hMode ? 0 : 7;
+        const endHour = is24hMode ? 23 : 23;
+        
+        for (let hour = startHour; hour <= endHour; hour++) {
+            for (let minute = 0; minute < 60; minute += 15) {
                 const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
                 slots.push(timeString);
             }
         }
         return slots;
-    };
+    }, [currentBranch?.view24h]);
 
-    const timeSlots = generateTimeSlots();
+    const timeSlots = useMemo((): string[] => {
+        const slots = generateTimeSlots();
+        // Добавляем время задачи если его нет в списке
+        if (taskData?.scheduleTime && !slots.includes(taskData.scheduleTime)) {
+            slots.push(taskData.scheduleTime);
+            slots.sort();
+        }
+        return slots;
+    }, [taskData?.scheduleTime, generateTimeSlots]);
 
     // Additional services functions
     const calculateTotalDuration = useCallback((baseDuration: number = 0) => {
@@ -818,9 +855,14 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 const servicePrice = parseFloat(data.cost) || 0;
                 const discountValue = parseFloat(data.discount) || 0;
                 
+                // Рассчитываем общую сумму (основная услуга + дополнительные)
+                const additionalServicesTotal = additionalServices.reduce((sum, s) => sum + (s.price || 0), 0);
+                const totalPrice = servicePrice + additionalServicesTotal;
+                
                 // Конвертируем скидку в абсолютную сумму в зависимости от типа
+                // Скидка применяется к ОБЩЕЙ сумме (основная + дополнительные услуги)
                 const discountAmount = discountType === 'percent' 
-                    ? Math.round(servicePrice * discountValue / 100)
+                    ? Math.round(totalPrice * discountValue / 100)
                     : Math.round(discountValue);
                 
                 const updatePayload: any = {
@@ -952,9 +994,14 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         const servicePrice = parseFloat(data.cost) || 0;
         const discountValue = parseFloat(data.discount) || 0;
         
+        // Рассчитываем общую сумму (основная услуга + дополнительные)
+        const additionalServicesTotal = additionalServices.reduce((sum, s) => sum + (s.price || 0), 0);
+        const totalPrice = servicePrice + additionalServicesTotal;
+        
         // Конвертируем скидку в абсолютную сумму в зависимости от типа
+        // Скидка применяется к ОБЩЕЙ сумме (основная + дополнительные услуги)
         const discountAmount = discountType === 'percent' 
-            ? Math.round(servicePrice * discountValue / 100)
+            ? Math.round(totalPrice * discountValue / 100)
             : Math.round(discountValue);
         
         const parsedData = {
@@ -2015,7 +2062,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                     <div className="flex justify-between text-green-600">
                                         <span className="text-sm">
                                             Скидка {taskData.discount} сом 
-                                            {taskData.servicePrice && taskData.servicePrice > 0 && ` (≈${Math.round((taskData.discount / taskData.servicePrice) * 100)}%)`}
+                                            {calculateTotalPrice() > 0 && ` (≈${Math.round((taskData.discount / calculateTotalPrice()) * 100)}%)`}
                                         </span>
                                         <span className="text-sm">-{taskData.discount} сом</span>
                                     </div>

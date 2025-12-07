@@ -55,7 +55,7 @@ export const TaskDialogHeader: React.FC<TaskDialogHeaderProps> = ({
               <Button
                 type="button"
                 onClick={onPaymentClick}
-                className="bg-white/20 hover:bg-white/30 text-white border border-white/30 h-9 px-4 text-sm font-semibold backdrop-blur-sm"
+                className="bg-white/20 hover:bg-white/30 text-white border border-white/30 h-9 px-4 text-sm font-semibold backdrop-blur-sm mr-10"
               >
                 <CreditCard className="h-4 w-4 mr-2" />
                 {t('task_dialog.pay_button')}
@@ -112,7 +112,7 @@ export const TaskDialogHeader: React.FC<TaskDialogHeaderProps> = ({
             <Button
               type="button"
               onClick={onPaymentClick}
-              className="bg-white/20 hover:bg-white/30 text-white border border-white/30 h-11 px-6 text-base font-semibold backdrop-blur-sm transition-all duration-200"
+              className="bg-white/20 hover:bg-white/30 text-white border border-white/30 h-11 px-6 text-base font-semibold backdrop-blur-sm transition-all duration-200 mr-10"
             >
               <CreditCard className="h-5 w-5 mr-2" />
               {t('task_dialog.pay_button')}

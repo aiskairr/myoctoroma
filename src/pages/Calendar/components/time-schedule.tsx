@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Plus, X, Clock, User, Calendar, GripVertical, Coins } from 'lucide-react';
+import { Plus, X, Clock, User, Calendar, GripVertical, Coins, Clock3 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
   MobileDialog, 
@@ -127,10 +127,22 @@ const generateTimeSlots = (startHour: number = 7, endHour: number = 24): string[
     return slots;
 };
 
-const getCurrentTimePosition = (): number => {
+// Генерация слотов для 24-часового режима (00:00 - 23:59)
+const generateTimeSlots24h = (): string[] => {
+    const slots: string[] = [];
+    for (let hour = 0; hour < 24; hour++) {
+        for (let minute = 0; minute < 60; minute += 15) {
+            slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+        }
+    }
+    return slots;
+};
+
+const getCurrentTimePosition = (is24hMode: boolean = false): number => {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const startMinutes = 7 * 60;
+    // В режиме 24ч начинаем с 00:00, в обычном - с 07:00
+    const startMinutes = is24hMode ? 0 : 7 * 60;
     return Math.max(0, (currentMinutes - startMinutes) / 15) * TIME_SLOT_HEIGHT;
 };
 
@@ -158,6 +170,16 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     const { user } = useAuth();
     const { t } = useLocale();
 
+    // Состояние режима 24-часового отображения (локальное, с начальным значением из настроек филиала)
+    const [is24hMode, setIs24hMode] = useState(false);
+    
+    // Синхронизация с настройками филиала при их изменении
+    useEffect(() => {
+        if (currentBranch?.view24h !== undefined) {
+            setIs24hMode(currentBranch.view24h);
+        }
+    }, [currentBranch?.view24h]);
+
     // Fetch real data from API
     const { data: mastersData = [], isLoading: mastersLoading, error: mastersError } = useMasters();
     const { data: tasksData = [], isLoading: tasksLoading, error: tasksError } = useCalendarTasks(currentDate);
@@ -179,6 +201,51 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     const createTaskMutation = useCreateTask();
     const queryClient = useQueryClient();
     const { toast } = useToast();
+
+    // Мутация для обновления настройки view24h филиала
+    const updateView24hMutation = useMutation({
+        mutationFn: async (view24h: boolean) => {
+            if (!currentBranch?.id) throw new Error('Филиал не выбран');
+            
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/branches/${currentBranch.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ view24h })
+            });
+
+            if (!response.ok) {
+                throw new Error('Ошибка при сохранении настройки');
+            }
+            
+            return response.json();
+        },
+        onSuccess: () => {
+            // Обновляем кэш филиалов
+            queryClient.invalidateQueries({ queryKey: ['/api/crm/branches'] });
+            toast({
+                title: 'Успешно',
+                description: is24hMode ? 'Включен 24-часовой режим' : 'Включен дневной режим (7:00-24:00)',
+            });
+        },
+        onError: (error) => {
+            console.error('Error updating view24h:', error);
+            // Откатываем локальное состояние
+            setIs24hMode(!is24hMode);
+            toast({
+                title: 'Ошибка',
+                description: 'Не удалось сохранить настройку',
+                variant: 'destructive',
+            });
+        }
+    });
+
+    // Функция переключения режима 24ч с сохранением на бэкенд
+    const handleToggle24hMode = useCallback(() => {
+        const newValue = !is24hMode;
+        setIs24hMode(newValue);
+        updateView24hMutation.mutate(newValue);
+    }, [is24hMode, updateView24hMutation]);
 
     // Мутация для добавления мастера на рабочий день
     const addMasterToWorkingDayMutation = useMutation({
@@ -299,12 +366,14 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                     wd => wd.master_id === master.id && wd.is_active
                 );
                 
+                // ОБНОВЛЕНО 5 декабря 2025: Используем startTime/endTime из master_working_dates
+                // Fallback значения используются только если нет записи в master_working_dates
                 const workHours = workingDate ? {
                     start: workingDate.start_time,
                     end: workingDate.end_time
                 } : {
-                    start: master.startWorkHour || '07:00',
-                    end: master.endWorkHour || '23:59'
+                    start: '07:00',
+                    end: '23:59'
                 };
                 
                 const isWorking = !!workingDate;
@@ -436,7 +505,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     const [isAddAppointmentOpen, setIsAddAppointmentOpen] = useState(false);
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
     const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
-    const [currentTimePosition, setCurrentTimePosition] = useState(getCurrentTimePosition());
+    const [currentTimePosition, setCurrentTimePosition] = useState(() => getCurrentTimePosition(currentBranch?.view24h === true));
 
     // Loading and error states
     const isLoading = mastersLoading || tasksLoading || servicesLoading || workingDatesLoading;
@@ -499,10 +568,15 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     // Update current time line
     useEffect(() => {
         const interval = setInterval(() => {
-            setCurrentTimePosition(getCurrentTimePosition());
+            setCurrentTimePosition(getCurrentTimePosition(is24hMode));
         }, 60000);
         return () => clearInterval(interval);
-    }, []);
+    }, [is24hMode]);
+
+    // Обновить позицию при смене режима 24ч
+    useEffect(() => {
+        setCurrentTimePosition(getCurrentTimePosition(is24hMode));
+    }, [is24hMode]);
 
     // Настройка парсера для автоматической инвалидации кэша
     useEffect(() => {
@@ -535,7 +609,13 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     }, []);
 
     // Memoized values
-    const timeSlots = useMemo(() => generateTimeSlots(), []);
+    // Генерируем слоты в зависимости от режима: 24ч (00:00-23:59) или дневной (07:00-24:00)
+    const timeSlots = useMemo(() => {
+        if (is24hMode) {
+            return generateTimeSlots24h();
+        }
+        return generateTimeSlots();
+    }, [is24hMode]);
 
     const dateString = useMemo(() => {
         return currentDate.toLocaleDateString('ru-RU', {
@@ -1558,6 +1638,20 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                     >
                                         {t('common.today') || 'Сегодня'}
                                     </button>
+                                    {/* Переключатель 24-часового режима */}
+                                    <button
+                                        onClick={handleToggle24hMode}
+                                        disabled={updateView24hMutation.isPending}
+                                        className={`px-3 py-1.5 rounded-lg transition-colors text-xs font-medium whitespace-nowrap flex items-center gap-1 ${
+                                            is24hMode 
+                                                ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                        } ${updateView24hMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
+                                        title={is24hMode ? 'Переключить на дневной режим (7:00-24:00)' : 'Переключить на 24-часовой режим (00:00-23:59)'}
+                                    >
+                                        <Clock3 size={14} />
+                                        {updateView24hMutation.isPending ? '...' : (is24hMode ? '24ч' : '7-24')}
+                                    </button>
                                 </div>
                             </div>
 
@@ -1580,6 +1674,21 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                 </div>
 
                                 <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                                    {/* Переключатель 24-часового режима (десктоп) */}
+                                    <button
+                                        onClick={handleToggle24hMode}
+                                        disabled={updateView24hMutation.isPending}
+                                        className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
+                                            is24hMode 
+                                                ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                        } ${updateView24hMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
+                                        title={is24hMode ? 'Переключить на дневной режим (7:00-24:00)' : 'Переключить на 24-часовой режим (00:00-23:59)'}
+                                    >
+                                        <Clock3 size={16} />
+                                        {updateView24hMutation.isPending ? 'Сохранение...' : (is24hMode ? '24 часа' : '7:00-24:00')}
+                                    </button>
+                                    
                                     <CancelledAppointments selectedDate={currentDate} />
                                     
                                     <DialogWrapper open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>

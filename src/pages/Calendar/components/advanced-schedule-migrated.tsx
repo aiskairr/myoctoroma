@@ -8,13 +8,12 @@ import { format } from "date-fns";
 import { useRefetchSettings } from "@/hooks/use-device";
 
 // Types from DailyCalendar
+// ОБНОВЛЕНО 5 декабря 2025: Удалены поля startWorkHour/endWorkHour
 interface Master {
     id: number;
     name: string;
     specialization?: string;
     isActive: boolean;
-    startWorkHour?: string;
-    endWorkHour?: string;
     branchId: string;
     photoUrl?: string;
 }
@@ -150,14 +149,16 @@ const AdvancedScheduleComponent: React.FC = () => {
     });
 
     // Convert masters to employees format for existing UI compatibility
+    // ОБНОВЛЕНО 5 декабря 2025: Удалены поля startWorkHour/endWorkHour
+    // Рабочее время теперь приходит из master_working_dates через calendar API
     const employees = useMemo(() => {
         return masters.map((master, index) => ({
             id: master.id.toString(),
             name: master.name,
             role: master.specialization || 'Мастер',
             workHours: {
-                start: master.startWorkHour || '09:00',
-                end: master.endWorkHour || '20:00'
+                start: '09:00', // Fallback значение, реальное время из master_working_dates
+                end: '20:00'
             },
             color: EMPLOYEE_COLORS[index % EMPLOYEE_COLORS.length]
         }));

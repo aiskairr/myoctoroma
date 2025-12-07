@@ -48,8 +48,6 @@ interface Master {
   name: string;
   specialization?: string;
   isActive: boolean;
-  startWorkHour?: string;
-  endWorkHour?: string;
   branchId: string;
   photoUrl?: string;
 }

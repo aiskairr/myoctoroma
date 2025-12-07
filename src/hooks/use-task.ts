@@ -124,7 +124,8 @@ export const formatTaskForForm = (task: Task | undefined) => {
 
   // Format duration and price for select
   const formatDuration = (duration: number | null, price: number | null) => {
-    if (!duration || !price) return '';
+    // Проверяем на null/undefined, но не на 0 (0 - валидное значение)
+    if (duration === null || duration === undefined || price === null || price === undefined) return '';
     return `${duration} мин - ${price} сом`;
   };
 

@@ -42,6 +42,8 @@ interface BranchUser {
 }
 
 // Интерфейс для мастера
+// ОБНОВЛЕНО 5 декабря 2025: Удалены поля startWorkHour/endWorkHour
+// Рабочее время теперь определяется через master_working_dates (компонент MasterWorkingDatesManager)
 interface Master {
   id: number;
   name: string;
@@ -49,8 +51,6 @@ interface Master {
   description?: string;
   phoneNumber?: string; // Номер телефона для WhatsApp уведомлений
   isActive: boolean;
-  startWorkHour: string;
-  endWorkHour: string;
   createdAt: string; // Формат: YYYY-MM-DD (дата создания записи)
   photoUrl?: string;
   workingDates?: WorkingDate[];
@@ -88,14 +88,13 @@ const MasterForm: React.FC<{
 }> = ({ master, onSubmit, isPending, branchUsers, onDelete, isDeleting }) => {
   const { t } = useLocale();
   const { currentBranch } = useBranch();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: master?.name || '',
     specialty: master?.specialty || '',
     description: master?.description || '',
     phoneNumber: master?.phoneNumber || '',
     isActive: master?.isActive ?? true,
-    startWorkHour: master?.startWorkHour || '09:00',
-    endWorkHour: master?.endWorkHour || '20:00',
   });
 
   const [accountData, setAccountData] = useState({
@@ -104,19 +103,21 @@ const MasterForm: React.FC<{
     createAccount: false
   });
 
+  // Состояние для отслеживания несохранённых дат в MasterWorkingDatesManager
+  const [unsavedDatesCount, setUnsavedDatesCount] = useState(0);
+
   // workingDates больше НЕ нужны - компонент MasterWorkingDatesManager автономен
   
   // Прогресс заполнения формы
   const [formProgress, setFormProgress] = useState(0);
 
   // Обновление прогресса заполнения формы
+  // ОБНОВЛЕНО 5 декабря 2025: Удалены поля startWorkHour/endWorkHour из расчёта прогресса
   useEffect(() => {
     const fields = [
       formData.name,
       formData.specialty,
       formData.description,
-      formData.startWorkHour,
-      formData.endWorkHour,
       accountData.createAccount ? accountData.email : true,
       accountData.createAccount ? accountData.password : true,
     ];
@@ -182,6 +183,17 @@ const MasterForm: React.FC<{
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Проверяем, есть ли несохранённые даты
+    if (unsavedDatesCount > 0) {
+      toast({
+        title: 'Несохранённые даты',
+        description: `У вас выбрано ${unsavedDatesCount} ${unsavedDatesCount === 1 ? 'дата' : 'дат'}, которые не добавлены. Нажмите "Добавить ${unsavedDatesCount} дней" или очистите выбор перед сохранением.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     // При редактировании мастера НЕ отправляем рабочие даты - они управляются отдельно через MasterWorkingDatesManager
     // При создании нового мастера рабочие даты будут пустыми - они управляются через отдельный компонент
     const combinedData = {
@@ -288,33 +300,8 @@ const MasterForm: React.FC<{
               className="col-span-3"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="workHours" className="col-span-1 text-sm font-medium text-gray-700">
-              {t('masters.work_time')}
-            </Label>
-            <div className="col-span-3 flex items-center space-x-3">
-              <Input
-                id="startWorkHour"
-                name="startWorkHour"
-                type="time"
-                value={formData.startWorkHour}
-                onChange={handleChange}
-                className="w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              />
-              <span className="text-gray-500">{t('masters.until')}</span>
-              <Input
-                id="endWorkHour"
-                name="endWorkHour"
-                type="time"
-                value={formData.endWorkHour}
-                onChange={handleChange}
-                className="w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              />
-              <span className="text-xs text-gray-500 ml-2">
-                {t('masters.by_default')}
-              </span>
-            </div>
-          </div>
+          {/* ОБНОВЛЕНО 5 декабря 2025: Поля startWorkHour/endWorkHour удалены
+              Рабочее время управляется через MasterWorkingDatesManager на вкладке "Рабочий график" */}
         </div>
       </div>
 
@@ -394,7 +381,17 @@ const MasterForm: React.FC<{
         {/* Компонент теперь АВТОНОМЕН - управляет своими данными независимо от родителя */}
         <MasterWorkingDatesManager
           masterId={master?.id!}
+          onUnsavedDatesChange={(_, count) => setUnsavedDatesCount(count)}
         />
+        {/* Предупреждение о несохранённых датах */}
+        {unsavedDatesCount > 0 && (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm text-amber-800">
+              ⚠️ У вас выбрано {unsavedDatesCount} {unsavedDatesCount === 1 ? 'дата' : 'дат'}. 
+              Нажмите "Добавить {unsavedDatesCount} дней" чтобы сохранить их, или очистите выбор.
+            </p>
+          </div>
+        )}
       </div>
 
       <DialogFooter className="mt-8 flex justify-between items-center">
@@ -439,6 +436,7 @@ const MasterForm: React.FC<{
 };
 
 // Упрощённая форма мастера для добавления (без аккаунта и рабочих дат)
+// ОБНОВЛЕНО 5 декабря 2025: Удалены поля startWorkHour/endWorkHour
 const MasterFormSimple: React.FC<{
   onSubmit: (data: Partial<Master>) => void;
   isPending: boolean;
@@ -450,8 +448,6 @@ const MasterFormSimple: React.FC<{
     description: '',
     phoneNumber: '',
     isActive: true,
-    startWorkHour: '09:00',
-    endWorkHour: '20:00',
   });
 
   const [formProgress, setFormProgress] = useState(0);
@@ -462,8 +458,6 @@ const MasterFormSimple: React.FC<{
       formData.name,
       formData.specialty,
       formData.description,
-      formData.startWorkHour,
-      formData.endWorkHour,
     ];
     const filledFields = fields.filter(field => field && typeof field === 'string' ? field.trim() !== '' : true).length;
     const progress = Math.round((filledFields / fields.length) * 100);
@@ -570,33 +564,11 @@ const MasterFormSimple: React.FC<{
               className="col-span-3"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="workHours-simple" className="col-span-1 text-sm font-medium text-gray-700">
-              {t('masters.work_time')}
-            </Label>
-            <div className="col-span-3 flex items-center space-x-3">
-              <Input
-                id="startWorkHour-simple"
-                name="startWorkHour"
-                type="time"
-                value={formData.startWorkHour}
-                onChange={handleChange}
-                className="w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              />
-              <span className="text-gray-500">{t('masters.until')}</span>
-              <Input
-                id="endWorkHour-simple"
-                name="endWorkHour"
-                type="time"
-                value={formData.endWorkHour}
-                onChange={handleChange}
-                className="w-28 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-              />
-              <span className="text-xs text-gray-500 ml-2">
-                {t('masters.by_default')}
-              </span>
-            </div>
-          </div>
+          {/* ОБНОВЛЕНО 5 декабря 2025: Поля startWorkHour/endWorkHour удалены
+              Рабочее время настраивается после создания мастера через MasterWorkingDatesManager */}
+          <p className="text-sm text-gray-500">
+            💡 Рабочее расписание мастера можно настроить после создания в разделе "Рабочий график"
+          </p>
         </div>
       </div>
 
@@ -689,12 +661,8 @@ const MasterCard: React.FC<{
       </CardHeader>
       <CardContent className="pt-0">
         <div className="space-y-3">
-          <div className="flex items-center text-sm text-gray-600">
-            <Clock className="h-4 w-4 mr-2 text-indigo-500" />
-            <span>
-              {master.startWorkHour} - {master.endWorkHour}
-            </span>
-          </div>
+          {/* ОБНОВЛЕНО 5 декабря 2025: Удалено отображение startWorkHour/endWorkHour
+              Рабочее время теперь показывается через MasterWorkingDatesDisplay */}
           {master.phoneNumber && (
             <div className="flex items-center text-sm text-gray-600">
               <span className="mr-2">📲</span>
@@ -1365,7 +1333,16 @@ const Masters: React.FC = () => {
         throw new Error('Branch not selected');
       }
 
-      const { workingDates, createAccount, accountEmail, accountPassword, ...masterData } = data;
+      // ОБНОВЛЕНО 5 декабря 2025: Удаляем startWorkHour/endWorkHour из данных
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { workingDates, createAccount, accountEmail, accountPassword, startWorkHour, endWorkHour, ...masterData } = data as Partial<Master> & { 
+        startWorkHour?: string; 
+        endWorkHour?: string;
+        workingDates?: unknown;
+        createAccount?: boolean;
+        accountEmail?: string;
+        accountPassword?: string;
+      };
 
       // Создаем мастера
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${currentBranch.id}`, {
@@ -1437,7 +1414,16 @@ const Masters: React.FC = () => {
 
   const updateMasterMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number, data: Partial<Master> }) => {
-      const { workingDates, createAccount, accountEmail, accountPassword, ...masterData } = data;
+      // ОБНОВЛЕНО 5 декабря 2025: Удаляем startWorkHour/endWorkHour из данных
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { workingDates, createAccount, accountEmail, accountPassword, startWorkHour, endWorkHour, ...masterData } = data as Partial<Master> & { 
+        startWorkHour?: string; 
+        endWorkHour?: string;
+        workingDates?: unknown;
+        createAccount?: boolean;
+        accountEmail?: string;
+        accountPassword?: string;
+      };
 
       // Обновляем мастера
       const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${id}`, {

@@ -12,6 +12,7 @@ export interface Branch {
   photoUrl?: string | null; // URL фотографии филиала
   systemPrompt?: string | null; // System prompt для AI ассистента
   managerTimeoutMinutes?: number | null; // Таймаут до передачи менеджеру (минуты)
+  view24h?: boolean; // Режим 24-часового отображения календаря
   isActive?: boolean; // Для поддержки soft delete
   createdAt?: string;
   updatedAt?: string;

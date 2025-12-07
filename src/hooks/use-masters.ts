@@ -3,17 +3,18 @@ import { useBranch } from '@/contexts/BranchContext';
 import { getBranchIdWithFallback } from '@/utils/branch-utils';
 
 // Interface for Master from API
+// ОБНОВЛЕНО 5 декабря 2025: Удалены поля startWorkHour/endWorkHour
+// Рабочее время теперь определяется через master_working_dates для каждой даты
 export interface Master {
   id: number;
   name: string;
   specialization?: string;
   isActive: boolean;
-  startWorkHour: string;
-  endWorkHour: string;
   description?: string;
   createdAt: string; // Формат: YYYY-MM-DD HH:mm:ss
   photoUrl?: string;
   branchId: string;
+  phoneNumber?: string;
 }
 
 // Hook to fetch masters for current branch

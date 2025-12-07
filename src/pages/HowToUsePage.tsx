@@ -20,6 +20,10 @@ export default function HowToUsePage() {
     window.open('https://youtu.be/FFjsGbOPScY', '_blank');
   };
 
+  const handleQuickStartVideoClick = () => {
+    window.open('https://youtube.com/shorts/42SzKIE9BVc', '_blank');
+  };
+
   const handleEmailClick = () => {
     window.location.href = 'mailto:info@promconsult.pro';
   };
@@ -81,6 +85,46 @@ export default function HowToUsePage() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
+          {/* Quick Start Video Card - YouTube Shorts */}
+          <div className="lg:col-span-3">
+            <Card className="relative overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-violet-500/10 via-card to-purple-500/10">
+              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-purple-500/5" />
+
+              <CardHeader className="relative">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-violet-500/20 rounded-lg">
+                      <Play className="h-6 w-6 text-violet-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl">{t('how_to_use.quick_start_title') || 'Быстрый старт'}</CardTitle>
+                      <CardDescription className="text-base">
+                        {t('how_to_use.quick_start_description') || 'Короткое видео о главных функциях системы за 1 минуту'}
+                      </CardDescription>
+                    </div>
+                  </div>
+
+                  <Badge variant="secondary" className="bg-violet-100 text-violet-700 border-violet-200">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    {t('how_to_use.new') || 'Новое'}
+                  </Badge>
+                </div>
+              </CardHeader>
+
+              <CardContent className="relative">
+                <Button
+                  onClick={handleQuickStartVideoClick}
+                  size="lg"
+                  className="w-full group shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700"
+                >
+                  <Play className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
+                  {t('how_to_use.watch_short') || 'Смотреть короткое видео'}
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Main Video Card */}
           <div className="lg:col-span-2">
             <Card className="relative overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-card to-card/80">

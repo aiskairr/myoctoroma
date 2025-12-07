@@ -110,14 +110,13 @@ interface serviceServiceCalculation {
 }
 
 // Интерфейс для мастера
+// ОБНОВЛЕНО 5 декабря 2025: Удалены поля startWorkHour/endWorkHour
 interface Master {
   id: number;
   name: string;
   specialty?: string;
   description?: string;
   isActive: boolean;
-  startWorkHour?: string;
-  endWorkHour?: string;
   createdAt?: string;
 }
 
@@ -941,14 +940,13 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
   const [selectedScheduleDuration, setSelectedScheduleDuration] = useState<number | null>(null);
 
   // Определяем интерфейс для мастера (Master)
+  // ОБНОВЛЕНО 5 декабря 2025: Удалены поля startWorkHour/endWorkHour
   interface Master {
     id: number;
     name: string;
     specialty?: string;
     description?: string;
     isActive: boolean;
-    startWorkHour?: string;
-    endWorkHour?: string;
     createdAt?: string;
   }
 

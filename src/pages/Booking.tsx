@@ -202,11 +202,12 @@ const formatDateForAPI = (date: Date): string => {
 const BookingStep = {
   Branch: 0,
   Service: 1,
-  Date: 2,
-  Master: 3,
-  Time: 4,
-  ClientInfo: 5,
-  Confirmation: 6
+  Duration: 2,  // Новый шаг для выбора длительности
+  Date: 3,
+  Master: 4,
+  Time: 5,
+  ClientInfo: 6,
+  Confirmation: 7
 } as const;
 
 type BookingStepType = typeof BookingStep[keyof typeof BookingStep];
@@ -303,6 +304,9 @@ const BookingPageContent: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  
+  // Состояние для выбранной услуги (для отображения доступных длительностей)
+  const [selectedService, setSelectedService] = useState<any>(null);
   
   // Search states
   const [serviceSearch, setServiceSearch] = useState<string>('');
@@ -428,10 +432,20 @@ const BookingPageContent: React.FC = () => {
     goToStep(BookingStep.Service);
   };
 
-  const handleServiceSelect = (serviceId: string, duration: number, price: number) => {
+  // Обработчик выбора услуги - сохраняем услугу и переходим к выбору длительности
+  const handleServiceClick = (service: any) => {
+    setSelectedService(service);
     setBookingData(prev => ({
       ...prev,
-      serviceId,
+      serviceId: service.id
+    }));
+    goToStep(BookingStep.Duration);
+  };
+
+  // Обработчик выбора длительности
+  const handleDurationSelect = (duration: number, price: number) => {
+    setBookingData(prev => ({
+      ...prev,
       serviceDuration: duration,
       servicePrice: price
     }));
@@ -545,12 +559,14 @@ const BookingPageContent: React.FC = () => {
     const steps = [
       t('booking.step.branch'),
       t('booking.step.service'),
+      'Длительность', // Новый шаг
       t('booking.step.date'),
       t('booking.step.master'),
       t('booking.step.time'),
       t('booking.step.contacts')
     ];
-    const progress = (currentStep / 5) * 100;
+    // Теперь 7 шагов (0-6), поэтому делим на 6
+    const progress = (currentStep / 6) * 100;
 
     return (
       <div className="w-full space-y-3 mb-8">
@@ -864,11 +880,7 @@ const BookingPageContent: React.FC = () => {
                     ? 'bg-slate-800/80 border-slate-700 hover:border-blue-500/50 hover:bg-slate-700/90 backdrop-blur-sm'
                     : 'hover:shadow-lg hover:border-primary/50'
                 }`}
-                onClick={() => handleServiceSelect(
-                  service.id,
-                  firstAvailableDuration?.duration || service.defaultDuration || 60,
-                  firstAvailableDuration ? service[firstAvailableDuration.key] : 0
-                )}
+                onClick={() => handleServiceClick(service)}
               >
                 <div className="flex">
                   {/* Фото услуги */}
@@ -937,6 +949,138 @@ const BookingPageContent: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
+    );
+  };
+
+  // Шаг выбора длительности услуги
+  const renderDurationStep = () => {
+    if (!selectedService) {
+      return (
+        <div className="text-center py-12">
+          <p>Услуга не выбрана</p>
+          <Button onClick={() => goToStep(BookingStep.Service)} className="mt-4">
+            Вернуться к выбору услуги
+          </Button>
+        </div>
+      );
+    }
+
+    // Все возможные поля длительности
+    const durationFields = [
+      { key: 'duration10_price', duration: 10 },
+      { key: 'duration15_price', duration: 15 },
+      { key: 'duration20_price', duration: 20 },
+      { key: 'duration30_price', duration: 30 },
+      { key: 'duration40_price', duration: 40 },
+      { key: 'duration50_price', duration: 50 },
+      { key: 'duration60_price', duration: 60 },
+      { key: 'duration75_price', duration: 75 },
+      { key: 'duration80_price', duration: 80 },
+      { key: 'duration90_price', duration: 90 },
+      { key: 'duration110_price', duration: 110 },
+      { key: 'duration120_price', duration: 120 },
+      { key: 'duration150_price', duration: 150 },
+      { key: 'duration220_price', duration: 220 },
+    ];
+
+    // Фильтруем только доступные длительности
+    const availableDurations = durationFields.filter(
+      (field) => selectedService[field.key] !== null && selectedService[field.key] !== undefined
+    );
+
+    // Форматируем длительность для отображения
+    const formatDuration = (minutes: number): string => {
+      if (minutes < 60) return `${minutes} мин`;
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      if (mins === 0) return `${hours} ч`;
+      return `${hours} ч ${mins} мин`;
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h2 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${
+              theme === 'dark' ? 'text-white' : ''
+            }`}>
+              Выберите длительность
+            </h2>
+            <p className={`transition-colors duration-300 ${
+              theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
+            }`}>
+              {selectedService.name}
+            </p>
+          </div>
+          
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => goToStep(BookingStep.Service)}
+            className={`transition-all duration-300 ${
+              theme === 'dark' 
+                ? 'hover:bg-slate-700 text-slate-300 hover:text-white' 
+                : ''
+            }`}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <InfoCard />
+
+        {availableDurations.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {availableDurations.map((item) => (
+              <Card
+                key={item.key}
+                className={`cursor-pointer transition-all group overflow-hidden ${
+                  theme === 'dark'
+                    ? 'bg-slate-800/80 border-slate-700 hover:border-blue-500/50 hover:bg-slate-700/90 backdrop-blur-sm'
+                    : 'hover:shadow-lg hover:border-primary/50'
+                }`}
+                onClick={() => handleDurationSelect(item.duration, selectedService[item.key])}
+              >
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-full ${
+                        theme === 'dark' ? 'bg-blue-500/20' : 'bg-primary/10'
+                      }`}>
+                        <Clock className={`h-5 w-5 ${
+                          theme === 'dark' ? 'text-blue-400' : 'text-primary'
+                        }`} />
+                      </div>
+                      <div>
+                        <CardTitle className={`text-lg transition-colors ${
+                          theme === 'dark'
+                            ? 'text-white group-hover:text-blue-400'
+                            : 'group-hover:text-primary'
+                        }`}>
+                          {formatDuration(item.duration)}
+                        </CardTitle>
+                      </div>
+                    </div>
+                    <div className={`font-semibold text-xl transition-colors duration-300 ${
+                      theme === 'dark' ? 'text-blue-400' : 'text-primary'
+                    }`}>
+                      {selectedService[item.key]} сом
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className={`text-center py-12 rounded-lg border ${
+            theme === 'dark' 
+              ? 'bg-slate-800/60 border-slate-700 text-slate-300' 
+              : 'bg-white/60 text-muted-foreground'
+          }`}>
+            <p>Нет доступных вариантов длительности</p>
+          </div>
+        )}
       </div>
     );
   };
@@ -1802,6 +1946,7 @@ const BookingPageContent: React.FC = () => {
     switch (currentStep) {
       case BookingStep.Branch: return renderBranchStep();
       case BookingStep.Service: return renderServiceStep();
+      case BookingStep.Duration: return renderDurationStep();
       case BookingStep.Date: return renderDateStep();
       case BookingStep.Master: return renderMasterStep();
       case BookingStep.Time: return renderTimeStep();
