@@ -15,6 +15,24 @@ if (!import.meta.env.DEV && !import.meta.env.VITE_BACKEND_URL) {
 // Типы пользователей
 type UserType = 'admin' | 'user' | 'staff';
 
+type LoginEndpoint = {
+  userType: UserType;
+  url: string;
+};
+
+type LoginAttemptResult = {
+  endpoint: LoginEndpoint;
+  response?: Response;
+  data?: any;
+  error?: unknown;
+};
+
+const LOGIN_ENDPOINTS: LoginEndpoint[] = [
+  { userType: 'admin', url: `${SECONDARY_BACKEND_URL}/admin` },
+  { userType: 'staff', url: `${SECONDARY_BACKEND_URL}/staffAuthorization/login` },
+  { userType: 'user', url: `${SECONDARY_BACKEND_URL}/user/auth` },
+];
+
 // Axios настроен для работы с Bearer token
 
 interface User {
@@ -64,6 +82,38 @@ const AuthContext = createContext<AuthContextType>({
   logout: async () => { },
   checkAuth: async () => { },
 });
+
+const safeParseResponse = async (response: Response) => {
+  const responseText = await response.text();
+  if (!responseText) return {};
+
+  try {
+    return JSON.parse(responseText);
+  } catch (parseError) {
+    console.error("❌ Failed to parse login response:", parseError);
+    return {};
+  }
+};
+
+const performLoginAttempt = async (endpoint: LoginEndpoint, body: string): Promise<LoginAttemptResult> => {
+  try {
+    const response = await fetch(endpoint.url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body,
+    });
+
+    const data = await safeParseResponse(response);
+
+    return { endpoint, response, data };
+  } catch (error) {
+    console.error(`Login request to ${endpoint.userType} endpoint failed:`, error);
+    return { endpoint, error };
+  }
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -180,270 +230,213 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     let detectedUserType: UserType | null = null;
+    const payload = JSON.stringify({ email, password });
 
     try {
-      // Сначала пробуем /admin/ (новый эндпоинт)
-      let response = await fetch(`${SECONDARY_BACKEND_URL}/admin`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
+      const attempts = await Promise.all(
+        LOGIN_ENDPOINTS.map((endpoint) => performLoginAttempt(endpoint, payload))
+      );
+
+      console.log("Login attempt statuses:", attempts.map((attempt) => ({
+        endpoint: attempt.endpoint.userType,
+        status: attempt.response?.status,
+        ok: attempt.response?.ok,
+        hasError: Boolean(attempt.error),
+      })));
+
+      const okAttempts = attempts.filter((attempt) => attempt.response?.ok);
+      let resolvedPayload: { accessToken: string; refreshToken?: string; userInfo: any; rawResult: any } | null = null;
+      let successfulAttempt: LoginAttemptResult | undefined;
+
+      const extractAuthPayload = (result: any) => {
+        if (!result || result.success === false) return null;
+
+        const accessToken = result.accessToken || result.data?.accessToken || result.data?.token || result.token;
+        const refreshToken = result.refreshToken || result.data?.refreshToken;
+        const userInfo = result.user || result.data?.user;
+
+        if (!accessToken || !userInfo) return null;
+
+        return { accessToken, refreshToken, userInfo, rawResult: result };
+      };
+
+      for (const attempt of okAttempts) {
+        const authPayload = extractAuthPayload(attempt.data);
+        if (authPayload) {
+          resolvedPayload = authPayload;
+          successfulAttempt = attempt;
+          break;
+        }
+      }
+
+      if (!resolvedPayload || !successfulAttempt) {
+        const unauthorizedAttempt = attempts.find((attempt) => attempt.response?.status === 401);
+        const failedAttempt = attempts.find((attempt) => attempt.response && !attempt.response.ok);
+        const networkError = attempts.find((attempt) => attempt.error);
+
+        setIsAuthenticated(false);
+        setUser(null);
+
+        if (unauthorizedAttempt) {
+          return { success: false, message: unauthorizedAttempt.data?.message || "Неверный логин или пароль" };
+        }
+
+        if (failedAttempt) {
+          return { success: false, message: failedAttempt.data?.message || "Ошибка входа" };
+        }
+
+        const message = networkError && networkError.error instanceof Error
+          ? networkError.error.message
+          : "Ошибка подключения к серверу";
+        return { success: false, message };
+      }
+
+      detectedUserType = successfulAttempt.endpoint.userType;
+      const { accessToken, rawResult, userInfo } = resolvedPayload;
+      let { refreshToken } = resolvedPayload;
+
+      console.log(`🔍 FULL RESPONSE from login (${detectedUserType || 'unknown'} endpoint):`, JSON.stringify(rawResult, null, 2));
+      console.log("  result.accessToken:", rawResult.accessToken ? "EXISTS" : "MISSING");
+      console.log("  result.data?.accessToken:", rawResult.data?.accessToken ? "EXISTS" : "MISSING");
+      console.log("  result.refreshToken:", rawResult.refreshToken ? "EXISTS" : "MISSING");
+      console.log("  result.user:", rawResult.user ? "EXISTS" : "MISSING");
+      console.log("  result.data?.user:", rawResult.data?.user ? "EXISTS" : "MISSING");
+
+      // Сохраняем данные в localStorage
+      localStorage.setItem('uuid', JSON.stringify(rawResult));
+
+      // Сохраняем access token в localStorage
+      localStorage.setItem('auth_token', accessToken);
+      localStorage.setItem('access_token', accessToken);
+      console.log("💾 Access token saved to localStorage");
+
+      // Сохраняем тип пользователя
+      if (detectedUserType) {
+        setUserType(detectedUserType);
+        localStorage.setItem('user_type', detectedUserType);
+        console.log(`💾 User type detected and saved: ${detectedUserType}`);
+      }
+
+      // Если backend прислал refresh token только в cookies - пытаемся прочитать его
+      if (!refreshToken) {
+        const refreshTokenFromCookies =
+          Cookies.get('refreshToken') ||
+          Cookies.get('refresh_token') ||
+          Cookies.get('refresh-token');
+        
+        if (refreshTokenFromCookies) {
+          refreshToken = refreshTokenFromCookies;
+          console.log("💾 Refresh token extracted from cookies");
+        } else {
+          console.warn("⚠️ Refresh token not found in response body or cookies");
+        }
+      }
+
+      // Сохраняем refresh token если есть
+      if (refreshToken) {
+        localStorage.setItem('refresh_token', refreshToken);
+        console.log("💾 Refresh token saved to localStorage");
+      }
+
+      // Также сохраняем в cookies для совместимости
+      Cookies.set('token', accessToken, {
+        expires: 365,
+        path: '/',
+        sameSite: 'lax'
       });
+      
+      // Проверяем что токен сохранился
+      const savedToken = localStorage.getItem('auth_token');
+      console.log("✓ Verification - Token in localStorage:", savedToken ? "EXISTS (length: " + savedToken.length + ")" : "NOT SAVED!");
 
-      console.log("Admin login response status:", response.status);
+      // Создаем объект пользователя из данных ответа
+      // Используем все доступные данные из userInfo
+      const userData = {
+        id: userInfo.id,
+        email: userInfo.email || email, // Предпочитаем email из ответа, иначе из формы
+        username: userInfo.username || userInfo.email || email,
+        firstname: userInfo.firstname,
+        lastname: userInfo.lastname,
+        role: userInfo.role,
+        customRole: userInfo.customRole,
+        specialty: userInfo.specialty,
+        description: userInfo.description,
+        is_active: userInfo.is_active !== undefined ? userInfo.is_active : true,
+        isActive: userInfo.isActive,
+        photo_url: userInfo.photo_url || userInfo.photoUrl,
+        organization: userInfo.organization,
+        branches: userInfo.branches,
+      };
 
-      // Если admin login успешен
-      if (response.ok) {
-        detectedUserType = 'admin';
-      }
+      console.log("📝 Creating user object:", userData);
+      console.log("📝 JSON stringified user object:", JSON.stringify(userData));
+      console.log("📝 Length of stringified user:", JSON.stringify(userData).length);
 
-      // Если admin login вернул 401, пробуем staff login
-      if (response.status === 401) {
-        console.log("Admin login failed, trying staffAuthorization/login...");
-        response = await fetch(`${SECONDARY_BACKEND_URL}/staffAuthorization/login`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({ email, password }),
-        });
-
-        console.log("Staff login response status:", response.status);
-
-        // Если staff login успешен
-        if (response.ok) {
-          detectedUserType = 'staff';
+      console.log("🔧 Setting authentication state...");
+      setIsAuthenticated(true);
+      console.log("🔧 setIsAuthenticated(true) called");
+      setUser(userData);
+      console.log("🔧 setUser called with:", userData);
+      
+      const userJsonString = JSON.stringify(userData);
+      console.log("💾 About to save user data...");
+      console.log("💾 User JSON:", userJsonString);
+      console.log("💾 User JSON length:", userJsonString.length, "bytes");
+      
+      // Сохраняем в localStorage (более надежно)
+      localStorage.setItem('user_data', userJsonString);
+      console.log("✅ User data saved to localStorage");
+      
+      // Также сохраняем в cookies для совместимости
+      Cookies.set('user', userJsonString, {
+        expires: 365,
+        path: '/',
+        sameSite: 'lax'
+      });
+      console.log("✅ User data saved to cookies");
+      
+      // Проверяем что данные сохранились ВЕЗДЕ
+      const savedInLocalStorage = localStorage.getItem('user_data');
+      const savedInCookies = Cookies.get('user');
+      
+      
+      console.log("✓ Verification IMMEDIATELY AFTER SET:");
+      console.log("  - localStorage:", savedInLocalStorage ? "EXISTS" : "❌ NOT SAVED");
+      console.log("  - cookies:", savedInCookies ? "EXISTS" : "❌ NOT SAVED");
+      
+      if (savedInLocalStorage) {
+        try {
+          const savedUserData = JSON.parse(savedInLocalStorage);
+          console.log("✓ localStorage - role:", savedUserData.role);
+          console.log("✓ localStorage - id:", savedUserData.id);
+          console.log("✓ localStorage - email:", savedUserData.email);
+        } catch (e) {
+          console.error("❌ Failed to parse localStorage user data:", e);
         }
       }
-
-      // Если staff login тоже вернул 401, пробуем user auth
-      if (response.status === 401) {
-        console.log("Staff login failed, trying user/auth...");
-        response = await fetch(`${SECONDARY_BACKEND_URL}/user/auth`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({ email, password }),
-        });
-
-        console.log("User login response status:", response.status);
-
-        // Если user login успешен
-        if (response.ok) {
-          detectedUserType = 'user';
+      
+      if (savedInCookies) {
+        try {
+          const savedUserData = JSON.parse(savedInCookies);
+          console.log("✓ cookies - role:", savedUserData.role);
+          console.log("✓ cookies - id:", savedUserData.id);
+          console.log("✓ cookies - email:", savedUserData.email);
+        } catch (e) {
+          console.error("❌ Failed to parse cookie user data:", e);
         }
       }
+      
+      console.log("🎉 Login successful with role:", userData.role);
+      console.log("🎉 Returning result:", { success: true, user: userData });
 
-      const responseText = await response.text();
-      let result: any = {};
-      try {
-        result = responseText ? JSON.parse(responseText) : {};
-      } catch (parseError) {
-        console.error("❌ Failed to parse /user/auth response:", parseError);
+      // Предзагружаем название организации для refresh токена (если доступно)
+      if (userData.role === "owner" || userData.role === "admin") {
+        preloadOrganizationName(userData.id, accessToken).catch(() => {});
       }
 
-      if (!response.ok) {
-        console.log("❌ Login request failed with status:", response.status);
-        // Специальная обработка для 401 (неверные учетные данные)
-        if (response.status === 401) {
-          setIsAuthenticated(false);
-          setUser(null);
-          return {
-            success: false,
-            message: result?.message || "Неверный логин или пароль"
-          };
-        }
-        const error: any = new Error(result?.message || "Login request failed");
-        error.response = { status: response.status, data: result };
-        throw error;
-      }
-
-      console.log(`🔍 FULL RESPONSE from login (${detectedUserType || 'unknown'} endpoint):`);
-      console.log("  Status:", response.status);
-      console.log("  Data:", JSON.stringify(result, null, 2));
-      console.log("  result.success:", result.success);
-      console.log("  result.token:", result.token ? "EXISTS" : "MISSING");
-      console.log("  result.accessToken:", result.accessToken ? "EXISTS" : "MISSING");
-      console.log("  result.data?.accessToken:", result.data?.accessToken ? "EXISTS" : "MISSING");
-      console.log("  result.refreshToken:", result.refreshToken ? "EXISTS" : "MISSING");
-      console.log("  result.user:", result.user ? "EXISTS" : "MISSING");
-      console.log("  result.data?.user:", result.data?.user ? "EXISTS" : "MISSING");
-
-      // ВАЖНО: Проверяем что аутентификация успешна
-      if (result.success === false) {
-        console.log("❌ Authentication failed - wrong credentials");
-        setIsAuthenticated(false);
-        setUser(null);
-        return { success: false, message: result.message || "Неверный логин или пароль" };
-      }
-
-      // Проверяем какой формат токенов используется
-      // Staff API возвращает данные в result.data
-      // Staff API использует data.token вместо data.accessToken
-      const accessToken = result.accessToken || result.data?.accessToken || result.data?.token || result.token;
-      let refreshToken = result.refreshToken || result.data?.refreshToken;
-      const userInfo = result.user || result.data?.user;
-
-      console.log("🔍 Checking conditions:");
-      console.log("  - result.success:", result.success);
-      console.log("  - accessToken:", accessToken ? "EXISTS" : "MISSING");
-      console.log("  - userInfo:", userInfo ? "EXISTS" : "MISSING");
-
-      if (result.success && accessToken && userInfo) {
-        console.log("✅ Token and user data received from backend");
-        console.log("📋 User info:", {
-          id: userInfo.id,
-          role: userInfo.role
-        });
-
-        // Сохраняем данные в localStorage
-        localStorage.setItem('uuid', JSON.stringify(result));
-
-        // Сохраняем access token в localStorage
-        localStorage.setItem('auth_token', accessToken);
-        localStorage.setItem('access_token', accessToken);
-        console.log("💾 Access token saved to localStorage");
-
-        // Сохраняем тип пользователя
-        if (detectedUserType) {
-          setUserType(detectedUserType);
-          localStorage.setItem('user_type', detectedUserType);
-          console.log(`💾 User type detected and saved: ${detectedUserType}`);
-        }
-
-        // Если backend прислал refresh token только в cookies - пытаемся прочитать его
-        if (!refreshToken) {
-          const refreshTokenFromCookies =
-            Cookies.get('refreshToken') ||
-            Cookies.get('refresh_token') ||
-            Cookies.get('refresh-token');
-          
-          if (refreshTokenFromCookies) {
-            refreshToken = refreshTokenFromCookies;
-            console.log("💾 Refresh token extracted from cookies");
-          } else {
-            console.warn("⚠️ Refresh token not found in response body or cookies");
-          }
-        }
-
-        // Сохраняем refresh token если есть
-        if (refreshToken) {
-          localStorage.setItem('refresh_token', refreshToken);
-          console.log("💾 Refresh token saved to localStorage");
-        }
-
-        // Также сохраняем в cookies для совместимости
-        Cookies.set('token', accessToken, {
-          expires: 365,
-          path: '/',
-          sameSite: 'lax'
-        });
-        
-        // Проверяем что токен сохранился
-        const savedToken = localStorage.getItem('auth_token');
-        console.log("✓ Verification - Token in localStorage:", savedToken ? "EXISTS (length: " + savedToken.length + ")" : "NOT SAVED!");
-
-        // Создаем объект пользователя из данных ответа
-        // Используем все доступные данные из userInfo
-        const userData = {
-          id: userInfo.id,
-          email: userInfo.email || email, // Предпочитаем email из ответа, иначе из формы
-          username: userInfo.username || userInfo.email || email,
-          firstname: userInfo.firstname,
-          lastname: userInfo.lastname,
-          role: userInfo.role,
-          customRole: userInfo.customRole,
-          specialty: userInfo.specialty,
-          description: userInfo.description,
-          is_active: userInfo.is_active !== undefined ? userInfo.is_active : true,
-          isActive: userInfo.isActive,
-          photo_url: userInfo.photo_url || userInfo.photoUrl,
-          organization: userInfo.organization,
-          branches: userInfo.branches,
-        };
-
-        console.log("📝 Creating user object:", userData);
-        console.log("📝 JSON stringified user object:", JSON.stringify(userData));
-        console.log("📝 Length of stringified user:", JSON.stringify(userData).length);
-
-        console.log("🔧 Setting authentication state...");
-        setIsAuthenticated(true);
-        console.log("🔧 setIsAuthenticated(true) called");
-        setUser(userData);
-        console.log("🔧 setUser called with:", userData);
-        
-        const userJsonString = JSON.stringify(userData);
-        console.log("💾 About to save user data...");
-        console.log("💾 User JSON:", userJsonString);
-        console.log("💾 User JSON length:", userJsonString.length, "bytes");
-        
-        // Сохраняем в localStorage (более надежно)
-        localStorage.setItem('user_data', userJsonString);
-        console.log("✅ User data saved to localStorage");
-        
-        // Также сохраняем в cookies для совместимости
-        Cookies.set('user', userJsonString, {
-          expires: 365,
-          path: '/',
-          sameSite: 'lax'
-        });
-        console.log("✅ User data saved to cookies");
-        
-        // Проверяем что данные сохранились ВЕЗДЕ
-        const savedInLocalStorage = localStorage.getItem('user_data');
-        const savedInCookies = Cookies.get('user');
-        
-        console.log("✓ Verification IMMEDIATELY AFTER SET:");
-        console.log("  - localStorage:", savedInLocalStorage ? "EXISTS" : "❌ NOT SAVED");
-        console.log("  - cookies:", savedInCookies ? "EXISTS" : "❌ NOT SAVED");
-        
-        if (savedInLocalStorage) {
-          try {
-            const savedUserData = JSON.parse(savedInLocalStorage);
-            console.log("✓ localStorage - role:", savedUserData.role);
-            console.log("✓ localStorage - id:", savedUserData.id);
-            console.log("✓ localStorage - email:", savedUserData.email);
-          } catch (e) {
-            console.error("❌ Failed to parse localStorage user data:", e);
-          }
-        }
-        
-        if (savedInCookies) {
-          try {
-            const savedUserData = JSON.parse(savedInCookies);
-            console.log("✓ cookies - role:", savedUserData.role);
-            console.log("✓ cookies - id:", savedUserData.id);
-            console.log("✓ cookies - email:", savedUserData.email);
-          } catch (e) {
-            console.error("❌ Failed to parse cookie user data:", e);
-          }
-        }
-        
-        console.log("🎉 Login successful with role:", userData.role);
-        console.log("🎉 Returning result:", { success: true, user: userData });
-
-        // Предзагружаем название организации для refresh токена (если доступно)
-        if (userData.role === "owner" || userData.role === "admin") {
-          preloadOrganizationName(userData.id, accessToken).catch(() => {});
-        }
-
-        const finalResult = { success: true, user: userData };
-        console.log("📤 FINAL RETURN VALUE:", finalResult);
-        return finalResult;
-      } else {
-        // Нет токена или данных пользователя - значит ошибка
-        console.log("❌ No token or user data in response");
-        console.log("  AccessToken:", accessToken ? "EXISTS" : "MISSING");
-        console.log("  User:", userInfo ? "EXISTS" : "MISSING");
-        setIsAuthenticated(false);
-        setUser(null);
-        return { success: false, message: result.message || "Ошибка входа" };
-      }
+      const finalResult = { success: true, user: userData };
+      console.log("📤 FINAL RETURN VALUE:", finalResult);
+      return finalResult;
     } catch (err: any) {
       console.error("Login error:", err);
       const message = err.response?.data?.message || "Ошибка подключения к серверу";

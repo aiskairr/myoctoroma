@@ -67,16 +67,33 @@ const CreateServiceBtn = () => {
     const watchedDefaultDuration = watch('defaultDuration');
     const watchedIsActive = watch('isActive');
 
+    const branchOptions = branches.length > 0 ? branches : (currentBranch ? [currentBranch] : []);
+
     useEffect(() => {
-        if (isOpen && branches.length > 0) {
-            const branchId = getBranchIdWithFallback(currentBranch, branches);
+        if (isOpen && branchOptions.length > 0) {
+            const branchId = getBranchIdWithFallback(currentBranch, branchOptions);
             setValue('instanceId', branchId);
+            console.log(branches)
         }
-    }, [isOpen, branches, currentBranch, setValue]);
+    }, [isOpen, branchOptions, currentBranch, setValue]);
 
     const createMutation = useMutation({
         mutationFn: async (service: Omit<any, 'id' | 'createdAt'>) => {
             const token = localStorage.getItem('auth_token');
+            const durationNumber = Number(service.defaultDuration) || 60;
+
+            const payload = {
+                name: service.name,
+                defaultDuration: durationNumber,
+                prices: [
+                    {
+                        duration: durationNumber,
+                        price: 0, // в UI нет поля цены, отправляем 0
+                    },
+                ],
+                branchId: Number(service.instanceId), // сохраняем привязку к филиалу
+                isActive: service.isActive,
+            };
             
             const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/services`, {
                 method: 'POST',
@@ -84,29 +101,12 @@ const CreateServiceBtn = () => {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` })
                 },
-                body: JSON.stringify({
-                    name: service.name,
-                    description: service.description,
-                    isActive: service.isActive,
-                    branchID: service.instanceId,
-                    defaultDuration: service.defaultDuration,
-                    duration10_price: 0,
-                    duration15_price: 0,
-                    duration20_price: 0,
-                    duration30_price: 0,
-                    duration40_price: 0,
-                    duration50_price: 0,
-                    duration60_price: 0,
-                    duration75_price: 0,
-                    duration80_price: 0,
-                    duration90_price: 0,
-                    duration110_price: 0,
-                    duration120_price: 0,
-                    duration150_price: 0,
-                    duration220_price: 0,
-                }),
+                body: JSON.stringify(payload),
             });
-            if (!response.ok) throw new Error('Ошибка создания услуги');
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(errText || 'Ошибка создания услуги');
+            }
             return response.json();
         },
         onSuccess: () => {
@@ -200,7 +200,7 @@ const CreateServiceBtn = () => {
                             <SelectContent>
                                 {branches.map((branch) => (
                                     <SelectItem key={branch.id} value={branch.id.toString()}>
-                                        {branch.branches}
+                                        {branch.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

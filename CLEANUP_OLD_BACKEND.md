@@ -71,7 +71,7 @@ https://lesser-felicdad-promconsulting-79f07228.koyeb.app
 
 ✅ **Secondary Backend:**
 ```
-https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app
+https://octobackend.com/api/main/
 ```
 
 ❌ **Старый бэкенд (удален):**
@@ -104,7 +104,7 @@ const url = createApiUrl('/api/tasks');
 
 // Secondary  
 const url = createApiUrl('/api/tasks', true);
-// https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app/api/tasks
+// https://octobackend.com/api/main//api/tasks
 ```
 
 ---

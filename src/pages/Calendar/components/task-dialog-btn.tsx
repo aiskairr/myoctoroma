@@ -89,10 +89,11 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     // Fetch masters, services, and branches data
     const { data: mastersData = [] } = useMasters();
     const { data: servicesData = [] } = useServices();
-    const { branches } = useBranch();
+    const { branches, currentBranch } = useBranch();
+    const branchIdParam = currentBranch?.id ? currentBranch.id.toString() : '';
     const { user } = useAuth();
-
-    // Fetch administrators
+    console.log('👤 Current masterss:', mastersData);
+    // Получаем администраторов с primary backend (для выбора ответственного)
     const getBranchIdWithFallback = (currentBranch: any, branches: any[]) => {
         if (currentBranch?.id) return currentBranch.id;
         if (branches?.length > 0) return branches[0].id;
@@ -100,11 +101,19 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
     };
 
     const { data: administrators = [] } = useQuery<{ id: number, name: string }[]>({
-        queryKey: ['administrators', getBranchIdWithFallback(null, branches)],
+        queryKey: ['administrators', getBranchIdWithFallback(currentBranch, branches)],
         queryFn: async () => {
-            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchID=${getBranchIdWithFallback(null, branches)}`);
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchID=${getBranchIdWithFallback(currentBranch, branches)}`, {
+                credentials: 'include',
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!res.ok) {
+                const err = await res.text();
+                throw new Error(err || 'Failed to load administrators');
+            }
             return res.json();
         },
+        enabled: !!getBranchIdWithFallback(currentBranch, branches)
     });
 
     // Доступные способы оплаты
@@ -514,13 +523,28 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                         }))
                     };
 
-                    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/assignments/${taskId}`, {
+                    const token = localStorage.getItem('auth_token');
+                    const branchForPatch = branchIdParam || currentBranch?.id?.toString() || taskData?.branchId?.toString?.();
+                    if (!branchForPatch) {
+                        toast({
+                            title: t('calendar.branch_not_found') || 'Не выбран филиал',
+                            description: t('calendar.branch_not_found') || 'Укажите филиал перед сохранением',
+                            variant: 'destructive',
+                        });
+                        setAdditionalServices(additionalServices);
+                        return;
+                    }
+                    const url = `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/assignments/${taskId}?branchId=${branchForPatch}`;
+                    const response = await fetch(url, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                         },
                         body: JSON.stringify(updatePayload),
-                        credentials: 'include'
+                        credentials: 'include',
+                        cache: 'no-store'
                     });
 
                     if (!response.ok) {
@@ -580,13 +604,28 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     }))
                 };
 
-                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/assignments/${taskId}`, {
+                const token = localStorage.getItem('auth_token');
+                const branchForPatch = branchIdParam || currentBranch?.id?.toString() || taskData?.branchId?.toString?.();
+                if (!branchForPatch) {
+                    toast({
+                        title: t('calendar.branch_not_found') || 'Не выбран филиал',
+                        description: t('calendar.branch_not_found') || 'Укажите филиал перед сохранением',
+                        variant: 'destructive',
+                    });
+                    setAdditionalServices(additionalServices);
+                    return;
+                }
+                const url = `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/assignments/${taskId}?branchId=${branchForPatch}&_=${Date.now()}`;
+                const response = await fetch(url, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     },
                     body: JSON.stringify(updatePayload),
-                    credentials: 'include'
+                    credentials: 'include',
+                    cache: 'no-store'
                 });
 
                 if (!response.ok) {
@@ -627,12 +666,19 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         console.log('🔍 loadAdditionalServices called for assignment ID:', taskId);
         try {
             // Загружаем assignment с дополнительными услугами
-            const assignmentResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/assignments/${taskId}`, {
+            const token = localStorage.getItem('auth_token');
+            const url = `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/assignments/${taskId}${branchIdParam ? `?branchId=${branchIdParam}` : ''}&_=${Date.now()}`;
+            const assignmentResponse = await fetch(url, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'If-Modified-Since': '0',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                 },
-                credentials: 'include'
+                credentials: 'include',
+                cache: 'no-store'
             });
 
             console.log('🔍 assignment response status:', assignmentResponse.status);
@@ -700,14 +746,44 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                 const servicePrice = parseFloat(data.cost) || 0;
                 const discount = parseFloat(data.discount) || 0;
                 
-                // Находим service по имени для получения ID
+                // Находим service по имени для получения ID (или берём из текущей задачи)
                 const selectedService = servicesData.find(s => s.name === data.serviceType);
-                const serviceId = selectedService?.id || 0;
+                const serviceId =
+                    selectedService?.id ||
+                    taskData?.service_snapshot?.id ||
+                    taskData?.serviceId ||
+                    0;
+
+                // Определяем сотрудника по имени
+                const selectedMaster = mastersData.find(m => m.name === data.master);
+                const employeeId = selectedMaster?.id || taskData?.masterId || currentTask?.masterId || null;
+
+                const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
                 
-                const updatePayload = {
+                // Рассчитываем итоговую сумму оплаты
+                const totalPrice = Math.max(0, servicePrice - (servicePrice * discount / 100));
+                const organisationId =
+                    currentBranch?.organisationId ||
+                    (orgData as any)?.id ||
+                    user?.organization_id ||
+                    user?.organisationId ||
+                    user?.orgId ||
+                    user?.organization?.id ||
+                    0;
+
+                const updatePayload: any = {
                     assignmentDate: data.date && data.date.trim() ? convertDateFormat(data.date) : undefined,
                     startTime: data.time,
                     endTime: calculateEndTime(data.time, serviceDuration),
+                    employeeId,
+                    timezone,
+                    organizationId: Number(organisationId),
+                    branchId: Number(branchForPatch),
+                    client: {
+                        id: taskData?.clientId || taskData?.client_id || 0,
+                        firstname: taskData?.client?.firstName || taskData?.clientName || '',
+                        phoneNumber: taskData?.client?.phoneNumber || ''
+                    },
                     service: {
                         id: serviceId,
                         name: data.serviceType,
@@ -716,16 +792,49 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     },
                     notes: data.notes,
                     discount: discount,
-                    status: data.status
+                    status: data.status,
+                    source: 'calendar',
+                    paid: 'paid',
+                    certificateNumber: '',
+                    paymentMethod: selectedPaymentMethod
+                        ? [{
+                            type: selectedPaymentMethod,
+                            amount: totalPrice,
+                            name: selectedPaymentMethod
+                        }]
+                        : [],
                 };
 
-                console.log('🚀 Sending PATCH request to:', `${import.meta.env.VITE_BACKEND_URL}/assignments/${taskId}`);
-                console.log('📦 Update payload:', updatePayload);
+                if (additionalServices.length > 0) {
+                    updatePayload.additionalServices = additionalServices.map(s => ({
+                        id: s.serviceId || s.id || 0,
+                        name: s.serviceName,
+                        price: s.price,
+                        duration: s.duration
+                    }));
+                }
 
-                const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/assignments/${taskId}`, {
+                const branchForPatch = branchIdParam || taskData?.branchId?.toString?.() || currentTask?.branchId?.toString?.() || currentBranch?.id?.toString();
+                if (!branchForPatch) {
+                    toast({
+                        title: t('calendar.branch_not_found') || 'Не выбран филиал',
+                        description: t('calendar.branch_not_found') || 'Укажите филиал перед сохранением',
+                        variant: 'destructive',
+                    });
+                    return;
+                }
+
+                const url = `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/assignments/${taskId}?branchId=${branchForPatch}`;
+                console.log('🚀 Sending PATCH request to:', url);
+                console.log('📦 Update payload:', updatePayload);
+                
+                const token = localStorage.getItem('auth_token');
+                const response = await fetch(url, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                     },
                     body: JSON.stringify(updatePayload),
                     credentials: 'include'
@@ -1346,12 +1455,12 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                                                 </SelectItem>
                                                                 {/* Fallback options */}
                                                                 {!watchedServiceType && (
-                                                                    <SelectItem value="" disabled>
+                                                                    <SelectItem value="__placeholder_no_service" disabled>
                                                                         Выберите услугу для отображения длительностей
                                                                     </SelectItem>
                                                                 )}
                                                                 {watchedServiceType && availableDurations.length === 0 && (
-                                                                    <SelectItem value="" disabled>
+                                                                    <SelectItem value="__placeholder_no_durations" disabled>
                                                                         Нет доступных длительностей для этой услуги
                                                                     </SelectItem>
                                                                 )}
@@ -1474,14 +1583,20 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                             onValueChange={field.onChange}
                                         >
                                             <SelectTrigger className={`mt-1 ${errors.master ? 'border-red-500' : ''}`}>
-                                                <SelectValue />
+                                                <SelectValue placeholder={t('calendar.select_master') || 'Выберите мастера'} />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {mastersData.map(master => (
-                                                    <SelectItem key={master.id} value={master.name}>
-                                                        {master.name}
+                                                {mastersData.length === 0 ? (
+                                                    <SelectItem value="__no_master" disabled>
+                                                        {t('calendar.no_masters') || 'Нет мастеров'}
                                                     </SelectItem>
-                                                ))}
+                                                ) : (
+                                                    mastersData.map(master => (
+                                                        <SelectItem key={master.id} value={master.username}>
+                                                            {master.username}
+                                                        </SelectItem>
+                                                    ))
+                                                )}
                                             </SelectContent>
                                         </Select>
                                     )}
@@ -1503,14 +1618,20 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                             onValueChange={field.onChange}
                                         >
                                             <SelectTrigger className={`mt-1 ${errors.branch ? 'border-red-500' : ''}`}>
-                                                <SelectValue />
+                                                <SelectValue placeholder={t('calendar.select_branch') || 'Выберите филиал'} />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {branches.map(branch => (
-                                                    <SelectItem key={branch.id} value={branch.id.toString()}>
-                                                        {branch.branches}
+                                                {branches.length === 0 ? (
+                                                    <SelectItem value="__no_branch" disabled>
+                                                        {t('calendar.no_branches') || 'Нет филиалов'}
                                                     </SelectItem>
-                                                ))}
+                                                ) : (
+                                                    branches.map(branch => (
+                                                        <SelectItem key={branch.id} value={branch.id.toString()}>
+                                                            {branch.branches || branch.name || branch.id}
+                                                        </SelectItem>
+                                                    ))
+                                                )}
                                             </SelectContent>
                                         </Select>
                                     )}
@@ -1892,9 +2013,12 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                     {/* Выбор администратора */}
                     <div className="mt-4 border-t pt-4">
                         <Label className="text-sm font-semibold mb-2 block">Администратор</Label>
-                        <Select value={selectedAdministrator} onValueChange={setSelectedAdministrator}>
+                        <Select
+                            value={selectedAdministrator}
+                            onValueChange={setSelectedAdministrator}
+                        >
                             <SelectTrigger className="w-full">
-                                <SelectValue placeholder={t('calendar.select_administrator')} />
+                                <SelectValue placeholder={t('calendar.select_administrator') || 'Выберите администратора'} />
                             </SelectTrigger>
                             <SelectContent>
                                 {administrators.map((admin: { id: number; name: string }) => (

@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useBranch } from '@/contexts/BranchContext';
 import { getBranchIdWithFallback } from '@/utils/branch-utils';
+import { apiGetJson } from '@/lib/api';
 
 // Interface for Master from API
 export interface Master {
+  username: ReactNode;
   id: number;
   name: string;
   specialization?: string;
@@ -24,7 +26,7 @@ export const useMasters = () => {
   const branchId = getBranchIdWithFallback(currentBranch, branches);
 
   return useQuery<Master[]>({
-    queryKey: ['/api/crm/masters', branchId],
+    queryKey: ['/staff', branchId],
     queryFn: async () => {
       if (!branchId) {
         console.warn('❌ No valid branch ID available, skipping masters fetch');
@@ -32,29 +34,9 @@ export const useMasters = () => {
       }
 
       try {
-        // Use the new path-based API structure
-        const url = `${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${branchId}`;
-        console.log('📡 Masters API URL:', url);
-        
-        const response = await fetch(url, {
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-          }
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error('Необходима авторизация');
-          } else if (response.status === 404) {
-            throw new Error('Мастера не найдены для данного филиала');
-          } else {
-            const errorText = await response.text();
-            throw new Error(`Ошибка загрузки мастеров: ${response.status} - ${errorText}`);
-          }
-        }
-
-        const data = await response.json();
+        // Use the shared API helper to avoid cached 304 responses and handle auth
+        const response = await apiGetJson<Master[] | { data?: Master[]; staff?: Master[] }>(`/staff?branchId=${branchId}`);
+        const data = Array.isArray(response) ? response : response.data || response.staff || [];
         console.log('✅ Loaded masters:', data.length, data.map((m: Master) => ({ id: m.id, name: m.name })));
         return data;
       } catch (error) {

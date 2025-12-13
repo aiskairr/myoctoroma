@@ -39,11 +39,26 @@ const MasterWorkingDatesDisplay: React.FC<MasterWorkingDatesDisplayProps> = ({
     queryFn: async (): Promise<WorkingDate[]> => {
       if (!masterId) return [];
       const branchId = getBranchIdWithFallback(currentBranch, branches);
+      const token = localStorage.getItem('auth_token');
       const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates?month=${currentMonth.getMonth() + 1}&year=${currentMonth.getFullYear()}&branchId=${branchId}`
+        `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates?month=${currentMonth.getMonth() + 1}&year=${currentMonth.getFullYear()}&branchId=${branchId}&_=${Date.now()}`,
+        {
+          headers: {
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'If-Modified-Since': '0',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          credentials: 'include',
+          cache: 'no-store',
+        }
       );
       if (!res.ok) throw new Error('Failed to fetch working dates');
-      return res.json();
+      const result = await res.json();
+      if (Array.isArray(result)) return result;
+      if (result && Array.isArray((result as any).data)) return (result as any).data;
+      return [];
     },
     enabled: !!masterId && !!(currentBranch || branches.length > 0),
   });

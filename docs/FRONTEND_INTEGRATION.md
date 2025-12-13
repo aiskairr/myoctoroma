@@ -4,7 +4,7 @@
 
 Реализована система объединения данных из двух API endpoints:
 - `GET /api/tasks` - возвращает задачи с `masterId`
-- `GET /api/crm/masters` - возвращает список мастеров с именами
+- `GET /staff` - возвращает список мастеров с именами
 
 На фронтенде автоматически присваивается `masterName` к каждой задаче.
 
@@ -147,7 +147,7 @@ export function useCalendarTasks(selectedDate: Date = new Date()) {
 ```typescript
 // Автоматически выполняются параллельно:
 const tasksQuery = useQuery(['tasks', ...], () => fetch('/api/tasks'));
-const mastersQuery = useQuery(['masters', ...], () => fetch('/api/crm/masters'));
+const mastersQuery = useQuery(['masters', ...], () => fetch('/staff'));
 ```
 
 ### 2. Объединение данных
@@ -212,7 +212,7 @@ const { data: completedTasks } = useTasks({
 ### Изменения в backend требованиях:
 - `GET /api/tasks` НЕ должен возвращать `masterName`
 - `GET /api/tasks` должен возвращать только `masterId`
-- `GET /api/crm/masters/{branchId}` должен продолжать работать как есть
+- `GET /staff/{branchId}` должен продолжать работать как есть
 
 ### Пример ответа от `/api/tasks`:
 ```json
@@ -230,7 +230,7 @@ const { data: completedTasks } = useTasks({
 ]
 ```
 
-Фронтенд автоматически добавит `masterName: "Анна Петрова"` на основе данных из `/api/crm/masters`.
+Фронтенд автоматически добавит `masterName: "Анна Петрова"` на основе данных из `/staff`.
 
 ## Преимущества
 

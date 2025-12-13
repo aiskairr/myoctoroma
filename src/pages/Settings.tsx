@@ -1,176 +1,283 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { getQueryFn } from "@/lib/queryClient";
-import { useBranch } from '@/contexts/BranchContext';
-import { useLocale } from '@/contexts/LocaleContext';
-import { useAuth } from '@/contexts/SimpleAuthContext';
+import React, { useEffect, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { useLocale } from "@/contexts/LocaleContext";
+import { useAuth } from "@/contexts/SimpleAuthContext";
+import { useBranch } from "@/contexts/BranchContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, BookOpen, ArrowRight, User, Bot, Calendar, Download } from "lucide-react";
 import { BookingLinkCopy } from "@/components/BookingLinkCopy";
+
+// Простые плейсхолдеры, если нужных компонентов нет в проекте
+const UnifiedImportCard = () => (
+  <Card>
+    <CardHeader>
+      <CardTitle>Импорт данных</CardTitle>
+      <CardDescription>Компонент UnifiedImportCard отсутствует — добавьте его для полноценной работы.</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <p className="text-sm text-muted-foreground">Здесь будет интерфейс импорта из Altegio/DIKIDI/Zapisi.kz.</p>
+    </CardContent>
+  </Card>
+);
+
+const WhatsAppConnect = () => (
+  <Card>
+    <CardHeader>
+      <CardTitle>Подключение WhatsApp</CardTitle>
+      <CardDescription>Компонент WhatsAppConnect отсутствует — добавьте его для полноценной работы.</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <p className="text-sm text-muted-foreground">Здесь будет форма подключения WhatsApp.</p>
+    </CardContent>
+  </Card>
+);
 
 export default function Settings() {
   const { t } = useLocale();
   const { toast } = useToast();
-  const { currentBranch } = useBranch();
   const { user } = useAuth();
-  const [settings, setSettings] = useState<Record<string, string>>({
-    systemPrompt: "",
-  });
-  
+  const { currentBranch, refetchBranches } = useBranch();
+  const [, setLocation] = useLocation();
+
+  const [activeTab, setActiveTab] = useState<string>("account");
   const [userProfile, setUserProfile] = useState({
-    firstName: "",
-    lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
-  
-  const [whatsappConfig, setWhatsappConfig] = useState({
-    apiUrl: "",
-    mediaUrl: "",
-    branchId: "",
-    apiToken: "",
+  const [customRole, setCustomRole] = useState("");
+  const [botSettings, setBotSettings] = useState({
+    accountID: "",
+    managerTimeoutMinutes: "",
   });
 
-  // Excel Import states
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [importJobId, setImportJobId] = useState<string | null>(null);
-  const [importStatus, setImportStatus] = useState<any>(null);
+  // Константная часть промпта
+  const FIXED_PROMPT_TEMPLATE = `
+🎯 ПРИНЦИП РАБОТЫ:
+Первый бот (Bot#1) уже проанализировал сообщение клиента и определил его намерение.
+На основе этого намерения система АВТОМАТИЧЕСКИ подготовила ТОЧНУЮ информацию из базы данных.
+Эта информация передается тебе в разделе "📊 ДАННЫЕ ИЗ БД ДЛЯ ОТВЕТА".
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: [import.meta.env.VITE_BACKEND_URL + "/api/settings/" + (currentBranch?.id || "")],
-    queryFn: async ({ queryKey }) => {
-      try {
-        const token = document.cookie.split('token=')[1]?.split(';')[0] || '';
-        const response = await fetch(queryKey[0], {
-          headers: {
-            'Authorization': 'Bearer ' + token,
-          },
-        });
-        
-        if (response.status === 404 || response.status === 400) {
-          return null;
-        }
-        
-        if (response.status === 401) {
-          throw new Error('Unauthorized');
-        }
-        
-        if (!response.ok) {
-          throw new Error('HTTP error! status: ' + response.status);
-        }
-        
-        return response.json();
-      } catch (err) {
-        if (err instanceof TypeError && err.message === 'Failed to fetch') {
-          console.warn('Network error when fetching settings, treating as empty:', err);
-          return null;
-        }
-        throw err;
-      }
-    },
-    retry: false,
-    enabled: !!currentBranch?.id,
-  });
+🧠 ИНТЕЛЛЕКТУАЛЬНЫЙ КОНТЕКСТ:
+Если клиент спросил "Какие мастера работают сегодня?" - тебе передан список РАБОТАЮЩИХ мастеров с их занятостью.
+Если клиент спросил "Когда окно у Адиля?" - тебе передано РАСПИСАНИЕ АДИЛЯ с занятыми и свободными слотами.
+Если клиент спросил "Сколько стоит массаж?" - тебе передан ПРАЙС-ЛИСТ именно по массажу.
 
-  const { data: whatsappData, isLoading: isLoadingWhatsapp } = useQuery({
-    queryKey: [import.meta.env.VITE_BACKEND_URL + "/api/organisation/" + (currentBranch?.id || "") + "/whatsapp/config"],
-    queryFn: getQueryFn({ on401: "throw" }),
-    retry: false,
-    enabled: !!currentBranch?.id,
-  });
+📋 ЧТО НАХОДИТСЯ В КОНТЕКСТЕ:
+✅ Конкретные имена мастеров (реальные люди из БД)
+✅ Точные цены на услуги (из прайс-листа филиала)
+✅ Реальная занятость (из расписания на сегодня/выбранную дату)
+✅ Специализации мастеров (их реальные услуги)
+✅ Свободные окна (вычислены на основе записей)
 
-  const updateProfileMutation = useMutation({
-    mutationFn: async (data: { firstName?: string; lastName?: string; email?: string; password?: string }) => {
-      if (!user?.id) {
-        throw new Error('User ID not found');
+⚠️ КРИТИЧЕСКИ ВАЖНО:
+❌ НИКОГДА не говори "у меня нет доступа к расписанию" - оно УЖЕ в контексте!
+❌ НИКОГДА не говори "нет информации о мастерах" - они УЖЕ перечислены!
+❌ НИКОГДА не говори "не знаю цены" - они УЖЕ в прайс-листе!
+❌ НИКОГДА не придумывай имена - используй ТОЛЬКО те, что в контексте!
+
+✅ ВСЕГДА читай раздел "📊 ДАННЫЕ ИЗ БД ДЛЯ ОТВЕТА"
+✅ ВСЕГДА используй КОНКРЕТНЫЕ имена из списка
+✅ ВСЕГДА указывай ТОЧНЫЕ цены из переданного прайса
+✅ ВСЕГДА проверяй РЕАЛЬНУЮ занятость из расписания
+
+📌 ПРИМЕРЫ ПРАВИЛЬНОЙ РАБОТЫ:
+... (сокращено для читаемости) ...
+`.trim();
+
+  const extractCustomRole = (fullPrompt: string): string => {
+    if (!fullPrompt) return "Ты - профессиональный администратор салона красоты/массажа.";
+    const lines = fullPrompt.split("\n");
+    const customLines: string[] = [];
+    for (const line of lines) {
+      if (line.includes("🎯 ПРИНЦИП РАБОТЫ:")) break;
+      if (line.trim()) customLines.push(line);
+    }
+    return customLines.join("\n").trim() || "Ты - профессиональный администратор салона красоты/массажа.";
+  };
+
+  const generateFullPrompt = (role: string): string => {
+    return `${role}\n${FIXED_PROMPT_TEMPLATE}`;
+  };
+
+  const updateSystemPromptMutation = useMutation({
+    mutationFn: async (role: string) => {
+      if (!currentBranch?.id) {
+        throw new Error("Branch ID is required");
       }
-      
-      // Используем branch_id из user, если есть, иначе из currentBranch
-      const branchId = (user as any).branches || currentBranch?.id;
-      
-      if (!branchId) {
-        throw new Error('Branch ID is required');
-      }
-      
-      const token = document.cookie.split('token=')[1]?.split(';')[0] || '';
-      
-      // Подготавливаем данные запроса со всеми полями пользователя
-      const requestData: any = {
-        first_name: data.firstName || (user as any).first_name || (user as any).firstName || 'User',
-        last_name: data.lastName || (user as any).last_name || (user as any).lastName || 'User',
-        email: data.email || (user as any).email,
-        branches: branchId,
-        isActive: (user as any).isActive !== undefined ? (user as any).isActive : true,
-      };
-      
-      // Добавляем password только если он был изменен
-      if (data.password) {
-        requestData.password = data.password;
-      }
-      
-      // Добавляем paidDate если есть
-      if ((user as any).paidDate) {
-        requestData.paidDate = (user as any).paidDate;
-      }
-      
-      const url = import.meta.env.VITE_SECONDARY_BACKEND_URL + "/user/changeUserData/" + user.id;
-      
-      const response = await fetch(url, {
-        method: 'PUT',
+
+      const fullPrompt = generateFullPrompt(role);
+      const token = document.cookie.split("token=")[1]?.split(";")[0] || "";
+
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/branches/${currentBranch.id}`, {
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token,
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify(requestData),
+        credentials: "include",
+        body: JSON.stringify({ systemPrompt: fullPrompt }),
       });
-      
+
       if (!response.ok) {
-        if (response.status === 409) {
-          throw new Error(t('settings.email_already_exists'));
-        }
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'HTTP error! status: ' + response.status);
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: t('settings.profile_updated'),
-        description: t('settings.profile_updated_description'),
+        title: t("settings.settings_saved"),
+        description: t("settings.system_prompt_updated"),
+      });
+      refetchBranches();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: t("error"),
+        description: error.message || t("settings.save_failed"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateBotSettingsMutation = useMutation({
+    mutationFn: async (settings: { accountID?: string; managerTimeoutMinutes?: number | null }) => {
+      if (!currentBranch?.id) {
+        throw new Error("Branch ID is required");
+      }
+
+      const token = document.cookie.split("token=")[1]?.split(";")[0] || "";
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/branches/${currentBranch.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        credentials: "include",
+        body: JSON.stringify(settings),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: t("settings.settings_saved"),
+        description: "Настройки бота успешно обновлены",
+      });
+      refetchBranches();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: t("error"),
+        description: error.message || t("settings.save_failed"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: { email?: string; password?: string }) => {
+      const token = document.cookie.split("token=")[1]?.split(";")[0] || "";
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/user`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          throw new Error(t("settings.email_already_exists"));
+        }
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: t("settings.profile_updated"),
+        description: t("settings.profile_updated_description"),
       });
       setUserProfile({
-        firstName: "",
-        lastName: "",
         email: "",
         password: "",
         confirmPassword: "",
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
-        title: t('settings.profile_update_error'),
+        title: t("settings.profile_update_error"),
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
+  useEffect(() => {
+    if (currentBranch?.systemPrompt) {
+      setCustomRole(extractCustomRole(currentBranch.systemPrompt));
+    } else {
+      setCustomRole("Ты - профессиональный администратор салона красоты/массажа.");
+    }
+
+    setBotSettings({
+      accountID: (currentBranch as any)?.accountID || "",
+      managerTimeoutMinutes: (currentBranch as any)?.managerTimeoutMinutes?.toString() || "",
+    });
+  }, [currentBranch]);
+
+  const handleBotSettingsChange = (key: keyof typeof botSettings, value: string) => {
+    setBotSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleUpdateBotSettings = () => {
+    const settings: { accountID?: string; managerTimeoutMinutes?: number | null } = {};
+    if (botSettings.accountID.trim()) settings.accountID = botSettings.accountID.trim();
+    if (botSettings.managerTimeoutMinutes.trim()) {
+      const timeout = parseInt(botSettings.managerTimeoutMinutes);
+      if (!isNaN(timeout) && timeout > 0) {
+        settings.managerTimeoutMinutes = timeout;
+      } else {
+        toast({
+          title: t("error"),
+          description: "Таймаут должен быть положительным числом",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      settings.managerTimeoutMinutes = null;
+    }
+    updateBotSettingsMutation.mutate(settings);
+  };
+
   const handleProfileInputChange = (key: keyof typeof userProfile, value: string) => {
     setUserProfile((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleUpdateProfile = async () => {
-    if (!userProfile.firstName && !userProfile.lastName && !userProfile.email && !userProfile.password) {
+    if (!userProfile.email && !userProfile.password) {
       toast({
-        title: t('error'),
-        description: t('settings.at_least_one_field'),
+        title: t("error"),
+        description: t("settings.at_least_one_field"),
         variant: "destructive",
       });
       return;
@@ -178,225 +285,25 @@ export default function Settings() {
 
     if (userProfile.password && userProfile.password !== userProfile.confirmPassword) {
       toast({
-        title: t('error'),
-        description: t('settings.passwords_not_match'),
+        title: t("error"),
+        description: t("settings.passwords_not_match"),
         variant: "destructive",
       });
       return;
     }
 
-    const updateData: { firstName?: string; lastName?: string; email?: string; password?: string } = {};
-    if (userProfile.firstName) updateData.firstName = userProfile.firstName;
-    if (userProfile.lastName) updateData.lastName = userProfile.lastName;
+    const updateData: { email?: string; password?: string } = {};
     if (userProfile.email) updateData.email = userProfile.email;
     if (userProfile.password) updateData.password = userProfile.password;
 
     try {
       await updateProfileMutation.mutateAsync(updateData);
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error("Error updating profile:", error);
     }
   };
 
-  // Excel Import mutations and handlers
-  const importMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('branchId', String(currentBranch?.id || ''));
-      
-      const token = document.cookie.split('token=')[1]?.split(';')[0] || '';
-      
-      const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/api/import/excel', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + token,
-        },
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to import file');
-      }
-      
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: t('settings.import_started'),
-        description: t('settings.import_started_description'),
-      });
-      
-      if (data.jobId) {
-        setImportJobId(data.jobId);
-        pollImportStatus(data.jobId);
-      }
-    },
-    onError: (error) => {
-      toast({
-        title: t('settings.import_error'),
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const pollImportStatus = async (jobId: string) => {
-    const maxAttempts = 60;
-    let attempts = 0;
-    
-    const poll = async () => {
-      if (attempts >= maxAttempts) {
-        return;
-      }
-      
-      try {
-        const token = document.cookie.split('token=')[1]?.split(';')[0] || '';
-        const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/api/import/status/' + jobId, {
-          headers: {
-            'Authorization': 'Bearer ' + token,
-          },
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setImportStatus(data);
-          
-          if (data.job?.status !== 'COMPLETED' && data.job?.status !== 'FAILED') {
-            attempts++;
-            setTimeout(poll, 2000);
-          }
-        }
-      } catch (error) {
-        console.error('Error polling import status:', error);
-      }
-    };
-    
-    poll();
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-    }
-  };
-
-  const handleImport = async () => {
-    if (!selectedFile) {
-      toast({
-        title: t('error'),
-        description: 'Пожалуйста, выберите файл',
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    try {
-      await importMutation.mutateAsync(selectedFile);
-    } catch (error) {
-      console.error('Error importing file:', error);
-    }
-  };
-
-  const handleManualProcess = async (jobId: string) => {
-    try {
-      const token = document.cookie.split('token=')[1]?.split(';')[0] || '';
-      const response = await fetch(import.meta.env.VITE_BACKEND_URL + '/api/import/process/' + jobId, {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + token,
-        },
-      });
-      
-      if (response.ok) {
-        toast({
-          title: 'Обработка запущена',
-          description: 'Файл начал обрабатываться',
-        });
-        pollImportStatus(jobId);
-      }
-    } catch (error) {
-      toast({
-        title: 'Ошибка',
-        description: 'Не удалось запустить обработку',
-        variant: "destructive",
-      });
-    }
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-  };
-
-  useEffect(() => {
-    if (data && typeof data === 'object') {
-      const apiData = data;
-      if (apiData.key && apiData.value) {
-        setSettings((prev) => ({ 
-          ...prev, 
-          [apiData.key]: apiData.value 
-        }));
-      }
-    } else if (data === null) {
-      setSettings((prev) => ({ 
-        ...prev, 
-        systemPrompt: '' 
-      }));
-    }
-  }, [data]);
-
-  useEffect(() => {
-    if (whatsappData && typeof whatsappData === 'object') {
-      const configData = (whatsappData as any).config;
-      if (configData) {
-        setWhatsappConfig({
-          apiUrl: configData.apiUrl || "",
-          mediaUrl: configData.mediaUrl || "",
-          branchId: configData.branchId || "",
-          apiToken: configData.apiToken || "",
-        });
-      }
-    }
-  }, [whatsappData]);
-  
-  if (isLoading) {
-    return (
-      <div className="p-6 flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!currentBranch?.id) {
-    return (
-      <div className="p-6">
-        <div className="text-muted-foreground">
-          <h2 className="text-lg font-semibold mb-2">Филиал не выбран</h2>
-          <p className="text-sm">Пожалуйста, выберите филиал для работы с настройками</p>
-        </div>
-      </div>
-    );
-  }
-  
-  if (error) {
-    const errorMessage = error instanceof Error ? error.message : '';
-    return (
-      <div className="p-6">
-        <div className="text-destructive">
-          <h2 className="text-lg font-semibold mb-2">Ошибка загрузки настроек</h2>
-          <p className="text-sm">{errorMessage || 'Произошла ошибка при загрузке настроек'}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (user?.role === 'master') {
+  if (user?.role === "master") {
     return (
       <div className="p-6">
         <Card className="border-red-200 bg-red-50">
@@ -412,439 +319,327 @@ export default function Settings() {
       </div>
     );
   }
-  
+
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-medium mb-1">Настройки</h1>
-        <p className="text-muted-foreground">Управление профилем и настройки системы</p>
-      </div>
-
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle>{t('settings.profile_title')}</CardTitle>
-          <CardDescription>
-            {t('settings.profile_description')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleUpdateProfile(); }}>
-            {((user as any)?.first_name || (user as any)?.firstName || user?.email) && (
-              <div className="bg-muted/50 p-3 rounded-lg space-y-1">
-                {((user as any)?.first_name || (user as any)?.firstName) && (
-                  <p className="text-sm text-muted-foreground">
-                    Текущее имя: <span className="font-medium text-foreground">{(user as any)?.first_name || (user as any)?.firstName}</span>
-                  </p>
-                )}
-                {((user as any)?.last_name || (user as any)?.lastName) && (
-                  <p className="text-sm text-muted-foreground">
-                    Текущая фамилия: <span className="font-medium text-foreground">{(user as any)?.last_name || (user as any)?.lastName}</span>
-                  </p>
-                )}
-                {user?.email && (
-                  <p className="text-sm text-muted-foreground">
-                    {t('settings.current_email')} <span className="font-medium text-foreground">{user.email}</span>
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="first-name">Имя</Label>
-              <Input
-                id="first-name"
-                type="text"
-                value={userProfile.firstName}
-                onChange={(e) => handleProfileInputChange("firstName", e.target.value)}
-                placeholder="Введите новое имя"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="last-name">Фамилия</Label>
-              <Input
-                id="last-name"
-                type="text"
-                value={userProfile.lastName}
-                onChange={(e) => handleProfileInputChange("lastName", e.target.value)}
-                placeholder="Введите новую фамилию"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="new-email">{t('settings.new_email_label')}</Label>
-              <Input
-                id="new-email"
-                type="email"
-                value={userProfile.email}
-                onChange={(e) => handleProfileInputChange("email", e.target.value)}
-                placeholder={t('settings.new_email_placeholder')}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="new-password">{t('settings.new_password_label')}</Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={userProfile.password}
-                onChange={(e) => handleProfileInputChange("password", e.target.value)}
-                placeholder={t('settings.new_password_placeholder')}
-              />
-            </div>
-
-            {userProfile.password && (
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">{t('settings.confirm_password_label')}</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  value={userProfile.confirmPassword}
-                  onChange={(e) => handleProfileInputChange("confirmPassword", e.target.value)}
-                  placeholder={t('settings.confirm_password_placeholder')}
-                />
-              </div>
-            )}
-            
-            <div className="flex justify-end">
-              <Button
-                type="submit"
-                disabled={updateProfileMutation.isPending}
-              >
-                {updateProfileMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t('settings.updating_button')}
-                  </>
-                ) : (
-                  t('settings.update_profile_button')
-                )}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-      
-      <div className="mb-6">
-        <BookingLinkCopy />
-      </div>
-      
-      <Card className="mb-6 bg-gray-100 dark:bg-gray-900 border-gray-300 dark:border-gray-700 opacity-60 relative">
-        <div className="absolute top-4 right-4 bg-gray-500 text-white text-xs px-2 py-1 rounded-md font-semibold z-10">
-          Демо
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="container mx-auto px-6 py-8 max-w-7xl">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent mb-2">
+            {t("settings.page_title") || "Настройки"}
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            {t("settings.page_description") || "Управление профилем, настройка системы и инструменты для работы"}
+          </p>
         </div>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-gray-600 dark:text-gray-400">{t('settings.system_prompt_title')}</CardTitle>
-          {data === null && (
-            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-              {t('settings.system_prompt_not_found')}
-            </p>
-          )}
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="system-prompt" className="text-gray-600 dark:text-gray-400">{t('settings.system_prompt_label')}</Label>
-              <Textarea
-                id="system-prompt"
-                rows={8}
-                disabled
-                value={settings.systemPrompt}
-                className="bg-gray-200 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                placeholder={
-                  data === null
-                    ? t('settings.system_prompt_placeholder_not_found')
-                    : t('settings.system_prompt_placeholder')
-                }
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-500">{t('settings.system_prompt_description')}</p>
-            </div>
-            
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                variant="secondary"
-                disabled
-                className="mr-2 bg-gray-400 dark:bg-gray-600 text-white cursor-not-allowed opacity-50"
-              >
-                {t('settings.reset_to_default')}
-              </Button>
-              <Button
-                type="button"
-                disabled
-                className="bg-gray-400 dark:bg-gray-600 text-white cursor-not-allowed opacity-50"
-              >
-                {t('settings.save_prompt')}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
 
-      <Card className="mb-6 bg-gray-100 dark:bg-gray-900 border-gray-300 dark:border-gray-700 opacity-60 relative">
-        <div className="absolute top-4 right-4 bg-gray-500 text-white text-xs px-2 py-1 rounded-md font-semibold z-10">
-          Демо
-        </div>
-        <CardHeader>
-          <CardTitle className="text-gray-600 dark:text-gray-400">{t('settings.whatsapp_api')}</CardTitle>
-          <CardDescription className="text-gray-500 dark:text-gray-500">
-            Конфигурация подключения к WhatsApp API
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingWhatsapp ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-              <span className="ml-2 text-gray-500 dark:text-gray-400">Загрузка конфигурации...</span>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="whatsapp-api-url" className="text-gray-600 dark:text-gray-400">API URL</Label>
-                  <Input
-                    id="whatsapp-api-url"
-                    type="url"
-                    disabled
-                    placeholder="https://xxxx.api.greenapi.com"
-                    value={whatsappConfig.apiUrl}
-                    className="bg-gray-200 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="whatsapp-media-url" className="text-gray-600 dark:text-gray-400">Media URL</Label>
-                  <Input
-                    id="whatsapp-media-url"
-                    type="url"
-                    disabled
-                    placeholder="https://xxxx.media.greenapi.com"
-                    value={whatsappConfig.mediaUrl}
-                    className="bg-gray-200 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="whatsapp-branch-id" className="text-gray-600 dark:text-gray-400">Branch ID</Label>
-                  <Input
-                    id="whatsapp-branch-id"
-                    type="text"
-                    disabled
-                    placeholder="7105292833"
-                    value={whatsappConfig.branchId}
-                    className="bg-gray-200 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="whatsapp-api-token" className="text-gray-600 dark:text-gray-400">API Token</Label>
-                  <Input
-                    id="whatsapp-api-token"
-                    type="password"
-                    disabled
-                    placeholder="Введите API токен"
-                    value={whatsappConfig.apiToken}
-                    className="bg-gray-200 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                  />
-                </div>
-              </div>
+        <Tabs defaultValue="account" className="w-full" onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-8">
+            <TabsTrigger value="account" className="flex items-center gap-2">
+              <User className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden lg:inline">Настройки аккаунта</span>
+              <span className="lg:hidden">Аккаунт</span>
+            </TabsTrigger>
+            <TabsTrigger value="chatbot" className="flex items-center gap-2">
+              <Bot className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden lg:inline">Чат-бот</span>
+              <span className="lg:hidden">Бот</span>
+            </TabsTrigger>
+            <TabsTrigger value="booking" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden lg:inline">Онлайн бронирование</span>
+              <span className="lg:hidden">Бронь</span>
+            </TabsTrigger>
+            <TabsTrigger value="import" className="flex items-center gap-2">
+              <Download className="h-4 w-4 flex-shrink-0" />
+              <span className="hidden lg:inline">Импорт данных</span>
+              <span className="lg:hidden">Импорт</span>
+            </TabsTrigger>
+          </TabsList>
 
-              <div className="flex gap-3 pt-4">
-                <Button
-                  disabled
-                  className="flex-1 bg-gray-400 dark:bg-gray-600 text-white cursor-not-allowed opacity-50"
-                >
-                  Сохранить конфигурацию
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  disabled
-                  className="border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-50"
-                >
-                  Тест соединения
-                </Button>
-              </div>
-
-              <div className="bg-gray-200 dark:bg-gray-800 p-4 rounded-md">
-                <h3 className="text-sm font-medium mb-2 text-gray-600 dark:text-gray-400">Информация о настройке</h3>
-                <ul className="text-xs text-gray-500 dark:text-gray-500 space-y-1">
-                  <li>• API URL и Media URL получаются от провайдера WhatsApp API</li>
-                  <li>• Branch ID - идентификатор вашего инстанса</li>
-                  <li>• API Token - секретный ключ для авторизации</li>
-                  <li>• Все данные шифруются перед сохранением в базе данных</li>
-                </ul>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Excel Import Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Импорт данных</CardTitle>
-          <CardDescription>
-            Импорт клиентов и задач из Excel файла
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Important notice about administrator-only import */}
-            <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-              <div className="flex gap-2">
-                <span className="text-amber-600 dark:text-amber-400 text-xl">⚠️</span>
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-                    Важно: Импорт только для администраторов
-                  </p>
-                  <p className="text-xs text-amber-800 dark:text-amber-200">
-                    Импортировать данные может только администратор со своего аккаунта. 
-                    Хозяин (owner) не должен импортировать данные, так как это может привести 
-                    к сохранению записей и мастеров в неправильном филиале.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="excel-file">Выберите Excel файл</Label>
-              <Input
-                id="excel-file"
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleFileSelect}
-                disabled={importMutation.isPending}
-              />
-              <p className="text-xs text-muted-foreground">
-                Поддерживаются форматы: .xlsx, .xls
-              </p>
-            </div>
-            
-            {selectedFile && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Выбранный файл:</p>
-                <p className="text-sm text-muted-foreground">{selectedFile.name}</p>
-                <p className="text-xs text-muted-foreground">Размер: {formatFileSize(selectedFile.size)}</p>
-              </div>
-            )}
-            
-            <Button
-              onClick={handleImport}
-              disabled={!selectedFile || importMutation.isPending}
-              className="w-full"
-            >
-              {importMutation.isPending ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  {t('settings.loading_text')}
-                </>
-              ) : (
-                t('settings.import_data_button')
-              )}
-            </Button>
-
-            {/* Ручной запуск обработки для отладки */}
-            {importJobId && (!importStatus || !((importStatus as any)?.job?.status) || ((importStatus as any)?.job?.status === 'PENDING')) && (
-              <Button
-                onClick={() => handleManualProcess(importJobId)}
-                variant="outline"
-                className="w-full mt-2"
-              >
-                {t('settings.manual_process')}
-              </Button>
-            )}
-
-            {/* Статус импорта */}
-            {importJobId && importStatus && typeof importStatus === 'object' && importStatus !== null && (
-              <div className="mt-4 p-4 bg-muted rounded-lg border">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{t('settings.import_status')}:</span>
-                    <span className={`px-2 py-1 rounded text-sm ${
-                      (importStatus as any).job?.status === 'COMPLETED' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                      (importStatus as any).job?.status === 'FAILED' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                      'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                    }`}>
-                      {(importStatus as any).job?.status === 'COMPLETED' ? t('settings.completed') :
-                       (importStatus as any).job?.status === 'FAILED' ? t('settings.failed') :
-                       (importStatus as any).job?.status === 'PROCESSING' ? t('settings.processing') : t('settings.pending')}
-                    </span>
+          <TabsContent value="account" className="space-y-6">
+            <Card className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-indigo-200 shadow-md hover:shadow-lg transition-all duration-200">
+              <CardHeader className="pb-3 border-b border-indigo-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-md">
+                      <BookOpen className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-indigo-900">
+                        {t("settings.how_to_use_title") || "Как пользоваться системой"}
+                      </CardTitle>
+                      <CardDescription className="text-indigo-600">
+                        {t("settings.how_to_use_description") || "Видеоинструкции и руководства по работе с CRM"}
+                      </CardDescription>
+                    </div>
                   </div>
+                  <Button
+                    onClick={() => setLocation("/")}
+                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium"
+                  >
+                    {t("settings.open_instructions") || "Открыть инструкции"}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+            </Card>
 
-                  {/* Прогресс бар */}
+            <Card className="mb-6 bg-gradient-to-br from-slate-50 to-white border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3 border-b border-slate-100">
+                <CardTitle className="text-slate-800">{t("settings.profile_title")}</CardTitle>
+                <CardDescription className="text-slate-600">
+                  {t("settings.profile_description")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); handleUpdateProfile(); }}>
+                  {user?.email && (
+                    <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg">
+                      <p className="text-sm text-emerald-700">
+                        {t("settings.current_email")} <span className="font-semibold text-emerald-900">{user.email}</span>
+                      </p>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>{t('settings.progress')}:</span>
-                      <span>{Math.round((importStatus as any).job?.completionPercentage || 0)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${(importStatus as any).job?.completionPercentage || 0}%` }}
-                      ></div>
-                    </div>
+                    <Label htmlFor="new-email" className="text-slate-700 font-medium">{t("settings.new_email_label")}</Label>
+                    <Input
+                      id="new-email"
+                      type="email"
+                      value={userProfile.email}
+                      onChange={(e) => handleProfileInputChange("email", e.target.value)}
+                      placeholder={t("settings.new_email_placeholder")}
+                      className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500"
+                    />
                   </div>
 
-                  {/* Детали импорта */}
-                  {(importStatus as any).job && (
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">{t('settings.processed_rows')}:</span>
-                        <div className="font-medium">
-                          {(importStatus as any).job.processedRows || 0} / {(importStatus as any).job.totalRows || 0}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">{t('settings.file')}</span>
-                        <div className="font-medium truncate">
-                          {(importStatus as any).job.fileName || t('settings.unknown')}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">{t('settings.clients')}</span>
-                        <div className="font-medium">
-                          {(importStatus as any).job.clientsImported || 0}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">{t('settings.tasks')}</span>
-                        <div className="font-medium">
-                          {(importStatus as any).job.tasksImported || 0}
-                        </div>
-                      </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password" className="text-slate-700 font-medium">{t("settings.new_password_label")}</Label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      value={userProfile.password}
+                      onChange={(e) => handleProfileInputChange("password", e.target.value)}
+                      placeholder={t("settings.new_password_placeholder")}
+                      className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  {userProfile.password && (
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-password" className="text-slate-700 font-medium">{t("settings.confirm_password_label")}</Label>
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        value={userProfile.confirmPassword}
+                        onChange={(e) => handleProfileInputChange("confirmPassword", e.target.value)}
+                        placeholder={t("settings.confirm_password_placeholder")}
+                        className="border-slate-300 focus:border-emerald-500 focus:ring-emerald-500"
+                      />
                     </div>
                   )}
 
-                  {/* Ошибка если есть */}
-                  {(importStatus as any).job?.status === 'FAILED' && (importStatus as any).job?.errorMessage && (
-                    <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
-                      <div className="text-sm text-red-800 dark:text-red-200">
-                        <strong>Ошибка:</strong> {(importStatus as any).job.errorMessage}
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      type="submit"
+                      disabled={updateProfileMutation.isPending}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6"
+                    >
+                      {updateProfileMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t("settings.updating_button")}
+                        </>
+                      ) : (
+                        t("settings.update_profile_button")
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="chatbot" className="space-y-6">
+            <WhatsAppConnect />
+
+            {currentBranch && (
+              <Card className="mb-6 bg-gradient-to-br from-blue-50 to-white border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3 border-b border-blue-100">
+                  <CardTitle className="text-slate-800">🤖 Настройки бота</CardTitle>
+                  <CardDescription className="text-slate-600">
+                    Настройте параметры работы бота WhatsApp
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <form
+                    className="space-y-5"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleUpdateBotSettings();
+                    }}
+                  >
+                    <div className="space-y-2">
+                      <Label htmlFor="accountID" className="text-slate-700 font-medium flex items-center gap-2">
+                        🆔 Account ID (WhatsApp Business API)
+                        <span className="text-xs text-slate-500 font-normal">(опционально)</span>
+                      </Label>
+                      <Input
+                        id="accountID"
+                        type="text"
+                        value={botSettings.accountID}
+                        onChange={(e) => handleBotSettingsChange("accountID", e.target.value)}
+                        placeholder="Введите Account ID от провайдера WhatsApp API"
+                        className="border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="managerTimeout" className="text-slate-700 font-medium flex items-center gap-2">
+                        ⏱️ Таймаут молчания бота (минуты)
+                        <span className="text-xs text-slate-500 font-normal">(по умолчанию: 15 минут)</span>
+                      </Label>
+                      <Input
+                        id="managerTimeout"
+                        type="number"
+                        min="1"
+                        value={botSettings.managerTimeoutMinutes}
+                        onChange={(e) => handleBotSettingsChange("managerTimeoutMinutes", e.target.value)}
+                        placeholder="15"
+                        className="border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-slate-600">
+                      {t("dashboard.current_branch")}: <span className="font-semibold text-slate-800">{(currentBranch as any).branches || currentBranch?.id}</span>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        type="submit"
+                        disabled={updateBotSettingsMutation.isPending}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-8"
+                      >
+                        {updateBotSettingsMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            {t("settings.saving") || "Сохранение..."}
+                          </>
+                        ) : (
+                          "Сохранить настройки бота"
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+
+            {currentBranch && (
+              <Card className="mb-6 bg-gradient-to-br from-slate-50 to-white border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3 border-b border-slate-100">
+                  <CardTitle className="text-slate-800">
+                    {t("settings.system_prompt_title") || "Настройка системного промпта"}
+                  </CardTitle>
+                  <CardDescription className="text-slate-600">
+                    {t("settings.system_prompt_description") || "Настройте роль и описание вашего бота"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <form
+                    className="space-y-6"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      updateSystemPromptMutation.mutate(customRole);
+                    }}
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="custom-role" className="text-slate-700 font-medium text-base">
+                          📝 Описание роли бота
+                        </Label>
+                        <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
+                          Редактируемое поле
+                        </span>
+                      </div>
+                      <Textarea
+                        id="custom-role"
+                        rows={3}
+                        value={customRole}
+                        onChange={(e) => setCustomRole(e.target.value)}
+                        placeholder="Например: Ты - профессиональный администратор салона красоты/массажа."
+                        className="border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500 bg-white text-base"
+                      />
+                      <p className="text-xs text-slate-500">
+                        💡 Опишите, кто ваш бот и какой у вас бизнес.
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-slate-700 font-medium text-base">
+                          🔒 Системная логика (защищена)
+                        </Label>
+                        <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                          Автоматическая часть
+                        </span>
+                      </div>
+                      <div className="border border-slate-200 rounded-lg bg-slate-50/50 p-4 max-h-48 overflow-y-auto">
+                        <pre className="text-xs text-slate-600 whitespace-pre-wrap font-mono leading-relaxed">
+                          {FIXED_PROMPT_TEMPLATE}
+                        </pre>
                       </div>
                     </div>
-                  )}
-                </div>
-              </div>
+
+                    <div className="bg-slate-100 border border-slate-200 rounded-lg p-3 text-xs text-slate-600">
+                      {t("dashboard.current_branch")}: <span className="font-semibold text-slate-800">{(currentBranch as any).branches || currentBranch?.id}</span>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        type="submit"
+                        disabled={updateSystemPromptMutation.isPending || !customRole.trim()}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-8"
+                      >
+                        {updateSystemPromptMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            {t("settings.saving") || "Сохранение..."}
+                          </>
+                        ) : (
+                          t("settings.save_prompt") || "Сохранить промпт"
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
             )}
-            
-            <div className="bg-muted p-4 rounded-md">
-              <h3 className="text-sm font-medium mb-2">Процесс импорта</h3>
-              <p className="text-xs text-muted-foreground">
-                Импорт происходит в три этапа:
-              </p>
-              <ul className="text-xs text-muted-foreground mt-1 space-y-1">
-                <li>• Этап 1: Загрузка файла и сохранение в облачное хранилище</li>
-                <li>• Этап 2: Запуск фоновой обработки через очередь задач</li>
-                <li>• Этап 3: Импорт клиентов и задач с отслеживанием прогресса</li>
-              </ul>
-              <p className="text-xs text-muted-foreground mt-2">
-                <strong>Преимущества:</strong> Фоновая обработка позволяет импортировать большие файлы без блокировки интерфейса
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </TabsContent>
+
+          <TabsContent value="booking" className="space-y-6">
+            <BookingLinkCopy />
+          </TabsContent>
+
+          <TabsContent value="import" className="space-y-6">
+            <UnifiedImportCard />
+          </TabsContent>
+        </Tabs>
+
+        <div className="mt-12 pb-6 text-center">
+          <p className="text-sm text-gray-500">
+            Powered by{" "}
+            <a
+              href="https://prom.consulting"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+            >
+              Prom.Consulting
+            </a>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

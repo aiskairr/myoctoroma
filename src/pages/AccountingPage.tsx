@@ -163,7 +163,7 @@ const AccountingPage = () => {
   const fetchServices = async () => {
     try {
       const branchId = getBranchIdWithFallback(currentBranch, branches);
-      const response = await $api.get(`/services?branch_id=${branchId}&page=1&limit=1000`);
+      const response = await $api.get(`/services?branchId=${branchId}&page=1&limit=1000`);
       console.log('Services response:', response.data);
       // API возвращает пагинированный ответ
       return response.data?.data || [];

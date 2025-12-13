@@ -9,12 +9,12 @@ import CancelledAppointments from '@/components/CancelledAppointments';
 import { useMasters } from '@/hooks/use-masters';
 import { useCalendarTasks } from '@/hooks/use-calendar-tasks';
 import { useServices, convertServicesToLegacyFormat } from '@/hooks/use-services';
-import { useCreateTask, generateTaskId } from '@/hooks/use-task';
 import { useBranch } from '@/contexts/BranchContext';
 import { useAuth } from '@/contexts/SimpleAuthContext';
 import { useMasterWorkingDates } from '@/hooks/use-master-working-dates';
 import { useLocale } from '@/contexts/LocaleContext';
 import type { Master } from '@/hooks/use-masters';
+import { apiGetJson } from '@/lib/api';
 
 // Types
 interface Employee {
@@ -141,7 +141,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     // Убрали избыточные логи изменения даты
 
     // Context
-    const { currentBranch } = useBranch();
+    const { currentBranch, orgData } = useBranch();
     const { user } = useAuth();
     const { t } = useLocale();
 
@@ -163,7 +163,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     );
 
     // API mutations
-    const createTaskMutation = useCreateTask();
+    const [isCreatingAssignment, setIsCreatingAssignment] = useState(false);
     const queryClient = useQueryClient();
     const { toast } = useToast();
 
@@ -176,9 +176,13 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             endTime: string;
             branchId: string;
         }) => {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${workingDayData.masterId}/working-dates`, {
+            const token = localStorage.getItem('auth_token');
+            const response = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
                 body: JSON.stringify({
                     workDate: workingDayData.workDate,
                     startTime: workingDayData.startTime,
@@ -202,7 +206,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             });
             
             // Обновляем данные рабочих дат
-            queryClient.invalidateQueries({ queryKey: ['/api/masters/working-dates'] });
+            queryClient.invalidateQueries({ queryKey: ['/working-dates'] });
             
             // Закрываем диалог и сбрасываем форму
             setIsAddEmployeeOpen(false);
@@ -221,18 +225,55 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         },
     });
 
-    // Мутация для обновления задач
+    // Мутация для обновления назначений через /assignments/{id} (secondary)
     const updateTaskMutation = useMutation({
         mutationFn: async ({ taskId, updates }: { taskId: string, updates: any }) => {
-            console.log('🚀 Sending PATCH request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`);
-            console.log('📦 Payload:', updates);
+            const branchForPatch = currentBranch?.id?.toString() || updates.branchId?.toString?.();
+            if (!branchForPatch) {
+                throw new Error(t('calendar.branch_not_found') || 'Branch is required');
+            }
 
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`, {
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+            // Собираем полный payload под контракт /assignments
+            const payload: any = {
+                organizationId: currentBranch?.organisationId ? Number(currentBranch.organisationId) : undefined,
+                branchId: Number(branchForPatch),
+                client: updates.client || {
+                    id: updates.clientId || 0,
+                    firstname: updates.clientName || '',
+                    phoneNumber: updates.clientPhone || ''
+                },
+                employeeId: updates.employeeId ? Number(updates.employeeId) : undefined,
+                assignmentDate: updates.assignmentDate || updates.scheduleDate,
+                startTime: updates.startTime || updates.scheduleTime,
+                endTime: updates.endTime,
+                notes: updates.notes,
+                source: updates.source || 'calendar',
+                discount: updates.discount ?? 0,
+                paid: updates.paid || 'unpaid',
+                certificateNumber: updates.certificateNumber || '',
+                paymentMethod: updates.paymentMethod || [],
+                service: updates.service,
+                additionalServices: updates.additionalServices || [],
+                status: updates.status,
+                timezone,
+            };
+
+            const url = `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/assignments/${taskId}?branchId=${branchForPatch}&_=${Date.now()}`;
+            console.log('🚀 Sending PATCH request to assignments:', url);
+            console.log('📦 Payload:', payload);
+
+            const token = localStorage.getItem('auth_token');
+
+            const response = await fetch(url, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                 },
-                body: JSON.stringify(updates),
+                body: JSON.stringify(payload),
                 credentials: 'include'
             });
 
@@ -240,9 +281,25 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             console.log('📡 Response ok:', response.ok);
 
             if (!response.ok) {
-                const errorData = await response.json();
-                console.error('❌ Error response:', errorData);
-                throw new Error(errorData.message || 'Failed to update task');
+                let message = 'Failed to update assignment';
+                try {
+                    const errorData = await response.json();
+                    console.error('❌ Error response:', errorData);
+                    if (response.status === 409 || errorData?.details?.conflictingAssignment) {
+                        const { startTimeUTC, endTimeUTC, timezone } = errorData.details || {};
+                        message = t('calendar.appointment_conflict') || 'Мастер уже занят';
+                        if (startTimeUTC && endTimeUTC && timezone) {
+                            message += ` (${startTimeUTC}-${endTimeUTC} ${timezone})`;
+                        }
+                    } else {
+                        message = errorData?.error || errorData?.message || message;
+                    }
+                } catch {
+                    const errText = await response.text().catch(() => '');
+                    console.error('❌ Error response text:', errText);
+                    if (errText) message = errText;
+                }
+                throw new Error(message);
             }
 
             const result = await response.json();
@@ -250,19 +307,39 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             return result;
         },
         onSuccess: () => {
-            console.log('✅ Task updated successfully');
+            console.log('✅ Assignment updated successfully');
             // Инвалидируем кэш календарных задач
             queryClient.invalidateQueries({ queryKey: ['calendar-tasks'] });
         },
         onError: (error: any) => {
-            console.error('❌ Error updating task:', error);
+            console.error('❌ Error updating assignment:', error);
             toast({
-                title: "Ошибка обновления",
+                title: t('calendar.update_error') || "Ошибка обновления",
                 description: error.message || "Не удалось обновить запись",
                 variant: "destructive",
             });
         }
     });
+
+    // Helpers
+    const toLocalDateKey = (value: string | Date) => {
+        const d = typeof value === 'string' ? new Date(value) : value;
+        return d.toLocaleDateString('sv-SE'); // yyyy-mm-dd in local TZ
+    };
+    const currentDateKey = toLocalDateKey(currentDate);
+
+    // Сдвигаем время рабочей смены, если с бэка приходит в UTC (например, 03:00 вместо 08:00)
+    const shiftTime = (timeStr: string, offsetHours = 6) => {
+        if (!timeStr) return timeStr;
+        const [h, m] = timeStr.split(':').map(Number);
+        if (Number.isNaN(h) || Number.isNaN(m)) return timeStr;
+        // Создаем дату в UTC без смещения и добавляем offset в UTC, чтобы не применять локальный часовой пояс дважды
+        const date = new Date(Date.UTC(1970, 0, 1, h, m, 0, 0));
+        date.setUTCHours(date.getUTCHours() + offsetHours);
+        const hh = String(date.getUTCHours()).padStart(2, '0');
+        const mm = String(date.getUTCMinutes()).padStart(2, '0');
+        return `${hh}:${mm}`;
+    };
 
     // Convert services data to legacy format for compatibility
     const services = useMemo(() => {
@@ -279,12 +356,12 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
             .map((master, index) => {
                 // Найти рабочий день для этого мастера
                 const workingDate = masterWorkingDates.find(
-                    wd => wd.master_id === master.id && wd.is_active
+                    wd => wd.master_id === master.id && wd.is_active && toLocalDateKey(wd.work_date) === currentDateKey
                 );
                 
                 const workHours = workingDate ? {
-                    start: workingDate.start_time,
-                    end: workingDate.end_time
+                    start: shiftTime(workingDate.start_time),
+                    end: shiftTime(workingDate.end_time)
                 } : {
                     start: master.startWorkHour || '07:00',
                     end: master.endWorkHour || '23:59'
@@ -296,7 +373,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 
                 return {
                     id: master.id.toString(),
-                    name: master.name,
+                    name: master.name || `Мастер ${master.id}`,
                     role: master.specialization || 'Мастер',
                     workHours,
                     color: EMPLOYEE_COLORS[index % EMPLOYEE_COLORS.length],
@@ -304,7 +381,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                     workingDate: workingDate || null
                 };
             })
-            .filter(employee => employee.isWorking); // Показываем только работающих мастеров
+            .filter(employee => employee?.isWorking); // Показываем только работающих мастеров
         
         console.log(`  - Total working employees: ${workingEmployees.length} out of ${mastersData.length}`);
         return workingEmployees;
@@ -458,19 +535,26 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
     // Отдельный запрос для получения всех мастеров филиала (для диалога добавления)
     const { data: allBranchMasters = [], isLoading: allMastersLoading } = useQuery<Master[]>({
-        queryKey: [`/api/crm/masters/${currentBranch?.id}`],
+        queryKey: [`/staff?branchId=${currentBranch?.id}`],
         queryFn: async () => {
             if (!currentBranch?.id) return [];
             
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${currentBranch.id}`, {
-                credentials: 'include'
+            return apiGetJson<Master[] | { data?: Master[]; staff?: Master[] }>(`/staff?branchId=${currentBranch.id}`).then(res => {
+                const list = Array.isArray(res) ? res : res.data || res.staff || [];
+                return list.map((item: any) => {
+                    const first = item.firstname || item.first_name || '';
+                    const last = item.lastname || item.last_name || '';
+                    const name = item.name || `${first} ${last}`.trim() || item.username || `Сотрудник ${item.id}`;
+                    return {
+                        ...item,
+                        name,
+                        isActive: item.isActive ?? item.is_active ?? true,
+                        startWorkHour: item.startWorkHour || item.start_time || '07:00',
+                        endWorkHour: item.endWorkHour || item.end_time || '23:59',
+                        branchId: item.branchId?.toString?.() || item.branch_id?.toString?.() || ''
+                    } as Master;
+                });
             });
-            
-            if (!response.ok) {
-                throw new Error('Не удалось загрузить мастеров');
-            }
-            
-            return response.json();
         },
         enabled: !!currentBranch?.id && isAddEmployeeOpen,
         staleTime: 5 * 60 * 1000, // 5 минут
@@ -553,12 +637,16 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         let currentTask = null;
         try {
             console.log('📡 Fetching current task data from server...')
-            const taskResponse = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${appointmentId}`, {
+            const token = localStorage.getItem('auth_token');
+            const url = `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/assignments/${appointmentId}?branchId=${currentBranch?.id}&_=${Date.now()}`;
+            const taskResponse = await fetch(url, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                 },
-                credentials: 'include'
+                credentials: 'include',
+                cache: 'no-store'
             });
             
             if (taskResponse.ok) {
@@ -593,103 +681,56 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
             };
 
-            // Формируем полный payload, используя текущие данные задачи и изменения
-            const payload: any = {};
-            
-            // Обязательные поля из текущей задачи
-            if (currentTask) {
-                payload.clientName = currentTask.clientName || currentAppointment.clientName;
-                payload.phoneNumber = currentTask.client?.phoneNumber || '';
-                payload.serviceType = currentTask.serviceType || currentAppointment.service;
-                payload.notes = currentTask.notes || currentAppointment.notes || '';
-                
-                // scheduleDate только если есть валидная дата
-                if (currentTask.scheduleDate && currentTask.scheduleDate !== null) {
-                    payload.scheduleDate = currentTask.scheduleDate;
-                }
-                
-                const servicePrice = currentTask.finalPrice || currentTask.servicePrice || 0;
-                const discount = currentTask.discount || 0;
-                payload.finalPrice = calculateFinalPrice(servicePrice, discount);
-                payload.discount = discount;
-                payload.branchId = currentTask.branchId || '1';
-                payload.status = currentTask.status || currentAppointment.status;
-            } else {
-                // Fallback to appointment data if task fetch failed
-                payload.clientName = currentAppointment.clientName;
-                payload.phoneNumber = '';
-                payload.serviceType = currentAppointment.service;
-                payload.notes = currentAppointment.notes || '';
-                // НЕ добавляем scheduleDate если данных нет
-                payload.finalPrice = 0;
-                payload.discount = 0;
-                payload.branchId = '1';
-                payload.status = currentAppointment.status;
-            }
-            
-            // Применяем изменения поверх базовых данных
-            if (updates.startTime) {
-                payload.scheduleTime = updates.startTime;
-                // Вычисляем end_time на основе startTime и текущей длительности
-                const duration = updates.duration || currentAppointment.duration || 60;
-                payload.endTime = calculateEndTime(updates.startTime, duration);
-            }
-            if (updates.endTime) {
-                payload.endTime = updates.endTime;
-            }
-            if (updates.duration) {
-                payload.duration = updates.duration;
-                // Если есть startTime, пересчитываем endTime
-                const startTime = updates.startTime || currentAppointment.startTime;
-                if (startTime) {
-                    payload.endTime = calculateEndTime(startTime, updates.duration);
-                }
+            // Формируем payload для /assignments/{id}
+            const baseDuration = updates.duration || currentAppointment.duration || 60;
+            const startTimeLocal = updates.startTime || currentAppointment.startTime || '09:00';
+            const endTimeLocal = updates.endTime || calculateEndTime(startTimeLocal, baseDuration);
+            // Бэкенд ожидает локальное время, без дополнительного сдвига
+            const startTimeForApi = startTimeLocal;
+            const endTimeForApi = endTimeLocal;
+
+            const employeeIdForApi = updates.employeeId
+                ? Number(updates.employeeId)
+                : currentAppointment.employeeId
+                    ? Number(currentAppointment.employeeId)
+                    : currentAppointment.masterId
+                        ? Number(currentAppointment.masterId)
+                        : undefined;
+
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+            const payload: any = {
+                assignmentDate: currentDate.toLocaleDateString('sv-SE'),
+                startTime: startTimeForApi,
+                endTime: endTimeForApi,
+                employeeId: employeeIdForApi,
+                notes: updates.notes || currentAppointment.notes || '',
+                status: updates.status || currentAppointment.status || 'scheduled',
+                timezone,
+                branchId: currentBranch?.id ? Number(currentBranch.id) : undefined,
+                organizationId: currentBranch?.organisationId ? Number(currentBranch.organisationId) : undefined,
+            };
+
+            // service snapshot
+            const servicePrice = currentAppointment.price || currentAppointment.servicePrice || 0;
+            payload.service = {
+                id: currentAppointment.serviceId || currentAppointment.service_id || 0,
+                name: currentAppointment.service,
+                duration: baseDuration,
+                price: servicePrice
+            };
+
+            // Дополнительные услуги, если есть в состоянии
+            if (additionalServices.length > 0) {
+                payload.additionalServices = additionalServices.map(s => ({
+                    id: s.serviceId || s.id || 0,
+                    name: s.serviceName,
+                    duration: s.duration,
+                    price: s.price
+                }));
             }
 
-            // Обязательные поля для API
-            if (!payload.endTime && payload.scheduleTime) {
-                const duration = currentAppointment.duration || 60;
-                payload.endTime = calculateEndTime(payload.scheduleTime, duration);
-            }
-            
-            if (updates.employeeId) {
-                console.log('🔍 Looking for employeeId:', updates.employeeId);
-                
-                // Найдем мастера по employeeId в employees (где id - строка)
-                const employee = employees.find(emp => emp.id === updates.employeeId);
-                console.log('👤 Found employee:', employee);
-                
-                if (employee) {
-                    // Найдем соответствующий объект в mastersData для получения реального ID
-                    const masterData = mastersData.find(master => master.id.toString() === updates.employeeId);
-                    console.log('🎯 Found masterData:', masterData);
-                    
-                    if (masterData) {
-                        payload.masterId = masterData.id; // Используем оригинальный числовой ID
-                        payload.masterName = masterData.name;
-                        console.log('✅ Master mapping successful:', { 
-                            employeeId: updates.employeeId, 
-                            masterId: masterData.id, 
-                            masterName: masterData.name 
-                        });
-                    } else {
-                        console.warn('⚠️ Master not found in mastersData for employeeId:', updates.employeeId);
-                        console.log('Available masters IDs:', mastersData.map(m => m.id.toString()));
-                    }
-                } else {
-                    console.warn('⚠️ Employee not found for employeeId:', updates.employeeId);
-                    console.log('Available employee IDs:', employees.map(e => e.id));
-                }
-            } else if (currentTask) {
-                // Сохраняем текущего мастера если он не изменяется
-                payload.masterId = currentTask.masterId;
-                payload.masterName = currentTask.masterName || currentTask.master?.name;
-            }
-
-            console.log('🚀 Sending PATCH request to:', `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${appointmentId}`);
+            console.log('🚀 Sending PATCH request to assignments:', `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/assignments/${appointmentId}`);
             console.log('📦 Payload:', payload);
-
-            // Используем мутацию вместо прямого fetch
             updateTaskMutation.mutate({ taskId: appointmentId, updates: payload });
 
         } catch (error) {
@@ -1056,121 +1097,144 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 return;
             }
 
-            // Форматируем дату для API в формат YYYY-MM-DD (scheduleDate format)
-            const scheduleDate = currentDate.toISOString().split('T')[0];
+            // Форматируем дату для API в локальном формате YYYY-MM-DD
+            const scheduleDate = currentDate.toLocaleDateString('sv-SE'); // локальная дата, без смещения в UTC
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Bishkek';
 
             // Get service price
             const servicePrice = service?.price || 0;
 
-            // Generate unique task ID
-            const organisationId = user?.organisationId || user?.organization_id || user?.orgId || '1';
-            const branchId = currentBranch?.id?.toString() || '1';
-            const taskId = generateTaskId(organisationId, branchId);
+            const branchId = currentBranch?.id?.toString();
+            const organizationIdRaw =
+                currentBranch?.organisationId ||
+                (orgData as any)?.id ||
+                orgData ||
+                user?.organization_id ||
+                user?.organisationId ||
+                user?.orgId ||
+                user?.organization?.id ||
+                localStorage.getItem('organization_id') ||
+                localStorage.getItem('organisation_id');
+            const organizationId = organizationIdRaw ? Number(organizationIdRaw) : NaN;
 
-            // Prepare data for API
-            const taskData = {
-                id: taskId,
-                clientName: newAppointment.clientName.trim(),
-                clientPhone: newAppointment.phone.trim() || undefined,
-                scheduleDate: scheduleDate,
-                scheduleTime: selectedTimeSlot,
-                serviceType: newAppointment.service,
-                masterId: parseInt(selectedEmployeeId),
-                serviceDuration: duration,
-                servicePrice: servicePrice,
-                branchId: branchId,
+            if (!organizationId || Number.isNaN(organizationId)) {
+                console.warn('⚠️ Organization ID not found; check auth/branch context/localStorage');
+                alert(t('calendar.organization_not_found'));
+                return;
+            }
+
+            if (!branchId) {
+                alert(t('calendar.branch_not_found'));
+                return;
+            }
+            const totalDurationWithServices = calculateTotalDuration({ duration });
+            const endTime = minutesToTime(timeToMinutes(selectedTimeSlot) + totalDurationWithServices);
+            // Отправляем локальное время (без сдвига), бэкенд сам хранит в UTC
+            const startTimeForApi = selectedTimeSlot;
+            const endTimeForApi = endTime;
+
+            // Нормализуем телефон: убираем пробелы и добавляем +, если только цифры
+            const rawPhone = newAppointment.phone.trim();
+            const compactPhone = rawPhone.replace(/\s+/g, '');
+            const normalizedPhone = compactPhone.startsWith('+') ? compactPhone : `+${compactPhone}`;
+
+            const assignmentPayload = {
+                organizationId: Number(organizationId),
+                branchId: Number(branchId),
+                client: {
+                    id: normalizedPhone, // используем телефон как идентификатор для поиска/создания
+                    firstname: newAppointment.clientName.trim(),
+                    lastname: '',
+                    phoneNumber: normalizedPhone
+                },
+                employeeId: Number(selectedEmployeeId),
+                assignmentDate: scheduleDate,
+                startTime: startTimeForApi,
+                endTime: endTimeForApi,
+                timezone,
                 notes: newAppointment.notes || undefined,
-                status: 'scheduled'
+                service: {
+                    id: service?.id || 0,
+                    name: newAppointment.service,
+                    price: servicePrice,
+                    duration
+                },
+                additionalServices: additionalServices.map(s => ({
+                    id: s.serviceId || s.id || 0,
+                    name: s.serviceName,
+                    price: s.price,
+                    duration: s.duration
+                }))
             };
 
-            console.log('📤 Creating new task with data:', taskData);
+            console.log('📤 Creating assignment with data:', assignmentPayload);
 
-            // Send POST request to create task
-            createTaskMutation.mutate(taskData, {
-                onSuccess: async (newTask) => {
-                    console.log('✅ Task created successfully:', newTask);
+            setIsCreatingAssignment(true);
+            const token = localStorage.getItem('auth_token');
 
-                    // Create additional services if any
-                    if (additionalServices.length > 0) {
-                        for (const [index, service] of additionalServices.entries()) {
-                            try {
-                                // Calculate start time for additional service
-                                let additionalStartTime = selectedTimeSlot;
-                                
-                                // Add main service duration
-                                let totalPreviousDuration = duration;
-                                
-                                // Add duration of previous additional services
-                                for (let i = 0; i < index; i++) {
-                                    totalPreviousDuration += additionalServices[i].duration;
-                                }
-                                
-                                additionalStartTime = minutesToTime(timeToMinutes(selectedTimeSlot) + totalPreviousDuration);
-
-                                const additionalTaskData = {
-                                    id: generateTaskId(organisationId, branchId),
-                                    clientName: newAppointment.clientName.trim(),
-                                    clientPhone: newAppointment.phone.trim() || undefined,
-                                    scheduleDate: scheduleDate,
-                                    scheduleTime: additionalStartTime,
-                                    serviceType: service.serviceName,
-                                    masterId: parseInt(selectedEmployeeId),
-                                    serviceDuration: service.duration,
-                                    servicePrice: service.price,
-                                    branchId: branchId,
-                                    notes: `Дополнительная услуга к основной записи #${newTask.id}`,
-                                    status: 'scheduled',
-                                    motherId: newTask.id // Link to main appointment
-                                };
-
-                                console.log(`📤 Creating additional service ${index + 1}:`, additionalTaskData);
-                                
-                                // Create additional service
-                                await createTaskMutation.mutateAsync(additionalTaskData);
-                                
-                            } catch (error) {
-                                console.error(`❌ Failed to create additional service ${index + 1}:`, error);
-                                // Continue with other services even if one fails
-                            }
-                        }
-                    }
-
-                    // Optionally update local state for immediate UI feedback
-                    const startMinutes = timeToMinutes(selectedTimeSlot);
-                    const totalDurationWithServices = calculateTotalDuration({ duration });
-                    const endMinutes = startMinutes + totalDurationWithServices;
-
-                    const appointment: Appointment = {
-                        id: newTask.id.toString(),
-                        employeeId: selectedEmployeeId,
-                        clientName: newAppointment.clientName.trim(),
-                        service: newAppointment.service,
-                        startTime: selectedTimeSlot,
-                        endTime: minutesToTime(endMinutes),
-                        duration: totalDurationWithServices,
-                        status: 'scheduled',
-                        notes: newAppointment.notes,
-                        price: calculateTotalPrice({ price: servicePrice }),
-                        childIds: additionalServices.map(s => s.id.toString())
-                    };
-
-                    setAppointments(prev => [...prev, appointment]);
-
-                    // Reset form and close dialog
-                    setNewAppointment({ clientName: '', phone: '', service: '', startTime: '', duration: 45, notes: '' });
-                    setAdditionalServices([]);
-                    setSelectedAdditionalService('');
-                    setSelectedEmployeeId('');
-                    setSelectedTimeSlot('');
-                    setIsAddAppointmentOpen(false);
+            fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/assignments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
                 },
-                onError: (error) => {
-                    console.error('❌ Failed to create task:', error);
-                    alert(`Ошибка при создании записи: ${error.message}`);
+                body: JSON.stringify(assignmentPayload)
+            })
+            .then(async res => {
+                if (!res.ok) {
+                    let message = 'Failed to create assignment';
+                    try {
+                        const errJson = await res.json();
+                        message = errJson?.error || errJson?.message || message;
+                        if (errJson?.details?.conflictingAssignment) {
+                            const { startTimeUTC, endTimeUTC, timezone } = errJson.details;
+                            message = `${t('calendar.appointment_conflict') || 'Сотрудник уже занят'} (${startTimeUTC}-${endTimeUTC} ${timezone})`;
+                        }
+                    } catch {
+                        const errText = await res.text().catch(() => '');
+                        message = errText || message;
+                    }
+                    throw new Error(message);
                 }
-            });
+                return res.json();
+            })
+            .then(() => {
+                // UI feedback
+                const startMinutes = timeToMinutes(selectedTimeSlot);
+                const endMinutes = startMinutes + totalDurationWithServices;
+
+                const appointment: Appointment = {
+                    id: Date.now().toString(),
+                    employeeId: selectedEmployeeId,
+                    clientName: newAppointment.clientName.trim(),
+                    service: newAppointment.service,
+                    startTime: selectedTimeSlot,
+                    endTime: minutesToTime(endMinutes),
+                    duration: totalDurationWithServices,
+                    status: 'scheduled',
+                    notes: newAppointment.notes,
+                    price: calculateTotalPrice({ price: servicePrice }),
+                    childIds: additionalServices.map(s => s.id.toString())
+                };
+
+                setAppointments(prev => [...prev, appointment]);
+                queryClient.invalidateQueries();
+
+                // Reset form and close dialog
+                setNewAppointment({ clientName: '', phone: '', service: '', startTime: '', duration: 45, notes: '' });
+                setAdditionalServices([]);
+                setSelectedAdditionalService('');
+                setSelectedEmployeeId('');
+                setSelectedTimeSlot('');
+                setIsAddAppointmentOpen(false);
+            })
+            .catch((error: any) => {
+                console.error('❌ Failed to create assignment:', error);
+                alert(`${t('calendar.appointment_create_error') || 'Ошибка при создании записи'}: ${error.message || error}`);
+            })
+            .finally(() => setIsCreatingAssignment(false));
         }
-    }, [newAppointment, selectedEmployeeId, selectedTimeSlot, doesAppointmentFitWorkingHours, currentDate, currentBranch, createTaskMutation, services]);
+    }, [newAppointment, selectedEmployeeId, selectedTimeSlot, doesAppointmentFitWorkingHours, currentDate, currentBranch, services, additionalServices, calculateTotalDuration, calculateTotalPrice, queryClient]);
 
     const handleTimeSlotClick = useCallback((employeeId: string, timeSlot: string) => {
         if (!isWithinWorkingHours(employeeId, timeSlot)) return;
@@ -1823,7 +1887,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                                         className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm flex-shrink-0"
                                                         style={{ backgroundColor: employee.color }}
                                                     >
-                                                        {employee.name[0]}
+                                                        {employee.name?.[0] || '?'}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="font-semibold text-sm text-gray-900 truncate">
@@ -2076,13 +2140,13 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                         </button>
                                         <button
                                             onClick={handleAddAppointment}
-                                            disabled={!newAppointment.clientName.trim() || !newAppointment.phone.trim() || !newAppointment.service || createTaskMutation.isPending}
+                                            disabled={!newAppointment.clientName.trim() || !newAppointment.phone.trim() || !newAppointment.service || isCreatingAssignment}
                                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                                         >
-                                            {createTaskMutation.isPending && (
+                                            {isCreatingAssignment && (
                                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                             )}
-                                            {createTaskMutation.isPending ? t('calendar.creating') : t('calendar.create_appointment')}
+                                            {isCreatingAssignment ? t('calendar.creating') : t('calendar.create_appointment')}
                                         </button>
                                     </div>
                                 </div>

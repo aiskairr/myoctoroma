@@ -54,7 +54,7 @@ private readonly API_URL = 'https://partial-elfrida-promconsulting-9e3c84f1.koye
 VITE_BACKEND_URL=https://lesser-felicdad-promconsulting-79f07228.koyeb.app
 
 # Secondary Backend URL (вторичный - для специфичных сервисов)
-VITE_SECONDARY_BACKEND_URL=https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app
+VITE_SECONDARY_BACKEND_URL=https://octobackend.com/api/main/
 
 # Legacy (старый URL для справки)
 # Old: https://partial-elfrida-promconsulting-9e3c84f1.koyeb.app
@@ -75,7 +75,7 @@ const PRIMARY_BACKEND_URL = import.meta.env.VITE_BACKEND_URL ||
 
 // Secondary Backend URL
 const SECONDARY_BACKEND_URL = import.meta.env.VITE_SECONDARY_BACKEND_URL || 
-  'https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app';
+  'https://octobackend.com/api/main/';
 
 // Primary API instance (default)
 const $api = axios.create({

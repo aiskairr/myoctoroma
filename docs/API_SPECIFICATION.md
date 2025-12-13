@@ -177,7 +177,7 @@ ORDER BY
 Фронтенд приложение выполняет следующие шаги для получения полной информации о задачах:
 
 1. **Запрос задач**: `GET /api/tasks` - получение списка задач с `masterId`
-2. **Запрос мастеров**: `GET /api/crm/masters/{branchId}` - получение списка мастеров с именами
+2. **Запрос мастеров**: `GET /staff/{branchId}` - получение списка мастеров с именами
 3. **Объединение данных**: На фронтенде создается карта мастеров по ID и присваивается `masterName` к каждой задаче
 
 ### Пример обработки на фронтенде:
@@ -185,7 +185,7 @@ ORDER BY
 ```typescript
 // 1. Получаем задачи и мастеров параллельно
 const tasksData = await fetch('/api/tasks?branchId=1&...');
-const mastersData = await fetch('/api/crm/masters/1');
+const mastersData = await fetch('/staff/1');
 
 // 2. Создаем карту мастеров для быстрого поиска
 const mastersMap = new Map(masters.map(master => [master.id, master.name]));

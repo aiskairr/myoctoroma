@@ -61,7 +61,7 @@
 
 ---
 
-### 2. **GET /api/crm/masters/:branchId** (PRIMARY BACKEND)
+### 2. **GET /staff/:branchId** (PRIMARY BACKEND)
 Получение списка мастеров для филиала
 
 **Параметры URL:**

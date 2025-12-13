@@ -63,10 +63,10 @@ export default function CRMServices() {
 
   // Get services data
   const { data: services = [], isLoading } = useQuery<serviceService[]>({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/services?branch_id=${branchID}`],
+    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/services?branchId=${branchID}`],
     queryFn: async () => {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/services?branch_id=${branchID}&page=1&limit=1000`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/services?branchId=${branchID}&page=1&limit=1000`, {
         headers: {
           ...(token && { 'Authorization': `Bearer ${token}` })
         }

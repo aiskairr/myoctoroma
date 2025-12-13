@@ -117,7 +117,22 @@ export default function Clients() {
     setTodaysLoading(true);
     try {
       // Загружаем сегодняшних клиентов
-      const data: ApiClientsResponse = await apiGetJson(`/clients/`);
+      const token = localStorage.getItem('auth_token') || '';
+      const res = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/clients`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include',
+        cache: 'no-store'
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || `Failed to load clients (${res.status})`);
+      }
+
+      const data: ApiClientsResponse = await res.json();
       
       // Преобразуем данные из API формата в формат приложения
       const clients = data.clients.map(apiClient => {

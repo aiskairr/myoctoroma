@@ -32,7 +32,7 @@ export async function apiRequest(
   };
   
   // Автоматически добавляем токен авторизации если он есть
-  const token = Cookies.get('token');
+  const token = Cookies.get('token') || localStorage.getItem('auth_token');
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -96,7 +96,7 @@ export const getQueryFn: <T>(options: {
     };
     
     // Автоматически добавляем токен авторизации если он есть
-    const token = Cookies.get('token');
+    const token = Cookies.get('token') || localStorage.getItem('auth_token');
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }

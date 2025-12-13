@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useBranch } from '@/contexts/BranchContext';
 import { getBranchIdWithFallback } from '@/utils/branch-utils';
+import { apiGetJson } from '@/lib/api';
 
 // Interface for Service from API
 export interface Service {
@@ -41,7 +42,7 @@ export const useServices = () => {
   const branchId = getBranchIdWithFallback(currentBranch, branches);
 
   return useQuery<Service[]>({
-    queryKey: ['/services?branch_id', branchId],
+    queryKey: [`/services?branchId=${branchId}`],
     queryFn: async () => {
       if (!branchId) {
         console.warn('❌ No valid branch ID available, skipping services fetch');
@@ -49,34 +50,10 @@ export const useServices = () => {
       }
 
       try {
-        // Use the new path-based API structure with pagination
-        const url = `${import.meta.env.VITE_BACKEND_URL}/services?branch_id=${branchId}&page=1&limit=1000`;
-        console.log('📡 Services API URL:', url);
-        
-        const token = localStorage.getItem('auth_token');
-        
-        const response = await fetch(url, {
-          headers: {
-            'Accept': 'application/json',
-            ...(token && { 'Authorization': `Bearer ${token}` })
-          }
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error('Необходима авторизация');
-          } else if (response.status === 404) {
-            console.log('📋 No services found for this branch');
-            return [];
-          } else {
-            const errorText = await response.text();
-            throw new Error(`Ошибка загрузки услуг: ${response.status} - ${errorText}`);
-          }
-        }
-
-        const result = await response.json();
+        // Use shared API helper to avoid cached 304 responses and ensure auth headers
+        const result = await apiGetJson<{ data?: Service[] } | Service[]>(`/services?branchId=${branchId}`);
         // API возвращает пагинированный ответ { page, limit, total, pages, data }
-        const data = result.data || [];
+        const data = Array.isArray(result) ? result : result.data || [];
         console.log('✅ Loaded services:', data.length, data.map((s: Service) => ({ id: s.id, name: s.name })));
         return data;
       } catch (error) {

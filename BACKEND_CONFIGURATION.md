@@ -5,7 +5,7 @@
 Проект настроен для работы с двумя бэкенд серверами одновременно:
 
 1. **Primary Backend** (Основной): `https://lesser-felicdad-promconsulting-79f07228.koyeb.app`
-2. **Secondary Backend** (Вторичный): `https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app`
+2. **Secondary Backend** (Вторичный): `https://octobackend.com/api/main/`
 
 ## Конфигурация (.env)
 
@@ -14,7 +14,7 @@
 VITE_BACKEND_URL=https://lesser-felicdad-promconsulting-79f07228.koyeb.app
 
 # Secondary Backend URL (для специфичных сервисов)
-VITE_SECONDARY_BACKEND_URL=https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app
+VITE_SECONDARY_BACKEND_URL=https://octobackend.com/api/main/
 ```
 
 ## Использование в коде
@@ -63,7 +63,7 @@ const url = createApiUrl('/api/tasks');
 
 // Создание URL для вторичного бэкенда
 const url = createApiUrl('/api/tasks', true);
-// Результат: https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app/api/tasks
+// Результат: https://octobackend.com/api/main//api/tasks
 
 // Использование с fetch
 const response = await fetch(createApiUrl('/api/tasks'), {

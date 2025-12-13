@@ -25,11 +25,11 @@
 - `GET /api/masters` - Список мастеров
 - `GET /api/masters/availability` - Доступность мастера
 - `GET /api/masters/working-dates` - Рабочие даты
-- `GET /api/crm/masters` - CRM мастера
-- `GET /api/crm/masters/:id` - CRM мастер по ID
-- `POST /api/crm/masters/:id` - Создание/обновление мастера
-- `DELETE /api/crm/masters/:id` - Удаление мастера
-- `POST /api/crm/masters/:id/upload-image` - Загрузка изображения
+- `GET /staff` - CRM мастера
+- `GET /staff/:id` - CRM мастер по ID
+- `POST /staff/:id` - Создание/обновление мастера
+- `DELETE /staff/:id` - Удаление мастера
+- `POST /staff/:id/upload-image` - Загрузка изображения
 - `GET /api/masters/:id/working-dates` - Рабочие даты мастера
 - `POST /api/masters/:id/working-dates` - Добавление рабочих дат
 - `DELETE /api/masters/:id/working-dates/:date` - Удаление рабочей даты
@@ -107,7 +107,7 @@
 
 ## Secondary Backend
 
-Вторичный бэкенд (`https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app`) готов к использованию.
+Вторичный бэкенд (`https://octobackend.com/api/main/`) готов к использованию.
 
 ### Когда использовать Secondary Backend?
 

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useBranch } from '@/contexts/BranchContext';
 
 // Interface for Task from API
 export interface Task {
@@ -39,23 +40,37 @@ export interface Task {
 
 // Hook to fetch task by ID
 export const useTask = (taskId: number | null) => {
+  const { currentBranch } = useBranch();
+  const branchId = currentBranch?.id?.toString() || localStorage.getItem('currentBranchId') || '';
+  
   return useQuery<Task>({
-    queryKey: ['/api/tasks', taskId],
+    queryKey: ['/assignments', taskId, branchId],
     queryFn: async () => {
-      if (!taskId) {
-        throw new Error('Task ID is required');
+      if (!taskId || !branchId) {
+        throw new Error('Task ID and branchId are required');
       }
 
       try {
-        const url = `${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`;
+        // Добавляем cache-buster, чтобы избежать 304 без тела
+        const url = `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/assignments/${taskId}?branchId=${branchId}&_=${Date.now()}`;
         console.log('📡 Task API URL:', url);
+        const token = localStorage.getItem('auth_token');
         
         const response = await fetch(url, {
           credentials: 'include',
           headers: {
             'Accept': 'application/json',
-          }
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'If-Modified-Since': '0',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          cache: 'no-store'
         });
+
+        if (response.status === 304) {
+          throw new Error('Not Modified');
+        }
 
         if (!response.ok) {
           if (response.status === 401) {
@@ -68,15 +83,73 @@ export const useTask = (taskId: number | null) => {
           }
         }
 
-        const data = await response.json();
-        console.log('✅ Loaded task:', data);
-        return data;
+        const raw = await response.json();
+        const payload = (raw && typeof raw === 'object' && 'data' in raw) ? (raw as any).data : raw;
+
+        const shiftTime = (timeStr?: string | null, offsetHours = 6) => {
+          if (!timeStr) return null;
+          const [h, m] = timeStr.split(':').map(Number);
+          if (Number.isNaN(h) || Number.isNaN(m)) return timeStr;
+          const d = new Date(Date.UTC(1970, 0, 1, h, m, 0, 0));
+          d.setUTCHours(d.getUTCHours() + offsetHours);
+          const hh = String(d.getUTCHours()).padStart(2, '0');
+          const mm = String(d.getUTCMinutes()).padStart(2, '0');
+          return `${hh}:${mm}`;
+        };
+
+        // Если это assignment формат, нормализуем под Task
+        if (payload && typeof payload === 'object' && ('assignment_date' in payload || 'start_time' in payload)) {
+          const scheduleDateIso = payload.assignment_date
+            ? new Date(payload.assignment_date).toISOString().split('T')[0]
+            : null;
+
+          const normalized: Task = {
+            id: Number(payload.id),
+            clientId: payload.client_id || 0,
+            clientName: payload.client_snapshot?.first_name || payload.clientName || '',
+            status: payload.status || 'scheduled',
+            serviceType: payload.service_snapshot?.name || payload.serviceType || null,
+            scheduleDate: scheduleDateIso,
+            scheduleTime: shiftTime(payload.start_time, 6) || payload.scheduleTime,
+            endTime: shiftTime(payload.end_time, 6) || payload.endTime,
+            masterName: payload.employee_snapshot
+              ? `${payload.employee_snapshot.first_name || ''} ${payload.employee_snapshot.last_name || ''}`.trim()
+              : payload.masterName || null,
+            masterId: payload.employee_id || payload.masterId || null,
+            serviceDuration: payload.service_snapshot?.duration ?? payload.serviceDuration ?? null,
+            servicePrice: payload.service_snapshot?.price ?? payload.servicePrice ?? null,
+            notes: payload.notes || null,
+            instanceId: payload.instanceId || null,
+            branchId: payload.branch_id?.toString?.() || payload.branchId || '',
+            discount: payload.discount ? Number(payload.discount) : undefined,
+            finalPrice: payload.final_price ? Number(payload.final_price) : payload.finalPrice ?? undefined,
+            client: payload.client_snapshot
+              ? {
+                  telegramId: payload.client_snapshot.telegram_id,
+                  firstName: payload.client_snapshot.first_name,
+                  lastName: payload.client_snapshot.last_name,
+                  customName: payload.client_snapshot.custom_name,
+                  phoneNumber: payload.client_snapshot.phone_number,
+                  branchId: payload.branch_id?.toString?.(),
+                  organisationId: payload.organization_id,
+                }
+              : undefined,
+            master: undefined,
+            serviceType: payload.service_snapshot?.name || payload.serviceType || null,
+          };
+
+          console.log('✅ Loaded assignment normalized:', normalized);
+          return normalized;
+        }
+
+        console.log('✅ Loaded task (raw):', payload);
+        return payload;
       } catch (error) {
         console.error('❌ Failed to fetch task:', error);
         throw error;
       }
     },
-    enabled: !!taskId && taskId > 0,
+    enabled: !!taskId && taskId > 0 && !!branchId,
     staleTime: 2 * 60 * 1000, // 2 minutes
     refetchOnWindowFocus: false,
   });

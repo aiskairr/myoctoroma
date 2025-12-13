@@ -43,7 +43,7 @@ console.log('Secondary:', import.meta.env.VITE_SECONDARY_BACKEND_URL);
 
 **Ожидаемый результат:**
 - [ ] Primary: `https://lesser-felicdad-promconsulting-79f07228.koyeb.app`
-- [ ] Secondary: `https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app`
+- [ ] Secondary: `https://octobackend.com/api/main/`
 
 ---
 
@@ -72,7 +72,7 @@ fetch('https://lesser-felicdad-promconsulting-79f07228.koyeb.app/api/tasks?branc
 **В консоли браузера:**
 ```javascript
 // Тест 2: GET запрос к Secondary Backend
-fetch('https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app/api/tasks?branchId=1&sortBy=scheduleDate&sortOrder=asc&userRole=superadmin', {
+fetch('https://octobackend.com/api/main//api/tasks?branchId=1&sortBy=scheduleDate&sortOrder=asc&userRole=superadmin', {
   credentials: 'include'
 })
 .then(r => r.json())
@@ -191,7 +191,7 @@ taskParserService.manualFetch({}, true)
 **Шаг 1:** Измените `.env` файл:
 ```env
 # Поменяйте местами URL
-VITE_BACKEND_URL=https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app
+VITE_BACKEND_URL=https://octobackend.com/api/main/
 VITE_SECONDARY_BACKEND_URL=https://lesser-felicdad-promconsulting-79f07228.koyeb.app
 ```
 
@@ -215,7 +215,7 @@ console.log('Primary:', import.meta.env.VITE_BACKEND_URL);
 **Шаг 4:** Верните обратно:
 ```env
 VITE_BACKEND_URL=https://lesser-felicdad-promconsulting-79f07228.koyeb.app
-VITE_SECONDARY_BACKEND_URL=https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app
+VITE_SECONDARY_BACKEND_URL=https://octobackend.com/api/main/
 ```
 
 ---
@@ -229,7 +229,7 @@ VITE_SECONDARY_BACKEND_URL=https://scattered-ermentrude-promconsulting-23cbccde.
 Promise.all([
   fetch('https://lesser-felicdad-promconsulting-79f07228.koyeb.app/api/tasks?branchId=1', 
     { credentials: 'include' }).then(r => r.json()),
-  fetch('https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app/api/tasks?branchId=1', 
+  fetch('https://octobackend.com/api/main//api/tasks?branchId=1', 
     { credentials: 'include' }).then(r => r.json())
 ])
 .then(([primary, secondary]) => {

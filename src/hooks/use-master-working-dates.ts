@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { apiGetJson } from '@/lib/api';
 
 // Интерфейс для рабочих дат мастеров
 export interface MasterWorkingDate {
@@ -21,27 +22,19 @@ export const useMasterWorkingDates = (date?: string, branchId?: string) => {
       if (date) params.append('date', date);
       if (branchId) params.append('branchId', branchId);
       
-      const url = `${import.meta.env.VITE_BACKEND_URL}/api/crm/master-working-dates?${params.toString()}`;
+      const url = `/working-dates?${params.toString()}`;
       
-      const response = await fetch(url, {
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Unauthorized');
-        } else if (response.status === 500) {
-          throw new Error('Failed to fetch master working dates');
-        } else {
-          const errorText = await response.text();
-          throw new Error(`Error ${response.status}: ${errorText}`);
-        }
-      }
-
-      return response.json();
+      // Use shared API helper to avoid credentialed CORS failures and cached 304s
+      const response = await apiGetJson<MasterWorkingDate[] | { data?: MasterWorkingDate[]; results?: MasterWorkingDate[] }>(url);
+      // Backend может отдавать массив напрямую или оборачивать в { data }
+      const raw = Array.isArray(response) ? response : response.data || response.results || [];
+      // Нормализуем поля: master_id может называться staff_id
+      return raw.map((item: any) => ({
+        ...item,
+        master_id: item.master_id ?? item.staff_id,
+        branch_id: item.branch_id?.toString?.() ?? item.branch_id,
+        is_active: item.is_active ?? item.is_day_off === false,
+      }));
     },
     enabled: !!date && !!branchId, // Запрос выполняется только если переданы и дата и branchId
     staleTime: 5 * 60 * 1000, // Данные считаются свежими 5 минут

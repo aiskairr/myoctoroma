@@ -37,10 +37,28 @@ interface BookingData {
 
 // Используем новый booking API для получения филиалов
 const getOrganisationBranches = async (organisationId: string): Promise<any> => {
-  const branches = await BookingService.getBranches(Number(organisationId));
+  const token = localStorage.getItem('guest_token') || localStorage.getItem('auth_token');
+  const url = `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/booking/branches?organizationId=${organisationId}`;
+  
+  const res = await fetch(url, {
+    headers: {
+      'Accept': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+    cache: 'no-store'
+  });
+  
+  if (!res.ok && res.status !== 304) {
+    const errorText = await res.text();
+    throw new Error(`Failed to load branches: ${res.status} ${errorText}`);
+  }
+
+  // 304 может прийти с пустым телом — считаем, что данных нет, чтобы не падать
+  const branches = res.status === 304 ? [] : await res.json().catch(() => []);
+
   // Преобразуем формат ответа для совместимости со старым кодом
   return {
-    branches: branches.map(branch => ({
+    branches: branches.map((branch: any) => ({
       id: branch.id.toString(),
       branches: branch.name,
       name: branch.name,
@@ -54,7 +72,7 @@ const getOrganisationBranches = async (organisationId: string): Promise<any> => 
 };
 
 const getServices = async (branchId: string): Promise<any> => {
-  const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services?branch_id=${branchId}&page=1&limit=1000`);
+  const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services?branchId=${branchId}&page=1&limit=1000`);
   // API возвращает пагинированный ответ { data: [...] }
   return (response.data as any).data || [];
 };
@@ -75,142 +93,154 @@ const getMasters = async (branchId: string): Promise<any> => {
 };
 
 const getMasterDetails = async (masterId: number): Promise<any> => {
-  const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${masterId}`);
+  const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/staff/${masterId}`);
   return response.data;
 };
 
-const getMasterWorkingDates = async (branchId: string): Promise<any> => {
+// Функция для получения назначений (assignments) с использованием нового эндпоинта
+const getAssignments = async (branchId: string, date?: string, employeeId?: number): Promise<any> => {
   try {
-    // Сначала попробуем публичный API
-    const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/public/master-working-dates?branchId=${branchId}`, {
+    const params = new URLSearchParams({
+      branchId: branchId,
+      page: '1',
+      limit: '1000'
+    });
+
+    if (date) {
+      params.append('date', date);
+    }
+
+    if (employeeId) {
+      params.append('employeeId', employeeId.toString());
+    }
+
+    const response = await axios.get(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/assignments?${params.toString()}`, {
       headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('guest_token')}`
       }
     });
-    console.log('getMasterWorkingDates response (public):', response.data);
+
+    console.log('getAssignments response:', response.data);
     return response.data;
   } catch (error) {
-    console.warn('Public API failed, trying CRM API:', error);
-    
-    try {
-      // Если публичный API не работает, попробуем CRM API
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/crm/master-working-dates?branchId=${branchId}`, {
-        withCredentials: true,
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      });
-      console.log('getMasterWorkingDates response (crm):', response.data);
-      return response.data;
-    } catch (crmError) {
-      console.error('Both APIs failed, using test data:', crmError);
-      
-      // Возвращаем тестовые данные, соответствующие предоставленным пользователем
-      const testData = [
-        {
-          "id": 52,
-          "master_id": 6,
-          "master_name": "Азат",
-          "work_date": "2025-10-17T00:00:00.000Z",
-          "start_time": "08:00",
-          "end_time": "17:00",
-          "branch_id": "1",
-          "is_active": true
-        },
-        {
-          "id": 54,
-          "master_id": 6,
-          "master_name": "Азат",
-          "work_date": "2025-10-10T00:00:00.000Z",
-          "start_time": "08:00",
-          "end_time": "17:00",
-          "branch_id": "1",
-          "is_active": true
-        },
-        {
-          "id": 26,
-          "master_id": 5,
-          "master_name": "Актан",
-          "work_date": "2025-10-10T00:00:00.000Z",
-          "start_time": "09:00",
-          "end_time": "20:00",
-          "branch_id": "1",
-          "is_active": true
-        },
-        {
-          "id": 22,
-          "master_id": 5,
-          "master_name": "Актан",
-          "work_date": "2025-10-09T00:00:00.000Z",
-          "start_time": "09:00",
-          "end_time": "20:00",
-          "branch_id": "1",
-          "is_active": true
-        },
-        {
-          "id": 34,
-          "master_id": 4,
-          "master_name": "Владимир",
-          "work_date": "2025-10-10T00:00:00.000Z",
-          "start_time": "09:00",
-          "end_time": "18:00",
-          "branch_id": "1",
-          "is_active": true
-        }
-      ];
-      
-      console.log('Using test data:', testData);
-      return testData;
-    }
+    console.error('Failed to fetch assignments:', error);
+    throw error;
   }
 };
 
-// Функция для получения записей на конкретную дату и мастера
-// Функция для получения доступных временных слотов
+// Функция для получения рабочих дат мастеров из assignments
+const getMasterWorkingDates = async (branchId: string): Promise<any> => {
+  try {
+    const assignmentsData = await getAssignments(branchId);
+
+    // Извлекаем уникальные даты и сотрудников из назначений
+    const workingDates: any[] = [];
+    const dateEmployeeMap = new Map<string, Set<number>>();
+
+    assignmentsData.data?.forEach((assignment: any) => {
+      const date = assignment.assignment_date.split('T')[0];
+      const employeeId = assignment.employee_id;
+
+      if (!dateEmployeeMap.has(date)) {
+        dateEmployeeMap.set(date, new Set());
+      }
+      dateEmployeeMap.get(date)?.add(employeeId);
+    });
+
+    // Преобразуем в формат, совместимый со старым API
+    dateEmployeeMap.forEach((employeeIds, date) => {
+      employeeIds.forEach(employeeId => {
+        const assignments = assignmentsData.data.filter(
+          (a: any) => a.employee_id === employeeId && a.assignment_date.split('T')[0] === date
+        );
+
+        if (assignments.length > 0) {
+          const firstAssignment = assignments[0];
+          const lastAssignment = assignments[assignments.length - 1];
+
+          workingDates.push({
+            id: `${employeeId}-${date}`,
+            master_id: employeeId,
+            master_name: firstAssignment.employee_snapshot?.first_name || '',
+            work_date: date,
+            start_time: firstAssignment.start_time || '09:00',
+            end_time: lastAssignment.end_time || '18:00',
+            branch_id: branchId,
+            is_active: true
+          });
+        }
+      });
+    });
+
+    console.log('getMasterWorkingDates (from assignments):', workingDates);
+    return workingDates;
+  } catch (error) {
+    console.error('Failed to get master working dates:', error);
+    return [];
+  }
+};
+
+// Функция для получения доступных временных слотов на основе assignments
 const getAvailableTimeSlots = async (masterId: number, date: string, branchId: string): Promise<{ time: string; available: boolean }[]> => {
   try {
-    const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/public/available-slots`, {
-      params: {
-        date: date,
-        masterId: masterId,
-        branchId: branchId
-      },
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
+    // Получаем назначения для конкретного мастера и даты
+    const assignmentsData = await getAssignments(branchId, date, masterId);
+
+    // Получаем все занятые временные слоты
+    const bookedSlots = new Set<string>();
+    assignmentsData.data?.forEach((assignment: any) => {
+      const startTime = assignment.start_time;
+      const endTime = assignment.end_time;
+
+      // Добавляем все временные слоты в диапазоне от startTime до endTime
+      const [startHour, startMinute] = startTime.split(':').map(Number);
+      const [endHour, endMinute] = endTime.split(':').map(Number);
+
+      let currentHour = startHour;
+      let currentMinute = startMinute;
+
+      while (currentHour < endHour || (currentHour === endHour && currentMinute < endMinute)) {
+        const timeSlot = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+        bookedSlots.add(timeSlot);
+
+        currentMinute += 30;
+        if (currentMinute >= 60) {
+          currentMinute = 0;
+          currentHour += 1;
+        }
       }
     });
-    console.log('getAvailableTimeSlots response:', response.data);
-    return response.data as { time: string; available: boolean }[];
+
+    // Генерируем все возможные временные слоты (с 09:00 до 20:00)
+    const allSlots: { time: string; available: boolean }[] = [];
+    for (let hour = 9; hour < 20; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const timeSlot = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+        allSlots.push({
+          time: timeSlot,
+          available: !bookedSlots.has(timeSlot)
+        });
+      }
+    }
+
+    console.log('getAvailableTimeSlots (from assignments):', allSlots);
+    return allSlots;
   } catch (error) {
-    console.warn('Available slots API failed:', error);
-    // Возвращаем тестовые данные с доступными слотами
-    const testSlots = [
-      { time: "09:00", available: true },
-      { time: "09:30", available: true },
-      { time: "10:00", available: false }, // занято
-      { time: "10:30", available: true },
-      { time: "11:00", available: true },
-      { time: "11:30", available: true },
-      { time: "12:00", available: true },
-      { time: "12:30", available: true },
-      { time: "13:00", available: true },
-      { time: "13:30", available: true },
-      { time: "14:00", available: true },
-      { time: "14:30", available: false }, // занято
-      { time: "15:00", available: true },
-      { time: "15:30", available: true },
-      { time: "16:00", available: true },
-      { time: "16:30", available: true },
-      { time: "17:00", available: true },
-      { time: "17:30", available: true },
-      { time: "18:00", available: true }
-    ];
-    
-    console.log('Using test slots data:', testSlots);
-    return testSlots;
+    console.error('Failed to get available time slots:', error);
+    // В случае ошибки возвращаем все слоты как доступные
+    const fallbackSlots: { time: string; available: boolean }[] = [];
+    for (let hour = 9; hour < 20; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const timeSlot = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+        fallbackSlots.push({
+          time: timeSlot,
+          available: true
+        });
+      }
+    }
+    return fallbackSlots;
   }
 };
 

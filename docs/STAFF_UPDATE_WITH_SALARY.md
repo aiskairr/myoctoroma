@@ -31,7 +31,7 @@ POST /salaries?branchId=7
 ```
 🔄 Updating master via PATCH /staff/4
 📦 Payload: { firstname: "Камила", lastname: "Умарова", ... }
-🔗 URL: https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app/staff/4
+🔗 URL: https://octobackend.com/api/main//staff/4
 📡 Response status: 200
 ✅ Update response: { success: true, data: {...} }
 💰 Creating/updating salary record for master...
@@ -127,11 +127,11 @@ onSuccess: async (result) => {
 **Решение**:
 ```bash
 # 1. Проверьте консоль браузера
-🔗 URL: https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app/staff/4
+🔗 URL: https://octobackend.com/api/main//staff/4
 📡 Response status: (не появилось) <- проблема с сетью
 
 # 2. Проверьте .env файл
-VITE_SECONDARY_BACKEND_URL=https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app
+VITE_SECONDARY_BACKEND_URL=https://octobackend.com/api/main/
 
 # 3. Проверьте токен в localStorage
 localStorage.getItem('auth_token')

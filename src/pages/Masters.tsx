@@ -16,6 +16,7 @@ import MasterWorkingDatesDisplay from "@/components/MasterWorkingDatesDisplay";
 import MasterWorkingDatesCalendar from "@/components/MasterWorkingDatesCalendar";
 import { useBranch } from "@/contexts/BranchContext";
 import { useLocale } from "@/contexts/LocaleContext";
+import { getBranchIdWithFallback } from "@/utils/branch-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -46,6 +47,8 @@ interface BranchUser {
 interface Master {
   id: number;
   name: string;
+  first_name?: string;
+  last_name?: string;
   specialty?: string;
   description?: string;
   isActive: boolean;
@@ -93,9 +96,9 @@ const MasterForm: React.FC<{
   isDeleting?: boolean;
 }> = ({ master, onSubmit, isPending, branchUsers, onDelete, isDeleting }) => {
   const { t } = useLocale();
-  const { currentBranch } = useBranch();
+  const { currentBranch, branches } = useBranch();
   const [formData, setFormData] = useState({
-    name: master?.name || '',
+    name: master?.first_name || '',
     specialty: master?.specialty || '',
     description: master?.description || '',
     isActive: master?.isActive ?? true,
@@ -118,17 +121,24 @@ const MasterForm: React.FC<{
 
   // Загрузка рабочих дат при редактировании, если они не предоставлены
   const { data: fetchedWorkingDates, isLoading: isLoadingDates } = useQuery({
-    queryKey: ['working-dates', master?.id],
+    queryKey: ['working-dates', master?.id, getBranchIdWithFallback(currentBranch, branches)],
     queryFn: async () => {
       if (!master) return [];
-      return await apiGetJson(`/working-dates`);
+      const branchId = getBranchIdWithFallback(currentBranch, branches);
+      if (!branchId) return [];
+      return await apiGetJson(`/working-dates?staffId=${master.id}&branchId=${branchId}`);
     },
     enabled: !!master && (!master.workingDates || master.workingDates.length === 0),
   });
 
   useEffect(() => {
-    if (fetchedWorkingDates) {
-      setWorkingDates(fetchedWorkingDates);
+    if (fetchedWorkingDates !== undefined) {
+      const normalizeWorkingDates = (data: any): WorkingDate[] => {
+        if (Array.isArray(data)) return data;
+        if (data && Array.isArray(data.data)) return data.data;
+        return [];
+      };
+      setWorkingDates(normalizeWorkingDates(fetchedWorkingDates));
     }
   }, [fetchedWorkingDates]);
 
@@ -1045,6 +1055,7 @@ const AdministratorForm: React.FC<{
     onSubmit(combinedData);
   };
 
+  console.log('AdministratorForm render with formData:', formData);
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Прогресс заполнения формы */}
@@ -1796,7 +1807,7 @@ const Masters: React.FC = () => {
       console.log('Creating staff with payload:', staffPayload);
       
       // Создаем сотрудника через /staff endpoint
-      const res = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff?organisationId=${orgData}`, {
+      const res = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff?organizationId=${orgData}`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json', 
@@ -1831,6 +1842,37 @@ const Masters: React.FC = () => {
         variant: 'default',
       });
       refetch();
+
+      // Автоматически создаем рабочий день 09:00-18:00 на сегодня для нового сотрудника
+      if (staffData?.id && currentBranch?.id) {
+        try {
+          const today = new Date();
+          const workDate = today.toISOString().split('T')[0];
+
+          await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates/${staffData.id}?branchId=${currentBranch.id}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`
+            },
+            body: JSON.stringify({
+              workDate,
+              startTime: '09:00',
+              endTime: '18:00'
+            })
+          }).then(async res => {
+            if (!res.ok) {
+              const errorText = await res.text();
+              console.warn('⚠️ Failed to auto-create working day:', res.status, errorText);
+            } else {
+              console.log('✅ Auto-created working day for staff', staffData.id, 'date', workDate);
+            }
+          });
+        } catch (err) {
+          console.warn('⚠️ Error while auto-creating working day:', err);
+        }
+      }
 
       // Создаем salary record
       if (staffData && staffData.id && user && currentBranch?.id) {
@@ -1876,9 +1918,21 @@ const Masters: React.FC = () => {
     mutationFn: async ({ id, data }: { id: number, data: Partial<Master> }) => {
       const { workingDates, createAccount, accountEmail, accountPassword, baseSalary, commissionRate, ...masterData } = data;
       console.log(workingDates + " workingDates")
+      const authToken = localStorage.getItem('auth_token');
 
       // Подготовка данных для обновления согласно новому API
       const staffUpdatePayload: any = {};
+      const organizationId = currentBranch?.organisationId || orgData?.id || user?.organization_id || user?.organisationId || user?.orgId || user?.organization?.id;
+      if (organizationId) {
+        staffUpdatePayload.organizationId = Number(organizationId);
+      }
+      if (currentBranch?.id) {
+        staffUpdatePayload.branches = [{
+          id: currentBranch.id,
+          name: (currentBranch as any).branches || (currentBranch as any).name || '',
+          address: (currentBranch as any).address || ''
+        }];
+      }
 
       // Маппинг полей: name -> firstname/lastname
       if (masterData.name) {
@@ -1899,11 +1953,12 @@ const Masters: React.FC = () => {
       console.log('📦 Payload:', staffUpdatePayload);
       console.log('🔗 URL:', `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff/${id}`);
 
-      const res = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff/${id}?organizationId=${orgData}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          'Accept': 'application/json',
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
         },
         body: JSON.stringify(staffUpdatePayload)
       });
@@ -1932,11 +1987,17 @@ const Masters: React.FC = () => {
         console.log('🗓️ Updating working dates for branch:', currentBranch.id);
 
         try {
-          // Получаем все рабочие даты для этого филиала
-          const workingDatesUrl = `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates?branchId=${currentBranch.id}`;
+          // Получаем все рабочие даты для этого мастера в этом филиале
+          const workingDatesUrl = `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates?staffId=${id}&branchId=${currentBranch.id}`;
           console.log('📡 Fetching working dates from URL:', workingDatesUrl);
 
-          const allWorkingDatesRes = await fetch(workingDatesUrl);
+          const allWorkingDatesRes = await fetch(workingDatesUrl, {
+            headers: {
+              'Accept': 'application/json',
+              ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+            },
+            credentials: 'include'
+          });
           console.log('📡 Working dates response status:', allWorkingDatesRes.status);
 
           if (allWorkingDatesRes.ok) {
@@ -1945,8 +2006,12 @@ const Masters: React.FC = () => {
 
             // Удаляем все существующие рабочие даты для этого мастера в этом филиале
             await Promise.all(allWorkingDates.map(async (cwd: any) => {
-              await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates/${cwd.id}`, {
-                method: 'DELETE'
+              await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates/${cwd.id}?branchId=${cwd.branch_id || currentBranch.id}`, {
+                method: 'DELETE',
+                headers: {
+                  ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+                },
+                credentials: 'include'
               });
             }));
           } else {
@@ -1961,14 +2026,17 @@ const Masters: React.FC = () => {
           // Добавляем новые рабочие даты
           console.log('➕ Adding new working dates:', workingDates.length);
           await Promise.all(workingDates.map(async (wd) => {
-            await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates/`, {
+            await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates/${id}?branchId=${wd.branchId || currentBranch.id}`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+              },
+              credentials: 'include',
               body: JSON.stringify({
                 workDate: wd.date,
                 startTime: wd.startTime,
-                endTime: wd.endTime,
-                branchId: wd.branchId || currentBranch.id
+                endTime: wd.endTime
               })
             });
           }));
@@ -2049,8 +2117,11 @@ const Masters: React.FC = () => {
 
   const deleteMasterMutation = useMutation({
     mutationFn: async (id: number) => {
+      const organizationId = orgData;
+      const orgParam = organizationId ? `?organizationId=${organizationId}` : '';
+
       // Сначала удаляем мастера из основной таблицы
-      const deleteRes = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff/${id}`, {
+      const deleteRes = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff/${id}${orgParam}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
       });
@@ -2062,7 +2133,7 @@ const Masters: React.FC = () => {
       // Затем удаляем пользователя из таблицы users (если существует)
       if (deletedMaster?.id) {
         try {
-          const userDeleteRes = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff/${id}`, {
+          const userDeleteRes = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff/${id}${orgParam}`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
           });
@@ -2383,7 +2454,7 @@ const Masters: React.FC = () => {
     mutationFn: async ({ masterId, file }: { masterId: number, file: File }) => {
       const formData = new FormData();
       formData.append('image', file);
-      const res = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/api/crm/masters/${masterId}/upload-image`, {
+      const res = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff/${masterId}/upload-image`, {
         method: 'POST',
         body: formData
       });

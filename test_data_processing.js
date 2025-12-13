@@ -85,7 +85,7 @@ const tasksFromAPI = [
     }
 ];
 
-// Пример данных из API /api/crm/masters
+// Пример данных из API /staff
 const mastersFromAPI = [
     {
         "id": 3,

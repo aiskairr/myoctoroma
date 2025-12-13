@@ -10,7 +10,7 @@ type AxiosError = any;
 const PRIMARY_BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://lesser-felicdad-promconsulting-79f07228.koyeb.app';
 
 // Secondary Backend URL - используется для дополнительных сервисов
-const SECONDARY_BACKEND_URL = import.meta.env.VITE_SECONDARY_BACKEND_URL || 'https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app';
+const SECONDARY_BACKEND_URL = import.meta.env.VITE_SECONDARY_BACKEND_URL || 'https://octobackend.com/api/main/';
 
 // Primary API instance (default) - используется для всех существующих эндпоинтов
 const $api = axios.create({
@@ -68,7 +68,7 @@ let isRefreshing = false;
 let failedQueue: any[] = [];
 let isRedirecting = false; // Флаг для предотвращения множественных редиректов
 const REFRESH_TOKEN_COOKIE_NAMES = ['refreshToken', 'refresh_token', 'refresh-token'];
-const TOKEN_REFRESH_INTERVAL_MS = 15 * 60 * 1000; // 15 минут
+const TOKEN_REFRESH_INTERVAL_MS = 12 * 60 * 1000; // 12 минут, обновляем заранее до истечения access token
 let tokenRefreshIntervalId: number | null = null;
 
 const readRefreshTokenFromCookies = (): string | null => {
@@ -108,11 +108,7 @@ const processQueue = (error: any, token: string | null = null) => {
 const refreshAccessToken = async (): Promise<string | null> => {
     try {
         const refreshToken = getStoredRefreshToken();
-
-        if (!refreshToken) {
-            console.error('❌ No refresh token found in storage or cookies');
-            return null;
-        }
+        const hasRefreshToken = !!refreshToken;
 
         console.log('🔄 Attempting to refresh access token...');
 
@@ -134,9 +130,17 @@ const refreshAccessToken = async (): Promise<string | null> => {
             needsRefreshTokenInBody = false; // Admin берет refresh token из cookies
         } else if (userType === 'staff') {
             refreshEndpoint = `${SECONDARY_BACKEND_URL}/staffAuthorization/refresh`;
+            if (!hasRefreshToken) {
+                console.error('❌ No refresh token available for staff refresh');
+                return null;
+            }
             refreshPayload.refreshToken = refreshToken; // Staff требует refresh token в body
         } else if (userType === 'user') {
             refreshEndpoint = `${SECONDARY_BACKEND_URL}/user/refresh`;
+            if (!hasRefreshToken) {
+                console.error('❌ No refresh token available for user refresh');
+                return null;
+            }
             refreshPayload.refreshToken = refreshToken; // User требует refresh token в body
         } else {
             // Если тип не определен, пробуем все три
@@ -149,7 +153,7 @@ const refreshAccessToken = async (): Promise<string | null> => {
                 console.log(`Trying ${userType} refresh endpoint:`, refreshEndpoint);
                 const response = await axios.post(
                     refreshEndpoint,
-                    needsRefreshTokenInBody ? {} : refreshPayload, // Admin: пустой body, остальные: с данными
+                    needsRefreshTokenInBody ? refreshPayload : {}, // Admin: пустой body, остальные: с данными
                     {
                         headers: {
                             'Content-Type': 'application/json',
@@ -237,6 +241,9 @@ const refreshAccessToken = async (): Promise<string | null> => {
 
         // Пробуем /staffAuthorization/refresh
         try {
+            if (!hasRefreshToken) {
+                throw new Error('No refresh token available for staff refresh');
+            }
             console.log('Trying /staffAuthorization/refresh endpoint...');
             const staffResponse = await axios.post(
                 `${SECONDARY_BACKEND_URL}/staffAuthorization/refresh`,
@@ -281,6 +288,9 @@ const refreshAccessToken = async (): Promise<string | null> => {
         }
 
         // Пробуем /user/refresh как последний fallback
+        if (!hasRefreshToken) {
+            throw new Error('No refresh token available for user refresh');
+        }
         const response = await axios.post(
             `${SECONDARY_BACKEND_URL}/user/refresh`,
             { refreshToken }, // User требует refreshToken в body
@@ -371,8 +381,12 @@ const startTokenRefreshScheduler = () => {
 
     tokenRefreshIntervalId = window.setInterval(async () => {
         const refreshToken = getStoredRefreshToken();
+        const userType = localStorage.getItem('user_type');
 
-        if (!refreshToken) {
+        // Для admin refresh token может быть только в httpOnly cookie (недоступен JS),
+        // поэтому не блокируем расписание при его отсутствии
+        const canAttemptRefresh = refreshToken || userType === 'admin' || !userType;
+        if (!canAttemptRefresh) {
             return;
         }
 

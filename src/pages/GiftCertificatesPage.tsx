@@ -118,9 +118,9 @@ const GiftCertificatesPage = () => {
         // Загружаем все данные параллельно для лучшей производительности
         const [certificatesResponse, mastersResponse, administratorsResponse, serviceTypesResponse] = await Promise.all([
           fetch(`${import.meta.env.VITE_BACKEND_URL}/gift-certificates?branchId=${currentBranch.id}`, { headers: authHeaders }),
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${currentBranch.id}`, { headers: authHeaders }), // Используем dedicated endpoint для мастеров
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/staff/${currentBranch.id}`, { headers: authHeaders }), // Используем dedicated endpoint для мастеров
           fetch(`${import.meta.env.VITE_BACKEND_URL}/api/administrators?branchID=${currentBranch.id}`, { headers: authHeaders }), // Добавляем фильтр по филиалу
-          fetch(`${import.meta.env.VITE_BACKEND_URL}/services?branch_id=${currentBranch.id}&page=1&limit=1000`, { headers: authHeaders }) // Используем services endpoint вместо service-types
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/services?branchId=${currentBranch.id}&page=1&limit=1000`, { headers: authHeaders }) // Используем services endpoint вместо service-types
         ]);
 
         // Обрабатываем сертификаты

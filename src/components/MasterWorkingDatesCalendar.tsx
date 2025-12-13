@@ -12,6 +12,9 @@ import { useBranch } from "@/contexts/BranchContext";
 import { useLocale } from "@/contexts/LocaleContext";
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import Cookies from "js-cookie";
+
+const SECONDARY_API_BASE_URL = import.meta.env.VITE_SECONDARY_BACKEND_URL || import.meta.env.VITE_BACKEND_URL;
 
 interface WorkingDate {
   work_date: string;
@@ -31,6 +34,14 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
   const { currentBranch } = useBranch();
   const { t } = useLocale();
   
+  const authHeaders = () => {
+    const token = localStorage.getItem('auth_token') || Cookies.get('token');
+    return {
+      'Accept': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+  };
+
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -42,9 +53,12 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
 
   // Получаем рабочие даты мастера для текущего месяца
   const { data: workingDates = [], isLoading, refetch } = useQuery<WorkingDate[]>({
-    queryKey: ['${import.meta.env.VITE_BACKEND_URL}/api/masters', masterId, 'working-dates', currentMonth.getMonth() + 1, currentMonth.getFullYear(), currentBranch?.id],
+    queryKey: [`${SECONDARY_API_BASE_URL}/working-dates`, masterId, currentMonth.getMonth() + 1, currentMonth.getFullYear(), currentBranch?.id],
     queryFn: async (): Promise<WorkingDate[]> => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates?month=${currentMonth.getMonth() + 1}&year=${currentMonth.getFullYear()}&branchId=${currentBranch?.id}`);
+      const res = await fetch(`${SECONDARY_API_BASE_URL}/working-dates?month=${currentMonth.getMonth() + 1}&year=${currentMonth.getFullYear()}&branchId=${currentBranch?.id}`, {
+        headers: authHeaders(),
+        credentials: 'include'
+      });
       if (!res.ok) throw new Error('Failed to fetch working dates');
       return res.json();
     },
@@ -53,9 +67,13 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
   // Мутация для сохранения рабочей даты
   const saveWorkingDate = useMutation({
     mutationFn: async (data: { workDate: string; startTime: string; endTime: string }) => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates`, {
+      const res = await fetch(`${SECONDARY_API_BASE_URL}/working-dates`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...authHeaders()
+        },
+        credentials: 'include',
         body: JSON.stringify({
           workDate: data.workDate,
           startTime: data.startTime,
@@ -81,8 +99,10 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
   // Мутация для удаления рабочей даты
   const deleteWorkingDate = useMutation({
     mutationFn: async (workDate: string) => {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/masters/${masterId}/working-dates/${workDate}?branchId=${currentBranch?.id}`, {
+      const res = await fetch(`${SECONDARY_API_BASE_URL}/working-dates/${workDate}?branchId=${currentBranch?.id}`, {
         method: 'DELETE',
+        headers: authHeaders(),
+        credentials: 'include'
       });
       if (!res.ok) throw new Error('Failed to delete working date');
       return res.json();
@@ -96,8 +116,15 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
     },
   });
 
+  const toLocalDate = (isoString: string) => {
+    const d = new Date(isoString);
+    // Backend присылает время на 6 часов раньше (UTC), корректируем в локальную дату
+    d.setHours(d.getHours() + 6);
+    return d;
+  };
+
   // Преобразуем даты в объекты Date для календаря
-  const workingDateObjects = workingDates.map(wd => new Date(wd.work_date));
+  const workingDateObjects = workingDates.map(wd => toLocalDate(wd.work_date));
 
   // Обработчик выбора даты в календаре
   const handleDateSelect = (date: Date | undefined) => {
@@ -107,7 +134,7 @@ const MasterWorkingDatesCalendar: React.FC<MasterWorkingDatesCalendarProps> = ({
     
     // Проверяем, есть ли уже рабочая дата для этого дня
     const dateStr = format(date, 'yyyy-MM-dd');
-    const existingDate = workingDates.find(wd => wd.work_date === dateStr);
+    const existingDate = workingDates.find(wd => format(toLocalDate(wd.work_date), 'yyyy-MM-dd') === dateStr);
     
     if (existingDate) {
       setEditingDate(existingDate);

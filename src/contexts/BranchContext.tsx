@@ -4,6 +4,7 @@ import { useAuth } from "./SimpleAuthContext";
 import { $apiSecondary } from "@/API/http";
 
 export interface Branch {
+  name: ReactNode;
   id: number;
   branches: string;
   address: string;
@@ -19,7 +20,7 @@ interface BranchContextType {
   isLoading: boolean;
   error: string | null;
   refetchBranches: () => Promise<void>;
-  orgData: Organization | null;
+  orgData: Organization | number | null;
 }
 
  interface Organization {
@@ -49,8 +50,21 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [orgData, setOrgData] = useState<Organization | null>(null);
+  const [orgData, setOrgData] = useState<Organization | number | null>(null);
   const [orgFetched, setOrgFetched] = useState(false); // Флаг что организация уже загружена
+
+  // Пробуем извлечь id организации напрямую из данных пользователя
+  const resolveOrganizationId = useCallback(() => {
+    if (!user) return null;
+
+    return (
+      user.organization?.id ||
+      user.organisationId ||
+      user.organization_id ||
+      user.orgId ||
+      null
+    );
+  }, [user]);
 
     const logCheck = async () => {
     // Не запускаем повторно если уже загружали
@@ -97,6 +111,8 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   const fetchBranches = useCallback(async () => {
+    const organizationId = orgData || resolveOrganizationId();
+
     try {
       setIsLoading(true);
       setError(null);
@@ -104,6 +120,13 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
       console.log('🏢 BranchContext: Starting branch loading...');
 
       if (!isAuthenticated || !user) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Без организации не сможем загрузить филиалы
+      if (!organizationId) {
+        console.log('⚠️ No organization id found for user, skipping branches loading');
         setIsLoading(false);
         return;
       }
@@ -117,7 +140,7 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
       
       // Используем $apiSecondary для автоматического обновления токена
       const branchesResponse = await $apiSecondary.get<Branch[] | { branches: Branch[] }>(
-        `/branches?organizationId=${orgData}`
+        `/branches?organizationId=${organizationId}`
       );
 
       const branchesData = branchesResponse.data;
@@ -151,7 +174,7 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, isAuthenticated, orgData]);
+  }, [user, isAuthenticated, orgData, resolveOrganizationId]);
 
   const setBranch = (branch: Branch) => {
     setCurrentBranch(branch);
@@ -166,12 +189,22 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, isAuthenticated]);
 
+  // Если id организации можно получить из профиля, сохраняем его сразу
+  useEffect(() => {
+    if (!orgData) {
+      const directOrgId = resolveOrganizationId();
+      if (directOrgId) {
+        setOrgData(directOrgId as any);
+      }
+    }
+  }, [orgData, resolveOrganizationId]);
+
   useEffect(() => {
     // Загружаем филиалы только когда orgData готов
-    if (orgData && !branches.length) {
+    if ((orgData || resolveOrganizationId()) && !branches.length) {
       fetchBranches();
     }
-  }, [orgData]);
+  }, [orgData, resolveOrganizationId, branches.length, fetchBranches]);
 
   const value = {
     currentBranch,

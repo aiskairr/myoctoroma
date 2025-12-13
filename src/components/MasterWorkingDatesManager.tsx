@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
 interface WorkingDate {
+  id?: number;
   date: string; // ISO date string
   startTime: string;
   endTime: string;
@@ -22,6 +23,7 @@ interface WorkingDate {
 
 // Интерфейс для данных с сервера
 interface ServerWorkingDate {
+  id?: number;
   work_date: string;
   start_time: string;
   end_time: string;
@@ -45,31 +47,43 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
   const queryClient = useQueryClient();
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<string>('');
-  const [startTime, setStartTime] = useState('07:00');
-  const [endTime, setEndTime] = useState('23:59');
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('18:00');
   const [viewMonth, setViewMonth] = useState(new Date());
 
   // Загружаем рабочие дни с сервера, если передан masterId
-  const { data: serverWorkingDates, isLoading: isLoadingServerDates } = useQuery<ServerWorkingDate[]>({
+  const { data: serverWorkingDates, isLoading: isLoadingServerDates } = useQuery<ServerWorkingDate[] | { data: ServerWorkingDate[] }>({
     queryKey: [`working-dates?staffId=${masterId}&branchId=${currentBranch?.id}`],
     queryFn: async () => {
       if (!masterId) return [];
-      const response = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates?staffId=${masterId}&branchId=${currentBranch?.id}`);
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates?staffId=${masterId}&branchId=${currentBranch?.id}`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch working dates');
       }
-      return response.json();
+      const result = await response.json();
+      if (Array.isArray(result)) return result;
+      if (result && Array.isArray((result as any).data)) return (result as any).data;
+      return [];
     },
     enabled: !!masterId,
   });
 
   // Функция конвертации данных с сервера в локальный формат
-  const convertServerToLocalFormat = (serverDates: ServerWorkingDate[]): WorkingDate[] => {
-    return serverDates.map(date => ({
+  const convertServerToLocalFormat = (serverDates: ServerWorkingDate[] | { data: ServerWorkingDate[] }): WorkingDate[] => {
+    const dates = Array.isArray(serverDates) ? serverDates : serverDates?.data || [];
+    return dates.map(date => ({
+      id: date.id,
       date: format(new Date(date.work_date), 'yyyy-MM-dd'),
       startTime: date.start_time,
       endTime: date.end_time,
-      branchId: date.branch_id
+      branchId: date.branch_id?.toString?.() || ''
     }));
   };
 
@@ -88,10 +102,14 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
         throw new Error('Master ID is required');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates?staffId=${masterId}&branchId=${currentBranch?.id}`, {
+      const authToken = localStorage.getItem('auth_token');
+      const branchParam = data.branchId || currentBranch?.id;
+
+      const response = await fetch(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates/${masterId}?branchId=${branchParam}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
         },
         body: JSON.stringify(data),
         credentials: 'include'
@@ -111,15 +129,20 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
 
   // Мутация для удаления рабочего дня
   const deleteWorkingDateMutation = useMutation({
-    mutationFn: async (data: { workDate: string; branchId: string }) => {
+    mutationFn: async (data: { workDate: string; branchId: string; id?: string | number }) => {
       if (!masterId) {
         throw new Error('Master ID is required');
       }
 
+      const authToken = localStorage.getItem('auth_token');
+
       const response = await fetch(
-        `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/api/masters/${masterId}/working-dates/${data.workDate}?branchId=${data.branchId}`,
+        `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/working-dates/${data.id || data.workDate}?branchId=${data.branchId}`,
         {
           method: 'DELETE',
+          headers: {
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+          },
           credentials: 'include'
         }
       );
@@ -131,7 +154,15 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      // Мгновенно убираем дату из UI
+      onWorkingDatesChange(
+        workingDates.filter(wd => {
+          if (variables.id) return wd.id !== Number(variables.id);
+          return !(wd.date === variables.workDate && wd.branchId === variables.branchId);
+        })
+      );
+
       toast({
         title: "Рабочий день удален",
         description: "Рабочий день успешно удален",
@@ -139,7 +170,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
       });
 
       // Обновляем данные с сервера
-      queryClient.invalidateQueries({ queryKey: ['working-dates', masterId] });
+      queryClient.invalidateQueries({ queryKey: [`working-dates?staffId=${masterId}&branchId=${currentBranch?.id}`] });
     },
     onError: (error: Error) => {
       toast({
@@ -213,7 +244,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
     }
   };
 
-  const handleRemoveWorkingDate = (dateToRemove: string, branchId: string) => {
+  const handleRemoveWorkingDate = (dateToRemove: string, branchId: string, id?: string | number) => {
     if (!masterId) {
       toast({
         title: "Ошибка",
@@ -225,6 +256,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
 
     // Отправляем DELETE запрос на сервер
     deleteWorkingDateMutation.mutate({
+      id,
       workDate: dateToRemove,
       branchId: branchId
     });
@@ -263,7 +295,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                   <SelectContent>
                     {branches.map((branch) => (
                       <SelectItem key={branch.id} value={branch.id.toString()}>
-                        {branch.branches}
+                        {branch.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -425,7 +457,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                   const branch = branches.find(b => b.id.toString() === wd.branchId);
                   return (
                     <div
-                      key={`${wd.date}-${wd.branchId}-${index}`}
+                      key={`${wd.id || wd.date}-${wd.branchId}-${index}`}
                       className="flex items-center justify-between p-3 border rounded-lg"
                     >
                       <div className="flex items-center space-x-3">
@@ -442,7 +474,7 @@ const MasterWorkingDatesManager: React.FC<MasterWorkingDatesManagerProps> = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleRemoveWorkingDate(wd.date, wd.branchId)}
+                        onClick={() => handleRemoveWorkingDate(wd.date, wd.branchId, wd.id)}
                         disabled={deleteWorkingDateMutation.isPending}
                         className="text-destructive hover:text-destructive"
                       >

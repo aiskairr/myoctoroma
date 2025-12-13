@@ -74,7 +74,7 @@ https://lesser-felicdad-promconsulting-79f07228.koyeb.app
 
 **Secondary Backend (вторичный):**
 ```
-https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app
+https://octobackend.com/api/main/
 ```
 Готов к использованию для специфичных сервисов.
 
@@ -156,7 +156,7 @@ const response = await $apiSecondary.get('/api/masters');
 VITE_BACKEND_URL=https://lesser-felicdad-promconsulting-79f07228.koyeb.app
 
 # Secondary Backend (для специфичных сервисов)
-VITE_SECONDARY_BACKEND_URL=https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app
+VITE_SECONDARY_BACKEND_URL=https://octobackend.com/api/main/
 ```
 
 ### src/API/http.ts
@@ -191,7 +191,7 @@ fetch('https://lesser-felicdad-promconsulting-79f07228.koyeb.app/api/tasks?branc
   .catch(e => console.error('❌ Ошибка:', e));
 
 // Тест Secondary Backend
-fetch('https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app/api/tasks?branchId=1', 
+fetch('https://octobackend.com/api/main//api/tasks?branchId=1', 
   { credentials: 'include' })
   .then(r => r.json())
   .then(d => console.log('✅ Secondary работает:', d))

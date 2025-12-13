@@ -63,7 +63,7 @@ export const calendarService = {
   // Получение списка мастеров
   async getMasters(): Promise<Master[]> {
     try {
-      const response = await axios.get<Master[]>('${import.meta.env.VITE_BACKEND_URL}/api/crm/masters');
+      const response = await axios.get<Master[]>('${import.meta.env.VITE_BACKEND_URL}/staff');
       return response.data;
     } catch (error) {
       console.error('Error fetching masters:', error);
@@ -74,7 +74,7 @@ export const calendarService = {
   // Получение мастера по ID
   async getMaster(id: number): Promise<Master> {
     try {
-      const response = await axios.get<Master>(`${import.meta.env.VITE_BACKEND_URL}/api/crm/masters/${id}`);
+      const response = await axios.get<Master>(`${import.meta.env.VITE_BACKEND_URL}/staff/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching master ${id}:`, error);

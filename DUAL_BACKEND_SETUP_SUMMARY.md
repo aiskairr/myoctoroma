@@ -5,7 +5,7 @@
 ### 1. Обновлен .env файл ✅
 ```env
 VITE_BACKEND_URL=https://lesser-felicdad-promconsulting-79f07228.koyeb.app
-VITE_SECONDARY_BACKEND_URL=https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app
+VITE_SECONDARY_BACKEND_URL=https://octobackend.com/api/main/
 ```
 
 ### 2. Обновлен src/API/http.ts ✅
@@ -36,7 +36,7 @@ VITE_SECONDARY_BACKEND_URL=https://scattered-ermentrude-promconsulting-23cbccde.
 - И всех остальных эндпоинтов
 
 ### Secondary Backend (опционально)
-**URL:** `https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app`
+**URL:** `https://octobackend.com/api/main/`
 
 Готов к использованию для:
 - Новых микросервисов
@@ -120,7 +120,7 @@ console.log('Secondary:', import.meta.env.VITE_SECONDARY_BACKEND_URL);
 ### Ожидаемый результат:
 ```
 Primary: https://lesser-felicdad-promconsulting-79f07228.koyeb.app
-Secondary: https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app
+Secondary: https://octobackend.com/api/main/
 ```
 
 ## Следующие шаги

@@ -8,7 +8,7 @@
 
 ### До:
 - Использовались старые endpoints:
-  - `PUT /api/crm/masters/{id}` для мастеров
+  - `PUT /staff/{id}` для мастеров
   - `PUT /api/administrators/{id}` для администраторов
 - Отдельная логика для создания/обновления user accounts
 

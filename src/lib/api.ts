@@ -48,9 +48,11 @@ export const apiRequest = async (endpoint: string, options: ApiRequestOptions = 
   // Используем credentials только для endpoints которым это действительно нужно
   const needsCredentials = endpoint.startsWith('/api/auth') || 
                           endpoint.startsWith('/api/organisation') ||
-                          endpoint.includes('/whatsapp/');
+                          endpoint.includes('/whatsapp/') ||
+                          endpoint.includes('/working-dates');
   
   const config: RequestInit = {
+    cache: 'no-store', // avoid 304 Not Modified with empty bodies
     credentials: needsCredentials ? 'include' : 'omit',
     ...fetchOptions,
     headers
@@ -62,7 +64,7 @@ export const apiRequest = async (endpoint: string, options: ApiRequestOptions = 
   let baseUrl: string;
   if (endpoint.startsWith('http')) {
     baseUrl = '';
-  } else if (endpoint.startsWith('/clients') || endpoint.startsWith('/branches') || endpoint.startsWith('/user') || endpoint.startsWith('/admin') || endpoint.startsWith('/staff') || endpoint.startsWith('/staffAuthorization') || endpoint.startsWith('/working-dates') || endpoint.startsWith('/booking')) {
+  } else if (endpoint.startsWith('/clients') || endpoint.startsWith('/assignments') || endpoint.startsWith('/branches') || endpoint.startsWith('/user') || endpoint.startsWith('/admin') || endpoint.startsWith('/staff') || endpoint.startsWith('/staffAuthorization') || endpoint.startsWith('/working-dates') || endpoint.startsWith('/booking')) {
     baseUrl = SECONDARY_API_BASE_URL;
   } else {
     baseUrl = PRIMARY_API_BASE_URL;
@@ -88,6 +90,15 @@ export const apiRequest = async (endpoint: string, options: ApiRequestOptions = 
 
   try {
     let response = await executeRequest();
+
+    // Some hosting providers return 304 with an empty body; treat it as an empty JSON response
+    if (response.status === 304) {
+      console.warn('📦 Received 304 Not Modified, returning empty JSON payload to avoid fetch failures.');
+      return new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     if (response.status === 401 && !skipAuth) {
       console.warn('🔄 Access token expired. Attempting refresh before retry...');

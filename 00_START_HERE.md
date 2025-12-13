@@ -9,7 +9,7 @@
 Ваш проект теперь поддерживает **2 бэкенда одновременно** без конфликтов:
 
 1. **Primary Backend** (основной) - `https://lesser-felicdad-promconsulting-79f07228.koyeb.app`
-2. **Secondary Backend** (вторичный) - `https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app`
+2. **Secondary Backend** (вторичный) - `https://octobackend.com/api/main/`
 
 ---
 
@@ -29,7 +29,7 @@ console.log(import.meta.env.VITE_SECONDARY_BACKEND_URL);
 **Ожидаемый результат:**
 ```
 https://lesser-felicdad-promconsulting-79f07228.koyeb.app
-https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app
+https://octobackend.com/api/main/
 ```
 
 ---
@@ -162,7 +162,7 @@ fetch('https://lesser-felicdad-promconsulting-79f07228.koyeb.app/api/tasks?branc
   .catch(e => console.error('❌ Error:', e));
 
 // Тест Secondary Backend
-fetch('https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app/api/tasks?branchId=1', 
+fetch('https://octobackend.com/api/main//api/tasks?branchId=1', 
   { credentials: 'include' })
   .then(r => r.json())
   .then(d => console.log('✅ Secondary:', d))

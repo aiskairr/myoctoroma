@@ -2,8 +2,11 @@
 // Endpoints на VITE_BACKEND_URL (Primary Backend)
 
 interface StaffInfo {
-  first_name: string;
-  last_name: string;
+  id: number;
+  firstname?: string;
+  lastname?: string;
+  first_name?: string;
+  last_name?: string;
   role: string;
 }
 
@@ -42,20 +45,10 @@ interface SalaryResponse {
 }
 
 interface CreateSalaryRequest {
-  staff: {
-    id: number;
-    firstname: string;
-    lastname: string;
-    role: string;
-  };
+  staff: StaffInfo;
   baseSalary: number;
   commissionRate: number;
-  createdBy: {
-    id: number;
-    firstname: string;
-    lastname: string;
-    role: string;
-  };
+  createdBy: StaffInfo;
 }
 
 interface CreateSalaryResponse {
@@ -83,7 +76,14 @@ class SalaryService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_BACKEND_URL;
+    // Используем вторичный бэкенд если задан (новые эндпоинты /api/tenant)
+    const secondary = import.meta.env.VITE_SECONDARY_BACKEND_URL;
+    if (secondary?.includes('/api/main')) {
+      // salary endpoints сидят на /api/tenant
+      this.baseUrl = secondary.replace('/api/main', '/api/tenant');
+    } else {
+      this.baseUrl = secondary || import.meta.env.VITE_BACKEND_URL;
+    }
   }
 
   /**
@@ -117,8 +117,10 @@ class SalaryService {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
         },
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -170,17 +172,39 @@ class SalaryService {
 
       const url = new URL(`${this.baseUrl}/salaries`);
       url.searchParams.append('branchId', branchId.toString());
+      url.searchParams.append('staffId', salaryData.staff.id.toString());
 
-      console.log('📡 POST URL:', url.toString());
+      console.log('📡 PATCH URL:', url.toString());
       console.log('📦 Request Body:', JSON.stringify(salaryData, null, 2));
 
+      // Бэкенд ожидает staff и created_by в snake_case
+      const payload = {
+        staff_id: salaryData.staff.id,
+        staff: {
+          id: salaryData.staff.id,
+          first_name: salaryData.staff.first_name || salaryData.staff.firstname || '',
+          last_name: salaryData.staff.last_name || salaryData.staff.lastname || '',
+          role: salaryData.staff.role,
+        },
+        base_salary: salaryData.baseSalary,
+        commission_rate: salaryData.commissionRate,
+        created_by: {
+          id: salaryData.createdBy.id,
+          first_name: salaryData.createdBy.first_name || salaryData.createdBy.firstname || '',
+          last_name: salaryData.createdBy.last_name || salaryData.createdBy.lastname || '',
+          role: salaryData.createdBy.role,
+        },
+      };
+
       const response = await fetch(url.toString(), {
-        method: 'POST',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
         },
-        body: JSON.stringify(salaryData),
+        credentials: 'include',
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {

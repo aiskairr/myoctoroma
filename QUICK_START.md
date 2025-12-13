@@ -12,7 +12,7 @@ cat .env
 Должны видеть:
 ```
 VITE_BACKEND_URL=https://lesser-felicdad-promconsulting-79f07228.koyeb.app
-VITE_SECONDARY_BACKEND_URL=https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app
+VITE_SECONDARY_BACKEND_URL=https://octobackend.com/api/main/
 ```
 
 ### 2. Запустите dev сервер
@@ -139,7 +139,7 @@ async function createTask() {
 3. Выполните любой API запрос в приложении
 4. Проверьте URL запроса:
    - Должен начинаться с `https://lesser-felicdad-promconsulting-79f07228.koyeb.app` (Primary)
-   - Или с `https://scattered-ermentrude-promconsulting-23cbccde.koyeb.app` (Secondary)
+   - Или с `https://octobackend.com/api/main/` (Secondary)
 
 ## Troubleshooting
 

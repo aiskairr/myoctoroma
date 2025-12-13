@@ -963,7 +963,7 @@ const TaskCard = ({ task, onTaskUpdated }: { task: Task, onTaskUpdated: () => vo
 
   // Получаем список мастеров для выбора
   const { data: mastersData, isLoading: isLoadingMasters } = useQuery<Master[]>({
-    queryKey: ['/api/crm/masters'],
+    queryKey: ['/staff'],
   });
 
   // Получаем список услуг для диалога выбора времени

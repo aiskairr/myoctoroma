@@ -101,7 +101,7 @@ export function useTasks(params: TasksQueryParams = {}) {
     queryParams.append('userMasterId', (params.userMasterId || user?.master_id || '').toString());
   }
   
-  const endpoint = `/calendar?${queryParams.toString()}`;
+  const endpoint = `/assignments?${queryParams.toString()}`;
 
   // Убрали избыточные логи - оставляем только в queryFn
 
@@ -111,17 +111,89 @@ export function useTasks(params: TasksQueryParams = {}) {
     queryFn: async (): Promise<TaskFromAPI[]> => {
       console.log("📡 Making tasks API request to:", endpoint);
       
-      const data = await apiGetJson<TaskFromAPI[]>(endpoint);
-      console.log("📦 Raw tasks API Response:", data);
+      const raw = await apiGetJson<any>(endpoint);
+      console.log("📦 Raw tasks API Response:", raw);
+
+      const shiftTime = (timeStr?: string | null, offsetHours = 6) => {
+        if (!timeStr) return null;
+        const [h, m] = timeStr.split(':').map(Number);
+        if (Number.isNaN(h) || Number.isNaN(m)) return timeStr;
+        const d = new Date(Date.UTC(1970, 0, 1, h, m, 0, 0));
+        d.setUTCHours(d.getUTCHours() + offsetHours);
+        const hh = String(d.getUTCHours()).padStart(2, '0');
+        const mm = String(d.getUTCMinutes()).padStart(2, '0');
+        return `${hh}:${mm}`;
+      };
+
+      const normalizeAssignment = (item: any): TaskFromAPI => {
+        const scheduleDateIso = item.assignment_date
+          ? new Date(item.assignment_date).toISOString().split('T')[0]
+          : null;
+
+        return {
+          id: item.id?.toString?.() || item.id,
+          clientId: item.client_id || 0,
+          status: item.status || 'scheduled',
+          serviceType: item.service_snapshot?.name || item.serviceType || null,
+          serviceServiceId: item.service_snapshot?.id,
+          serviceDuration: item.service_snapshot?.duration ?? item.serviceDuration ?? null,
+          servicePrice: item.service_snapshot?.price ?? item.servicePrice ?? null,
+          discount: item.discount ? Number(item.discount) : undefined,
+          finalPrice: item.final_price ? Number(item.final_price) : item.finalPrice ?? null,
+          scheduleDate: scheduleDateIso,
+          scheduleTime: shiftTime(item.start_time, 6) || item.scheduleTime,
+          endTime: shiftTime(item.end_time, 6) || item.endTime,
+          masterId: item.employee_id ?? item.masterId ?? null,
+          masterName: item.employee_snapshot
+            ? `${item.employee_snapshot.first_name || ''} ${item.employee_snapshot.last_name || ''}`.trim()
+            : item.masterName || null,
+          notes: item.notes || null,
+          branchId: item.branch_id?.toString?.() || item.branchId || '',
+          source: item.source || null,
+          chatId: item.chat_id || null,
+          mother: item.mother || null,
+          paymentMethod: item.payment_method || null,
+          adminName: item.manager_snapshot
+            ? `${item.manager_snapshot.first_name || ''} ${item.manager_snapshot.last_name || ''}`.trim()
+            : item.adminName || null,
+          paid: item.paid,
+          createdAt: item.createdAt || item.created_at || null,
+          updatedAt: item.updatedAt || item.updated_at || null,
+          client: item.client_snapshot
+            ? {
+                id: item.client_id,
+                telegramId: item.client_snapshot.telegram_id,
+                firstName: item.client_snapshot.first_name,
+                lastName: item.client_snapshot.last_name,
+                username: item.client_snapshot.username,
+                customName: item.client_snapshot.custom_name,
+                phoneNumber: item.client_snapshot.phone_number,
+                branchId: item.branch_id?.toString?.(),
+                organisationId: item.organization_id,
+                firstSeenAt: item.client_snapshot.first_seen_at,
+                lastActiveAt: item.client_snapshot.last_active_at,
+                isActive: item.client_snapshot.is_active,
+              }
+            : item.client,
+        };
+      };
+
+      const list: any[] = Array.isArray(raw)
+        ? raw
+        : raw?.data || raw?.assignments || raw?.tasks || [];
+
+      if (Array.isArray(list) && list.length > 0 && !list.every(item => 'scheduleDate' in item)) {
+        return list.map(normalizeAssignment);
+      }
       
       // Проверяем формат ответа и возвращаем массив задач
-      if (Array.isArray(data)) {
-        return data;
+      if (Array.isArray(list)) {
+        return list as TaskFromAPI[];
       }
       
       // Если данные в другом формате, пытаемся извлечь массив
-      if (data && typeof data === 'object' && 'tasks' in data) {
-        return (data as any).tasks || [];
+      if (raw && typeof raw === 'object' && 'tasks' in raw) {
+        return (raw as any).tasks || [];
       }
       
       return [];
