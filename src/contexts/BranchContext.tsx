@@ -79,7 +79,17 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
       // Используем $apiSecondary для автоматического обновления токена
       // Токен добавляется автоматически через interceptor
       const response = await $apiSecondary.get<Organization[]>(
-        `/organizations?ownerId=${user?.id}`
+        `/organizations`,
+        {
+          params: {
+            ownerId: user?.id,
+            _: Date.now(), // избежать 304
+          },
+          headers: {
+            'Cache-Control': 'no-cache',
+            Pragma: 'no-cache',
+          },
+        }
       );
 
       if (Array.isArray(response.data) && response.data.length > 0) {
@@ -140,7 +150,17 @@ export const BranchProvider = ({ children }: { children: ReactNode }) => {
       
       // Используем $apiSecondary для автоматического обновления токена
       const branchesResponse = await $apiSecondary.get<Branch[] | { branches: Branch[] }>(
-        `/branches?organizationId=${organizationId}`
+        `/branches`,
+        {
+          params: {
+            organizationId: organizationId,
+            _: Date.now(), // избежать 304
+          },
+          headers: {
+            'Cache-Control': 'no-cache',
+            Pragma: 'no-cache',
+          },
+        }
       );
 
       const branchesData = branchesResponse.data;

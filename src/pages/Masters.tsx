@@ -49,6 +49,7 @@ interface Master {
   name: string;
   first_name?: string;
   last_name?: string;
+  role?: string;
   specialty?: string;
   description?: string;
   isActive: boolean;
@@ -98,7 +99,9 @@ const MasterForm: React.FC<{
   const { t } = useLocale();
   const { currentBranch, branches } = useBranch();
   const [formData, setFormData] = useState({
-    name: master?.first_name || '',
+    name: master?.name || master?.first_name || '',
+    firstname: master?.first_name || master?.name?.split(' ')[0] || '',
+    lastname: master?.last_name || master?.name?.split(' ').slice(1).join(' ') || '',
     specialty: master?.specialty || '',
     description: master?.description || '',
     isActive: master?.isActive ?? true,
@@ -107,6 +110,8 @@ const MasterForm: React.FC<{
     baseSalary: master?.baseSalary || 10000,
     commissionRate: master?.commissionRate || 0.1,
   });
+
+  console.log('Initial formData:', master);
 
   const [accountData, setAccountData] = useState({
     email: '',
@@ -142,9 +147,30 @@ const MasterForm: React.FC<{
     }
   }, [fetchedWorkingDates]);
 
+  // Синхронизация формы при открытии/смене мастера
+  useEffect(() => {
+    if (master) {
+      setFormData({
+        name: master.name || master.first_name || '',
+        firstname: master.first_name || master.name?.split(' ')[0] || '',
+        lastname: master.last_name || master.name?.split(' ').slice(1).join(' ') || '',
+        specialty: master.specialty || '',
+        description: master.description || '',
+        isActive: master.isActive ?? true,
+        startWorkHour: master.startWorkHour || '09:00',
+        endWorkHour: master.endWorkHour || '20:00',
+        baseSalary: master.baseSalary || 10000,
+        commissionRate: master.commissionRate || 0.1,
+      });
+      setWorkingDates(master.workingDates || []);
+    }
+  }, [master]);
+
   // Обновление прогресса заполнения формы
   useEffect(() => {
     const fields = [
+      formData.firstname,
+      formData.lastname,
       formData.name,
       formData.specialty,
       formData.description,
@@ -252,6 +278,32 @@ const MasterForm: React.FC<{
         </div>
         <Separator />
         <div className="space-y-5">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="firstname" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.firstname')}
+            </Label>
+            <Input
+              id="firstname"
+              name="firstname"
+              value={formData.firstname}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="lastname" className="col-span-1 text-sm font-medium text-gray-700">
+              {t('masters.lastname')}
+            </Label>
+            <Input
+              id="lastname"
+              name="lastname"
+              value={formData.lastname}
+              onChange={handleChange}
+              className="col-span-3 rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              required
+            />
+          </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="col-span-1 text-sm font-medium text-gray-700">
               {t('masters.name')} <span className="text-red-500">*</span>
@@ -499,6 +551,8 @@ const MasterForm: React.FC<{
             disabled={
               isPending || 
               isDeleting || 
+              !formData.firstname.trim() ||
+              !formData.lastname.trim() ||
               !formData.name.trim() ||
               (!master && (!accountData.email.trim() || !accountData.password.trim()))
             }
@@ -1763,16 +1817,46 @@ const Masters: React.FC = () => {
   });
 
   const { data: masters, isLoading, isError, refetch } = useQuery({
-    queryKey: ['/staff?organizationId=', orgData + "&role=employee"],
+    queryKey: ['/staff?organizationId=', `${orgData}&role=employee`],
     queryFn: async () => {
       if (!orgData) {
         return [];
       }
-      const url = `/staff?organizationId=${orgData}`;
+      const url = `/staff?organizationId=${orgData}&role=employee`;
       return await apiGetJson(url);
     },
     enabled: !!orgData,
   });
+  const masterListRaw = Array.isArray(masters) ? masters : (masters as any)?.data || [];
+  const masterList = masterListRaw.map((m: any) => {
+    const first = m.first_name || m.firstname || m.firstName || '';
+    const last = m.last_name || m.lastname || m.lastName || '';
+    return {
+      ...m,
+      first_name: first || m.first_name,
+      last_name: last || m.last_name,
+      name: m.name || [first, last].filter(Boolean).join(' ') || m.username || '',
+    };
+  });
+
+  const extractNames = (staff: any) => {
+    const fullName = typeof staff?.name === 'string' ? staff.name.split(' ') : [];
+    return {
+      firstName:
+        staff?.firstname ||
+        staff?.first_name ||
+        staff?.firstName ||
+        fullName[0] ||
+        staff?.username ||
+        '',
+      lastName:
+        staff?.lastname ||
+        staff?.last_name ||
+        staff?.lastName ||
+        (fullName.length > 1 ? fullName.slice(1).join(' ') : '') ||
+        '',
+    };
+  };
   console.log(masters + " sdoksodkoskodk")
   const createMasterMutation = useMutation({
     mutationFn: async (data: Partial<Master>) => {
@@ -1834,7 +1918,7 @@ const Masters: React.FC = () => {
     },
     onSuccess: async (result) => {
       const { staffData, baseSalary, commissionRate } = result;
-
+      console.log('Staff created successfully:', staffData);
       setIsAddDialogOpen(false);
       toast({
         title: t('masters.master_created'),
@@ -1878,12 +1962,13 @@ const Masters: React.FC = () => {
       if (staffData && staffData.id && user && currentBranch?.id) {
         try {
           console.log('📊 Staff data for salary:', staffData);
+          const names = extractNames(staffData);
 
           const salaryResult = await salaryService.createSalaryRecord({
             staff: {
               id: staffData.id,
-              firstname: staffData.firstname || (staffData as any).first_name || staffData.username,
-              lastname: staffData.lastname || (staffData as any).last_name || '',
+              firstname: names.firstName,
+              lastname: staffData.last_name,
               role: staffData.role || 'employee',
             },
             baseSalary: baseSalary || 10000,
@@ -1934,11 +2019,15 @@ const Masters: React.FC = () => {
         }];
       }
 
-      // Маппинг полей: name -> firstname/lastname
+      // Маппинг полей: firstname/lastname/name -> payload
+      const nameParts = masterData.name ? masterData.name.split(' ') : [];
+      if (masterData.firstname || nameParts.length) {
+        staffUpdatePayload.firstname = masterData.firstname || nameParts[0] || '';
+      }
+      if (masterData.lastname || nameParts.length > 1) {
+        staffUpdatePayload.lastname = masterData.lastname || nameParts.slice(1).join(' ') || '';
+      }
       if (masterData.name) {
-        const nameParts = masterData.name.split(' ');
-        staffUpdatePayload.firstname = nameParts[0] || '';
-        staffUpdatePayload.lastname = nameParts.slice(1).join(' ') || '';
         staffUpdatePayload.username = masterData.name;
       }
 
@@ -2071,12 +2160,13 @@ const Masters: React.FC = () => {
         try {
           console.log('💰 Creating/updating salary record for master...');
           console.log('📊 Updated staff data:', updatedStaff);
+          const names = extractNames(updatedStaff);
 
           const salaryResult = await salaryService.createSalaryRecord({
             staff: {
               id: updatedStaff.id,
-              firstname: updatedStaff.firstname || (updatedStaff as any).first_name || updatedStaff.username,
-              lastname: updatedStaff.lastname || (updatedStaff as any).last_name || '',
+              firstname: names.firstName,
+              lastname: names.lastName,
               role: updatedStaff.role || 'employee',
             },
             baseSalary: baseSalary || 10000,
@@ -2225,12 +2315,13 @@ const Masters: React.FC = () => {
       if (staffData && staffData.id && user && currentBranch?.id) {
         try {
           console.log('📊 Staff data for salary (Administrator):', staffData);
+          const names = extractNames(staffData);
 
           const salaryResult = await salaryService.createSalaryRecord({
             staff: {
               id: staffData.id,
-              firstname: staffData.firstname || (staffData as any).first_name || staffData.username,
-              lastname: staffData.lastname || (staffData as any).last_name || '',
+              firstname: names.firstName,
+              lastname: names.lastName,
               role: staffData.role || 'manager',
             },
             baseSalary: baseSalary || 15000,
@@ -2327,12 +2418,13 @@ const Masters: React.FC = () => {
         try {
           console.log('💰 Creating/updating salary record for administrator...');
           console.log('📊 Updated staff data (Administrator):', updatedStaff);
+          const names = extractNames(updatedStaff);
 
           const salaryResult = await salaryService.createSalaryRecord({
             staff: {
               id: updatedStaff.id,
-              firstname: updatedStaff.firstname || (updatedStaff as any).first_name || updatedStaff.username,
-              lastname: updatedStaff.lastname || (updatedStaff as any).last_name || '',
+              firstname: names.firstName,
+              lastname: names.lastName,
               role: updatedStaff.role || 'manager',
             },
             baseSalary: baseSalary || 15000,
@@ -2607,7 +2699,7 @@ const Masters: React.FC = () => {
         <div className="bg-red-50 p-6 rounded-lg text-red-800 my-8 border border-red-200">
           {t('masters.loading_error')}
         </div>
-      ) : !masters || masters.length === 0 ? (
+      ) : !masterList || masterList.length === 0 ? (
         <div className="bg-gray-50 p-8 rounded-lg text-center my-8 border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('masters.no_masters_title')}</h3>
           <p className="text-gray-500 mb-4">
@@ -2623,17 +2715,19 @@ const Masters: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {masters.data.map((master: Master) => (
-            <MasterCard
-              key={master.id}
-              master={master}
-              onEditClick={() => handleEditClick(master)}
-              onDeleteClick={() => handleDeleteClick(master.id)}
-              onScheduleClick={() => handleScheduleClick(master)}
-              onImageUpload={handleImageUpload}
-              isUploading={uploadingImages[master.id] || false}
-            />
-          ))}
+          {masterList
+            .filter((master: any) => (master as any).role === 'employee')
+            .map((master: Master) => (
+              <MasterCard
+                key={master.id}
+                master={master}
+                onEditClick={() => handleEditClick(master)}
+                onDeleteClick={() => handleDeleteClick(master.id)}
+                onScheduleClick={() => handleScheduleClick(master)}
+                onImageUpload={handleImageUpload}
+                isUploading={uploadingImages[master.id] || false}
+              />
+            ))}
         </div>
       )}
 

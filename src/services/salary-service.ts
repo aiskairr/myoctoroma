@@ -172,32 +172,25 @@ class SalaryService {
 
       const url = new URL(`${this.baseUrl}/salaries`);
       url.searchParams.append('branchId', branchId.toString());
-      url.searchParams.append('staffId', salaryData.staff.id.toString());
 
       console.log('📡 PATCH URL:', url.toString());
       console.log('📦 Request Body:', JSON.stringify(salaryData, null, 2));
 
       // Бэкенд ожидает staff и created_by в snake_case
       const payload = {
-        staff_id: salaryData.staff.id,
         staff: {
           id: salaryData.staff.id,
-          first_name: salaryData.staff.first_name || salaryData.staff.firstname || '',
-          last_name: salaryData.staff.last_name || salaryData.staff.lastname || '',
+          firstname: salaryData.staff.first_name || salaryData.staff.firstname || '',
+          lastname: salaryData.staff.last_name || salaryData.staff.lastname || '',
           role: salaryData.staff.role,
         },
-        base_salary: salaryData.baseSalary,
-        commission_rate: salaryData.commissionRate,
-        created_by: {
-          id: salaryData.createdBy.id,
-          first_name: salaryData.createdBy.first_name || salaryData.createdBy.firstname || '',
-          last_name: salaryData.createdBy.last_name || salaryData.createdBy.lastname || '',
-          role: salaryData.createdBy.role,
-        },
+        baseSalary: salaryData.baseSalary,
+        commissionRate: salaryData.commissionRate,
+       
       };
 
       const response = await fetch(url.toString(), {
-        method: 'PATCH',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

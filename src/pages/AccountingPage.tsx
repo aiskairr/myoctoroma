@@ -5,6 +5,7 @@ import { getBranchIdWithFallback } from '@/utils/branch-utils';
 import { accountingService } from '@/services/accounting-service';
 import { expenseService, type ExpenseRecord } from '@/services/expense-service';
 import { $api } from '@/API/http';
+import { apiGetJson } from '@/lib/api';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import {
@@ -135,11 +136,26 @@ const AccountingPage = () => {
   const fetchMasters = async () => {
     try {
       const branchId = getBranchIdWithFallback(currentBranch, branches);
-      const url = `/api/masters?branchID=${branchId}`;
+      const url = `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff?branchId=${branchId}&_=${Date.now()}`;
       console.log('Fetching masters with URL:', url);
-      const response = await $api.get(url);
-      console.log('Masters response:', response.data);
-      return response.data;
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch masters: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log('Masters response:', data);
+      // API staff возвращает { success, data: [...] }
+      return (data as any)?.data || data;
     } catch (error) {
       console.error('Error fetching masters:', error);
       throw error;
@@ -163,10 +179,10 @@ const AccountingPage = () => {
   const fetchServices = async () => {
     try {
       const branchId = getBranchIdWithFallback(currentBranch, branches);
-      const response = await $api.get(`/services?branchId=${branchId}&page=1&limit=1000`);
-      console.log('Services response:', response.data);
+      const data = await apiGetJson<any>(`/services?branchId=${branchId}`);
+      console.log('Services response:', data);
       // API возвращает пагинированный ответ
-      return response.data?.data || [];
+      return (data as any)?.data || [];
     } catch (error) {
       console.error('Error fetching services:', error);
       throw error;
@@ -194,22 +210,17 @@ const AccountingPage = () => {
       const dateString = new Date(targetDate.getTime() - (targetDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
       
       const branchId = getBranchIdWithFallback(currentBranch, branches);
-      const url = `${import.meta.env.VITE_BACKEND_URL}/accounting?branchId=${branchId}&date=${dateString}`;
+      const url = `/accounting?branchId=${branchId}&date=${dateString}`;
       console.log('Fetching accounting statistics with URL:', url);
       
-      const response = await fetch(url);
-      if (response.ok) {
-        const apiData = await response.json();
-        console.log('Accounting statistics response:', apiData);
-        const dailyIncome = Number(apiData.income || 0);
-        const dailyExpenses = Number(apiData.expenses || 0);
-        const netProfit = Number(apiData.profit || (dailyIncome - dailyExpenses));
-        const recordsCount = Array.isArray(apiData.accountings) ? apiData.accountings.length : Number(apiData.assignments || 0);
-        setDailyStats({ dailyIncome, dailyExpenses, recordsCount, netProfit });
-        setDailyCashData({ dailyIncome, dailyExpenses, netProfit });
-      } else {
-        console.error('Failed to fetch accounting statistics:', response.status);
-      }
+      const apiData = await apiGetJson<any>(url);
+      console.log('Accounting statistics response:', apiData);
+      const dailyIncome = Number(apiData.income || 0);
+      const dailyExpenses = Number(apiData.expenses || 0);
+      const netProfit = Number(apiData.profit || (dailyIncome - dailyExpenses));
+      const recordsCount = Array.isArray(apiData.accountings) ? apiData.accountings.length : Number(apiData.assignments || 0);
+      setDailyStats({ dailyIncome, dailyExpenses, recordsCount, netProfit });
+      setDailyCashData({ dailyIncome, dailyExpenses, netProfit });
     } catch (error) {
       console.error('Error fetching accounting statistics:', error);
     }

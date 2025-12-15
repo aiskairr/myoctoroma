@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, BookOpen, ArrowRight, User, Bot, Calendar, Download } from "lucide-react";
 import { BookingLinkCopy } from "@/components/BookingLinkCopy";
+import WhatsAppConnect from "@/components/WhatsappConnect";
 
 // Простые плейсхолдеры, если нужных компонентов нет в проекте
 const UnifiedImportCard = () => (
@@ -27,17 +28,6 @@ const UnifiedImportCard = () => (
   </Card>
 );
 
-const WhatsAppConnect = () => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Подключение WhatsApp</CardTitle>
-      <CardDescription>Компонент WhatsAppConnect отсутствует — добавьте его для полноценной работы.</CardDescription>
-    </CardHeader>
-    <CardContent>
-      <p className="text-sm text-muted-foreground">Здесь будет форма подключения WhatsApp.</p>
-    </CardContent>
-  </Card>
-);
 
 export default function Settings() {
   const { t } = useLocale();

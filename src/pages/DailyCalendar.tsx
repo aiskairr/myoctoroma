@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { Redirect } from "wouter";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Redirect, useLocation } from "wouter";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -2136,6 +2136,8 @@ const getStatusLabel = (status: string | null | undefined) => {
 export default function DailyCalendar() {
   const { isMaster, isLoading: masterRoleLoading } = useIsMaster();
   const { toast } = useToast();
+  const [location] = useLocation();
+  const prevSearchRef = useRef<string>(new URL(window.location.href).search);
 
   // Если пользователь - мастер, перенаправляем на календарь мастеров
   if (!masterRoleLoading && isMaster) {
@@ -2152,6 +2154,50 @@ export default function DailyCalendar() {
   // Состояние для drag and drop
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [draggedOver, setDraggedOver] = useState<{ time: string; masterId: number } | null>(null);
+
+  // Перезагружаем страницу при изменении query params (например, даты в sidebar календаре)
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const currentSearch = window.location.search;
+      if (prevSearchRef.current && prevSearchRef.current !== currentSearch) {
+        window.location.reload();
+      }
+      prevSearchRef.current = currentSearch;
+    };
+
+    // События history/popstate не ловятся автоматически, добавляем свои
+    const origPushState = history.pushState;
+    history.pushState = function (...args) {
+      const result = origPushState.apply(this, args as any);
+      window.dispatchEvent(new Event("pushstate"));
+      window.dispatchEvent(new Event("locationchange"));
+      return result;
+    };
+    const origReplaceState = history.replaceState;
+    history.replaceState = function (...args) {
+      const result = origReplaceState.apply(this, args as any);
+      window.dispatchEvent(new Event("replacestate"));
+      window.dispatchEvent(new Event("locationchange"));
+      return result;
+    };
+
+    window.addEventListener("popstate", handleLocationChange);
+    window.addEventListener("pushstate", handleLocationChange);
+    window.addEventListener("replacestate", handleLocationChange);
+    window.addEventListener("locationchange", handleLocationChange);
+
+    // Первичная проверка
+    handleLocationChange();
+
+    return () => {
+      window.removeEventListener("popstate", handleLocationChange);
+      window.removeEventListener("pushstate", handleLocationChange);
+      window.removeEventListener("replacestate", handleLocationChange);
+      window.removeEventListener("locationchange", handleLocationChange);
+      history.pushState = origPushState;
+      history.replaceState = origReplaceState;
+    };
+  }, [location]);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());

@@ -1,673 +1,806 @@
-import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import type { Client, Message } from "@/types/schema";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import ClientList from "@/components/ClientList";
-import ConversationHistory from "@/components/ConversationHistory";
-import { format } from "date-fns";
-import { Loader2, Send, AlertTriangle, Edit, Check, X, User, Calendar, Clock, MessageSquare } from "lucide-react";
-import StatusBadge from "@/components/StatusBadge";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
-import { useBranchFilter } from "@/hooks/use-branch-filter";
-import { useLocale } from "@/contexts/LocaleContext";
-import { createApiUrl } from "@/utils/api-url";
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useLocation } from 'wouter';
+import { useLocale } from '@/contexts/LocaleContext';
+import { useBranch } from '@/contexts/BranchContext';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Search, Phone, Loader2, MessageCircle, AlertTriangle, User, Check, CheckCheck, Send, X, Plus, ChevronDown } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { apiGetJson } from '@/lib/api';
+import { format, isToday, isYesterday } from 'date-fns';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
+
+interface WhatsAppChatItem {
+  chatId: string | null;
+  contactNumber: string;
+  contactName: string | null;
+  unreadCount: number;
+  lastMessageTime: string;
+  lastMessage: string;
+  messagesCount: number;
+}
+
+interface ChatsListResponse {
+  success: boolean;
+  data: WhatsAppChatItem[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
+
+interface Message {
+  id: string;
+  direction: 'incoming' | 'outgoing';
+  message: string;
+  to: string;
+  from: string | null;
+  sentAt: string;
+  status: 'SENT' | 'DELIVERED' | 'READ' | 'PENDING';
+  contactName: string | null;
+  contactNumber: string;
+  source: string;
+  clientId: number;
+}
+
+interface ChatHistoryResponse {
+  success: boolean;
+  phone: string;
+  messages: Message[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+  stats: {
+    sentMessages: number;
+    receivedMessages: number;
+    totalMessages: number;
+  };
+}
 
 export default function Chats() {
   const { t } = useLocale();
+  const { currentBranch } = useBranch();
   const { toast } = useToast();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [, setLocation] = useLocation();
+  const accountId = useMemo(() => {
+    if (!currentBranch?.id) return null;
+    return (currentBranch as any).accountID || localStorage.getItem(`wa_account_${currentBranch.id}`);
+  }, [currentBranch]);
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [chats, setChats] = useState<WhatsAppChatItem[]>([]);
+  const [filteredChats, setFilteredChats] = useState<WhatsAppChatItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedChat, setSelectedChat] = useState<WhatsAppChatItem | null>(null);
+  const [page] = useState(1);
+  const [totalChats, setTotalChats] = useState(0);
+  
+  // Состояние для активного чата
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [conversationTopics, setConversationTopics] = useState<Record<string, string>>({});
-  const [wsConnected, setWsConnected] = useState(false);
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [customNameInput, setCustomNameInput] = useState("");
-  const socketRef = useRef<WebSocket | null>(null);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [newMessage, setNewMessage] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Диалог отправки на произвольный номер
+  const [showNewMessageDialog, setShowNewMessageDialog] = useState(false);
+  const [customPhone, setCustomPhone] = useState('');
+  const [customMessage, setCustomMessage] = useState('');
+  const [sendingCustom, setSendingCustom] = useState(false);
 
-  // Запрос данных пользователя
-  const userQuery = useQuery<{ id: number; email: string; username: string }>({
-    queryKey: ["/api/user"],
-    staleTime: Infinity,
-  });
-
-  // Запрос списка клиентов
-  const clientsQuery = useQuery<{ clients: Client[] }>({
-    queryKey: ["/clients"],
-    refetchInterval: 30000,
-  });
-
-  type ClientDetailsResponse = {
-    client: Client;
-    messages: Message[];
+  // Нормализация номера телефона
+  const normalizePhone = (phoneNumber: string) => {
+    return phoneNumber.replace(/^\+/, '');
   };
 
-  // Запрос деталей выбранного клиента и истории сообщений
-  const clientDetailsQuery = useQuery<ClientDetailsResponse>({
-    queryKey: ["/clients", selectedClientId],
-    enabled: !!selectedClientId,
-    refetchInterval: 5000,
-    retry: 3,
-    retryDelay: 1000
-  });
-
-  // Мутация для обновления имени клиента
-  const updateClientNameMutation = useMutation({
-    mutationFn: async ({ telegramId, customName }: { telegramId: string; customName: string }) => {
-      const response = await apiRequest("POST", `/clients/${telegramId}/update-name`, { customName });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/clients"] });
-      queryClient.invalidateQueries({ queryKey: ["/clients", selectedClientId] });
-      toast({
-        title: t('success'),
-        description: t('clients.name_updated'),
-      });
-    },
-    onError: () => {
-      toast({
-        title: t('error'),
-        description: t('clients.name_update_failed'),
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Мутация для отправки сообщения клиенту
-  const sendMessageMutation = useMutation({
-    mutationFn: async ({ telegramId, message }: { telegramId: string; message: string }) => {
-      const response = await apiRequest("POST", `/clients/${telegramId}/send`, { message });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/clients", selectedClientId] });
-      setNewMessage("");
-      toast({
-        title: t('sent'),
-        description: t('clients.message_sent'),
-      });
-    },
-    onError: () => {
-      toast({
-        title: t('error'),
-        description: t('clients.message_send_failed'),
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Синхронизация с URL query params
-  useEffect(() => {
-    const handleUrlChange = () => {
-      const searchParams = new URLSearchParams(window.location.search);
-      const clientIdFromUrl = searchParams.get('clientId');
-
-      if (clientIdFromUrl && clientIdFromUrl !== selectedClientId) {
-        console.log(`Setting client from URL: ${clientIdFromUrl}`);
-        setSelectedClientId(clientIdFromUrl);
-      }
-    };
-
-    // Проверяем при загрузке
-    handleUrlChange();
-
-    // Слушаем изменения URL
-    window.addEventListener('popstate', handleUrlChange);
-    return () => window.removeEventListener('popstate', handleUrlChange);
-  }, [selectedClientId]);
-
-  // Обновление URL при выборе клиента
-  const updateUrl = (clientId: string | null) => {
-    const url = new URL(window.location.href);
-    if (clientId) {
-      url.searchParams.set('clientId', clientId);
-    } else {
-      url.searchParams.delete('clientId');
-    }
-    window.history.replaceState({}, '', url.toString());
-  };
-
-  // Применяем фильтрацию по филиалам к данным клиентов
-  const filteredClients = useBranchFilter(clientsQuery.data?.clients);
-
-  // Обновление списка клиентов при получении данных с учетом фильтрации
-  useEffect(() => {
-    if (Array.isArray(filteredClients)) {
-      setClients(filteredClients);
-
-      // Проверяем, есть ли текущий выбранный клиент в отфильтрованном списке
-      if (selectedClientId) {
-        const clientStillExists = filteredClients.some(client => client.telegramId === selectedClientId);
-        if (!clientStillExists) {
-          console.log(`Selected client ${selectedClientId} not in filtered list, clearing selection`);
-          setSelectedClientId(null);
-          setSelectedClient(null);
-          updateUrl(null);
-        }
-      }
-
-      // Автовыбор первого клиента если никто не выбран и нет clientId в URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const clientIdFromUrl = urlParams.get('clientId');
-
-      if (!selectedClientId && !clientIdFromUrl && filteredClients.length > 0) {
-        const firstClientId = filteredClients[0].telegramId;
-        console.log(`Auto-selecting first client: ${firstClientId}`);
-        setSelectedClientId(firstClientId);
-        updateUrl(firstClientId);
-      }
-    }
-  }, [filteredClients, selectedClientId]);
-
-  // Обработка данных выбранного клиента
-  useEffect(() => {
-    if (clientDetailsQuery.data?.client) {
-      console.log("Setting client data from query:", clientDetailsQuery.data.client);
-      setSelectedClient(clientDetailsQuery.data.client);
-
-      if (Array.isArray(clientDetailsQuery.data.messages)) {
-        setMessages(clientDetailsQuery.data.messages);
-
-        // Определение темы разговора
-        if (clientDetailsQuery.data.messages.length > 0 && selectedClientId) {
-          const clientMessages = clientDetailsQuery.data.messages
-            .filter(msg => msg.isFromClient)
-            .slice(0, 5);
-
-          if (clientMessages.length > 0 && !conversationTopics[selectedClientId]) {
-            determineConversationTopic(clientMessages, selectedClientId);
-          }
-        }
-      }
-
-      // Сбросить индикатор непрочитанных сообщений
-      setClients(prevClients =>
-        prevClients.map(client =>
-          client.telegramId === selectedClientId
-            ? { ...client, hasUnreadMessages: false }
-            : client
-        )
-      );
-    }
-
-    if (clientDetailsQuery.isError) {
-      console.error("Client details query error:", clientDetailsQuery.error);
-      toast({
-        title: t('loading_error'),
-        description: t('clients.client_data_load_failed'),
-        variant: "destructive",
-      });
-    }
-  }, [clientDetailsQuery.data, clientDetailsQuery.isError, selectedClientId, conversationTopics, toast]);
-
-  // WebSocket соединение (упрощенная версия)
-  useEffect(() => {
-    const currentUserId = userQuery.data?.id;
-    if (!currentUserId) return;
-
-    // Получаем правильный URL для WebSocket
-    const getWebSocketUrl = () => {
-      if (import.meta.env.DEV) {
-        // В dev-режиме используем localhost с тем же портом что и dev-сервер
-        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        return `${protocol}//${window.location.host}/ws`;
-      } else {
-        // В production используем URL из переменной окружения
-        const backendUrl = import.meta.env.VITE_BACKEND_URL;
-        const protocol = backendUrl?.startsWith('https') ? "wss:" : "ws:";
-        const host = backendUrl?.replace(/^https?:\/\//, '');
-        return `${protocol}//${host}/ws`;
-      }
-    };
-
-    const wsUrl = getWebSocketUrl();
-
-    const createConnection = () => {
-      try {
-        const socket = new WebSocket(wsUrl);
-        socketRef.current = socket;
-
-        socket.onopen = () => {
-          console.log("✅ WebSocket connected to:", wsUrl);
-          setWsConnected(true);
-          socket.send(JSON.stringify({ type: 'identify', userId: currentUserId.toString() }));
-        };
-
-        socket.onclose = () => {
-          console.log("WebSocket disconnected");
-          setWsConnected(false);
-          // Переподключение через 3 секунды
-          setTimeout(createConnection, 3000);
-        };
-
-        socket.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-
-            if (data.type === 'new_message' && data.telegramId && data.message) {
-              if (data.telegramId === selectedClientId) {
-                // Обновляем сообщения для текущего клиента
-                setMessages(prev => {
-                  const messageExists = prev.some(msg => msg.id === data.message.id);
-                  if (messageExists) return prev;
-
-                  return [...prev, {
-                    ...data.message,
-                    timestamp: new Date(data.message.timestamp)
-                  }];
-                });
-              } else {
-                // Уведомление о новом сообщении от другого клиента
-                const client = clients.find(c => c.telegramId === data.telegramId);
-                if (client && data.message.isFromClient) {
-                  toast({
-                    title: `${client.customName || client.firstName || 'Клиент'}`,
-                    description: data.message.content.substring(0, 50) + '...',
-                  });
-                }
-              }
-
-              // Обновляем список клиентов
-              queryClient.invalidateQueries({ queryKey: ["/clients"] });
-            }
-          } catch (error) {
-            console.error("WebSocket message error:", error);
-          }
-        };
-      } catch (error) {
-        console.error("WebSocket creation error:", error);
-        setTimeout(createConnection, 5000);
-      }
-    };
-
-    createConnection();
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.close();
-      }
-    };
-  }, [userQuery.data?.id, selectedClientId, clients, toast, queryClient]);
-
-  // Определение темы разговора
-  const determineConversationTopic = (clientMessages: Message[], telegramId: string) => {
-    if (conversationTopics[telegramId]) return;
-
-    const content = clientMessages.map(msg => msg.content).join(" ").toLowerCase();
-    let topic = t('clients.topics.general');
-
-    const topicKeywords: Record<string, string[]> = {
-      [t('clients.topics.massage_booking')]: ["запись", "записаться", "забронировать", "визит"],
-      [t('clients.topics.classic_massage')]: ["классический", "классика", "обычный", "стандартный"],
-      [t('clients.topics.therapeutic_massage')]: ["лечебный", "лечение", "боли", "спина болит"],
-      [t('clients.topics.aroma_relax')]: ["арома", "релакс", "расслабление", "стресс"],
-      [t('clients.topics.sports_massage')]: ["спортивный", "спорт", "мышцы", "тренировка"],
-      [t('clients.topics.pricing_info')]: ["цена", "стоимость", "прайс", "сколько стоит"],
-      [t('clients.topics.location_schedule')]: ["адрес", "где находится", "часы работы"],
-      [t('clients.topics.gift_certificates')]: ["подарок", "сертификат"],
-      [t('clients.topics.other_services')]: ["бочка", "кедровая", "стоун", "камни"]
-    };
-
-    for (const [topicName, keywords] of Object.entries(topicKeywords)) {
-      if (keywords.some(keyword => content.includes(keyword))) {
-        topic = topicName;
-        break;
-      }
-    }
-
-    setConversationTopics(prev => ({ ...prev, [telegramId]: topic }));
-  };
-
-  // Обработчик выбора клиента
-  const handleClientSelect = (telegramId: string) => {
-    if (telegramId === selectedClientId) return; // Избегаем повторного выбора
-
-    console.log(`Selecting client: ${telegramId}`);
-    setSelectedClientId(telegramId);
-    updateUrl(telegramId);
-
-    // Сразу находим клиента в локальном списке для быстрого отображения
-    const localClient = clients.find(c => c.telegramId === telegramId);
-    if (localClient) {
-      setSelectedClient(localClient);
+  // Функция прокрутки вниз
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
-  // Обработчики редактирования имени
-  const handleStartEditingName = () => {
-    if (!selectedClient) return;
-    setCustomNameInput(selectedClient.customName || "");
-    setIsEditingName(true);
-  };
-
-  const handleSaveCustomName = () => {
-    if (!selectedClientId || !customNameInput.trim()) {
-      setIsEditingName(false);
+  // Загрузка списка чатов
+  const loadChats = async (silent = false) => {
+    if (!currentBranch?.id) {
       return;
     }
 
-    updateClientNameMutation.mutate({
-      telegramId: selectedClientId,
-      customName: customNameInput.trim(),
-    });
-    setIsEditingName(false);
+    if (!silent) setLoading(true);
+    try {
+      const endpoint = `https://sophisticated-priscella-promconsulting-5c0f5b4a.koyeb.app/api/webhook/chats/${currentBranch.id}?page=${page}&limit=50`;
+      const data = await apiGetJson<any>(endpoint);
+
+      // Новый формат: data: { branchId, accountId, chats: [], pagination: {} }
+      if (data?.success && data?.data?.chats && Array.isArray(data.data.chats)) {
+        const normalizedChats: WhatsAppChatItem[] = data.data.chats.map((c: any) => ({
+          chatId: c.chatId || c.phone || null,
+          contactNumber: c.phone || '',
+          contactName: c.contactName || null,
+          unreadCount: Number(c.unreadCount || 0),
+          lastMessageTime: c.lastMessageTime || '',
+          lastMessage: c.lastMessage || '',
+          messagesCount: c.messagesCount || 0,
+        }));
+
+        setChats(normalizedChats);
+        setFilteredChats(normalizedChats);
+        setTotalChats(Number(data.data.pagination?.total || normalizedChats.length));
+      }
+    } catch (error) {
+      console.error('Error loading chats:', error);
+      if (!silent) {
+        toast({
+          title: t('error'),
+          description: t('whatsapp.error_loading_history'),
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      if (!silent) setLoading(false);
+    }
   };
 
-  const handleCancelEditingName = () => {
-    setIsEditingName(false);
-    setCustomNameInput("");
+  // Загрузка истории сообщений
+  const loadMessages = async (chat: WhatsAppChatItem, silent = false) => {
+    if (!currentBranch?.id) return;
+
+    if (!silent) setLoadingMessages(true);
+    try {
+      const normalizedPhone = normalizePhone(chat.contactNumber);
+      const endpoint = `https://sophisticated-priscella-promconsulting-5c0f5b4a.koyeb.app/api/webhook/chats/${currentBranch.id}/${normalizedPhone}/messages?page=1&limit=50`;
+      const data = await apiGetJson<any>(endpoint);
+      
+      if (data?.success && data?.data?.messages && Array.isArray(data.data.messages)) {
+        const normalizedMessages: Message[] = data.data.messages.map((m: any) => ({
+          id: m.id?.toString() || `msg_${Date.now()}`,
+          direction: m.isFromClient ? 'incoming' : 'outgoing',
+          message: m.content || '',
+          to: m.isFromClient ? normalizedPhone : normalizedPhone,
+          from: m.isFromClient ? normalizedPhone : null,
+          sentAt: m.timestamp || new Date().toISOString(),
+          status: (m.status || 'SENT').toUpperCase() as Message['status'],
+          contactName: chat.contactName,
+          contactNumber: normalizedPhone,
+          source: m.isFromBot ? 'bot' : 'ui',
+          clientId: 0,
+        }));
+        setMessages(normalizedMessages);
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      if (!silent) {
+        toast({
+          title: t('error'),
+          description: t('whatsapp.error_loading_history'),
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      if (!silent) setLoadingMessages(false);
+    }
   };
 
-  // Обработчик отправки сообщения
-  const handleSendMessage = () => {
-    if (!selectedClientId || !newMessage.trim()) return;
+  // Отправка сообщения
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedChat || !currentBranch?.id) return;
 
-    sendMessageMutation.mutate({
-      telegramId: selectedClientId,
-      message: newMessage.trim(),
-    });
+    setSendingMessage(true);
+    try {
+      const normalizedPhone = normalizePhone(selectedChat.contactNumber);
+      const response = await fetch(
+        `https://sophisticated-priscella-promconsulting-5c0f5b4a.koyeb.app/api/webhook/send-message`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            branch_id: currentBranch.id,
+            phone: normalizedPhone,
+            message: newMessage.trim(),
+          })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        const msgMeta = (data as any)?.data || {};
+        setNewMessage('');
+        // Добавляем сообщение в список
+        const newMsg: Message = {
+          id: msgMeta.messageId?.toString?.() || `temp_${Date.now()}`,
+          direction: 'outgoing',
+          message: newMessage.trim(),
+          to: normalizedPhone,
+          from: null,
+          sentAt: msgMeta.timestamp || new Date().toISOString(),
+          status: 'SENT',
+          contactName: selectedChat.contactName,
+          contactNumber: normalizedPhone,
+          source: 'ui',
+          clientId: 0
+        };
+        setMessages(prev => [...prev, newMsg]);
+        
+        // Обновляем список чатов
+        loadChats();
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: t('whatsapp.send_error'),
+        description: t('whatsapp.send_error_message'),
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingMessage(false);
+    }
   };
 
-  // Форматирование даты и времени
-  const formatDate = (date: Date | string | undefined) => {
-    if (!date) return "Н/Д";
-    return format(new Date(date), "dd.MM.yyyy");
-  };
-
-  const formatDateTime = (date: Date | string | undefined) => {
-    if (!date) return "Н/Д";
-
-    const dateObj = new Date(date);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const isToday = dateObj.toDateString() === today.toDateString();
-    const isYesterday = dateObj.toDateString() === yesterday.toDateString();
-
-    if (isToday) {
-      return `Сегодня, ${format(dateObj, "HH:mm")}`;
-    } else if (isYesterday) {
-      return `Вчера, ${format(dateObj, "HH:mm")}`;
+  // Отправка на произвольный номер
+  const sendToCustomNumber = async () => {
+    if (!customPhone.trim() || !accountId) {
+      toast({
+        title: t('error'),
+        description: 'Введите номер телефона',
+        variant: 'destructive',
+      });
+      return;
     }
 
-    return format(dateObj, "dd.MM.yyyy, HH:mm");
+    if (!customMessage.trim()) {
+      toast({
+        title: t('error'),
+        description: t('whatsapp.type_message'),
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSendingCustom(true);
+    try {
+      const normalizedPhone = normalizePhone(customPhone);
+      const response = await fetch(
+        `https://sophisticated-priscella-promconsulting-5c0f5b4a.koyeb.app/api/webhook/send-message`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            phone: normalizedPhone,
+            message: customMessage.trim(),
+            branchId: currentBranch?.id,
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send message');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: t('whatsapp.message_sent'),
+          description: t('whatsapp.message_sent_successfully'),
+          variant: 'default',
+        });
+        
+        setCustomPhone('');
+        setCustomMessage('');
+        setShowNewMessageDialog(false);
+        loadChats();
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: t('whatsapp.send_error'),
+        description: t('whatsapp.send_error_message'),
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingCustom(false);
+    }
   };
 
+  // Загрузка чатов при монтировании + автообновление каждые 2 секунды
+  useEffect(() => {
+    loadChats(false); // Первая загрузка с индикатором
+    
+    // Устанавливаем интервал для тихого автообновления списка чатов
+    const interval = setInterval(() => {
+      loadChats(true); // Тихое обновление без индикатора
+    }, 2000); // Обновляем каждые 2 секунды
+    
+    return () => clearInterval(interval);
+  }, [currentBranch?.id, page]);
+
+  // Поиск чатов
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      let filtered = chats;
+      
+      // Поиск
+      if (searchQuery.trim()) {
+        filtered = filtered.filter(chat => 
+          chat.contactNumber.includes(searchQuery) ||
+          chat.contactName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      }
+      
+      setFilteredChats(filtered);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, chats]);
+
+  // Открытие чата
+  const handleOpenChat = (chat: WhatsAppChatItem) => {
+    setSelectedChat(chat);
+    loadMessages(chat, false); // Первая загрузка с индикатором
+  };
+
+  // Автообновление истории открытого чата каждые 2 секунды
+  useEffect(() => {
+    if (!selectedChat) return;
+    
+    // Устанавливаем интервал для тихого автообновления истории
+    const interval = setInterval(() => {
+      loadMessages(selectedChat, true); // Тихое обновление без индикатора
+    }, 2000); // Обновляем каждые 2 секунды
+    
+    return () => clearInterval(interval);
+  }, [selectedChat, currentBranch]);
+
+  // Получение отображаемого имени
+  const getChatDisplayName = (chat: WhatsAppChatItem) => {
+    return chat.contactName || chat.contactNumber;
+  };
+
+  // Форматирование времени для списка чатов
+  const formatChatTime = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      
+      if (isToday(date)) {
+        return format(date, 'HH:mm');
+      }
+      if (isYesterday(date)) {
+        return t('yesterday') || 'Вчера';
+      }
+      return format(date, 'dd.MM.yy');
+    } catch {
+      return '';
+    }
+  };
+
+  // Форматирование времени для сообщений
+  const formatMessageTime = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'HH:mm');
+    } catch {
+      return '';
+    }
+  };
+
+  // Группировка сообщений по датам
+  const groupMessagesByDate = (messages: Message[]) => {
+    // Сортируем сообщения от старых к новым (по дате отправки)
+    const sortedMessages = [...messages].sort((a, b) => 
+      new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
+    );
+    
+    const groups: { [key: string]: Message[] } = {};
+    
+    sortedMessages.forEach(msg => {
+      const date = new Date(msg.sentAt);
+      let dateKey: string;
+      
+      if (isToday(date)) {
+        dateKey = t('today') || 'Сегодня';
+      } else if (isYesterday(date)) {
+        dateKey = t('yesterday') || 'Вчера';
+      } else {
+        dateKey = format(date, 'dd.MM.yyyy');
+      }
+      
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(msg);
+    });
+    
+    return groups;
+  };
+
+  const messageGroups = groupMessagesByDate(messages);
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-screen">
-      {/* Список клиентов */}
-      <Card>
-        <CardHeader className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-t-xl">
-          <CardTitle className="flex items-center gap-3 text-lg">
-            <User className="h-6 w-6" />
-            Список клиентов
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {clientsQuery.isLoading ? (
-            <div className="flex items-center justify-center p-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    <div className="h-[calc(100vh-8rem)] flex gap-0 overflow-hidden border rounded-lg shadow-lg bg-background">
+      {/* Левая панель - Список чатов */}
+      <div className="w-full md:w-96 border-r flex flex-col">
+        {/* Заголовок */}
+        <div className="bg-[#008069] text-white p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <MessageCircle className="h-6 w-6" />
+            <h1 className="text-xl font-semibold">WhatsApp</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            {totalChats > 0 && (
+              <Badge variant="secondary" className="bg-white/20 text-white border-0">
+                {totalChats}
+              </Badge>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 hover:bg-white/20 text-white"
+              onClick={() => setShowNewMessageDialog(true)}
+              title="Новое сообщение"
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Поиск */}
+        <div className="p-3 border-b bg-muted/30">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Поиск или новый чат"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-background"
+            />
+          </div>
+        </div>
+
+        {/* Список чатов */}
+        <div className="flex-1 overflow-y-auto">
+          {!currentBranch ? (
+            <div className="flex flex-col items-center justify-center h-full text-center p-6 text-muted-foreground">
+              <AlertTriangle className="h-12 w-12 mb-3 opacity-30" />
+              <p>{t('branch.select_branch') || 'Выберите филиал'}</p>
+            </div>
+          ) : !accountId ? (
+            <div className="flex flex-col items-center justify-center h-full text-center p-6">
+              <Alert variant="destructive" className="max-w-sm">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Перейдите на страницу настройки в раздел Чат-бот для подключения WhatsApp
+                </AlertDescription>
+              </Alert>
+              <Button
+                className="mt-3"
+                onClick={() => setLocation('/settings')}
+                variant="outline"
+              >
+                Открыть настройки
+              </Button>
+            </div>
+          ) : loading ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-8 w-8 animate-spin text-[#008069]" />
+            </div>
+          ) : filteredChats.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center p-6 text-muted-foreground">
+              <MessageCircle className="h-12 w-12 mb-3 opacity-30" />
+              <p>{searchQuery ? (t('no_results') || 'Ничего не найдено') : (t('whatsapp.no_messages') || 'Нет чатов')}</p>
             </div>
           ) : (
-            <div className="max-h-full overflow-y-auto" style={{ 
-              scrollbarWidth: 'auto',
-              scrollbarGutter: 'stable'
-            }}>
-              {clients.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">
-                  <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>Нет доступных клиентов</p>
-                </div>
-              ) : (
-                <ClientList
-                  clients={clients}
-                  selectedClientId={selectedClientId}
-                  onClientSelect={handleClientSelect}
-                  conversationTopics={conversationTopics}
-                />
-              )}
+            <div className="divide-y">
+              {filteredChats.map((chat) => (
+                <button
+                  key={chat.contactNumber}
+                  onClick={() => handleOpenChat(chat)}
+                  className={cn(
+                    "w-full p-4 hover:bg-muted/50 transition-colors text-left flex gap-3",
+                    selectedChat?.contactNumber === chat.contactNumber && "bg-muted"
+                  )}
+                >
+                  {/* Аватар */}
+                  <Avatar className="h-12 w-12 flex-shrink-0">
+                    <AvatarFallback className="bg-[#008069] text-white">
+                      <User className="h-6 w-6" />
+                    </AvatarFallback>
+                  </Avatar>
+
+                  {/* Контент */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h3 className="font-semibold truncate">
+                        {getChatDisplayName(chat)}
+                      </h3>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatChatTime(chat.lastMessageTime)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm text-muted-foreground truncate">
+                        {chat.lastMessage}
+                      </p>
+                      {chat.unreadCount > 0 && (
+                        <Badge className="bg-[#25D366] text-white h-5 min-w-5 rounded-full text-xs">
+                          {chat.unreadCount}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Детали клиента */}
-      <Card className="lg:col-span-2 flex flex-col">
-        <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-t-xl">
-          <CardTitle className="flex items-center gap-3 text-lg">
-            <MessageSquare className="h-6 w-6" />
-            Информация о клиенте
-          </CardTitle>
-        </CardHeader>
-
-        {clientDetailsQuery.isLoading ? (
-          <CardContent className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-3">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto" />
-              <p className="text-sm text-muted-foreground">{t('clients.loading_clients')}</p>
-            </div>
-          </CardContent>
-        ) : !selectedClientId ? (
-          <CardContent className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-3">
-              <User className="h-12 w-12 text-muted-foreground/50 mx-auto" />
-              <div>
-                <p className="font-medium">{t('clients.select_client')}</p>
-                <p className="text-sm text-muted-foreground">
-                  {t('clients.select_client')}
-                </p>
+      {/* Правая панель - Активный чат */}
+      <div className="flex-1 flex flex-col">
+        {!selectedChat ? (
+          /* Заглушка когда чат не выбран */
+          <div className="flex flex-col items-center justify-center h-full text-center p-6 bg-muted/20">
+            <div className="max-w-md space-y-4">
+              <div className="w-32 h-32 mx-auto rounded-full bg-[#008069]/10 flex items-center justify-center">
+                <MessageCircle className="h-16 w-16 text-[#008069]" />
               </div>
+              <h2 className="text-2xl font-semibold">WhatsApp Web</h2>
+              <p className="text-muted-foreground">
+                Выберите чат, чтобы начать общение
+              </p>
             </div>
-          </CardContent>
-        ) : clientDetailsQuery.isError ? (
-          <CardContent className="flex-1 flex items-center justify-center p-6">
-            <Alert className="max-w-md">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                {t('clients.client_data_load_failed')}
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        ) : selectedClient ? (
+          </div>
+        ) : (
           <>
-            {/* Информация о клиенте */}
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* ID и статус */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{t('clients.telegram_id')}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{selectedClient.telegramId}</p>
-                  <StatusBadge status={selectedClient.isActive ? "Active" : "Inactive"} />
-                </div>
-
-                {/* Имя пользователя и ФИО */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{t('profile_data')}</span>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm">{selectedClient.username || t('no_username')}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {`${selectedClient.firstName || ""} ${selectedClient.lastName || ""}`.trim() || t('no_name')}
-                    </p>
+            {/* Заголовок чата */}
+            <div className="bg-muted/30 border-b p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden"
+                  onClick={() => setSelectedChat(null)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback className="bg-[#008069] text-white">
+                    <User className="h-5 w-5" />
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h2 className="font-semibold">{getChatDisplayName(selectedChat)}</h2>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Phone className="h-3 w-3" />
+                    {selectedChat.contactNumber}
                   </div>
                 </div>
+              </div>
+            </div>
 
-                {/* Кастомное имя */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Edit className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{t('clients.client_name')}</span>
+            {/* Сообщения */}
+            <div className="flex-1 relative">
+              <div className="absolute inset-0 overflow-y-auto p-4 space-y-4 bg-[#efeae2] dark:bg-[#0b141a]">
+                {loadingMessages ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#008069]" />
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <MessageCircle className="h-12 w-12 mb-3 opacity-30" />
+                  <p>{t('whatsapp.no_messages') || 'Нет сообщений'}</p>
+                </div>
+              ) : (
+                Object.entries(messageGroups).map(([date, msgs]) => (
+                  <div key={date} className="space-y-2">
+                    {/* Разделитель по дате */}
+                    <div className="flex justify-center">
+                      <div className="bg-white dark:bg-[#182229] text-muted-foreground text-xs px-3 py-1 rounded-lg shadow-sm">
+                        {date}
+                      </div>
                     </div>
-                    {!isEditingName && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleStartEditingName}
-                        className="h-6 px-2"
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                    )}
+                    
+                    {/* Сообщения */}
+                    {msgs.map((msg) => {
+                      const isOutgoing = msg.direction === 'outgoing';
+                      return (
+                        <div
+                          key={msg.id}
+                          className={cn(
+                            "flex",
+                            isOutgoing ? "justify-end" : "justify-start"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "max-w-[70%] rounded-lg p-3 shadow-sm",
+                              isOutgoing
+                                ? "bg-[#d9fdd3] dark:bg-[#005c4b] text-foreground"
+                                : "bg-white dark:bg-[#202c33] text-foreground"
+                            )}
+                          >
+                            <p className="text-sm whitespace-pre-wrap break-words">
+                              {msg.message}
+                            </p>
+                            <div className="flex items-center justify-end gap-1 mt-1">
+                              <span className="text-[10px] text-muted-foreground">
+                                {formatMessageTime(msg.sentAt)}
+                              </span>
+                              {isOutgoing && (
+                                <span className="text-[#53bdeb]">
+                                  {msg.status === 'READ' ? (
+                                    <CheckCheck className="h-3 w-3" />
+                                  ) : msg.status === 'DELIVERED' ? (
+                                    <CheckCheck className="h-3 w-3 text-muted-foreground" />
+                                  ) : (
+                                    <Check className="h-3 w-3 text-muted-foreground" />
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  {isEditingName ? (
-                    <div className="flex items-center space-x-1">
-                      <Input
-                        value={customNameInput}
-                        onChange={(e) => setCustomNameInput(e.target.value)}
-                        placeholder="Введите имя..."
-                        className="h-8 text-sm"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleSaveCustomName}
-                        disabled={updateClientNameMutation.isPending}
-                        className="h-8 px-2"
-                      >
-                        {updateClientNameMutation.isPending ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Check className="h-3 w-3" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleCancelEditingName}
-                        className="h-8 px-2"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
+                ))
+              )}
+              <div ref={messagesEndRef} />
+              </div>
+
+              {/* Scroll to bottom button */}
+              <Button
+                onClick={scrollToBottom}
+                className="absolute bottom-4 right-4 rounded-full w-12 h-12 shadow-lg bg-[#008069] hover:bg-[#006d5b] z-10"
+                size="icon"
+                title="Прокрутить вниз"
+              >
+                <ChevronDown className="h-5 w-5 text-white" />
+              </Button>
+            </div>
+
+            {/* Поле ввода */}
+            <div className="border-t bg-muted/30 p-4">
+              <div className="flex items-end gap-2">
+                <Textarea
+                  placeholder={t('whatsapp.type_message') || 'Введите сообщение'}
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  disabled={sendingMessage}
+                  className="flex-1 min-h-[44px] max-h-32 resize-none"
+                  rows={1}
+                />
+                <Button
+                  onClick={sendMessage}
+                  disabled={!newMessage.trim() || sendingMessage}
+                  className="bg-[#008069] hover:bg-[#006d5b] h-11 px-4"
+                >
+                  {sendingMessage ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    <p className="text-sm font-medium text-primary">
-                      {selectedClient.customName || t('clients.not_set')}
-                    </p>
+                    <Send className="h-5 w-5" />
                   )}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Даты и тема */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{t('clients.first_contact')}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(selectedClient.firstSeenAt)}
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{t('clients.last_activity')}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDateTime(selectedClient.lastActiveAt)}
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{t('clients.conversation_topic')}</span>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {conversationTopics[selectedClient.telegramId] || t('clients.determining')}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-
-            <Separator />
-
-            {/* История сообщений */}
-            <div className="flex-1 flex flex-col min-h-0">
-              <div className="px-6 py-3">
-                <h3 className="text-sm font-medium">{t('clients.message_history')}</h3>
-              </div>
-
-              <div className="flex-1 px-6 overflow-y-auto" style={{ 
-                scrollbarWidth: 'auto',
-                scrollbarGutter: 'stable'
-              }}>
-                <ConversationHistory client={selectedClient} messages={messages} />
-              </div>
-
-              {/* Форма отправки сообщения */}
-              <div className="p-6 border-t bg-muted/20">
-                <div className="space-y-3">
-                  <Textarea
-                    placeholder={t('clients.enter_message')}
-                    className="min-h-20 resize-none"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && e.ctrlKey) {
-                        handleSendMessage();
-                      }
-                    }}
-                  />
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">
-                      {t('clients.ctrl_enter_hint')}
-                    </span>
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={sendMessageMutation.isPending || !newMessage.trim()}
-                      className="gap-2"
-                    >
-                      {sendMessageMutation.isPending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          {t('clients.sending')}
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4" />
-                          {t('clients.send')}
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
+                </Button>
               </div>
             </div>
           </>
-        ) : (
-          <CardContent className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-3">
-              <AlertTriangle className="h-12 w-12 text-muted-foreground/50 mx-auto" />
-              <div>
-                <p className="font-medium">Клиент не найден</p>
-                <p className="text-sm text-muted-foreground">
-                  Клиент может быть удален или произошла ошибка
-                </p>
-              </div>
-            </div>
-          </CardContent>
         )}
-      </Card>
+      </div>
+
+      {/* Диалог отправки на произвольный номер */}
+      <Dialog open={showNewMessageDialog} onOpenChange={setShowNewMessageDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Новое сообщение</DialogTitle>
+            <DialogDescription>
+              Отправьте WhatsApp сообщение на любой номер телефона
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="custom-phone" className="flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                Номер телефона
+              </Label>
+              <Input
+                id="custom-phone"
+                placeholder="+996 (XXX) XXX-XXX"
+                value={customPhone}
+                onChange={(e) => setCustomPhone(e.target.value)}
+                disabled={sendingCustom}
+              />
+              <p className="text-xs text-muted-foreground">
+                Формат: +996XXXXXXXXX (автоматически удаляется "+")
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="custom-message" className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4" />
+                Сообщение
+              </Label>
+              <Textarea
+                id="custom-message"
+                placeholder="Введите сообщение..."
+                value={customMessage}
+                onChange={(e) => setCustomMessage(e.target.value)}
+                disabled={sendingCustom}
+                className="min-h-[120px] resize-none"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && e.ctrlKey) {
+                    sendToCustomNumber();
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Ctrl + Enter для отправки
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowNewMessageDialog(false)}
+              disabled={sendingCustom}
+            >
+              Отмена
+            </Button>
+            <Button
+              onClick={sendToCustomNumber}
+              disabled={!customPhone.trim() || !customMessage.trim() || sendingCustom}
+              className="bg-[#008069] hover:bg-[#006d5b]"
+            >
+              {sendingCustom ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Отправка...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Отправить
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

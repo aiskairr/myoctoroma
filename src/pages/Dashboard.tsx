@@ -63,6 +63,12 @@ export default function Dashboard() {
   const { currentBranch } = useBranch();
   const { isMaster, isLoading: masterRoleLoading } = useIsMaster();
   const { user } = useAuth();
+  const apiBase =
+    (import.meta.env.VITE_SECONDARY_BACKEND_URL || import.meta.env.VITE_BACKEND_URL || '').replace(
+      /\/api\/?$/,
+      ''
+    ); // убираем дублирующий /api в пути
+  const primaryApiBase = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/api\/?$/, '');
 
   if (!masterRoleLoading && isMaster) {
     return <Redirect to="/master/calendar" />;
@@ -105,11 +111,11 @@ export default function Dashboard() {
   const [mastersChartType, setMastersChartType] = useState<ChartType>('bar');
 
   const { data, isLoading, error } = useQuery({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/stats?branchID=branch${currentBranch?.id}`, currentBranch?.id],
+    queryKey: [`${apiBase}/stats?branchId=${currentBranch?.id}`, currentBranch?.id],
     refetchInterval: 10000,
     enabled: !!currentBranch?.id,
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/stats?branchID=branch${currentBranch?.id}`, {
+      const response = await fetch(`${apiBase}/stats?branchId=${currentBranch?.id}`, {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
@@ -125,11 +131,11 @@ export default function Dashboard() {
   });
 
   const activitiesQuery = useQuery({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/activities?branchID=branch${currentBranch?.id}`, currentBranch?.id],
+    queryKey: [`${apiBase}/activities?branchId=${currentBranch?.id}`, currentBranch?.id],
     refetchInterval: 10000,
     enabled: !!currentBranch?.id,
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/activities?branchID=branch${currentBranch?.id}`, {
+      const response = await fetch(`${apiBase}/activities?branchId=${currentBranch?.id}`, {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
@@ -145,14 +151,17 @@ export default function Dashboard() {
   });
 
   const serviceStatsQuery = useQuery({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/stats/service-types?branchId=${currentBranch?.id}`, currentBranch?.id],
+    queryKey: [`${primaryApiBase}/services?branchId=${currentBranch?.id}`, currentBranch?.id],
     refetchInterval: 60000,
     enabled: !!currentBranch?.id,
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/stats/service-types?branchId=${currentBranch?.id}`, {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${primaryApiBase}/services?branchId=${currentBranch?.id}`, {
+        method: 'GET',
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache'
         }
@@ -165,14 +174,17 @@ export default function Dashboard() {
   });
 
   const masterStatsQuery = useQuery({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/stats/masters?branchId=${currentBranch?.id}`, currentBranch?.id],
+    queryKey: [`${apiBase}/staff?branchId=${currentBranch?.id}`, currentBranch?.id],
     refetchInterval: 60000,
     enabled: !!currentBranch?.id,
     queryFn: async () => {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/stats/masters?branchId=${currentBranch?.id}`, {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${apiBase}/staff?branchId=${currentBranch?.id}`, {
+        method: 'GET',
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache'
         }
@@ -185,12 +197,13 @@ export default function Dashboard() {
   });
 
   const accountingStatsQuery = useQuery({
-    queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/statistics/accounting`, currentBranch?.id],
+    queryKey: [`${primaryApiBase}/accounting`, currentBranch?.id],
     refetchInterval: 60000,
     enabled: !!currentBranch?.id,
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/statistics/accounting/${today}/${today}?branchId=${currentBranch?.id}`, {
+      const response = await fetch(`${primaryApiBase}/accounting?branchId=${currentBranch?.id}&date=${today}`, {
+        method: 'GET',
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
@@ -229,15 +242,34 @@ export default function Dashboard() {
   useEffect(() => {
     if (serviceStatsQuery.data && typeof serviceStatsQuery.data === 'object') {
       const apiData = serviceStatsQuery.data as any;
-      setserviceTypes(apiData.serviceTypes || []);
-      setTotalRevenue(apiData.totalRevenue || 0);
+      // Новый формат: { page, limit, total, pages, data: [...] }
+      if (Array.isArray(apiData.data)) {
+        const mapped = apiData.data.map((s: any) => ({
+          name: s.name || 'Без названия',
+          count: (s.prices && Array.isArray(s.prices)) ? s.prices.length : 0,
+          revenue: (s.prices && Array.isArray(s.prices) && s.prices[0]?.price) ? s.prices[0].price : 0,
+        }));
+        setserviceTypes(mapped);
+        setTotalRevenue(mapped.reduce((sum, item) => sum + (item.revenue || 0), 0));
+      } else {
+        setserviceTypes(apiData.serviceTypes || []);
+        setTotalRevenue(apiData.totalRevenue || 0);
+      }
     }
   }, [serviceStatsQuery.data]);
 
   useEffect(() => {
     if (masterStatsQuery.data && typeof masterStatsQuery.data === 'object') {
       const apiData = masterStatsQuery.data as any;
-      if (apiData.masters && Array.isArray(apiData.masters)) {
+      // Новый формат: { success, data: [...] }
+      if (Array.isArray(apiData.data)) {
+        setMasterStats(
+          apiData.data.map((m: any) => ({
+            name: m.first_name || m.username || m.name || 'Без имени',
+            count: 1, // если нужно количество — здесь можно заменить на нужное поле
+          }))
+        );
+      } else if (apiData.masters && Array.isArray(apiData.masters)) {
         setMasterStats(apiData.masters);
       }
     }
