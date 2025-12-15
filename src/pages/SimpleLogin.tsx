@@ -189,7 +189,18 @@ export default function SimpleLogin() {
       </Card>
       
       {/* Footer брендинг */}
-      <div className="mt-6 sm:mt-8 text-center px-4">
+      <div className="mt-6 sm:mt-8 text-center px-4 space-y-4">
+        {/* Уведомление о технических работах */}
+        <div className="max-w-md mx-auto bg-red-600/90 backdrop-blur-sm text-white px-4 py-3 rounded-xl border border-red-400/50 shadow-lg">
+          <p className="text-xs sm:text-sm font-medium">
+            ⚠️ Сегодня 16 декабря 2025 года в 03:00-08:00 ожидаются плановые технические работы. 
+            Возможны замедления системы в это время. Спасибо за понимание!
+          </p>
+          <p className="text-xs mt-1 opacity-90">
+            С уважением, команда Prom.Consulting!
+          </p>
+        </div>
+        
         <p className="text-white/70 text-xs sm:text-sm font-light tracking-wide">
           {t('login.powered_by')}{" "}
           <span className="font-semibold text-white/90 hover:text-white transition-colors duration-200">
