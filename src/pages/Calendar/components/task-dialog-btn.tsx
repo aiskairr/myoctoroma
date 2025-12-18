@@ -916,7 +916,7 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
         
         // Generate unique task ID
         const organisationId = user?.organisationId || user?.organization_id || user?.orgId || '1';
-        const branchId = data.branch || '1';
+        const branchId = currentBranch?.id?.toString() || '1';
         const generatedTaskId = generateTaskId(organisationId, branchId);
         
         // Вспомогательные функции
@@ -1603,41 +1603,6 @@ const TaskDialogBtn: React.FC<Props> = ({ children, taskId = null }) => {
                                 />
                                 {errors.master && (
                                     <p className="text-red-500 text-xs mt-1">{errors.master.message}</p>
-                                )}
-                            </div>
-
-                            <div>
-                                <Label className="text-sm text-gray-600">Филиал</Label>
-                                <Controller
-                                    name="branch"
-                                    control={control}
-                                    rules={{ required: "Выберите филиал" }}
-                                    render={({ field }) => (
-                                        <Select
-                                            value={field.value}
-                                            onValueChange={field.onChange}
-                                        >
-                                            <SelectTrigger className={`mt-1 ${errors.branch ? 'border-red-500' : ''}`}>
-                                                <SelectValue placeholder={t('calendar.select_branch') || 'Выберите филиал'} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {branches.length === 0 ? (
-                                                    <SelectItem value="__no_branch" disabled>
-                                                        {t('calendar.no_branches') || 'Нет филиалов'}
-                                                    </SelectItem>
-                                                ) : (
-                                                    branches.map(branch => (
-                                                        <SelectItem key={branch.id} value={branch.id.toString()}>
-                                                            {branch.branches || branch.name || branch.id}
-                                                        </SelectItem>
-                                                    ))
-                                                )}
-                                            </SelectContent>
-                                        </Select>
-                                    )}
-                                />
-                                {errors.branch && (
-                                    <p className="text-red-500 text-xs mt-1">{errors.branch.message}</p>
                                 )}
                             </div>
 
