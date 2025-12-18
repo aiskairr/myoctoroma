@@ -124,10 +124,10 @@ const generateTimeSlots = (startHour: number = 7, endHour: number = 24): string[
     return slots;
 };
 
-const getCurrentTimePosition = (): number => {
+const getCurrentTimePosition = (startHour: number = 7): number => {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const startMinutes = 7 * 60;
+    const startMinutes = startHour * 60;
     return Math.max(0, (currentMinutes - startMinutes) / 15) * TIME_SLOT_HEIGHT;
 };
 
@@ -491,6 +491,10 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
     const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
     const [currentTimePosition, setCurrentTimePosition] = useState(getCurrentTimePosition());
+    const [is24HourMode, setIs24HourMode] = useState<boolean>(() => {
+        const saved = localStorage.getItem('time_schedule_24hour_mode');
+        return saved === 'true';
+    });
 
     // Loading and error states
     const isLoading = mastersLoading || tasksLoading || servicesLoading || workingDatesLoading;
@@ -562,11 +566,14 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
 
     // Update current time line
     useEffect(() => {
+        const startHour = is24HourMode ? 0 : 7;
+        setCurrentTimePosition(getCurrentTimePosition(startHour));
+
         const interval = setInterval(() => {
-            setCurrentTimePosition(getCurrentTimePosition());
+            setCurrentTimePosition(getCurrentTimePosition(startHour));
         }, 60000);
         return () => clearInterval(interval);
-    }, []);
+    }, [is24HourMode]);
 
     // Handle window resize for responsive column width
     useEffect(() => {
@@ -579,8 +586,18 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    // Toggle 24-hour mode
+    const toggle24HourMode = () => {
+        const newMode = !is24HourMode;
+        setIs24HourMode(newMode);
+        localStorage.setItem('time_schedule_24hour_mode', String(newMode));
+    };
+
     // Memoized values
-    const timeSlots = useMemo(() => generateTimeSlots(), []);
+    const timeSlots = useMemo(() => {
+        const startHour = is24HourMode ? 0 : 7;
+        return generateTimeSlots(startHour, 24);
+    }, [is24HourMode]);
 
     const dateString = useMemo(() => {
         return currentDate.toLocaleDateString('ru-RU', {
@@ -1636,10 +1653,21 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                                         </p>
                                     </div>
                                 </div>
-
                                 <div className="flex items-center gap-3">
                                     <CancelledAppointments selectedDate={currentDate} />
-                                    
+
+                                    <button
+                                        onClick={toggle24HourMode}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium ${
+                                            is24HourMode
+                                                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                        }`}
+                                    >
+                                        <Clock size={18} />
+                                        24 часа
+                                    </button>
+
                                     <Dialog open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>
                                         <DialogTrigger asChild>
                                             <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
