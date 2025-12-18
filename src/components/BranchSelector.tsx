@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Building, Building2, Pencil, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { useBranch } from "../contexts/BranchContext";
 import { useAuth } from "../contexts/SimpleAuthContext";
 import { useLocale } from '../contexts/LocaleContext';
@@ -27,9 +29,13 @@ interface BranchCardProps {
 }
 
 interface EditBranchData {
-  branches: string;
+  name: string;
+  phone: string;
   address: string;
-  phoneNumber: string;
+  isActive: boolean;
+  systemPrompt?: string;
+  limitsEnabled?: boolean;
+  accountName?: string;
 }
 
 // Карточка филиала для модального окна
@@ -96,9 +102,13 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
   const [editDialog, setEditDialog] = useState(false);
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
   const [editData, setEditData] = useState<EditBranchData>({
-    branches: "",
+    name: "",
+    phone: "",
     address: "",
-    phoneNumber: ""
+    isActive: true,
+    systemPrompt: "",
+    limitsEnabled: false,
+    accountName: ""
   });
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -123,9 +133,13 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
   const handleEditBranch = (branch: Branch) => {
     setEditingBranch(branch);
     setEditData({
-      branches: branch.branches,
+      name: branch.branches,
+      phone: branch.phoneNumber,
       address: branch.address,
-      phoneNumber: branch.phoneNumber
+      isActive: (branch as any).isActive ?? true,
+      systemPrompt: (branch as any).systemPrompt || "",
+      limitsEnabled: (branch as any).limitsEnabled || false,
+      accountName: (branch as any).accountName || ""
     });
     setEditDialog(true);
   };
@@ -135,36 +149,65 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
 
     setIsUpdating(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/branches/${editingBranch.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(editData)
-      });
+      const token = localStorage.getItem('auth_token');
 
-      if (!response.ok) {
-        throw new Error('Ошибка при обновлении филиала');
+      // Подготавливаем payload согласно API документации
+      const payload: any = {
+        name: editData.name,
+        phone: editData.phone,
+        address: editData.address,
+        isActive: editData.isActive
+      };
+
+      // Добавляем опциональные поля только если они заполнены
+      if (editData.systemPrompt?.trim()) {
+        payload.systemPrompt = editData.systemPrompt;
+      }
+      if (editData.limitsEnabled !== undefined) {
+        payload.limitsEnabled = editData.limitsEnabled;
+      }
+      if (editData.accountName?.trim()) {
+        payload.accountName = editData.accountName;
       }
 
+      const response = await fetch(
+        `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/branches/${editingBranch.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          credentials: 'include',
+          body: JSON.stringify(payload)
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Ошибка при обновлении филиала');
+      }
+
+      const result = await response.json();
+      console.log('✅ Branch updated:', result);
+
       toast({
-        title: t('common.success'),
-        description: t('branch.update_success')
+        title: t('common.success') || 'Успешно',
+        description: t('branch.update_success') || 'Филиал успешно обновлен'
       });
 
       // Обновляем список филиалов
       await refetchBranches();
-      
+
       // Закрываем диалог редактирования
       setEditDialog(false);
       setEditingBranch(null);
 
-    } catch (error) {
-      console.error('Error updating branch:', error);
+    } catch (error: any) {
+      console.error('❌ Error updating branch:', error);
       toast({
-        title: t('common.error'),
-        description: t('branch.update_error'),
+        title: t('common.error') || 'Ошибка',
+        description: error.message || t('branch.update_error') || 'Не удалось обновить филиал',
         variant: "destructive"
       });
     } finally {
@@ -228,33 +271,88 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
               {t('branch.edit_description')}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
             <div>
-              <Label htmlFor="branchName">{t('branch.name_label')}</Label>
+              <Label htmlFor="branchName">Название филиала *</Label>
               <Input
                 id="branchName"
-                value={editData.branches}
-                onChange={(e) => setEditData({ ...editData, branches: e.target.value })}
-                placeholder={t('branch.name_placeholder')}
+                value={editData.name}
+                onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                placeholder="Например: Центральный офис"
               />
             </div>
+
             <div>
-              <Label htmlFor="branchAddress">{t('branch.address_label')}</Label>
+              <Label htmlFor="branchPhone">Телефон *</Label>
+              <Input
+                id="branchPhone"
+                value={editData.phone}
+                onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+                placeholder="+996700000000"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="branchAddress">Адрес *</Label>
               <Input
                 id="branchAddress"
                 value={editData.address}
                 onChange={(e) => setEditData({ ...editData, address: e.target.value })}
-                placeholder={t('branch.address_placeholder')}
+                placeholder="ул. Ленина, 25"
               />
             </div>
-            <div>
-              <Label htmlFor="branchPhone">{t('branch.phone_label')}</Label>
-              <Input
-                id="branchPhone"
-                value={editData.phoneNumber}
-                onChange={(e) => setEditData({ ...editData, phoneNumber: e.target.value })}
-                placeholder={t('branch.phone_placeholder')}
+
+            <div className="flex items-center justify-between space-x-2 py-2">
+              <div className="space-y-0.5">
+                <Label htmlFor="isActive">Филиал активен</Label>
+                <p className="text-xs text-muted-foreground">
+                  Включить/выключить филиал
+                </p>
+              </div>
+              <Switch
+                id="isActive"
+                checked={editData.isActive}
+                onCheckedChange={(checked) => setEditData({ ...editData, isActive: checked })}
               />
+            </div>
+
+            <div className="flex items-center justify-between space-x-2 py-2">
+              <div className="space-y-0.5">
+                <Label htmlFor="limitsEnabled">Лимиты включены</Label>
+                <p className="text-xs text-muted-foreground">
+                  Использовать лимиты WhatsApp
+                </p>
+              </div>
+              <Switch
+                id="limitsEnabled"
+                checked={editData.limitsEnabled || false}
+                onCheckedChange={(checked) => setEditData({ ...editData, limitsEnabled: checked })}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="accountName">Название WhatsApp аккаунта</Label>
+              <Input
+                id="accountName"
+                value={editData.accountName || ""}
+                onChange={(e) => setEditData({ ...editData, accountName: e.target.value })}
+                placeholder="WhatsApp Business"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="systemPrompt">Системный промпт для AI бота</Label>
+              <Textarea
+                id="systemPrompt"
+                value={editData.systemPrompt || ""}
+                onChange={(e) => setEditData({ ...editData, systemPrompt: e.target.value })}
+                placeholder="Опишите роль и поведение AI бота..."
+                rows={4}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Этот промпт будет использоваться AI ботом для ответов клиентам
+              </p>
             </div>
           </div>
           <DialogFooter>
@@ -265,9 +363,9 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
             >
               {t('common.cancel')}
             </Button>
-            <Button 
+            <Button
               onClick={handleUpdateBranch}
-              disabled={isUpdating || !editData.branches.trim()}
+              disabled={isUpdating || !editData.name.trim() || !editData.phone.trim() || !editData.address.trim()}
             >
               {isUpdating ? (
                 <>
