@@ -123,6 +123,8 @@ const getAssignments = async (branchId: string, date?: string, employeeId?: numb
     }
 
     if (employeeId) {
+
+      
       params.append('employeeId', employeeId.toString());
     }
 
