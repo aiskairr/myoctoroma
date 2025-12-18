@@ -2154,21 +2154,6 @@ export default function DailyCalendar() {
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const [draggedOver, setDraggedOver] = useState<{ time: string; masterId: number } | null>(null);
 
-  // Состояние для режима 24 часа (загружаем из localStorage)
-  const [is24HourMode, setIs24HourMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem('calendar_24hour_mode');
-    return saved === 'true';
-  });
-
-  // Сохраняем изменение режима в localStorage
-  const toggle24HourMode = () => {
-    setIs24HourMode(prev => {
-      const newValue = !prev;
-      localStorage.setItem('calendar_24hour_mode', String(newValue));
-      return newValue;
-    });
-  };
-
   // Синхронизация даты с query-параметром без перезагрузки
   useEffect(() => {
     const [path, search = ""] = location.split("?");
@@ -2294,10 +2279,10 @@ export default function DailyCalendar() {
     queryKey: [`${import.meta.env.VITE_BACKEND_URL}/api/public/service-services`],
   });
 
-  // Генерируем временные слоты с динамическим началом (0:00 или 7:00) до 23:59 с шагом 15 минут
+  // Генерируем временные слоты с 7:00 до 23:59 с шагом 15 минут
   const timeSlots = useMemo(() => {
     const slots = [];
-    const startHour = is24HourMode ? 0 : 7; // 0:00 в режиме 24 часа, иначе 7:00
+    const startHour = 7;
     const endHour = 24; // до 23:59
 
     for (let hour = startHour; hour < endHour; hour++) {
@@ -2308,7 +2293,7 @@ export default function DailyCalendar() {
     }
 
     return slots;
-  }, [is24HourMode]);
+  }, []);
 
   // Вычисляем позицию линии текущего времени
   const getCurrentTimePosition = () => {
@@ -2318,9 +2303,8 @@ export default function DailyCalendar() {
     const currentMinute = currentTime.getMinutes();
     const currentTimeInMinutes = currentHour * 60 + currentMinute;
 
-    // Время начала календаря (динамическое: 0:00 или 7:00) в минутах
-    const startHour = is24HourMode ? 0 : 7;
-    const startTimeInMinutes = startHour * 60;
+    // Время начала календаря (7:00) в минутах
+    const startTimeInMinutes = 7 * 60;
     const endTimeInMinutes = 24 * 60;
 
     // Если текущее время вне рабочих часов, не показываем линию
@@ -2688,15 +2672,6 @@ export default function DailyCalendar() {
           </div>
           <div className="flex items-center gap-3">
             <CancelledAppointments selectedDate={selectedDate} />
-            <Button
-              variant={is24HourMode ? "default" : "outline"}
-              size="sm"
-              onClick={toggle24HourMode}
-              className="flex items-center gap-2"
-            >
-              <Clock className="h-4 w-4" />
-              24 часа
-            </Button>
             <Badge variant="outline" className="ml-2">
               {currentBranch?.branches || 'Филиал'}
             </Badge>
