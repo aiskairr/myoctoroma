@@ -153,21 +153,21 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
 
       // Подготавливаем payload согласно API документации
       const payload: any = {
-        name: editData.name,
-        phone: editData.phone,
-        address: editData.address,
-        isActive: editData.isActive
+        name: editData.name?.trim() || '',
+        phone: editData.phone?.trim() || '',
+        address: editData.address?.trim() || '',
+        isActive: editData.isActive ?? true
       };
 
       // Добавляем опциональные поля только если они заполнены
       if (editData.systemPrompt?.trim()) {
-        payload.systemPrompt = editData.systemPrompt;
+        payload.systemPrompt = editData.systemPrompt.trim();
       }
-      if (editData.limitsEnabled !== undefined) {
+      if (editData.limitsEnabled !== undefined && editData.limitsEnabled !== null) {
         payload.limitsEnabled = editData.limitsEnabled;
       }
       if (editData.accountName?.trim()) {
-        payload.accountName = editData.accountName;
+        payload.accountName = editData.accountName.trim();
       }
 
       const response = await fetch(
@@ -365,7 +365,7 @@ export const BranchSelectorDialog: React.FC<BranchSelectorDialogProps> = ({ onSe
             </Button>
             <Button
               onClick={handleUpdateBranch}
-              disabled={isUpdating || !editData.name.trim() || !editData.phone.trim() || !editData.address.trim()}
+              disabled={isUpdating || !editData.name?.trim() || !editData.phone?.trim() || !editData.address?.trim()}
             >
               {isUpdating ? (
                 <>
