@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "./contexts/SimpleAuthContext";
 import { BranchProvider } from "./contexts/BranchContext";
 import { LocaleProvider } from "./contexts/LocaleContext";
+import { AuthMiddleware } from "./components/AuthMiddleware";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useIsMaster } from "@/hooks/use-master-role";
 import { useIsAdmin } from "@/hooks/use-admin-role";
@@ -76,8 +77,9 @@ function App() {
   return (
     <LocaleProvider>
       <AuthProvider>
-        <div className="min-h-screen">
-        <Switch>
+        <AuthMiddleware>
+          <div className="min-h-screen">
+          <Switch>
           {/* Публичные маршруты */}
           <Route path="/login" component={SimpleLogin} />
           <Route path="/public/booking" component={BookingPage} />
@@ -233,8 +235,9 @@ function App() {
             <NotFound />
           </Route>
         </Switch>
-      </div>
+        </div>
         <Toaster />
+        </AuthMiddleware>
       </AuthProvider>
     </LocaleProvider>
   );
