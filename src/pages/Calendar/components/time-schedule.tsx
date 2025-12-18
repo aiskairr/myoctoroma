@@ -373,7 +373,7 @@ const AdvancedScheduleComponent: React.FC<AdvancedScheduleComponentProps> = ({ i
                 
                 return {
                     id: master.id.toString(),
-                    name: master.name || `Мастер ${master.id}`,
+                    name: master.first_name,
                     role: master.specialization || 'Мастер',
                     workHours,
                     color: EMPLOYEE_COLORS[index % EMPLOYEE_COLORS.length],

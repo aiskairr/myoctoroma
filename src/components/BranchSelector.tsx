@@ -69,8 +69,8 @@ const BranchCard: React.FC<BranchCardProps> = ({ branch, isSelected, onClick, on
             </span>
           )}
         </div>
-        <p className="text-sm text-muted-foreground">{branch.address}</p>
-        <p className="text-xs text-muted-foreground mt-1">{t('branch.phone_prefix')}{branch.phoneNumber}</p>
+        <p className="text-sm text-muted-foreground">{branch.name}</p>
+        <p className="text-xs text-muted-foreground mt-1">{t('branch.phone_prefix')}{branch.phone}</p>
       </div>
       <Button
         variant="ghost"
@@ -409,7 +409,7 @@ export const BranchIndicator: React.FC<BranchIndicatorProps> = ({ compact = fals
         )}>
           <Building className="h-4 w-4" />
           <span className={compact ? "hidden sm:inline" : ""}>
-            {isLoading ? t('branch.loading') : currentBranch?.address}
+            {isLoading ? t('branch.loading') : currentBranch?.name}
           </span>
         </div>
       </div>
@@ -423,7 +423,7 @@ export const BranchIndicator: React.FC<BranchIndicatorProps> = ({ compact = fals
         compact ? "px-2 py-1" : "p-2"
       )}>
         <Building className="h-4 w-4" />
-        <span className={compact ? "hidden sm:inline" : ""}>{currentBranch.address}</span>
+        <span className={compact ? "hidden sm:inline" : ""}>{currentBranch.name}</span>
       </div>
     </div>
   );

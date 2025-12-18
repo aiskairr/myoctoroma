@@ -4,6 +4,7 @@ import { useAuth } from "./SimpleAuthContext";
 import { $apiSecondary } from "@/API/http";
 
 export interface Branch {
+  phone: ReactNode;
   name: ReactNode;
   id: number;
   branches: string;

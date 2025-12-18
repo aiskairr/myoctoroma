@@ -5,6 +5,7 @@ import { apiGetJson } from '@/lib/api';
 
 // Interface for Master from API
 export interface Master {
+  first_name: string;
   username: ReactNode;
   id: number;
   name: string;
