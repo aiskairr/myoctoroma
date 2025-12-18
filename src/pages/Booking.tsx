@@ -39,7 +39,7 @@ interface BookingData {
 const getOrganisationBranches = async (organisationId: string): Promise<any> => {
   const token = localStorage.getItem('guest_token') || localStorage.getItem('auth_token');
   const url = `${import.meta.env.VITE_SECONDARY_BACKEND_URL}/booking/branches?organizationId=${organisationId}`;
-  
+
   const res = await fetch(url, {
     headers: {
       'Accept': 'application/json',
@@ -47,7 +47,7 @@ const getOrganisationBranches = async (organisationId: string): Promise<any> => 
     },
     cache: 'no-store'
   });
-  
+
   if (!res.ok && res.status !== 304) {
     const errorText = await res.text();
     throw new Error(`Failed to load branches: ${res.status} ${errorText}`);
@@ -104,7 +104,7 @@ const getMasters = async (branchId: string): Promise<any> => {
 };
 
 const getMasterDetails = async (masterId: number): Promise<any> => {
-  const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/staff/${masterId}`);
+  const response = await axios.get(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/staff/${masterId}`);
   return response.data;
 };
 
@@ -311,9 +311,9 @@ const BookingPageContent: React.FC = () => {
           <div className="container mx-auto px-4 py-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img 
-                  src="/PROM_logo_mid_blue.svg" 
-                  alt="Logo" 
+                <img
+                  src="/PROM_logo_mid_blue.svg"
+                  alt="Logo"
                   className="h-8 w-8"
                 />
                 <div>
@@ -431,7 +431,7 @@ const BookingPageContent: React.FC = () => {
     }
 
     const slots: string[] = [];
-    
+
     try {
       const [startH, startM] = startHour.split(':').map(Number);
       const [endH, endM] = endHour.split(':').map(Number);
@@ -481,7 +481,7 @@ const BookingPageContent: React.FC = () => {
     }
 
     const availableDates = new Set<string>();
-    
+
     masterWorkingDates.forEach((workingDate: any) => {
       if (workingDate.is_active && workingDate.work_date) {
         availableDates.add(workingDate.work_date);
@@ -595,6 +595,7 @@ const BookingPageContent: React.FC = () => {
         organizationId: Number(organisationId),
         branchId: Number(bookingData.branch),
         client: {
+          id: '', // Пустая строка для новых клиентов
           firstname: bookingData.name,
           phoneNumber: bookingData.phone
         },
@@ -602,15 +603,25 @@ const BookingPageContent: React.FC = () => {
         assignmentDate: assignmentDate,
         startTime: startTime,
         endTime: endTime,
+        notes: trackingInfo.notesText || '',
+        source: trackingInfo.trackingSource || 'web',
+        discount: 0,
+        paid: 'paid',
+        certificateNumber: '',
+        paymentMethod: [
+          {
+            type: 'cash',
+            amount: bookingData.servicePrice || 0,
+            name: 'Наличные'
+          }
+        ],
         service: {
           id: Number(bookingData.serviceId),
           name: '', // Будет заполнено на бэкенде
           price: bookingData.servicePrice || 0,
           duration: duration
         },
-        notes: trackingInfo.notesText || undefined,
-        source: trackingInfo.trackingSource || 'web',
-        paid: 'unpaid'
+        additionalServices: []
       };
 
       console.log('📝 Creating assignment with payload:', assignmentPayload);
@@ -664,29 +675,26 @@ const BookingPageContent: React.FC = () => {
           {steps.map((step, index) => (
             <div
               key={step}
-              className={`flex-1 text-center transition-colors duration-300 ${
-                index <= currentStep
-                  ? theme === 'dark' 
-                    ? 'text-blue-400 font-medium' 
-                    : 'text-primary font-medium'
-                  : theme === 'dark'
-                    ? 'text-slate-400'
-                    : 'text-muted-foreground'
-              }`}
+              className={`flex-1 text-center transition-colors duration-300 ${index <= currentStep
+                ? theme === 'dark'
+                  ? 'text-blue-400 font-medium'
+                  : 'text-primary font-medium'
+                : theme === 'dark'
+                  ? 'text-slate-400'
+                  : 'text-muted-foreground'
+                }`}
             >
               {!isMobile && step}
             </div>
           ))}
         </div>
-        <div className={`h-2 rounded-full overflow-hidden transition-colors duration-300 ${
-          theme === 'dark' ? 'bg-slate-700' : 'bg-secondary'
-        }`}>
+        <div className={`h-2 rounded-full overflow-hidden transition-colors duration-300 ${theme === 'dark' ? 'bg-slate-700' : 'bg-secondary'
+          }`}>
           <div
-            className={`h-full transition-all duration-500 ease-out ${
-              theme === 'dark'
-                ? 'bg-gradient-to-r from-blue-500 to-purple-500'
-                : 'bg-gradient-to-r from-blue-500 to-sky-500'
-            }`}
+            className={`h-full transition-all duration-500 ease-out ${theme === 'dark'
+              ? 'bg-gradient-to-r from-blue-500 to-purple-500'
+              : 'bg-gradient-to-r from-blue-500 to-sky-500'
+              }`}
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -702,43 +710,37 @@ const BookingPageContent: React.FC = () => {
     if (!branch && !service && !master && !bookingData.date) return null;
 
     return (
-      <Card className={`mb-6 transition-all duration-500 ${
-        theme === 'dark'
-          ? 'border-blue-700/50 bg-gradient-to-br from-slate-800/80 to-slate-700/60 backdrop-blur-sm'
-          : 'border-primary/20 bg-gradient-to-br from-blue-50/50 to-sky-50/30'
-      }`}>
+      <Card className={`mb-6 transition-all duration-500 ${theme === 'dark'
+        ? 'border-blue-700/50 bg-gradient-to-br from-slate-800/80 to-slate-700/60 backdrop-blur-sm'
+        : 'border-primary/20 bg-gradient-to-br from-blue-50/50 to-sky-50/30'
+        }`}>
         <CardHeader className="pb-3">
-          <CardTitle className={`text-base flex items-center gap-2 transition-colors duration-300 ${
-            theme === 'dark' ? 'text-amber-400' : 'text-amber-600'
-          }`}>
+          <CardTitle className={`text-base flex items-center gap-2 transition-colors duration-300 ${theme === 'dark' ? 'text-amber-400' : 'text-amber-600'
+            }`}>
             <Sparkles className="h-4 w-4" />
             {t('booking.confirmation.title').replace('!', '')} {t('booking.title').toLowerCase()}
           </CardTitle>
         </CardHeader>
-        <CardContent className={`space-y-2 text-sm transition-colors duration-300 ${
-          theme === 'dark' ? 'text-slate-200' : ''
-        }`}>
+        <CardContent className={`space-y-2 text-sm transition-colors duration-300 ${theme === 'dark' ? 'text-slate-200' : ''
+          }`}>
           {branch && (
             <div className="flex items-center gap-2">
-              <MapPin className={`h-4 w-4 transition-colors duration-300 ${
-                theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
-              }`} />
+              <MapPin className={`h-4 w-4 transition-colors duration-300 ${theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
+                }`} />
               <span>{branch.branches}</span>
             </div>
           )}
           {service && (
             <div className="flex items-center gap-2">
-              <Scissors className={`h-4 w-4 transition-colors duration-300 ${
-                theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
-              }`} />
+              <Scissors className={`h-4 w-4 transition-colors duration-300 ${theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
+                }`} />
               <span>
                 {service.name}
                 {bookingData.serviceDuration && (
-                  <Badge variant="secondary" className={`ml-2 transition-all duration-300 ${
-                    theme === 'dark' 
-                      ? 'bg-slate-700 text-slate-200 border-slate-600' 
-                      : ''
-                  }`}>
+                  <Badge variant="secondary" className={`ml-2 transition-all duration-300 ${theme === 'dark'
+                    ? 'bg-slate-700 text-slate-200 border-slate-600'
+                    : ''
+                    }`}>
                     {bookingData.serviceDuration} мин
                   </Badge>
                 )}
@@ -747,21 +749,19 @@ const BookingPageContent: React.FC = () => {
           )}
           {master && (
             <div className="flex items-center gap-2">
-              <User className={`h-4 w-4 transition-colors duration-300 ${
-                theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
-              }`} />
+              <User className={`h-4 w-4 transition-colors duration-300 ${theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
+                }`} />
               <span>{master.name}</span>
             </div>
           )}
           {bookingData.date && (
             <div className="flex items-center gap-2">
-              <CalendarIcon className={`h-4 w-4 transition-colors duration-300 ${
-                theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
-              }`} />
+              <CalendarIcon className={`h-4 w-4 transition-colors duration-300 ${theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
+                }`} />
               <span>
-                {bookingData.date.toLocaleDateString('ru-RU', { 
-                  day: 'numeric', 
-                  month: 'long' 
+                {bookingData.date.toLocaleDateString('ru-RU', {
+                  day: 'numeric',
+                  month: 'long'
                 })}
                 {bookingData.time && ` в ${bookingData.time}`}
               </span>
@@ -775,14 +775,12 @@ const BookingPageContent: React.FC = () => {
   const renderBranchStep = () => (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <h2 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${
-          theme === 'dark' ? 'text-white' : ''
-        }`}>
+        <h2 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${theme === 'dark' ? 'text-white' : ''
+          }`}>
           {t('booking.branch.title')}
         </h2>
-        <p className={`transition-colors duration-300 ${
-          theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
-        }`}>
+        <p className={`transition-colors duration-300 ${theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
+          }`}>
           {t('booking.branch.subtitle')}
         </p>
       </div>
@@ -791,36 +789,32 @@ const BookingPageContent: React.FC = () => {
         {organisationBranches?.branches?.map((branch: any, index: number) => (
           <Card
             key={branch.id}
-            className={`cursor-pointer transition-all hover:scale-105 group animate-in fade-in slide-in-from-bottom-2 duration-300 booking-card ${
-              theme === 'dark'
-                ? 'bg-slate-800/80 border-slate-700 hover:border-blue-500/50 hover:bg-slate-700/90 backdrop-blur-sm dark-card-bg shadow-dark hover:glow-blue'
-                : 'hover:shadow-lg hover:border-primary/50'
-            }`}
+            className={`cursor-pointer transition-all hover:scale-105 group animate-in fade-in slide-in-from-bottom-2 duration-300 booking-card ${theme === 'dark'
+              ? 'bg-slate-800/80 border-slate-700 hover:border-blue-500/50 hover:bg-slate-700/90 backdrop-blur-sm dark-card-bg shadow-dark hover:glow-blue'
+              : 'hover:shadow-lg hover:border-primary/50'
+              }`}
             style={{ animationDelay: `${index * 150}ms` }}
             onClick={() => handleBranchSelect(branch.id)}
           >
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <CardTitle className={`transition-colors ${
-                    theme === 'dark' 
-                      ? 'text-white group-hover:text-blue-400' 
-                      : 'group-hover:text-primary'
-                  }`}>
+                  <CardTitle className={`transition-colors ${theme === 'dark'
+                    ? 'text-white group-hover:text-blue-400'
+                    : 'group-hover:text-primary'
+                    }`}>
                     {branch.branches}
                   </CardTitle>
-                  <CardDescription className={`flex items-center gap-1 transition-colors duration-300 ${
-                    theme === 'dark' ? 'text-slate-400' : ''
-                  }`}>
+                  <CardDescription className={`flex items-center gap-1 transition-colors duration-300 ${theme === 'dark' ? 'text-slate-400' : ''
+                    }`}>
                     <MapPin className="h-3 w-3" />
                     {branch.address}
                   </CardDescription>
                 </div>
-                <ChevronRight className={`h-5 w-5 transition-all ${
-                  theme === 'dark'
-                    ? 'text-slate-400 group-hover:text-blue-400 group-hover:translate-x-1'
-                    : 'text-muted-foreground group-hover:text-primary group-hover:translate-x-1'
-                }`} />
+                <ChevronRight className={`h-5 w-5 transition-all ${theme === 'dark'
+                  ? 'text-slate-400 group-hover:text-blue-400 group-hover:translate-x-1'
+                  : 'text-muted-foreground group-hover:text-primary group-hover:translate-x-1'
+                  }`} />
               </div>
             </CardHeader>
           </Card>
@@ -834,26 +828,23 @@ const BookingPageContent: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h2 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${
-              theme === 'dark' ? 'text-white' : ''
-            }`}>
+            <h2 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${theme === 'dark' ? 'text-white' : ''
+              }`}>
               {t('booking.service.title')}
             </h2>
-            <p className={`transition-colors duration-300 ${
-              theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
-            }`}>
+            <p className={`transition-colors duration-300 ${theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
+              }`}>
               {t('booking.service.subtitle')}
             </p>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => goToStep(BookingStep.Branch)}
-            className={`transition-all duration-300 ${
-              theme === 'dark' 
-                ? 'hover:bg-slate-700 text-slate-300 hover:text-white' 
-                : ''
-            }`}
+            className={`transition-all duration-300 ${theme === 'dark'
+              ? 'hover:bg-slate-700 text-slate-300 hover:text-white'
+              : ''
+              }`}
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
@@ -887,11 +878,10 @@ const BookingPageContent: React.FC = () => {
             return (
               <Card
                 key={service.id}
-                className={`cursor-pointer transition-all group ${
-                  theme === 'dark'
-                    ? 'bg-slate-800/80 border-slate-700 hover:border-blue-500/50 hover:bg-slate-700/90 backdrop-blur-sm'
-                    : 'hover:shadow-lg hover:border-primary/50'
-                }`}
+                className={`cursor-pointer transition-all group ${theme === 'dark'
+                  ? 'bg-slate-800/80 border-slate-700 hover:border-blue-500/50 hover:bg-slate-700/90 backdrop-blur-sm'
+                  : 'hover:shadow-lg hover:border-primary/50'
+                  }`}
                 onClick={() => handleServiceSelect(
                   service.id,
                   firstAvailableDuration?.duration || service.defaultDuration || 60,
@@ -901,31 +891,27 @@ const BookingPageContent: React.FC = () => {
                 <CardHeader>
                   <div className="flex justify-between items-start gap-4">
                     <div className="space-y-1 flex-1">
-                      <CardTitle className={`text-lg transition-colors ${
-                        theme === 'dark'
-                          ? 'text-white group-hover:text-blue-400'
-                          : 'group-hover:text-primary'
-                      }`}>
+                      <CardTitle className={`text-lg transition-colors ${theme === 'dark'
+                        ? 'text-white group-hover:text-blue-400'
+                        : 'group-hover:text-primary'
+                        }`}>
                         {service.name}
                       </CardTitle>
                     </div>
                     <div className="text-right shrink-0">
                       {firstAvailableDuration ? (
-                        <div className={`font-semibold transition-colors duration-300 ${
-                          theme === 'dark' ? 'text-blue-400' : 'text-primary'
-                        }`}>
+                        <div className={`font-semibold transition-colors duration-300 ${theme === 'dark' ? 'text-blue-400' : 'text-primary'
+                          }`}>
                           {t('booking.service.price')} {service[firstAvailableDuration.key]} сом
                         </div>
                       ) : (
-                        <div className={`font-semibold transition-colors duration-300 ${
-                          theme === 'dark' ? 'text-blue-400' : 'text-primary'
-                        }`}>
+                        <div className={`font-semibold transition-colors duration-300 ${theme === 'dark' ? 'text-blue-400' : 'text-primary'
+                          }`}>
                           Цена не указана
                         </div>
                       )}
-                      <div className={`text-xs transition-colors duration-300 ${
-                        theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
-                      }`}>
+                      <div className={`text-xs transition-colors duration-300 ${theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
+                        }`}>
                         {firstAvailableDuration?.duration || service.defaultDuration} {t('booking.service.duration')}
                       </div>
                     </div>
@@ -943,26 +929,23 @@ const BookingPageContent: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h2 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${
-            theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
-          }`}>
+          <h2 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
+            }`}>
             {t('booking.master.title')}
           </h2>
-          <p className={`transition-colors duration-300 ${
-            theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
-          }`}>
+          <p className={`transition-colors duration-300 ${theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
+            }`}>
             {t('booking.master.subtitle')}
           </p>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => goToStep(BookingStep.Date)}
-          className={`transition-all duration-300 ${
-            theme === 'dark' 
-              ? 'hover:bg-slate-700 text-slate-300 hover:text-white' 
-              : ''
-          }`}
+          className={`transition-all duration-300 ${theme === 'dark'
+            ? 'hover:bg-slate-700 text-slate-300 hover:text-white'
+            : ''
+            }`}
         >
           <ChevronLeft className="h-5 w-5" />
         </Button>
@@ -972,55 +955,49 @@ const BookingPageContent: React.FC = () => {
 
       {mastersLoading ? (
         <div className="flex justify-center items-center py-12">
-          <Loader2 className={`h-8 w-8 animate-spin transition-colors duration-300 ${
-            theme === 'dark' ? 'text-blue-400' : 'text-primary'
-          }`} />
+          <Loader2 className={`h-8 w-8 animate-spin transition-colors duration-300 ${theme === 'dark' ? 'text-blue-400' : 'text-primary'
+            }`} />
         </div>
       ) : (() => {
         // Получаем мастеров, работающих в выбранную дату
         const availableMasters = getMastersForDate(selectedDate);
-        
+
         return availableMasters && availableMasters.length > 0 ? (
-          <div className={`rounded-xl shadow-lg border transition-all duration-500 p-6 hover:shadow-xl ${
-            theme === 'dark'
-              ? 'bg-slate-800/60 backdrop-blur-sm border-slate-700'
-              : 'bg-white/60 backdrop-blur-sm border-white/40'
-          }`}>
+          <div className={`rounded-xl shadow-lg border transition-all duration-500 p-6 hover:shadow-xl ${theme === 'dark'
+            ? 'bg-slate-800/60 backdrop-blur-sm border-slate-700'
+            : 'bg-white/60 backdrop-blur-sm border-white/40'
+            }`}>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {availableMasters.map((master: any) => (
                 <Card
                   key={master.id}
-                  className={`cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 group ${
-                    bookingData.masterId === master.id 
-                      ? theme === 'dark'
-                        ? 'border-blue-500 bg-gradient-to-br from-blue-900/30 to-purple-900/20 shadow-lg shadow-blue-500/20'
-                        : 'border-[var(--color-primary)] bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-light-blue)]/5 shadow-lg'
-                      : theme === 'dark'
-                        ? 'hover:border-blue-500/50 bg-slate-700/80 backdrop-blur-sm border-slate-600'
-                        : 'hover:border-[var(--color-primary)]/50 bg-white/80 backdrop-blur-sm'
-                  }`}
+                  className={`cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 group ${bookingData.masterId === master.id
+                    ? theme === 'dark'
+                      ? 'border-blue-500 bg-gradient-to-br from-blue-900/30 to-purple-900/20 shadow-lg shadow-blue-500/20'
+                      : 'border-[var(--color-primary)] bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-light-blue)]/5 shadow-lg'
+                    : theme === 'dark'
+                      ? 'hover:border-blue-500/50 bg-slate-700/80 backdrop-blur-sm border-slate-600'
+                      : 'hover:border-[var(--color-primary)]/50 bg-white/80 backdrop-blur-sm'
+                    }`}
                   onClick={() => handleMasterSelect(master.id)}
                 >
                   <CardContent className="p-6 text-center space-y-4">
-                    <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center text-2xl font-semibold transition-all duration-300 ${
-                      theme === 'dark'
-                        ? 'bg-gradient-to-br from-blue-800 to-purple-800 text-blue-200'
-                        : 'bg-gradient-to-br from-blue-100 to-sky-100 text-blue-700'
-                    }`}>
+                    <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center text-2xl font-semibold transition-all duration-300 ${theme === 'dark'
+                      ? 'bg-gradient-to-br from-blue-800 to-purple-800 text-blue-200'
+                      : 'bg-gradient-to-br from-blue-100 to-sky-100 text-blue-700'
+                      }`}>
                       {master.name.charAt(0)}
                     </div>
                     <div>
-                      <h3 className={`font-semibold transition-colors ${
-                        theme === 'dark'
-                          ? 'text-white group-hover:text-blue-400'
-                          : 'group-hover:text-primary'
-                      }`}>
+                      <h3 className={`font-semibold transition-colors ${theme === 'dark'
+                        ? 'text-white group-hover:text-blue-400'
+                        : 'group-hover:text-primary'
+                        }`}>
                         {master.name}
                       </h3>
                       {master.specialty && (
-                        <p className={`text-sm transition-colors duration-300 ${
-                          theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
-                        }`}>
+                        <p className={`text-sm transition-colors duration-300 ${theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
+                          }`}>
                           {master.specialty}
                         </p>
                       )}
@@ -1031,20 +1008,17 @@ const BookingPageContent: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className={`rounded-xl shadow-lg border p-6 transition-all duration-500 ${
-            theme === 'dark'
-              ? 'bg-slate-800/60 backdrop-blur-sm border-slate-700'
-              : 'bg-white/60 backdrop-blur-sm border-white/40'
-          }`}>
+          <div className={`rounded-xl shadow-lg border p-6 transition-all duration-500 ${theme === 'dark'
+            ? 'bg-slate-800/60 backdrop-blur-sm border-slate-700'
+            : 'bg-white/60 backdrop-blur-sm border-white/40'
+            }`}>
             <div className="p-12 text-center">
-              <p className={`transition-colors duration-300 ${
-                theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
-              }`}>
+              <p className={`transition-colors duration-300 ${theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
+                }`}>
                 На выбранную дату ({selectedDate.toLocaleDateString('ru-RU')}) нет доступных мастеров
               </p>
-              <p className={`text-sm mt-2 transition-colors duration-300 ${
-                theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
-              }`}>
+              <p className={`text-sm mt-2 transition-colors duration-300 ${theme === 'dark' ? 'text-slate-400' : 'text-muted-foreground'
+                }`}>
                 Попробуйте выбрать другую дату
               </p>
             </div>
@@ -1058,33 +1032,33 @@ const BookingPageContent: React.FC = () => {
   const renderDateStep = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const availableDates = getAvailableDates();
-    
+
     console.log('renderDateStep:', {
       masterWorkingDates,
       availableDates,
       workingDatesLoading
     });
-    
+
     // Функция для проверки, доступна ли дата для записи
     const isDateAvailable = (date: Date): boolean => {
       if (date < today) return false; // Прошедшие даты недоступны
-      
+
       if (!masterWorkingDates || !Array.isArray(masterWorkingDates)) {
         console.log('masterWorkingDates not available:', masterWorkingDates);
         return false;
       }
-      
+
       const dateStr = formatDateForAPI(date);
       const isAvailable = masterWorkingDates.some((workingDate: any) => {
         if (!workingDate.is_active) return false;
-        
+
         // Приводим work_date к формату YYYY-MM-DD для сравнения
         const workDateStr = formatDateForAPI(new Date(workingDate.work_date));
         return workDateStr === dateStr;
       });
-      
+
       console.log(`Date ${dateStr} is available:`, isAvailable);
       return isAvailable;
     };
@@ -1093,26 +1067,23 @@ const BookingPageContent: React.FC = () => {
       <div className="space-y-6 max-w-full px-2 sm:px-0">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight transition-colors duration-300 ${
-              theme === 'dark' ? 'text-white' : ''
-            }`}>
+            <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight transition-colors duration-300 ${theme === 'dark' ? 'text-white' : ''
+              }`}>
               {t('booking.time.select_date_title')}
             </h2>
-            <p className={`text-sm sm:text-base transition-colors duration-300 ${
-              theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
-            }`}>
+            <p className={`text-sm sm:text-base transition-colors duration-300 ${theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
+              }`}>
               {t('booking.time.select_date_subtitle')}
             </p>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => goToStep(BookingStep.Service)}
-            className={`transition-all duration-300 ${
-              theme === 'dark' 
-                ? 'hover:bg-slate-700 text-slate-300 hover:text-white' 
-                : ''
-            }`}
+            className={`transition-all duration-300 ${theme === 'dark'
+              ? 'hover:bg-slate-700 text-slate-300 hover:text-white'
+              : ''
+              }`}
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
@@ -1122,20 +1093,17 @@ const BookingPageContent: React.FC = () => {
 
         {workingDatesLoading ? (
           <div className="flex justify-center items-center py-12">
-            <Loader2 className={`h-8 w-8 animate-spin transition-colors duration-300 ${
-              theme === 'dark' ? 'text-blue-400' : 'text-primary'
-            }`} />
+            <Loader2 className={`h-8 w-8 animate-spin transition-colors duration-300 ${theme === 'dark' ? 'text-blue-400' : 'text-primary'
+              }`} />
           </div>
         ) : !masterWorkingDates || !Array.isArray(masterWorkingDates) ? (
-          <Card className={`transition-all duration-500 ${
-            theme === 'dark'
-              ? 'bg-slate-800/80 border-slate-700 backdrop-blur-sm'
-              : ''
-          }`}>
+          <Card className={`transition-all duration-500 ${theme === 'dark'
+            ? 'bg-slate-800/80 border-slate-700 backdrop-blur-sm'
+            : ''
+            }`}>
             <CardContent className="p-6 text-center">
-              <p className={`transition-colors duration-300 ${
-                theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
-              }`}>
+              <p className={`transition-colors duration-300 ${theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
+                }`}>
                 Загрузка рабочих дат...
               </p>
               <p className="text-xs text-red-500 mt-2">
@@ -1163,25 +1131,24 @@ const BookingPageContent: React.FC = () => {
                   }
                 }}
                 disabled={!isDateAvailable(new Date())}
-                className={`flex-1 h-12 text-sm sm:text-base transition-all duration-200 hover:scale-105 active:scale-95 ${
-                  (() => {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    const selected = new Date(selectedDate);
-                    selected.setHours(0, 0, 0, 0);
-                    const isSelected = today.getTime() === selected.getTime();
-                    
-                    if (theme === 'dark') {
-                      return isSelected 
-                        ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white border-transparent shadow-lg shadow-blue-500/25"
-                        : "bg-gradient-to-r from-slate-700 to-slate-600 hover:from-blue-700/50 hover:to-purple-700/50 border-slate-600 text-slate-200 hover:text-white";
-                    } else {
-                      return isSelected 
-                        ? "bg-gradient-to-r from-blue-500 to-sky-500 text-white border-transparent"
-                        : "bg-gradient-to-r from-blue-50 to-sky-50 hover:from-blue-100 hover:to-sky-100";
-                    }
-                  })()
-                }`}
+                className={`flex-1 h-12 text-sm sm:text-base transition-all duration-200 hover:scale-105 active:scale-95 ${(() => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const selected = new Date(selectedDate);
+                  selected.setHours(0, 0, 0, 0);
+                  const isSelected = today.getTime() === selected.getTime();
+
+                  if (theme === 'dark') {
+                    return isSelected
+                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white border-transparent shadow-lg shadow-blue-500/25"
+                      : "bg-gradient-to-r from-slate-700 to-slate-600 hover:from-blue-700/50 hover:to-purple-700/50 border-slate-600 text-slate-200 hover:text-white";
+                  } else {
+                    return isSelected
+                      ? "bg-gradient-to-r from-blue-500 to-sky-500 text-white border-transparent"
+                      : "bg-gradient-to-r from-blue-50 to-sky-50 hover:from-blue-100 hover:to-sky-100";
+                  }
+                })()
+                  }`}
               >
                 <CalendarIcon className="h-4 w-4 mr-2" />
                 <span className="font-medium">{t('booking.time.today')}</span>
@@ -1189,7 +1156,7 @@ const BookingPageContent: React.FC = () => {
                   {new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
                 </span>
               </Button>
-              
+
               <Button
                 variant={(() => {
                   const tomorrow = new Date();
@@ -1212,26 +1179,25 @@ const BookingPageContent: React.FC = () => {
                   tomorrow.setDate(tomorrow.getDate() + 1);
                   return !isDateAvailable(tomorrow);
                 })()}
-                className={`flex-1 h-12 text-sm sm:text-base transition-all duration-200 hover:scale-105 active:scale-95 ${
-                  (() => {
-                    const tomorrow = new Date();
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    tomorrow.setHours(0, 0, 0, 0);
-                    const selected = new Date(selectedDate);
-                    selected.setHours(0, 0, 0, 0);
-                    const isSelected = tomorrow.getTime() === selected.getTime();
-                    
-                    if (theme === 'dark') {
-                      return isSelected 
-                        ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white border-transparent shadow-lg shadow-purple-500/25"
-                        : "bg-gradient-to-r from-slate-700 to-slate-600 hover:from-purple-700/50 hover:to-blue-700/50 border-slate-600 text-slate-200 hover:text-white";
-                    } else {
-                      return isSelected 
-                        ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white border-transparent"
-                        : "bg-gradient-to-r from-sky-50 to-blue-50 hover:from-sky-100 hover:to-blue-100";
-                    }
-                  })()
-                }`}
+                className={`flex-1 h-12 text-sm sm:text-base transition-all duration-200 hover:scale-105 active:scale-95 ${(() => {
+                  const tomorrow = new Date();
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  tomorrow.setHours(0, 0, 0, 0);
+                  const selected = new Date(selectedDate);
+                  selected.setHours(0, 0, 0, 0);
+                  const isSelected = tomorrow.getTime() === selected.getTime();
+
+                  if (theme === 'dark') {
+                    return isSelected
+                      ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white border-transparent shadow-lg shadow-purple-500/25"
+                      : "bg-gradient-to-r from-slate-700 to-slate-600 hover:from-purple-700/50 hover:to-blue-700/50 border-slate-600 text-slate-200 hover:text-white";
+                  } else {
+                    return isSelected
+                      ? "bg-gradient-to-r from-sky-500 to-blue-500 text-white border-transparent"
+                      : "bg-gradient-to-r from-sky-50 to-blue-50 hover:from-sky-100 hover:to-blue-100";
+                  }
+                })()
+                  }`}
               >
                 <Sun className="h-4 w-4 mr-2" />
                 <span className="font-medium">{t('booking.time.tomorrow')}</span>
@@ -1246,11 +1212,10 @@ const BookingPageContent: React.FC = () => {
             </div>
 
             {/* Календарь */}
-            <div className={`rounded-xl shadow-lg border p-6 transition-all duration-500 hover:shadow-xl ${
-              theme === 'dark'
-                ? 'bg-slate-800/70 backdrop-blur-sm border-slate-700 shadow-dark hover:glow-blue'
-                : 'bg-white/60 backdrop-blur-sm border-white/40'
-            }`}>
+            <div className={`rounded-xl shadow-lg border p-6 transition-all duration-500 hover:shadow-xl ${theme === 'dark'
+              ? 'bg-slate-800/70 backdrop-blur-sm border-slate-700 shadow-dark hover:glow-blue'
+              : 'bg-white/60 backdrop-blur-sm border-white/40'
+              }`}>
               <div className="flex justify-center items-center py-4 w-full">
                 <div className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-xl flex justify-center">
                   <Calendar
@@ -1258,9 +1223,8 @@ const BookingPageContent: React.FC = () => {
                     selected={selectedDate}
                     onSelect={handleDateSelect}
                     disabled={(date) => !isDateAvailable(date)}
-                    className={`rounded-md border-0 mx-auto scale-110 sm:scale-100 transform-gpu transition-all duration-300 ${
-                      theme === 'dark' 
-                        ? `
+                    className={`rounded-md border-0 mx-auto scale-110 sm:scale-100 transform-gpu transition-all duration-300 ${theme === 'dark'
+                      ? `
                           [&_.rdp]:flex [&_.rdp]:justify-center
                           [&_.rdp-month]:w-auto [&_.rdp-table]:w-auto [&_.rdp-tbody]:w-auto
                           [&_.rdp-day_button]:text-slate-200
@@ -1282,7 +1246,7 @@ const BookingPageContent: React.FC = () => {
                           [&_.rdp-nav_button]:hover:text-white
                           [&_.rdp-nav_button]:hover:bg-slate-700
                         `
-                        : `
+                      : `
                           [&_.rdp]:flex [&_.rdp]:justify-center
                           [&_.rdp-month]:w-auto [&_.rdp-table]:w-auto [&_.rdp-tbody]:w-auto
                           [&_.rdp-day_button]:hover:bg-[var(--color-primary)]/10
@@ -1295,13 +1259,12 @@ const BookingPageContent: React.FC = () => {
                           [&_.rdp-head_cell]:text-[var(--color-dark-blue)]
                           [&_.rdp-head_cell]:font-semibold
                         `
-                    }`}
+                      }`}
                     locale={ru}
                   />
                   {availableDates.length === 0 && (
-                    <div className={`text-center mt-4 transition-colors duration-300 ${
-                      theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
-                    }`}>
+                    <div className={`text-center mt-4 transition-colors duration-300 ${theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
+                      }`}>
                       <p>На данный момент нет доступных дат для записи.</p>
                       <p className="text-sm">Попробуйте выбрать другой филиал.</p>
                       <p className="text-xs text-red-500 mt-2">
@@ -1328,7 +1291,7 @@ const BookingPageContent: React.FC = () => {
       const dateStr = formatDateForAPI(selectedDate);
       const masterWorkingDate = masterWorkingDates.find((wd: any) => {
         if (wd.master_id !== bookingData.masterId || !wd.is_active) return false;
-        
+
         // Приводим work_date к формату YYYY-MM-DD для сравнения
         const workDateStr = formatDateForAPI(new Date(wd.work_date));
         return workDateStr === dateStr;
@@ -1345,10 +1308,10 @@ const BookingPageContent: React.FC = () => {
     };
 
     const workingHours = getSelectedMasterWorkingHours();
-    
+
     // Используем данные из API или генерируем слоты как fallback
     let availableTimeSlots: string[] = [];
-    
+
     if (availableSlots && Array.isArray(availableSlots)) {
       // Используем данные из API
       availableTimeSlots = availableSlots
@@ -1367,26 +1330,23 @@ const BookingPageContent: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h2 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${
-              theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
-            }`}>
+            <h2 className={`text-3xl font-bold tracking-tight transition-colors duration-300 ${theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
+              }`}>
               {t('booking.time.title')}
             </h2>
-            <p className={`transition-colors duration-300 ${
-              theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
-            }`}>
+            <p className={`transition-colors duration-300 ${theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
+              }`}>
               {t('booking.time.subtitle')}
             </p>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => goToStep(BookingStep.Master)}
-            className={`transition-all duration-300 ${
-              theme === 'dark' 
-                ? 'hover:bg-slate-700 text-slate-300 hover:text-white' 
-                : ''
-            }`}
+            className={`transition-all duration-300 ${theme === 'dark'
+              ? 'hover:bg-slate-700 text-slate-300 hover:text-white'
+              : ''
+              }`}
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
@@ -1396,50 +1356,43 @@ const BookingPageContent: React.FC = () => {
 
         {masterDetailsLoading || availableSlotsLoading ? (
           <div className="flex justify-center items-center py-12">
-            <Loader2 className={`h-8 w-8 animate-spin transition-colors duration-300 ${
-              theme === 'dark' ? 'text-blue-400' : 'text-primary'
-            }`} />
+            <Loader2 className={`h-8 w-8 animate-spin transition-colors duration-300 ${theme === 'dark' ? 'text-blue-400' : 'text-primary'
+              }`} />
           </div>
         ) : (
           <div className="space-y-6">
-            <div className={`rounded-xl shadow-lg border overflow-hidden transition-all duration-500 ${
-              theme === 'dark'
-                ? 'bg-slate-800/70 backdrop-blur-sm border-slate-700 shadow-dark'
-                : 'bg-white/60 backdrop-blur-sm border-white/40'
-            }`}>
-              <div className={`p-6 transition-all duration-500 ${
-                theme === 'dark'
-                  ? 'bg-gradient-to-r from-blue-900/30 via-purple-900/20 to-blue-900/30'
-                  : 'bg-gradient-to-r from-[var(--color-primary)]/10 via-[var(--color-light-blue)]/5 to-[var(--color-primary)]/10'
+            <div className={`rounded-xl shadow-lg border overflow-hidden transition-all duration-500 ${theme === 'dark'
+              ? 'bg-slate-800/70 backdrop-blur-sm border-slate-700 shadow-dark'
+              : 'bg-white/60 backdrop-blur-sm border-white/40'
               }`}>
+              <div className={`p-6 transition-all duration-500 ${theme === 'dark'
+                ? 'bg-gradient-to-r from-blue-900/30 via-purple-900/20 to-blue-900/30'
+                : 'bg-gradient-to-r from-[var(--color-primary)]/10 via-[var(--color-light-blue)]/5 to-[var(--color-primary)]/10'
+                }`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className={`text-lg font-semibold flex items-center gap-2 transition-colors duration-300 ${
-                      theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
-                    }`}>
-                      <CalendarIcon className={`h-5 w-5 transition-colors duration-300 ${
-                        theme === 'dark' ? 'text-blue-400' : 'text-[var(--color-primary)]'
-                      }`} />
+                    <h3 className={`text-lg font-semibold flex items-center gap-2 transition-colors duration-300 ${theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
+                      }`}>
+                      <CalendarIcon className={`h-5 w-5 transition-colors duration-300 ${theme === 'dark' ? 'text-blue-400' : 'text-[var(--color-primary)]'
+                        }`} />
                       {t('booking.time.appointment_date')}
                     </h3>
-                    <p className={`mt-1 transition-colors duration-300 ${
-                      theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
-                    }`}>
-                      {selectedDate.toLocaleDateString('ru-RU', { 
-                        weekday: 'long', 
-                        day: 'numeric', 
-                        month: 'long', 
-                        year: 'numeric' 
+                    <p className={`mt-1 transition-colors duration-300 ${theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
+                      }`}>
+                      {selectedDate.toLocaleDateString('ru-RU', {
+                        weekday: 'long',
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
                       })}
                     </p>
                   </div>
-                  <Badge 
-                    variant="secondary" 
-                    className={`text-sm transition-all duration-300 ${
-                      theme === 'dark'
-                        ? 'bg-blue-500/20 text-blue-200 border-blue-500/30'
-                        : 'bg-[var(--color-primary)]/10 text-[var(--color-dark-blue)] border-[var(--color-primary)]/20'
-                    }`}
+                  <Badge
+                    variant="secondary"
+                    className={`text-sm transition-all duration-300 ${theme === 'dark'
+                      ? 'bg-blue-500/20 text-blue-200 border-blue-500/30'
+                      : 'bg-[var(--color-primary)]/10 text-[var(--color-dark-blue)] border-[var(--color-primary)]/20'
+                      }`}
                   >
                     {t('booking.time.selected')}
                   </Badge>
@@ -1447,104 +1400,95 @@ const BookingPageContent: React.FC = () => {
               </div>
             </div>
 
-            <div className={`rounded-xl shadow-lg border overflow-hidden transition-all duration-500 ${
-              theme === 'dark'
-                ? 'bg-slate-800/70 backdrop-blur-sm border-slate-700 shadow-dark'
-                : 'bg-white/60 backdrop-blur-sm border-white/40'
-            }`}>
+            <div className={`rounded-xl shadow-lg border overflow-hidden transition-all duration-500 ${theme === 'dark'
+              ? 'bg-slate-800/70 backdrop-blur-sm border-slate-700 shadow-dark'
+              : 'bg-white/60 backdrop-blur-sm border-white/40'
+              }`}>
               <div className="p-6">
-                <h3 className={`text-lg font-semibold flex items-center gap-2 mb-2 transition-colors duration-300 ${
-                  theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
-                }`}>
-                  <Clock className={`h-5 w-5 transition-colors duration-300 ${
-                    theme === 'dark' ? 'text-blue-400' : 'text-[var(--color-primary)]'
-                  }`} />
+                <h3 className={`text-lg font-semibold flex items-center gap-2 mb-2 transition-colors duration-300 ${theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
+                  }`}>
+                  <Clock className={`h-5 w-5 transition-colors duration-300 ${theme === 'dark' ? 'text-blue-400' : 'text-[var(--color-primary)]'
+                    }`} />
                   {t('booking.time.available')}
                 </h3>
-                <p className={`mb-4 transition-colors duration-300 ${
-                  theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
-                }`}>
+                <p className={`mb-4 transition-colors duration-300 ${theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
+                  }`}>
                   {t('booking.time.working_hours')}: {workingHours.start} - {workingHours.end}
                   {availableSlots && availableSlots.length > 0 && (
-                    <span className={`block text-xs mt-1 transition-colors duration-300 ${
-                      theme === 'dark' ? 'text-green-400' : 'text-green-600'
-                    }`}>
+                    <span className={`block text-xs mt-1 transition-colors duration-300 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                      }`}>
                       {t('booking.time.slots_found').replace('{count}', availableSlots.filter(slot => slot.available).length.toString())}
                     </span>
                   )}
                 </p>
                 <div>
-                <div className="relative">
-                  <div className={`overflow-x-auto pb-4 scrollbar-track-transparent transition-all duration-300 ${
-                    theme === 'dark' ? 'hover:scrollbar-thumb-blue-400/40' : 'hover:scrollbar-thumb-primary/40'
-                  }`} style={{ 
-                    scrollbarWidth: 'auto',
-                    scrollbarColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.6) transparent' : 'rgba(0, 174, 239, 0.6) transparent',
-                    scrollbarGutter: 'stable'
-                  }}>
-                    <div className="flex gap-3 min-w-max px-2">
-                      {availableTimeSlots.map((time: string) => (
-                        <button
-                          key={time}
-                          onClick={() => handleTimeSelect(time)}
-                          className={`group relative flex-shrink-0 w-24 h-28 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg booking-card ${
-                            selectedTimeSlot === time
+                  <div className="relative">
+                    <div className={`overflow-x-auto pb-4 scrollbar-track-transparent transition-all duration-300 ${theme === 'dark' ? 'hover:scrollbar-thumb-blue-400/40' : 'hover:scrollbar-thumb-primary/40'
+                      }`} style={{
+                        scrollbarWidth: 'auto',
+                        scrollbarColor: theme === 'dark' ? 'rgba(59, 130, 246, 0.6) transparent' : 'rgba(0, 174, 239, 0.6) transparent',
+                        scrollbarGutter: 'stable'
+                      }}>
+                      <div className="flex gap-3 min-w-max px-2">
+                        {availableTimeSlots.map((time: string) => (
+                          <button
+                            key={time}
+                            onClick={() => handleTimeSelect(time)}
+                            className={`group relative flex-shrink-0 w-24 h-28 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg booking-card ${selectedTimeSlot === time
                               ? theme === 'dark'
                                 ? 'border-blue-500 bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-xl shadow-blue-500/25 scale-105'
                                 : 'border-primary bg-gradient-to-br from-blue-500 to-sky-500 text-white shadow-xl scale-105'
                               : theme === 'dark'
                                 ? 'border-slate-600 bg-slate-700/80 hover:border-blue-500/50 hover:bg-blue-600/20 text-slate-200'
                                 : 'border-gray-200 bg-white hover:border-primary/50 hover:bg-blue-50/50'
-                          }`}
-                        >
-                          <div className="flex flex-col items-center justify-center h-full gap-2">
-                            <Clock className={`h-5 w-5 transition-colors ${
-                              selectedTimeSlot === time 
-                                ? 'text-white' 
-                                : theme === 'dark' 
-                                  ? 'text-blue-400' 
+                              }`}
+                          >
+                            <div className="flex flex-col items-center justify-center h-full gap-2">
+                              <Clock className={`h-5 w-5 transition-colors ${selectedTimeSlot === time
+                                ? 'text-white'
+                                : theme === 'dark'
+                                  ? 'text-blue-400'
                                   : 'text-primary'
-                            }`} />
-                            <span className={`text-xl font-bold transition-colors ${
-                              selectedTimeSlot === time 
-                                ? 'text-white' 
-                                : theme === 'dark' 
-                                  ? 'text-slate-200' 
+                                }`} />
+                              <span className={`text-xl font-bold transition-colors ${selectedTimeSlot === time
+                                ? 'text-white'
+                                : theme === 'dark'
+                                  ? 'text-slate-200'
                                   : 'text-gray-900'
-                            }`}>
-                              {time}
-                            </span>
+                                }`}>
+                                {time}
+                              </span>
+                              {selectedTimeSlot === time && (
+                                <CheckCircle2 className="h-4 w-4 text-white" />
+                              )}
+                            </div>
                             {selectedTimeSlot === time && (
-                              <CheckCircle2 className="h-4 w-4 text-white" />
+                              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-400/20 to-sky-400/20 animate-pulse" />
                             )}
-                          </div>
-                          {selectedTimeSlot === time && (
-                            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-400/20 to-sky-400/20 animate-pulse" />
-                          )}
-                        </button>
-                      ))}
+                          </button>
+                        ))}
+                      </div>
                     </div>
+                    <div className="absolute right-0 top-0 bottom-4 w-16 bg-gradient-to-l from-white to-transparent pointer-events-none" />
+                    <div className="absolute left-0 top-0 bottom-4 w-16 bg-gradient-to-r from-white to-transparent pointer-events-none" />
                   </div>
-                  <div className="absolute right-0 top-0 bottom-4 w-16 bg-gradient-to-l from-white to-transparent pointer-events-none" />
-                  <div className="absolute left-0 top-0 bottom-4 w-16 bg-gradient-to-r from-white to-transparent pointer-events-none" />
-                </div>
 
-                {availableTimeSlots.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>Нет свободных временных слотов</p>
-                    <p className="text-sm mt-2">Попробуйте выбрать другого мастера или дату</p>
-                  </div>
-                )}
-
-                {availableTimeSlots.length > 0 && (
-                  <div className="mt-4 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-                    <div className="flex items-center gap-1">
-                      <div className="w-6 h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-                      <span>{t('booking.time.scroll_hint')}</span>
-                      <div className="w-6 h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+                  {availableTimeSlots.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Нет свободных временных слотов</p>
+                      <p className="text-sm mt-2">Попробуйте выбрать другого мастера или дату</p>
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {availableTimeSlots.length > 0 && (
+                    <div className="mt-4 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <div className="w-6 h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+                        <span>{t('booking.time.scroll_hint')}</span>
+                        <div className="w-6 h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1568,11 +1512,10 @@ const BookingPageContent: React.FC = () => {
 
       <InfoCard />
 
-      <div className={`${
-        theme === 'dark' 
-          ? 'bg-slate-800/90 border-slate-700/50 shadow-xl' 
-          : 'bg-white/70 border-white/50 shadow-lg'
-      } backdrop-blur-sm rounded-xl border p-8 transition-all duration-300 hover:shadow-xl`}>
+      <div className={`${theme === 'dark'
+        ? 'bg-slate-800/90 border-slate-700/50 shadow-xl'
+        : 'bg-white/70 border-white/50 shadow-lg'
+        } backdrop-blur-sm rounded-xl border p-8 transition-all duration-300 hover:shadow-xl`}>
         <div className="pt-2 space-y-6">
           <div className="space-y-2">
             <Label htmlFor="name" className={theme === 'dark' ? 'text-gray-200' : ''}>{t('booking.contacts.name')}</Label>
@@ -1602,11 +1545,10 @@ const BookingPageContent: React.FC = () => {
           </div>
 
           <Button
-            className={`w-full h-12 text-base animate-in fade-in slide-in-from-bottom-2 duration-400 ${
-              theme === 'dark' 
-                ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white' 
-                : ''
-            }`}
+            className={`w-full h-12 text-base animate-in fade-in slide-in-from-bottom-2 duration-400 ${theme === 'dark'
+              ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white'
+              : ''
+              }`}
             style={{ animationDelay: '600ms' }}
             size="lg"
             onClick={submitBooking}
@@ -1633,92 +1575,87 @@ const BookingPageContent: React.FC = () => {
     // Получаем данные о выбранном филиале и мастере
     const selectedBranch = organisationBranches?.branches?.find((b: any) => b.id === bookingData.branch);
     const selectedMaster = mastersList?.find((m: any) => m.id === bookingData.masterId);
-    
+
     return (
-    <div className="space-y-6 text-center max-w-2xl mx-auto">
-      <div className="flex flex-col items-center">
-        <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 shadow-lg ${
-          theme === 'dark' 
-            ? 'bg-gradient-to-br from-green-600/20 to-emerald-600/20 border border-green-500/30' 
+      <div className="space-y-6 text-center max-w-2xl mx-auto">
+        <div className="flex flex-col items-center">
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 shadow-lg ${theme === 'dark'
+            ? 'bg-gradient-to-br from-green-600/20 to-emerald-600/20 border border-green-500/30'
             : 'bg-gradient-to-br from-green-100 to-emerald-50'
-        }`}>
-          <CheckCircle2 className={`h-10 w-10 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
+            }`}>
+            <CheckCircle2 className={`h-10 w-10 ${theme === 'dark' ? 'text-green-400' : 'text-green-600'}`} />
+          </div>
+          <h2 className={`text-3xl font-bold tracking-tight mb-2 ${theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
+            }`}>{t('booking.confirmation.title')}</h2>
+          <p className={`text-lg ${theme === 'dark' ? 'text-gray-300' : 'text-muted-foreground'
+            }`}>
+            {t('booking.confirmation.subtitle')}
+          </p>
         </div>
-        <h2 className={`text-3xl font-bold tracking-tight mb-2 ${
-          theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
-        }`}>{t('booking.confirmation.title')}</h2>
-        <p className={`text-lg ${
-          theme === 'dark' ? 'text-gray-300' : 'text-muted-foreground'
-        }`}>
-          {t('booking.confirmation.subtitle')}
-        </p>
-      </div>
 
-      <div className={`backdrop-blur-sm rounded-xl shadow-lg border p-8 transition-all duration-300 hover:shadow-xl ${
-        theme === 'dark' 
-          ? 'bg-gradient-to-br from-slate-800/90 via-slate-700/80 to-slate-800/90 border-slate-600/50' 
+        <div className={`backdrop-blur-sm rounded-xl shadow-lg border p-8 transition-all duration-300 hover:shadow-xl ${theme === 'dark'
+          ? 'bg-gradient-to-br from-slate-800/90 via-slate-700/80 to-slate-800/90 border-slate-600/50'
           : 'bg-gradient-to-br from-green-50/80 via-emerald-50/60 to-white/70 border-green-200/50'
-      }`}>
-        <div className="pt-2 space-y-4 text-left">
-          <div className="flex items-center gap-3">
-            <User className={`h-5 w-5 ${theme === 'dark' ? 'text-gray-400' : 'text-muted-foreground'}`} />
-            <span className={theme === 'dark' ? 'text-gray-200' : ''}>{bookingData.name}</span>
-          </div>
-          <Separator className={theme === 'dark' ? 'bg-slate-600' : ''} />
-          <div className="flex items-center gap-3">
-            <Phone className={`h-5 w-5 ${theme === 'dark' ? 'text-gray-400' : 'text-muted-foreground'}`} />
-            <span className={theme === 'dark' ? 'text-gray-200' : ''}>{bookingData.phone}</span>
-          </div>
-          <Separator className={theme === 'dark' ? 'bg-slate-600' : ''} />
-          {selectedMaster && (
+          }`}>
+          <div className="pt-2 space-y-4 text-left">
             <div className="flex items-center gap-3">
-              <Scissors className={`h-5 w-5 ${theme === 'dark' ? 'text-gray-400' : 'text-muted-foreground'}`} />
-              <span className={theme === 'dark' ? 'text-gray-200' : ''}>{t('booking.confirmation.master')}: {selectedMaster.name}</span>
+              <User className={`h-5 w-5 ${theme === 'dark' ? 'text-gray-400' : 'text-muted-foreground'}`} />
+              <span className={theme === 'dark' ? 'text-gray-200' : ''}>{bookingData.name}</span>
             </div>
-          )}
-          {selectedMaster && <Separator className={theme === 'dark' ? 'bg-slate-600' : ''} />}
-          {selectedBranch && (
+            <Separator className={theme === 'dark' ? 'bg-slate-600' : ''} />
             <div className="flex items-center gap-3">
-              <MapPin className={`h-5 w-5 ${theme === 'dark' ? 'text-gray-400' : 'text-muted-foreground'}`} />
-              <div className="flex flex-col">
-                <span className={theme === 'dark' ? 'text-gray-200' : ''}>{selectedBranch.name}</span>
-                {selectedBranch.address && (
-                  <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-muted-foreground'}`}>{selectedBranch.address}</span>
-                )}
+              <Phone className={`h-5 w-5 ${theme === 'dark' ? 'text-gray-400' : 'text-muted-foreground'}`} />
+              <span className={theme === 'dark' ? 'text-gray-200' : ''}>{bookingData.phone}</span>
+            </div>
+            <Separator className={theme === 'dark' ? 'bg-slate-600' : ''} />
+            {selectedMaster && (
+              <div className="flex items-center gap-3">
+                <Scissors className={`h-5 w-5 ${theme === 'dark' ? 'text-gray-400' : 'text-muted-foreground'}`} />
+                <span className={theme === 'dark' ? 'text-gray-200' : ''}>{t('booking.confirmation.master')}: {selectedMaster.name}</span>
               </div>
+            )}
+            {selectedMaster && <Separator className={theme === 'dark' ? 'bg-slate-600' : ''} />}
+            {selectedBranch && (
+              <div className="flex items-center gap-3">
+                <MapPin className={`h-5 w-5 ${theme === 'dark' ? 'text-gray-400' : 'text-muted-foreground'}`} />
+                <div className="flex flex-col">
+                  <span className={theme === 'dark' ? 'text-gray-200' : ''}>{selectedBranch.name}</span>
+                  {selectedBranch.address && (
+                    <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-muted-foreground'}`}>{selectedBranch.address}</span>
+                  )}
+                </div>
+              </div>
+            )}
+            {selectedBranch && <Separator className={theme === 'dark' ? 'bg-slate-600' : ''} />}
+            <div className="flex items-center gap-3">
+              <CalendarIcon className={`h-5 w-5 ${theme === 'dark' ? 'text-gray-400' : 'text-muted-foreground'}`} />
+              <span className={theme === 'dark' ? 'text-gray-200' : ''}>
+                {bookingData.date && bookingData.date.toLocaleDateString('ru-RU', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric'
+                })}
+                {' в '}
+                {bookingData.time}
+              </span>
             </div>
-          )}
-          {selectedBranch && <Separator className={theme === 'dark' ? 'bg-slate-600' : ''} />}
-          <div className="flex items-center gap-3">
-            <CalendarIcon className={`h-5 w-5 ${theme === 'dark' ? 'text-gray-400' : 'text-muted-foreground'}`} />
-            <span className={theme === 'dark' ? 'text-gray-200' : ''}>
-              {bookingData.date && bookingData.date.toLocaleDateString('ru-RU', { 
-                day: 'numeric', 
-                month: 'long', 
-                year: 'numeric' 
-              })}
-              {' в '}
-              {bookingData.time}
-            </span>
           </div>
         </div>
-      </div>
 
-      <Button
-        variant="outline"
-        className={`transition-all duration-200 hover:scale-105 ${
-          theme === 'dark' 
-            ? 'bg-gradient-to-r from-blue-600/20 to-purple-600/20 hover:from-blue-500/30 hover:to-purple-500/30 border-blue-500/30 text-blue-300 hover:text-blue-200' 
+        <Button
+          variant="outline"
+          className={`transition-all duration-200 hover:scale-105 ${theme === 'dark'
+            ? 'bg-gradient-to-r from-blue-600/20 to-purple-600/20 hover:from-blue-500/30 hover:to-purple-500/30 border-blue-500/30 text-blue-300 hover:text-blue-200'
             : 'bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-light-blue)]/10 hover:from-[var(--color-primary)]/20 hover:to-[var(--color-light-blue)]/20 border-[var(--color-primary)]/30 text-[var(--color-dark-blue)]'
-        }`}
-        onClick={() => {
-          setBookingData({ name: '', phone: '' });
-          goToStep(BookingStep.Branch);
-        }}
-      >
-        {t('booking.confirmation.new_booking')}
-      </Button>
-    </div>
+            }`}
+          onClick={() => {
+            setBookingData({ name: '', phone: '' });
+            goToStep(BookingStep.Branch);
+          }}
+        >
+          {t('booking.confirmation.new_booking')}
+        </Button>
+      </div>
     );
   };
 
@@ -1736,42 +1673,36 @@ const BookingPageContent: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen transition-all duration-500 theme-transition ${
-      theme === 'dark' 
-        ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark-gradient-bg' 
-        : 'bg-gradient-to-br from-gray-50 via-blue-50/40 to-cyan-50/60'
-    } relative`}>
+    <div className={`min-h-screen transition-all duration-500 theme-transition ${theme === 'dark'
+      ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark-gradient-bg'
+      : 'bg-gradient-to-br from-gray-50 via-blue-50/40 to-cyan-50/60'
+      } relative`}>
       {/* Background decoration */}
-      <div className={`absolute inset-0 pointer-events-none transition-opacity duration-500 ${
-        theme === 'dark'
-          ? 'bg-gradient-to-tr from-blue-900/20 via-transparent to-purple-900/20'
-          : 'bg-gradient-to-tr from-[var(--color-primary)]/5 via-transparent to-[var(--color-light-blue)]/10'
-      }`}></div>
-      
-      <header className={`border-b sticky top-0 z-50 shadow-sm relative transition-all duration-500 ${
-        theme === 'dark'
-          ? 'bg-slate-800/95 border-slate-700 backdrop-blur-md'
-          : 'bg-white/95 backdrop-blur-md'
-      }`}>
+      <div className={`absolute inset-0 pointer-events-none transition-opacity duration-500 ${theme === 'dark'
+        ? 'bg-gradient-to-tr from-blue-900/20 via-transparent to-purple-900/20'
+        : 'bg-gradient-to-tr from-[var(--color-primary)]/5 via-transparent to-[var(--color-light-blue)]/10'
+        }`}></div>
+
+      <header className={`border-b sticky top-0 z-50 shadow-sm relative transition-all duration-500 ${theme === 'dark'
+        ? 'bg-slate-800/95 border-slate-700 backdrop-blur-md'
+        : 'bg-white/95 backdrop-blur-md'
+        }`}>
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img 
-                src="/PROM_logo_mid_blue.svg" 
-                alt="Logo" 
-                className={`h-8 w-8 transition-all duration-300 ${
-                  theme === 'dark' ? 'filter brightness-150' : ''
-                }`}
+              <img
+                src="/PROM_logo_mid_blue.svg"
+                alt="Logo"
+                className={`h-8 w-8 transition-all duration-300 ${theme === 'dark' ? 'filter brightness-150' : ''
+                  }`}
               />
               <div>
-                <h1 className={`text-2xl font-bold transition-colors duration-300 ${
-                  theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
-                }`}>
+                <h1 className={`text-2xl font-bold transition-colors duration-300 ${theme === 'dark' ? 'text-white' : 'text-[var(--color-dark-blue)]'
+                  }`}>
                   Octō CRM
                 </h1>
-                <p className={`text-sm transition-colors duration-300 ${
-                  theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
-                }`}>
+                <p className={`text-sm transition-colors duration-300 ${theme === 'dark' ? 'text-slate-300' : 'text-muted-foreground'
+                  }`}>
                   {t('booking.title')}
                 </p>
               </div>

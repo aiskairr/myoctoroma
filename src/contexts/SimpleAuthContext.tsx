@@ -151,16 +151,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Токен есть - восстанавливаем user из localStorage (более надежно) или cookies
       console.log("✅ Token found, restoring session");
-      
+
       // Сначала пробуем localStorage
       const savedUserFromLocalStorage = localStorage.getItem('user_data');
       const savedUserFromCookies = Cookies.get('user');
-      
+
       console.log("🔍 User in localStorage:", savedUserFromLocalStorage ? "EXISTS" : "MISSING");
       console.log("🔍 User in cookies:", savedUserFromCookies ? savedUserFromCookies : "MISSING");
-      
+
       const savedUserStr = savedUserFromLocalStorage || savedUserFromCookies;
-      
+
       if (savedUserStr) {
         try {
           const user = JSON.parse(savedUserStr);
@@ -169,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log("  - Email:", user.email);
           console.log("  - Role:", user.role);
           console.log("  - Username:", user.username);
-          
+
           // Валидируем что у пользователя есть все необходимые поля
           if (!user.role || !user.email) {
             console.error("❌ User object is incomplete! Missing role or email");
@@ -183,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             Cookies.remove('user');
             return;
           }
-          
+
           setIsAuthenticated(true);
           setUser(user);
           console.log("✅ User authenticated with role:", user.role);
@@ -210,7 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         Cookies.remove('token');
         Cookies.remove('user');
       }
-      
+
     } catch (error) {
       console.error("❌ Auth check failed:", error);
       setIsAuthenticated(false);
@@ -323,7 +323,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           Cookies.get('refreshToken') ||
           Cookies.get('refresh_token') ||
           Cookies.get('refresh-token');
-        
+
         if (refreshTokenFromCookies) {
           refreshToken = refreshTokenFromCookies;
           console.log("💾 Refresh token extracted from cookies");
@@ -344,7 +344,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         path: '/',
         sameSite: 'lax'
       });
-      
+
       // Проверяем что токен сохранился
       const savedToken = localStorage.getItem('auth_token');
       console.log("✓ Verification - Token in localStorage:", savedToken ? "EXISTS (length: " + savedToken.length + ")" : "NOT SAVED!");
@@ -377,16 +377,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("🔧 setIsAuthenticated(true) called");
       setUser(userData);
       console.log("🔧 setUser called with:", userData);
-      
+
       const userJsonString = JSON.stringify(userData);
       console.log("💾 About to save user data...");
       console.log("💾 User JSON:", userJsonString);
       console.log("💾 User JSON length:", userJsonString.length, "bytes");
-      
+
       // Сохраняем в localStorage (более надежно)
       localStorage.setItem('user_data', userJsonString);
       console.log("✅ User data saved to localStorage");
-      
+
       // Также сохраняем в cookies для совместимости
       Cookies.set('user', userJsonString, {
         expires: 365,
@@ -394,16 +394,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sameSite: 'lax'
       });
       console.log("✅ User data saved to cookies");
-      
+
       // Проверяем что данные сохранились ВЕЗДЕ
       const savedInLocalStorage = localStorage.getItem('user_data');
       const savedInCookies = Cookies.get('user');
-      
-      
+
+
       console.log("✓ Verification IMMEDIATELY AFTER SET:");
       console.log("  - localStorage:", savedInLocalStorage ? "EXISTS" : "❌ NOT SAVED");
       console.log("  - cookies:", savedInCookies ? "EXISTS" : "❌ NOT SAVED");
-      
+
       if (savedInLocalStorage) {
         try {
           const savedUserData = JSON.parse(savedInLocalStorage);
@@ -414,7 +414,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error("❌ Failed to parse localStorage user data:", e);
         }
       }
-      
+
       if (savedInCookies) {
         try {
           const savedUserData = JSON.parse(savedInCookies);
@@ -425,13 +425,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error("❌ Failed to parse cookie user data:", e);
         }
       }
-      
+
       console.log("🎉 Login successful with role:", userData.role);
       console.log("🎉 Returning result:", { success: true, user: userData });
 
       // Предзагружаем название организации для refresh токена (если доступно)
       if (userData.role === "owner" || userData.role === "admin") {
-        preloadOrganizationName(userData.id, accessToken).catch(() => {});
+        preloadOrganizationName(userData.id, accessToken).catch(() => { });
       }
 
       const finalResult = { success: true, user: userData };
@@ -574,7 +574,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Предзагружаем название организации для refresh токена (если доступно)
         if (userData.role === "owner" || userData.role === "admin") {
-          preloadOrganizationName(userData.id, accessToken).catch(() => {});
+          preloadOrganizationName(userData.id, accessToken).catch(() => { });
         }
         return { success: true, user: userData };
       } else {
@@ -680,29 +680,29 @@ export function useAuth() {
   }
   return context;
 }
-  const preloadOrganizationName = async (ownerId: number, token: string) => {
-    try {
-      const response = await fetch(`${SECONDARY_BACKEND_URL}/organizations?ownerId=${ownerId}`, {
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        credentials: "include",
-      });
+const preloadOrganizationName = async (ownerId: number, token: string) => {
+  try {
+    const response = await fetch(`${SECONDARY_BACKEND_URL}/organizations?ownerId=${ownerId}`, {
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
 
-      if (!response.ok) {
-        throw new Error(`Failed to load organizations (${response.status})`);
-      }
-
-      const data = await response.json();
-      if (Array.isArray(data) && data.length > 0) {
-        const orgName = data[0]?.name;
-        if (orgName) {
-          localStorage.setItem("organization_name", orgName);
-          console.log("🏷 Organization name saved for refresh:", orgName);
-        }
-      }
-    } catch (error) {
-      console.warn("⚠️ Could not preload organization name:", error);
+    if (!response.ok) {
+      throw new Error(`Failed to load organizations (${response.status})`);
     }
-  };
+
+    const data = await response.json();
+    if (Array.isArray(data) && data.length > 0) {
+      const orgName = data[0]?.name;
+      if (orgName) {
+        localStorage.setItem("organization_name", orgName);
+        console.log("🏷 Organization name saved for refresh:", orgName);
+      }
+    }
+  } catch (error) {
+    console.warn("⚠️ Could not preload organization name:", error);
+  }
+};

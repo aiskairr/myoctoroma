@@ -278,15 +278,15 @@ export default function Dashboard() {
   useEffect(() => {
     if (accountingStatsQuery.data && typeof accountingStatsQuery.data === 'object') {
       const apiData = accountingStatsQuery.data as any;
-      
+
       // Новый формат данных: data = [доходы, расходы, записей, прибыль]
       if (apiData.success && Array.isArray(apiData.data) && apiData.data.length >= 4) {
         const [dailyIncome, dailyExpenses, recordsCount, netProfit] = apiData.data;
-        
+
         setDailyAccountingStats({
           recordsCount: recordsCount || 0
         });
-        
+
         setDailyCashData({
           dailyIncome: dailyIncome || 0,
           dailyExpenses: dailyExpenses || 0,
@@ -739,7 +739,7 @@ export default function Dashboard() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-         
+
 
           {/* Accounting Stats Cards */}
           <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200 h-[120px]">
@@ -864,10 +864,10 @@ export default function Dashboard() {
         </Card>
 
         {/* Booking Links Statistics */}
-        <BookingLinksStats />
+        {/* <BookingLinksStats /> */}
 
         {/* Recent Activity */}
-        <Card className="border-0 shadow-sm">
+        {/* <Card className="border-0 shadow-sm">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center text-gray-900">
               <Users className="h-5 w-5 mr-2 text-gray-600" />
@@ -928,7 +928,7 @@ export default function Dashboard() {
               )}
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
     </div>
   );

@@ -1835,7 +1835,7 @@ const CreateClientDialog = ({ onClientCreated }: { onClientCreated: () => void }
 
       // Отправляем запрос на создание клиента (используем SECONDARY backend)
       // Используем apiPost который автоматически добавит токен авторизации
-      const response = await apiPost('/clients/', payload);
+      const response = await apiPost('/organizations/clients', payload);
 
       if (!response.ok) {
         const errorText = await response.text();
