@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, User, Clock, EditIcon, X, Plus, CalendarDays, Camera, Eye, Users as UsersIcon } from "lucide-react";
+import { Loader2, User, Clock, EditIcon, X, Plus, Camera, Users as UsersIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MasterWorkingDatesManager from "@/components/MasterWorkingDatesManager";
 import MasterWorkingDatesDisplay from "@/components/MasterWorkingDatesDisplay";
@@ -2660,39 +2660,6 @@ const Masters: React.FC = () => {
               <User className="h-8 w-8" />
               {t('masters.page_title')}
             </CardTitle>
-            <div className="flex gap-3">
-              <Dialog open={isAddAdministratorDialogOpen} onOpenChange={setIsAddAdministratorDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="border-white/20 text-white hover:bg-white/10 bg-white/5"
-                  >
-                    <User className="h-4 w-4 mr-2" />
-                    {t('masters.add_administrator')}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
-                  <DialogHeader>
-                    <DialogTitle className="text-xl font-semibold text-gray-900">{t('masters.add_administrator')}</DialogTitle>
-                    <DialogDescription className="text-gray-500">
-                      {t('masters.fill_admin_data')}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <AdministratorFormSimple
-                    onSubmit={handleAddAdministrator}
-                    isPending={createAdministratorMutation.isPending}
-                  />
-                </DialogContent>
-              </Dialog>
-              <Button
-                onClick={() => setIsAddDialogOpen(true)}
-                className="bg-white/20 hover:bg-white/30 text-white border-white/20"
-                variant="outline"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                {t('masters.add_master')}
-              </Button>
-            </div>
           </div>
         </CardHeader>
         <CardContent className="p-6">
