@@ -4,12 +4,16 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from "path";
 
+const ENABLE_PWA = process.env.ENABLE_PWA === 'true';
+
 export default defineConfig({
   plugins: [
     react(), 
     tsconfigPaths(),
-    VitePWA({
+    ENABLE_PWA ? VitePWA({
       registerType: 'autoUpdate',
+      // Отключаем минификацию SW, чтобы избежать падения terser на сборке (Vercel/Linux)
+      minify: false,
       includeAssets: ['favicon.png', 'apple-touch-icon.png', 'og-preview.png', 'pwa-*.png'],
       manifest: {
         name: 'Octō CRM - Система управления',
@@ -94,8 +98,8 @@ export default defineConfig({
         enabled: true,
         type: 'module'
       }
-    })
-  ],
+    }) : null
+  ].filter(Boolean),
   css: {
     postcss: './postcss.config.js',
   },

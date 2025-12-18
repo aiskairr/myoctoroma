@@ -390,8 +390,15 @@ const BookingPageContent: React.FC = () => {
 
   // Функция для получения доступных дат (когда работает хотя бы один мастер)
   const getAvailableDates = (): Date[] => {
-    if (!masterWorkingDates || !Array.isArray(masterWorkingDates)) {
-      return [];
+    if (!masterWorkingDates || !Array.isArray(masterWorkingDates) || masterWorkingDates.length === 0) {
+      // Фолбэк: если с бэка нет расписания, показываем ближайшие 30 дней
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return Array.from({ length: 30 }, (_, i) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() + i);
+        return d;
+      });
     }
 
     const availableDates = new Set<string>();
@@ -407,12 +414,17 @@ const BookingPageContent: React.FC = () => {
 
   // Функция для получения мастеров, работающих в выбранную дату
   const getMastersForDate = (date: Date): any[] => {
-    if (!masterWorkingDates || !Array.isArray(masterWorkingDates) || !mastersList) {
+    if (!mastersList) {
       return [];
     }
 
     const dateStr = formatDateForAPI(date);
     const workingMasterIds = new Set<number>();
+
+    if (!masterWorkingDates || !Array.isArray(masterWorkingDates) || masterWorkingDates.length === 0) {
+      // Нет расписания — позволяем выбрать любого мастера
+      return mastersList;
+    }
 
     masterWorkingDates.forEach((workingDate: any) => {
       if (workingDate.is_active && workingDate.work_date) {
@@ -1289,24 +1301,8 @@ const BookingPageContent: React.FC = () => {
     
     // Функция для проверки, доступна ли дата для записи
     const isDateAvailable = (date: Date): boolean => {
-      if (date < today) return false; // Прошедшие даты недоступны
-      
-      if (!masterWorkingDates || !Array.isArray(masterWorkingDates)) {
-        console.log('masterWorkingDates not available:', masterWorkingDates);
-        return false;
-      }
-      
-      const dateStr = formatDateForAPI(date);
-      const isAvailable = masterWorkingDates.some((workingDate: any) => {
-        if (!workingDate.is_active) return false;
-        
-        // Приводим work_date к формату YYYY-MM-DD для сравнения
-        const workDateStr = formatDateForAPI(new Date(workingDate.work_date));
-        return workDateStr === dateStr;
-      });
-      
-      console.log(`Date ${dateStr} is available:`, isAvailable);
-      return isAvailable;
+      // Ограничиваем только прошлые даты, чтобы не блокировать выбор при отсутствии расписания
+      return date >= today;
     };
 
     return (
