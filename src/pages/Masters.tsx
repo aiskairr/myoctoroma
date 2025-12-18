@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, User, Clock, EditIcon, X, Plus, CalendarDays, Camera } from "lucide-react";
+import { Loader2, User, Clock, EditIcon, X, Plus, CalendarDays, Camera, Eye, Users as UsersIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MasterWorkingDatesManager from "@/components/MasterWorkingDatesManager";
 import MasterWorkingDatesDisplay from "@/components/MasterWorkingDatesDisplay";
@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/contexts/SimpleAuthContext';
 import { salaryService } from '@/services/salary-service';
 
@@ -1710,11 +1711,12 @@ const AdministratorCard: React.FC<{
   const { t } = useLocale();
   const isActive = (administrator as any).is_active ?? administrator.isActive ?? true;
   return (
-    <Card className={`w-full relative overflow-hidden transition-all duration-300  hover:shadow-lg border-none shadow-sm`}>
-      <CardHeader className="pb-3">
+    <Card className={`w-full relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 border border-slate-200 bg-white/90 backdrop-blur-sm shadow-sm`}>
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-400" />
+      <CardHeader className="pb-3 pt-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Avatar className="h-10 w-10">
+            <Avatar className="h-10 w-10 ring-2 ring-purple-100 shadow-sm">
               <AvatarFallback className="bg-purple-100 text-purple-600">
                 <User className="h-5 w-5" />
               </AvatarFallback>
@@ -1761,7 +1763,7 @@ const AdministratorCard: React.FC<{
           variant="outline"
           size="sm"
           onClick={onEditClick}
-          className="text-gray-600 border-gray-200 hover:bg-gray-50"
+          className="text-gray-700 border-gray-200 hover:bg-purple-50 hover:text-purple-700"
         >
           <EditIcon className="h-4 w-4 mr-2" />
           {t('masters.change')}
@@ -2016,7 +2018,7 @@ const Masters: React.FC = () => {
 
       // Подготовка данных для обновления согласно новому API
       const staffUpdatePayload: any = {};
-      const organizationId = currentBranch?.organisationId || orgData?.id || user?.organization_id || user?.organisationId || user?.orgId || user?.organization?.id;
+      const organizationId = currentBranch?.organisationId || (typeof orgData === 'object' && orgData?.id) || user?.organization_id || user?.organisationId || user?.orgId || user?.organization?.id;
       if (organizationId) {
         staffUpdatePayload.organizationId = Number(organizationId);
       }
@@ -2030,11 +2032,11 @@ const Masters: React.FC = () => {
 
       // Маппинг полей: firstname/lastname/name -> payload
       const nameParts = masterData.name ? masterData.name.split(' ') : [];
-      if (masterData.firstname || nameParts.length) {
-        staffUpdatePayload.firstname = masterData.firstname || nameParts[0] || '';
+      if (masterData.first_name || nameParts.length) {
+        staffUpdatePayload.firstname = masterData.first_name || nameParts[0] || '';
       }
-      if (masterData.lastname || nameParts.length > 1) {
-        staffUpdatePayload.lastname = masterData.lastname || nameParts.slice(1).join(' ') || '';
+      if (masterData.last_name || nameParts.length > 1) {
+        staffUpdatePayload.lastname = masterData.last_name || nameParts.slice(1).join(' ') || '';
       }
       if (masterData.name) {
         staffUpdatePayload.username = masterData.name;
@@ -2700,6 +2702,32 @@ const Masters: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Tabs */}
+      <Tabs defaultValue="masters" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="masters" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            {t('masters.masters')}
+          </TabsTrigger>
+          <TabsTrigger value="administrators" className="flex items-center gap-2">
+            <UsersIcon className="h-4 w-4" />
+            {t('masters.administrators')}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Masters Tab */}
+        <TabsContent value="masters" className="space-y-6">
+          <div className="flex justify-end">
+            <Button
+              onClick={() => setIsAddDialogOpen(true)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t('masters.add_master')}
+            </Button>
+          </div>
+
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
@@ -2739,9 +2767,21 @@ const Masters: React.FC = () => {
             ))}
         </div>
       )}
+        </TabsContent>
 
-      <div className="mt-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('masters.administrators')}</h2>
+        {/* Administrators Tab */}
+        <TabsContent value="administrators" className="space-y-6">
+          <div className="flex justify-end">
+            <Button
+              onClick={() => setIsAddAdministratorDialogOpen(true)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t('masters.add_administrator')}
+            </Button>
+          </div>
+
         {administrators && administrators.data && administrators.data.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {administrators.data.map((administrator: Administrator) => (
@@ -2769,7 +2809,8 @@ const Masters: React.FC = () => {
             </Button>
           </div>
         )}
-      </div>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto bg-white rounded-xl">
