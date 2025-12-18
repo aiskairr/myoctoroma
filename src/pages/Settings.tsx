@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, BookOpen, ArrowRight, User, Bot, Calendar, Download } from "lucide-react";
 import { BookingLinkCopy } from "@/components/BookingLinkCopy";
-import WhatsAppConnect from "@/components/WhatsappConnect";
+import WhatsAppConnect from "@/components/WhatsAppConnect";
 
 // Простые плейсхолдеры, если нужных компонентов нет в проекте
 const UnifiedImportCard = () => (
