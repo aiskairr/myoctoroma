@@ -905,14 +905,16 @@ const MasterCard: React.FC<{
   const { t } = useLocale();
   return (
     <Card
-      className={`relative overflow-hidden transition-all duration-300 ${!(master as any).isActive && (master as any).is_active === false ? 'opacity-80 bg-gray-50' : 'bg-white'
-        } hover:shadow-lg border-none shadow-sm min-w-[300px] max-w-full`}
+      className={`relative overflow-hidden transition-all duration-300 min-w-[300px] max-w-full border border-slate-200 bg-white/90 backdrop-blur-sm shadow-sm hover:shadow-xl hover:-translate-y-0.5 ${
+        (!(master as any).isActive && (master as any).is_active === false) ? 'opacity-80' : ''
+      } h-full flex flex-col`}
     >
-      <CardHeader className="pb-4">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-sky-500 to-emerald-400" />
+      <CardHeader className="pb-4 pt-5">
         <div className="flex justify-between items-start">
           <div className="flex items-center space-x-4">
             <div className="relative group">
-              <Avatar className="h-12 w-12">
+              <Avatar className="h-14 w-14 ring-2 ring-indigo-100 shadow-sm">
                 {master.photoUrl ? (
                   <AvatarImage src={master.photoUrl} alt={master.name} />
                 ) : (
@@ -921,7 +923,7 @@ const MasterCard: React.FC<{
                   </AvatarFallback>
                 )}
               </Avatar>
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-50 rounded-full">
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-full">
                 <label className="cursor-pointer">
                   <input
                     type="file"
@@ -938,50 +940,57 @@ const MasterCard: React.FC<{
                 </label>
               </div>
             </div>
-            <div>
-              <CardTitle className="text-lg font-semibold text-gray-900 flex items-center">
+            <div className="space-y-1">
+              <CardTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                 {master.name}
                 {(((master as any).isActive === false) || ((master as any).is_active === false)) && (
                   <Badge
                     variant="secondary"
-                    className="ml-2 bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    className="bg-gray-200 text-gray-700 hover:bg-gray-300"
                   >
                     {t('masters.inactive')}
                   </Badge>
                 )}
               </CardTitle>
-              {master.specialty && (
-                <CardDescription className="text-sm text-gray-500 mt-1">
-                  {master.specialty}
-                </CardDescription>
-              )}
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs text-indigo-700 border-indigo-200 bg-indigo-50">
+                  {t('masters.configure')}
+                </Badge>
+                {master.specialty && (
+                  <CardDescription className="text-sm text-gray-500">
+                    {master.specialty}
+                  </CardDescription>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
-        <div className="space-y-3">
+      <CardContent className="pt-0 flex-1">
+        <div className="space-y-4">
           <div className="flex items-center text-sm text-gray-600">
             <Clock className="h-4 w-4 mr-2 text-indigo-500" />
-            <span>
+            <span className="font-medium">
               {master.startWorkHour} - {master.endWorkHour}
             </span>
           </div>
-          <MasterWorkingDatesDisplay masterId={master.id} masterName={master.name} />
+          <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/80 p-3">
+            <MasterWorkingDatesDisplay masterId={master.id} masterName={master.name} />
+          </div>
           {master.description && (
-            <p className="text-sm text-gray-500 line-clamp-3">
+            <p className="text-sm text-gray-600 line-clamp-3">
               {master.description}
             </p>
           )}
         </div>
       </CardContent>
-      <CardFooter className="pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
+      <CardFooter className="pt-4 border-t border-gray-100 flex items-center mt-auto">
         <div className="flex gap-3">
           <Button
             variant="outline"
             size="sm"
             onClick={onEditClick}
-            className="text-gray-600 border-gray-200 hover:bg-gray-50 min-w-[100px] text-sm"
+            className="text-gray-700 border-gray-200 hover:bg-indigo-50 hover:text-indigo-700 min-w-[120px] text-sm"
           >
             <EditIcon className="h-4 w-4 mr-2" />
             {t('masters.configure')}
@@ -990,7 +999,7 @@ const MasterCard: React.FC<{
             variant="destructive"
             size="sm"
             onClick={onDeleteClick}
-            className="bg-red-600 hover:bg-red-700 min-w-[100px] text-sm"
+            className="bg-red-600 hover:bg-red-700 min-w-[120px] text-sm shadow-sm"
           >
             <X className="h-4 w-4 mr-2" />
             {t('masters.delete_action')}
@@ -2640,7 +2649,7 @@ const Masters: React.FC = () => {
   };
   console.log(masters)
   return (
-    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
+    <div className="container mx-auto py-6 px-2 sm:px-4 lg:px-6">
       {/* Header */}
       <Card className="rounded-xl shadow-lg mb-8">
         <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-xl">

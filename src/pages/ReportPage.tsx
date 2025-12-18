@@ -166,7 +166,7 @@ export default function ReportPage() {
             >
               {branches.map((branch) => (
                 <option key={branch.id} value={branch.id.toString()} className="bg-white text-gray-900">
-                  {branch.branches}
+                  {branch.name}
                 </option>
               ))}
             </select>

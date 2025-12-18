@@ -322,7 +322,7 @@ export default function Clients() {
   }, [currentBranch]);
 
   return (
-    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
+    <div className="container mx-auto py-6 px-2 sm:px-4 lg:px-6">
       {/* Header */}
       <Card className="rounded-xl shadow-lg mb-8">
         <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-xl">

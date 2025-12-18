@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, addMinutes, isSameDay, addDays, subDays, isToday } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Loader2, Edit, X, User, Clock, MapPin, CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { useLocation } from "wouter";
 
 // Интерфейсы
 interface Master {
@@ -102,6 +103,7 @@ const statusLabels = {
 };
 
 export default function MasterCalendar() {
+  const [location, setLocation] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -131,6 +133,28 @@ export default function MasterCalendar() {
 
   const dateString = format(selectedDate, "yyyy-MM-dd");
 
+  // Синхронизируем выбранную дату с query params
+  useEffect(() => {
+    const [path, search = ""] = location.split("?");
+    const params = new URLSearchParams(search);
+    const urlDate = params.get("date");
+    if (urlDate) {
+      const parsed = parseISO(urlDate);
+      if (!isNaN(parsed.getTime())) {
+        setSelectedDate(parsed);
+      }
+    }
+  }, [location]);
+
+  useEffect(() => {
+    const [path, search = ""] = location.split("?");
+    const params = new URLSearchParams(search);
+    if (params.get("date") !== dateString) {
+      params.set("date", dateString);
+      setLocation(`${path}?${params.toString()}`, { replace: true });
+    }
+  }, [dateString, location, setLocation]);
+
   // Для календаря мастеров показываем только текущего мастера
   const masters = user && user.role === 'master' ? [{
     id: user.master_id,
@@ -143,7 +167,7 @@ export default function MasterCalendar() {
 
   // Загрузка задач только для мастера
   const { data: tasks = [], isLoading: tasksLoading, refetch: refetchTasks } = useQuery({
-    queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks-master-calendar"],
+    queryKey: ["${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks-master-calendar", dateString],
     queryFn: async () => {
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/crm/tasks-master-calendar?date=${dateString}`, {
         credentials: 'include'

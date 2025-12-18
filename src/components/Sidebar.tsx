@@ -17,7 +17,8 @@ import {
   HelpCircle,
   ChevronDown,
   Calendar as CalendarIcon,
-  MessageCircle
+  MessageCircle,
+  Package
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -346,6 +347,7 @@ function AdminOnlySidebar() {
       ]
     },
     { path: "/accounting", label: t('sidebar.accounting'), icon: <Calculator className="h-5 w-5" /> },
+    { path: "/warehouse", label: "Склад", icon: <Package className="h-5 w-5" /> },
     { path: "/salary", label: t('sidebar.salary'), icon: <DollarSign className="h-5 w-5" /> },
     { path: "/gift-certificates", label: t('sidebar.certificates'), icon: <Gift className="h-5 w-5" /> },
     { path: "/settings", label: t('sidebar.settings'), icon: <SettingsIcon className="h-5 w-5" /> },
@@ -591,6 +593,7 @@ function AdminSidebar() {
       ]
     },
     { path: "/accounting", label: t('sidebar.accounting'), icon: <Calculator className="h-5 w-5" /> },
+    { path: "/warehouse", label: "Склад", icon: <Package className="h-5 w-5" /> },
     { path: "/salary", label: t('sidebar.salary'), icon: <DollarSign className="h-5 w-5" /> },
     { path: "/gift-certificates", label: t('sidebar.certificates'), icon: <Gift className="h-5 w-5" /> },
     { path: "/reports", label: t('sidebar.reports'), icon: <FileBarChart className="h-5 w-5" /> },
@@ -684,7 +687,7 @@ function AdminSidebar() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full justify-start h-11 text-slate-300 transition-all hover:bg-slate-800 duration-200 group"
+                    className="w-full justify-start h-11 text-slate-300 transition-all hover:bg-slate-800 duration-200 group hover:text-slate-200"
                       >
                         <div className="flex items-center justify-between w-full">
                           <div className="flex items-center">

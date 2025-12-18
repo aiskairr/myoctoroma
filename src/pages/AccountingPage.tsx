@@ -215,9 +215,14 @@ const AccountingPage = () => {
       
       const apiData = await apiGetJson<any>(url);
       console.log('Accounting statistics response:', apiData);
-      const dailyIncome = Number(apiData.income || 0);
-      const dailyExpenses = Number(apiData.expenses || 0);
-      const netProfit = Number(apiData.profit || (dailyIncome - dailyExpenses));
+      // Бэкенд возвращает суммы в тыйынах, переводим в сомы
+      const dailyIncome = Number(apiData.income || 0) / 100;
+      const dailyExpenses = Number(apiData.expenses || 0) / 100;
+      const netProfit = Number(
+        apiData.profit !== undefined
+          ? apiData.profit
+          : (apiData.income || 0) - (apiData.expenses || 0)
+      ) / 100;
       const recordsCount = Array.isArray(apiData.accountings) ? apiData.accountings.length : Number(apiData.assignments || 0);
       setDailyStats({ dailyIncome, dailyExpenses, recordsCount, netProfit });
       setDailyCashData({ dailyIncome, dailyExpenses, netProfit });
@@ -498,12 +503,21 @@ const AccountingPage = () => {
     return expenses.reduce((sum, expense) => sum + expense.amount, 0);
   };
 
-  const filteredRecords = records.filter(record =>
-    record.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.master.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.serviceType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    record.phoneNumber.includes(searchTerm)
-  );
+  const filteredRecords = records.filter(record => {
+    const client = record.client || '';
+    const masterName = record.master || '';
+    const service = record.serviceType || '';
+    const phone = record.phoneNumber || '';
+
+    const term = searchTerm.toLowerCase();
+
+    return (
+      client.toLowerCase().includes(term) ||
+      masterName.toLowerCase().includes(term) ||
+      service.toLowerCase().includes(term) ||
+      phone.includes(searchTerm)
+    );
+  });
 
   if (isLoading) {
     return (

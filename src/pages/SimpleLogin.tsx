@@ -170,7 +170,7 @@ export default function SimpleLogin() {
 
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-xs sm:text-sm font-medium text-gray-700">
-                  {t('login.phone')}
+                  {t('login.email')}
                 </Label>
                 <Input
                   id="email"
@@ -178,7 +178,7 @@ export default function SimpleLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={t('login.phone_placeholder')}
+                  placeholder={t('login.email_placeholder')}
                   disabled={isLoading}
                   className="w-full outline-none focus:outline-none text-sm sm:text-base"
                   autoComplete="email"

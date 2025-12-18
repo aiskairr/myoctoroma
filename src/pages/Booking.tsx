@@ -72,7 +72,18 @@ const getOrganisationBranches = async (organisationId: string): Promise<any> => 
 };
 
 const getServices = async (branchId: string): Promise<any> => {
-  const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/services?branchId=${branchId}&page=1&limit=1000`);
+  const token = localStorage.getItem('auth_token');
+  const response = await axios.get(
+    `${import.meta.env.VITE_BACKEND_URL}/services?branchId=${branchId}&page=1&limit=1000&_=${Date.now()}`,
+    {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+      },
+      withCredentials: true,
+    }
+  );
   // API возвращает пагинированный ответ { data: [...] }
   return (response.data as any).data || [];
 };
@@ -103,7 +114,8 @@ const getAssignments = async (branchId: string, date?: string, employeeId?: numb
     const params = new URLSearchParams({
       branchId: branchId,
       page: '1',
-      limit: '1000'
+      limit: '1000',
+      _: Date.now().toString()
     });
 
     if (date) {
@@ -114,12 +126,16 @@ const getAssignments = async (branchId: string, date?: string, employeeId?: numb
       params.append('employeeId', employeeId.toString());
     }
 
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('guest_token');
     const response = await axios.get(`${import.meta.env.VITE_SECONDARY_BACKEND_URL}/assignments?${params.toString()}`, {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('guest_token')}`
-      }
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+      },
+      withCredentials: true,
     });
 
     console.log('getAssignments response:', response.data);

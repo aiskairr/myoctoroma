@@ -25,6 +25,7 @@ import SalaryPage from "./pages/SalaryPage";
 import SalaryPageNew from "./pages/SalaryPageNew";
 import GiftCertificatesPage from "./pages/GiftCertificatesPage";
 import ReportPage from "./pages/ReportPage";
+import WarehousePage from "./pages/WarehousePage";
 import CRMServices from "./pages/CRMServicesTable";
 import HowToUsePage from "./pages/HowToUsePage";
 import { MobileApp } from "./pages/MobileApp";
@@ -58,7 +59,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
           <div className="flex flex-grow">
             {!isMobile && <Sidebar />}
             <main className="flex-grow overflow-auto bg-gray-50">
-              <div className="p-6 lg:p-8">
+              <div className="p-2 md:p-4 lg:p-6">
                 <ErrorBoundary>
                   {children}
                 </ErrorBoundary>
@@ -186,6 +187,12 @@ function App() {
           <Route path="/salary-new">
             <ProtectedLayout>
               <SalaryPageNew />
+            </ProtectedLayout>
+          </Route>
+
+          <Route path="/warehouse">
+            <ProtectedLayout>
+              <WarehousePage />
             </ProtectedLayout>
           </Route>
 

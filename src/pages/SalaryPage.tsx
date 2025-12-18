@@ -107,12 +107,16 @@ export default function SalaryPage() {
       url.searchParams.append('branchId', branchId);
       url.searchParams.append('startDate', startDate);
       url.searchParams.append('endDate', endDate);
+      url.searchParams.append('_', Date.now().toString());
 
       console.log('📡 Fetching salaries from:', url.toString());
 
       const response = await fetch(url.toString(), {
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
           'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
         },
       });
@@ -198,14 +202,18 @@ export default function SalaryPage() {
         return;
       }
       
-      const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/api/accounting/period`);
+      const url = new URL(`${import.meta.env.VITE_BACKEND_URL}/accounting/period`);
       url.searchParams.append('startDate', startDate);
       url.searchParams.append('endDate', endDate);
       url.searchParams.append('branchId', branchId);
+      url.searchParams.append('_', Date.now().toString());
 
       const response = await fetch(url.toString(), {
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
           'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
         },
       });
@@ -231,9 +239,12 @@ export default function SalaryPage() {
         return;
       }
       
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments?branchId=${branchId}&startDate=${startDate}&endDate=${endDate}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/salary-payments?branchId=${branchId}&startDate=${startDate}&endDate=${endDate}&_=${Date.now()}`, {
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
           'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
         },
       });
@@ -245,6 +256,7 @@ export default function SalaryPage() {
         console.log('Массив платежей:', paymentsArray);
         console.log('Пример платежа:', paymentsArray[0]);
         setSalaryPayments(paymentsArray);
+        return paymentsArray;
       } else {
         console.error('Ошибка загрузки выплат:', response.status, response.statusText);
       }
@@ -361,24 +373,27 @@ export default function SalaryPage() {
         return;
       }
       
-      // Создаем объект согласно API документации
+      // Новый API /salary-payments/{staffId}?branchId=... принимает период и paymentMethod
       const paymentData = {
-        "employee": employeeName,
-        "amount": Number(amount),
-        "branchId": branchId,
-        "masterId": employee.master_id || null,
-        "administratorId": employee.employee_type === 'administrator' ? employeeId : null,
-        "employeeRole": employee.employee_role || employee.employee_type,
-        "baseSlary": Number(employee.base_salary) || 0,
-        "commissionRate": Number(employee.commission_rate) || 0
+        startDate,
+        endDate,
+        paymentMethod: [
+          {
+            type: 'cash',
+            amount: Number(amount),
+          }
+        ]
       };
+
+      console.log('💰 Sending salary payment data:', paymentData);
       
-      console.log('💰 Sending salary payment data (API format):', paymentData);
-      
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/salary-payments`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/salary-payments/${employeeId}?branchId=${branchId}&_=${Date.now()}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
           'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
         },
         body: JSON.stringify(paymentData),
@@ -394,7 +409,7 @@ export default function SalaryPage() {
           title: t('salary.success'),
           description: t('salary.payment_saved'),
         });
-        fetchSalaryPayments();
+        await fetchSalaryPayments();
         setEditedPayments(prev => {
           const updated = { ...prev };
           delete updated[employeeId];

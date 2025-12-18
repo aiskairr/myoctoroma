@@ -738,16 +738,16 @@ export default function Dashboard() {
         </Card>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
          
 
           {/* Accounting Stats Cards */}
-          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200 h-[120px]">
+            <CardContent className="p-6 h-full flex">
+              <div className="flex items-center justify-between w-full">
                 <div>
                   <p className="text-sm font-medium text-gray-600">{t('dashboard.daily_income')}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{(dailyCashData?.dailyIncome || 0).toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{(dailyCashData?.dailyIncome || 0).toLocaleString()} сом</p>
                 </div>
                 <div className="p-2 bg-blue-50 rounded-lg">
                   <DollarSign className="h-6 w-6 text-blue-600" />
@@ -756,12 +756,12 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200 h-[120px]">
+            <CardContent className="p-6 h-full flex">
+              <div className="flex items-center justify-between w-full">
                 <div>
                   <p className="text-sm font-medium text-gray-600">{t('dashboard.daily_expenses')}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{(dailyCashData?.dailyExpenses || 0).toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{(dailyCashData?.dailyExpenses || 0).toLocaleString()} сом</p>
                 </div>
                 <div className="p-2 bg-red-50 rounded-lg">
                   <TrendingUp className="h-6 w-6 text-red-600" />
@@ -770,9 +770,9 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200 h-[120px]">
+            <CardContent className="p-6 h-full flex">
+              <div className="flex items-center justify-between w-full">
                 <div>
                   <p className="text-sm font-medium text-gray-600">{t('dashboard.daily_records')}</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{dailyAccountingStats.recordsCount}</p>
@@ -784,12 +784,12 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+          <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200 h-[120px]">
+            <CardContent className="p-6 h-full flex">
+              <div className="flex items-center justify-between w-full">
                 <div>
                   <p className="text-sm font-medium text-gray-600">{t('dashboard.daily_profit')}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{(dailyCashData?.netProfit || 0).toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{(dailyCashData?.netProfit || 0).toLocaleString()} сом</p>
                 </div>
                 <div className="p-2 bg-purple-50 rounded-lg">
                   <TrendingUp className="h-6 w-6 text-purple-600" />
